@@ -52,6 +52,24 @@ git clone <your-repo-url>
 cd capstone_project
 ```
 
+After cloning the repository, create your local configuration file:
+1. Create a file in backend/src/main/resources called 'application.properties'. This file should not be committed to version control as it contains environment-specific configuration and potentially sensitive data like database passwords and API keys.
+2. Copy and paste this code in.
+```bash
+# application.properties (DEV)
+spring.application.name=spring-boot
+
+# JDBC points to the HOST port you mapped in docker-compose 
+spring.datasource.url=jdbc:postgresql://localhost:5332/appdb
+spring.datasource.username=app
+spring.datasource.password=secret
+spring.datasource.driver-class-name=org.postgresql.Driver
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+```
+
 ### 2. Start the Database
 Navigate to the backend directory and start PostgreSQL using Docker Compose:
 ```bash
