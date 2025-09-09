@@ -53,8 +53,13 @@ cd capstone_project
 ```
 
 After cloning the repository, create your local configuration file:
-1. Create a file in backend/src/main/resources called 'application.properties'. This file should not be committed to version control as it contains environment-specific configuration and potentially sensitive data like database passwords and API keys.
-2. Copy and paste this code in.
+1. Create a file in backend/src/main/resources called 'application.properties'. This file should not be committed to version control as it contains environment-specific configuration and potentially sensitive data like database passwords and API keys. To create the file, run these commands in order:
+```bash
+# Make sure you are in the capstone_project directory
+mkdir -p backend/src/main/resources
+touch backend/src/main/resources/application.properties
+```
+3. Copy and paste this code in.
 ```bash
 # application.properties (DEV)
 spring.application.name=spring-boot

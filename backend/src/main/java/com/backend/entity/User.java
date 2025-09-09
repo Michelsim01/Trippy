@@ -13,6 +13,39 @@ import java.time.LocalDateTime;
 @Table(name = "users", 
        uniqueConstraints = @UniqueConstraint(columnNames = "email"))
 public class User {
+    // Relationships
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<ArticleComment> articleComments;
+
+    @OneToMany(mappedBy = "guide", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Experience> experiences;
+
+    @OneToMany(mappedBy = "traveler", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Booking> bookings;
+
+    @OneToMany(mappedBy = "reviewer", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Review> reviews;
+
+    @OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<TravelArticle> travelArticles;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Notification> notifications;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<WishlistItem> wishlistItems;
+
+    @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Message> sentMessages;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private TripPoints tripPoints;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private UserSurvey userSurvey;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private java.util.List<Transaction> transactions;
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -144,6 +177,14 @@ public class User {
     
     public String getProfileImageUrl() {
         return profileImageUrl;
+    }
+
+    public java.util.List<ArticleComment> getArticleComments() {
+        return articleComments;
+    }
+
+    public void setArticleComments(java.util.List<ArticleComment> articleComments) {
+        this.articleComments = articleComments;
     }
     
     public void setProfileImageUrl(String profileImageUrl) {

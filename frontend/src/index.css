@@ -1,68 +1,165 @@
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@import "tailwindcss";
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Define custom colors for Tailwind CSS v4 */
+@layer base {
+  :root {
+    /* Primary colors */
+    --color-primary-1: #4AC63F;
+    --color-primary-2: #F6C92D;
+    --color-primary-3: #FD7FE9;
+    --color-primary-4: #62B3FD;
+
+    /* Neutral colors */
+    --color-neutrals-1: #141416;
+    --color-neutrals-2: #23262F;
+    --color-neutrals-3: #353945;
+    --color-neutrals-4: #777E90;
+    --color-neutrals-5: #B1B5C3;
+    --color-neutrals-6: #E6E8EC;
+    --color-neutrals-7: #F4F5F6;
+    --color-neutrals-8: #FCFCFD;
+
+    /* Font families */
+    --font-family-dm-sans: 'DM Sans', sans-serif;
+    --font-family-poppins: 'Poppins', sans-serif;
+  }
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+/* Custom utility classes for v4 compatibility */
+@layer utilities {
+  .bg-primary-1 {
+    background-color: var(--color-primary-1);
+  }
+
+  .bg-primary-2 {
+    background-color: var(--color-primary-2);
+  }
+
+  .bg-primary-3 {
+    background-color: var(--color-primary-3);
+  }
+
+  .bg-primary-4 {
+    background-color: var(--color-primary-4);
+  }
+
+  .bg-neutrals-1 {
+    background-color: var(--color-neutrals-1);
+  }
+
+  .bg-neutrals-2 {
+    background-color: var(--color-neutrals-2);
+  }
+
+  .bg-neutrals-3 {
+    background-color: var(--color-neutrals-3);
+  }
+
+  .bg-neutrals-4 {
+    background-color: var(--color-neutrals-4);
+  }
+
+  .bg-neutrals-5 {
+    background-color: var(--color-neutrals-5);
+  }
+
+  .bg-neutrals-6 {
+    background-color: var(--color-neutrals-6);
+  }
+
+  .bg-neutrals-7 {
+    background-color: var(--color-neutrals-7);
+  }
+
+  .bg-neutrals-8 {
+    background-color: var(--color-neutrals-8);
+  }
+
+  .text-primary-1 {
+    color: var(--color-primary-1);
+  }
+
+  .text-primary-2 {
+    color: var(--color-primary-2);
+  }
+
+  .text-primary-3 {
+    color: var(--color-primary-3);
+  }
+
+  .text-primary-4 {
+    color: var(--color-primary-4);
+  }
+
+  .text-neutrals-1 {
+    color: var(--color-neutrals-1);
+  }
+
+  .text-neutrals-2 {
+    color: var(--color-neutrals-2);
+  }
+
+  .text-neutrals-3 {
+    color: var(--color-neutrals-3);
+  }
+
+  .text-neutrals-4 {
+    color: var(--color-neutrals-4);
+  }
+
+  .text-neutrals-5 {
+    color: var(--color-neutrals-5);
+  }
+
+  .text-neutrals-6 {
+    color: var(--color-neutrals-6);
+  }
+
+  .text-neutrals-7 {
+    color: var(--color-neutrals-7);
+  }
+
+  .text-neutrals-8 {
+    color: var(--color-neutrals-8);
+  }
+
+  .border-primary-1 {
+    border-color: var(--color-primary-1);
+  }
+
+  .border-neutrals-6 {
+    border-color: var(--color-neutrals-6);
+  }
+
+  .border-neutrals-7 {
+    border-color: var(--color-neutrals-7);
+  }
 }
-a:hover {
-  color: #535bf2;
+
+/* Reset and base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  font-family: var(--font-family-poppins);
+  background-color: var(--color-neutrals-8);
+  color: var(--color-neutrals-2);
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+/* Utility class for hiding scrollbars */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  /* Internet Explorer 10+ */
+  scrollbar-width: none;
+  /* Firefox */
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+  /* Safari and Chrome */
 }
