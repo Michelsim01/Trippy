@@ -8,20 +8,24 @@ const LoginSection = () => (
         </div>
         <div className="space-y-4">
             <div>
-                <label className="block text-sm font-medium text-neutrals-4 mb-2 uppercase tracking-wider">
+                <label className="field-label" htmlFor="password">
                     Password
                 </label>
-                <div className="relative">
+                <div className="input-container">
                     <input
+                        id="password"
                         type="password"
-                        className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1 text-lg tracking-widest"
+                        className="input-field white tracking-widest"
                         defaultValue="**************"
                         readOnly
                     />
                 </div>
                 <p className="text-sm text-neutrals-4 mt-2">Last updated 1 month ago</p>
             </div>
-            <button className="px-6 py-3 border border-neutrals-6 rounded-full text-neutrals-1 font-medium hover:bg-neutrals-7 transition-colors">
+            <button
+                className="btn btn-outline-primary btn-md"
+                type="button"
+            >
                 Update password
             </button>
         </div>

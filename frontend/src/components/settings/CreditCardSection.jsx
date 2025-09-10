@@ -30,61 +30,66 @@ const CreditCardSection = ({ showAddCard, toggleAddCard }) => (
                             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCA0MCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0VCMDAxQiIvPgo8Y2lyY2xlIGN4PSIxNiIgY3k9IjEyIiByPSI2IiBmaWxsPSIjRkY1RjAwIi8+CjxjaXJjbGUgY3g9IjI0IiBjeT0iMTIiIHI9IjYiIGZpbGw9IiNGRjVGMDAiLz4KPHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCA0MCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIyMCIgY3k9IjEyIiByPSI0IiBmaWxsPSIjRkY1RjAwIi8+Cjwvc3ZnPgo=" alt="Mastercard" className="h-6" />
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-xs font-medium text-neutrals-4 mb-2 uppercase tracking-wider">
-                                Card Number
-                            </label>
-                            <input
-                                type="text"
-                                className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
-                                placeholder="9224 6666 2236 8888"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="field-label" htmlFor="cardNumber">
+                                    Card Number
+                                </label>
+                                <input
+                                    id="cardNumber"
+                                    type="text"
+                                    className="input-field white"
+                                    placeholder="9224 6666 2236 8888"
+                                />
+                            </div>
+                            <div>
+                                <label className="field-label" htmlFor="cardHolder">
+                                    Card Holder
+                                </label>
+                                <input
+                                    id="cardHolder"
+                                    type="text"
+                                    className="input-field white"
+                                    placeholder="John Doe"
+                                />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-neutrals-4 mb-2 uppercase tracking-wider">
-                                Card Holder
-                            </label>
-                            <input
-                                type="text"
-                                className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
-                                placeholder="9224 6666 2236 8888"
-                            />
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label className="field-label" htmlFor="expDate">
+                                    Expiration Date
+                                </label>
+                                <input
+                                    id="expDate"
+                                    type="text"
+                                    className="input-field white"
+                                    placeholder="MM/YY"
+                                />
+                            </div>
+                            <div>
+                                <label className="field-label" htmlFor="cvc">
+                                    CVC
+                                </label>
+                                <input
+                                    id="cvc"
+                                    type="text"
+                                    className="input-field white"
+                                    placeholder="123"
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div>
-                            <label className="block text-xs font-medium text-neutrals-4 mb-2 uppercase tracking-wider">
-                                Expiration Date
-                            </label>
-                            <input
-                                type="text"
-                                className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
-                                placeholder="MM/YY"
-                            />
+                        <div className="flex gap-3">
+                            <button className="btn btn-primary btn-md" type="button">
+                                Save
+                            </button>
+                            <button 
+                                onClick={toggleAddCard}
+                                className="btn btn-outline-primary btn-md"
+                                type="button"
+                            >
+                                Cancel
+                            </button>
                         </div>
-                        <div>
-                            <label className="block text-xs font-medium text-neutrals-4 mb-2 uppercase tracking-wider">
-                                CVC
-                            </label>
-                            <input
-                                type="text"
-                                className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
-                                placeholder="123"
-                            />
-                        </div>
-                    </div>
-                    <div className="flex gap-3">
-                        <button className="px-6 py-2 bg-primary-1 text-white rounded-lg font-medium hover:opacity-90 transition-colors">
-                            Save
-                        </button>
-                        <button 
-                            onClick={toggleAddCard}
-                            className="px-6 py-2 border border-neutrals-6 rounded-lg font-medium hover:bg-neutrals-7 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
                 </div>
             )}
             {!showAddCard && (

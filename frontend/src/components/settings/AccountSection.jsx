@@ -12,7 +12,7 @@ const AccountSection = () => (
                 <p className="text-sm text-neutrals-4 mb-4">
                     Once you delete your account, there is no going back. Please be certain.
                 </p>
-                <button className="px-6 py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors">
+                <button className="btn btn-accent btn-lg" type="button">
                     Delete Account
                 </button>
             </div>

@@ -18,9 +18,13 @@ const NotificationsSection = () => (
                         <h3 className="font-medium text-neutrals-1">{setting.title}</h3>
                         <p className="text-sm text-neutrals-4">{setting.desc}</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked={index < 2} />
-                        <div className="w-11 h-6 bg-neutrals-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-1"></div>
+                    <label className="toggle-button">
+                        <input
+                            type="checkbox"
+                            className="toggle-input"
+                            defaultChecked={index < 2}
+                        />
+                        <span className="toggle-slider"></span>
                     </label>
                 </div>
             ))}

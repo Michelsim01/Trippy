@@ -25,43 +25,47 @@ const ProfileSection = () => (
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                    <label className="field-label" htmlFor="firstName">
                         First Name
                     </label>
                     <input
+                        id="firstName"
                         type="text"
-                        className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
+                        className="input-field white"
                         defaultValue="John"
                     />
                 </div>
                 <div>
-                    <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                    <label className="field-label" htmlFor="lastName">
                         Last Name
                     </label>
                     <input
+                        id="lastName"
                         type="text"
-                        className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
+                        className="input-field white"
                         defaultValue="Doe"
                     />
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                <label className="field-label" htmlFor="email">
                     Email
                 </label>
                 <input
+                    id="email"
                     type="email"
-                    className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
+                    className="input-field white"
                     defaultValue="john.doe@example.com"
                 />
             </div>
             <div>
-                <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                <label className="field-label" htmlFor="bio">
                     Bio
                 </label>
                 <textarea
+                    id="bio"
                     rows="3"
-                    className="w-full px-4 py-3 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1"
+                    className="textarea-field"
                     placeholder="Tell us about yourself..."
                 ></textarea>
             </div>

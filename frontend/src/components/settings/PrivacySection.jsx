@@ -12,7 +12,14 @@ const PrivacySection = () => (
                     <h3 className="font-medium text-neutrals-1">Profile visibility</h3>
                     <p className="text-sm text-neutrals-4">Control who can see your profile</p>
                 </div>
-                <select className="px-3 py-2 border border-neutrals-6 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-1">
+                <style>{`
+                    .select-field.sm {
+                        max-width: 180px;
+                        min-width: 120px;
+                        width: 100%;
+                    }
+                `}</style>
+                <select className="select-field sm" defaultValue="Public">
                     <option>Public</option>
                     <option>Friends only</option>
                     <option>Private</option>
@@ -23,9 +30,9 @@ const PrivacySection = () => (
                     <h3 className="font-medium text-neutrals-1">Show online status</h3>
                     <p className="text-sm text-neutrals-4">Let others see when you're online</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" defaultChecked />
-                    <div className="w-11 h-6 bg-neutrals-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-1"></div>
+                <label className="toggle-button">
+                    <input type="checkbox" className="toggle-input" defaultChecked />
+                    <span className="toggle-slider"></span>
                 </label>
             </div>
             <div className="flex items-center justify-between py-3">
@@ -33,9 +40,9 @@ const PrivacySection = () => (
                     <h3 className="font-medium text-neutrals-1">Data sharing</h3>
                     <p className="text-sm text-neutrals-4">Share anonymized data to improve our service</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" />
-                    <div className="w-11 h-6 bg-neutrals-6 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-1"></div>
+                <label className="toggle-button">
+                    <input type="checkbox" className="toggle-input" />
+                    <span className="toggle-slider"></span>
                 </label>
             </div>
         </div>

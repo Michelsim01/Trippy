@@ -163,3 +163,647 @@ body {
   display: none;
   /* Safari and Chrome */
 }
+
+/* Input Field Styles */
+.input-field {
+  width: 100%;
+  padding: 16px 20px;
+  font-family: var(--font-family-poppins);
+  font-size: 16px;
+  font-weight: 400;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  outline: none;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* Default input state */
+.input-field.default {
+  background-color: var(--color-neutrals-7);
+  color: var(--color-neutrals-4);
+  border-color: var(--color-neutrals-4);
+}
+
+.input-field.default::placeholder {
+  color: var(--color-neutrals-4);
+}
+
+/* White background variant */
+.input-field.white {
+  color: var(--color-neutrals-2);
+  border-color: var(--color-neutrals-6);
+}
+
+.input-field.white::placeholder {
+  color: var(--color-neutrals-4);
+}
+
+/* Focused/Active state */
+.input-field.focused,
+.input-field:focus {
+  border-color: var(--color-primary-1);
+  color: var(--color-neutrals-2);
+}
+
+.input-field.focused::placeholder,
+.input-field:focus::placeholder {
+  color: var(--color-neutrals-4);
+}
+
+/* Error state */
+.input-field.error {
+  background-color: white;
+  border-color: var(--color-primary-3);
+  color: var(--color-neutrals-2);
+}
+
+/* Success/Valid state */
+.input-field.success {
+  background-color: white;
+  border-color: var(--color-primary-4);
+  color: var(--color-neutrals-2);
+}
+
+/* Loading state */
+.input-field.loading {
+  background-color: white;
+  border-color: var(--color-primary-1);
+  color: var(--color-neutrals-2);
+}
+
+/* Input container for positioning icons */
+.input-container {
+  position: relative;
+  width: 100%;
+}
+
+/* Right icon styling */
+.input-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+/* Submit/Arrow icon */
+.input-icon.submit {
+  background-color: var(--color-primary-1);
+  color: white;
+}
+
+/* Clear/X icon */
+.input-icon.clear {
+  background-color: var(--color-neutrals-5);
+  color: white;
+}
+
+/* Loading spinner icon */
+.input-icon.loading {
+  background-color: var(--color-primary-1);
+  color: white;
+}
+
+/* Success checkmark icon */
+.input-icon.success {
+  background-color: var(--color-primary-4);
+  color: white;
+}
+
+/* Error message styling */
+.error-message {
+  background-color: white;
+  color: var(--color-primary-3);
+  padding: 12px 20px;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+/* Form field labels */
+.field-label {
+  font-family: var(--font-family-poppins);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-neutrals-4);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* Success state label */
+.field-label.success {
+  color: var(--color-primary-1);
+}
+
+/* Error state label */
+.field-label.error {
+  color: var(--color-primary-3);
+}
+
+/* Form section styling */
+.form-section {
+  margin-bottom: 24px;
+}
+
+/* Display name taken message */
+.taken-message {
+  background-color: white;
+  color: var(--color-primary-3);
+  padding: 8px 20px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 400;
+  margin-top: 8px;
+  display: inline-block;
+}
+
+/* Textarea for bio/introduce section */
+.textarea-field {
+  width: 100%;
+  padding: 16px 20px;
+  font-family: var(--font-family-poppins);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-neutrals-2);
+  background-color: white;
+  border: 2px solid var(--color-neutrals-6);
+  border-radius: 20px;
+  outline: none;
+  resize: vertical;
+  min-height: 120px;
+  transition: all 0.3s ease;
+}
+
+.textarea-field:focus {
+  border-color: var(--color-primary-1);
+}
+
+.textarea-field::placeholder {
+  color: var(--color-neutrals-4);
+}
+
+/* Select dropdown styling */
+.select-field {
+  width: 100%;
+  padding: 16px 20px;
+  font-family: var(--font-family-poppins);
+  font-size: 16px;
+  color: var(--color-neutrals-2);
+  background-color: white;
+  border: 2px solid var(--color-neutrals-6);
+  border-radius: 50px;
+  outline: none;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23777E90' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 20px center;
+  background-size: 20px;
+  padding-right: 50px;
+}
+
+.select-field:focus {
+  border-color: var(--color-primary-1);
+}
+
+/* Animation for loading spinner */
+@keyframes spin {
+  0% {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  100% {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+.input-icon.loading::after {
+  content: '';
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-family-poppins);
+  font-weight: 600;
+  border: 2px solid transparent;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  outline: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Button sizes */
+.btn-sm {
+  padding: 8px 16px;
+  font-size: 14px;
+  min-height: 36px;
+}
+
+.btn-md {
+  padding: 12px 24px;
+  font-size: 16px;
+  min-height: 48px;
+}
+
+.btn-lg {
+  padding: 16px 32px;
+  font-size: 18px;
+  min-height: 56px;
+}
+
+.btn-xl {
+  padding: 20px 40px;
+  font-size: 20px;
+  min-height: 64px;
+}
+
+/* Primary button - Green */
+.btn-primary {
+  background-color: var(--color-primary-1);
+  color: white;
+  border-color: var(--color-primary-1);
+}
+
+.btn-primary:hover {
+  background-color: #3da832;
+  border-color: #3da832;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(74, 198, 63, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(74, 198, 63, 0.2);
+}
+
+/* Secondary button - Yellow */
+.btn-secondary {
+  background-color: var(--color-primary-2);
+  color: var(--color-neutrals-1);
+  border-color: var(--color-primary-2);
+}
+
+.btn-secondary:hover {
+  background-color: #e6b526;
+  border-color: #e6b526;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(246, 201, 45, 0.3);
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(246, 201, 45, 0.2);
+}
+
+/* Accent button - Pink */
+.btn-accent {
+  background-color: var(--color-primary-3);
+  color: white;
+  border-color: var(--color-primary-3);
+}
+
+.btn-accent:hover {
+  background-color: #fc5ce1;
+  border-color: #fc5ce1;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(253, 127, 233, 0.3);
+}
+
+.btn-accent:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(253, 127, 233, 0.2);
+}
+
+/* Info button - Blue */
+.btn-info {
+  background-color: var(--color-primary-4);
+  color: white;
+  border-color: var(--color-primary-4);
+}
+
+.btn-info:hover {
+  background-color: #3a9df7;
+  border-color: #3a9df7;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(98, 179, 253, 0.3);
+}
+
+.btn-info:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(98, 179, 253, 0.2);
+}
+
+/* Outline buttons */
+.btn-outline-primary {
+  background-color: transparent;
+  color: var(--color-primary-1);
+  border-color: var(--color-primary-1);
+}
+
+.btn-outline-primary:hover {
+  background-color: var(--color-primary-1);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(74, 198, 63, 0.2);
+}
+
+.btn-outline-secondary {
+  background-color: transparent;
+  color: var(--color-primary-2);
+  border-color: var(--color-primary-2);
+}
+
+.btn-outline-secondary:hover {
+  background-color: var(--color-primary-2);
+  color: var(--color-neutrals-1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(246, 201, 45, 0.2);
+}
+
+.btn-outline-accent {
+  background-color: transparent;
+  color: var(--color-primary-3);
+  border-color: var(--color-primary-3);
+}
+
+.btn-outline-accent:hover {
+  background-color: var(--color-primary-3);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(253, 127, 233, 0.2);
+}
+
+.btn-outline-info {
+  background-color: transparent;
+  color: var(--color-primary-4);
+  border-color: var(--color-primary-4);
+}
+
+.btn-outline-info:hover {
+  background-color: var(--color-primary-4);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(98, 179, 253, 0.2);
+}
+
+/* Ghost/Text buttons */
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-neutrals-3);
+  border-color: transparent;
+  padding: 12px 16px;
+}
+
+.btn-ghost:hover {
+  background-color: var(--color-neutrals-7);
+  color: var(--color-neutrals-2);
+}
+
+/* Disabled state */
+.btn:disabled,
+.btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn:disabled:hover,
+.btn.disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Loading state for buttons */
+.btn.loading {
+  position: relative;
+  color: transparent;
+}
+
+.btn.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.btn-outline-primary.loading::after,
+.btn-outline-secondary.loading::after,
+.btn-outline-accent.loading::after,
+.btn-outline-info.loading::after,
+.btn-ghost.loading::after {
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-top: 2px solid currentColor;
+}
+
+/* Icon buttons */
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  min-height: auto;
+  border-radius: 50%;
+}
+
+.btn-icon-sm {
+  width: 36px;
+  height: 36px;
+}
+
+.btn-icon-lg {
+  width: 56px;
+  height: 56px;
+}
+
+.btn-icon-xl {
+  width: 64px;
+  height: 64px;
+}
+
+/* Toggle Button Styles */
+.toggle-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: relative;
+  width: 56px;
+  height: 32px;
+  background-color: var(--color-neutrals-5);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 24px;
+  height: 24px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Toggle checked state */
+.toggle-input:checked + .toggle-slider {
+  background-color: var(--color-primary-1);
+}
+
+.toggle-input:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+/* Toggle hover state */
+.toggle-button:hover .toggle-slider {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-button:hover .toggle-input:checked + .toggle-slider {
+  box-shadow: 0 4px 12px rgba(74, 198, 63, 0.3);
+}
+
+/* Toggle focus state */
+.toggle-input:focus + .toggle-slider {
+  outline: 2px solid var(--color-primary-1);
+  outline-offset: 2px;
+}
+
+/* Toggle disabled state */
+.toggle-input:disabled + .toggle-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.toggle-input:disabled + .toggle-slider::before {
+  background-color: var(--color-neutrals-6);
+}
+
+/* Toggle sizes */
+.toggle-sm .toggle-slider {
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+}
+
+.toggle-sm .toggle-slider::before {
+  width: 18px;
+  height: 18px;
+  top: 3px;
+  left: 3px;
+}
+
+.toggle-sm .toggle-input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.toggle-lg .toggle-slider {
+  width: 68px;
+  height: 38px;
+  border-radius: 19px;
+}
+
+.toggle-lg .toggle-slider::before {
+  width: 30px;
+  height: 30px;
+  top: 4px;
+  left: 4px;
+}
+
+.toggle-lg .toggle-input:checked + .toggle-slider::before {
+  transform: translateX(30px);
+}
+
+/* Toggle with label */
+.toggle-label {
+  margin-left: 12px;
+  font-family: var(--font-family-poppins);
+  font-size: 16px;
+  color: var(--color-neutrals-2);
+  font-weight: 500;
+}
+
+/* Toggle colors */
+.toggle-secondary .toggle-input:checked + .toggle-slider {
+  background-color: var(--color-primary-2);
+}
+
+.toggle-accent .toggle-input:checked + .toggle-slider {
+  background-color: var(--color-primary-3);
+}
+
+.toggle-info .toggle-input:checked + .toggle-slider {
+  background-color: var(--color-primary-4);
+}
+
+/* Button group */
+.btn-group {
+  display: inline-flex;
+  gap: 0;
+}
+
+.btn-group .btn {
+  border-radius: 0;
+  border-right-width: 0;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: 50px;
+  border-bottom-left-radius: 50px;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 50px;
+  border-bottom-right-radius: 50px;
+  border-right-width: 2px;
+}
+
+.btn-group .btn:only-child {
+  border-radius: 50px;
+  border-right-width: 2px;
+}
