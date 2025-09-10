@@ -3,14 +3,43 @@ package com.backend.controller;
 import com.backend.entity.WishlistItem;
 import com.backend.repository.WishlistItemRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/wishlist-items")
 public class WishlistItemController {
     @Autowired
     private WishlistItemRepository wishlistItemRepository;
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Map<String, Object>>> getByUser(@PathVariable Long userId) {
+        List<WishlistItem> items = wishlistItemRepository.findByUser_Id(userId);
+        List<Map<String, Object>> result = items.stream().map(item -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("wishlistItemId", item.getWishlistItemId());
+            m.put("userId", item.getUser().getId());
+            m.put("addedAt", item.getAddedAt());
+            Map<String, Object> exp = new HashMap<>();
+            exp.put("experienceId", item.getExperience().getExperienceId());
+            exp.put("title", item.getExperience().getTitle());
+            exp.put("shortDescription", item.getExperience().getShortDescription());
+            exp.put("coverPhotoUrl", item.getExperience().getCoverPhotoUrl());
+            exp.put("price", item.getExperience().getPrice());
+            exp.put("duration", item.getExperience().getDuration());
+            exp.put("location", item.getExperience().getLocation());
+            exp.put("category", item.getExperience().getCategory());
+            exp.put("status", item.getExperience().getStatus());
+            exp.put("averageRating", item.getExperience().getAverageRating());
+            exp.put("totalReviews", item.getExperience().getTotalReviews());
+            m.put("experience", exp);
+            return m;
+        }).toList();
+        return ResponseEntity.ok(result);
+    }
 
     @GetMapping
     public List<WishlistItem> getAllWishlistItems() {
