@@ -15,6 +15,7 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import SettingsPage from './pages/SettingsPage'
 import LogoutPage from './pages/LogoutPage'
+import SearchResultsPage from './pages/SearchResultsPage'
 import './App.css'
 
 // Mock authentication state - in real app this would come from context/redux
@@ -43,6 +44,10 @@ export default function App() {
           <Route
             path="/home"
             element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
+          />
+          <Route
+            path="/search"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <SearchResultsPage />}
           />
           <Route
             path="/notifications"
