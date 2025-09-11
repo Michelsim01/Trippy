@@ -10,10 +10,10 @@ import WishlistPage from './pages/WishlistPage'
 import MessagesPage from './pages/MessagesPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
-import CreateExperienceBasicInfo from './pages/CreateExperienceBasicInfo'
-import CreateExperienceDetails from './pages/CreateExperienceDetails'
-import CreateExperiencePricing from './pages/CreateExperiencePricing'
-import CreateExperienceAvailability from './pages/CreateExperienceAvailability'
+import CreateExperienceBasicInfoPage from './pages/CreateExperienceBasicInfoPage'
+import CreateExperienceDetailsPage from './pages/CreateExperienceDetailsPage'
+import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
+import CreateExperienceAvailabilityPage from './pages/CreateExperienceAvailabilityPage'
 // import CreateExperienceSuccess from './pages/CreateExperienceSuccess'
 import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
@@ -94,19 +94,19 @@ export default function App() {
             />
             <Route
               path="/create-experience/basic-info"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfo />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfoPage />}
             />
             <Route
               path="/create-experience/details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetails title="Details Page" />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetailsPage />}
             />
             <Route
               path="/create-experience/pricing"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricing />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricingPage />}
             />
             <Route
               path="/create-experience/availability"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailability />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailabilityPage />}
             />
             <Route
               path="/create-experience/success"

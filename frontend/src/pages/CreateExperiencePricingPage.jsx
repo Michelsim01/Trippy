@@ -6,7 +6,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
-export default function CreateExperiencePricing() {
+export default function CreateExperiencePricingPage() {
   const navigate = useNavigate();
   const { formData: contextData, updateFormData } = useFormData();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
