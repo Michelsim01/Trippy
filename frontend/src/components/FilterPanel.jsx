@@ -4,11 +4,25 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
     const [localFilters, setLocalFilters] = useState(filters);
 
     const handlePriceChange = (field, value) => {
+        // Handle empty string and convert to number
+        const numericValue = value === '' ? 0 : parseInt(value) || 0;
         const newFilters = {
             ...localFilters,
             priceRange: {
                 ...localFilters.priceRange,
-                [field]: parseInt(value) || 0
+                [field]: numericValue
+            }
+        };
+        setLocalFilters(newFilters);
+        onFiltersChange(newFilters);
+    };
+
+    const handlePriceFilterToggle = () => {
+        const newFilters = {
+            ...localFilters,
+            priceRange: {
+                ...localFilters.priceRange,
+                enabled: !localFilters.priceRange.enabled
             }
         };
         setLocalFilters(newFilters);
@@ -55,7 +69,7 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
 
     const clearAllFilters = () => {
         const newFilters = {
-            priceRange: { min: 0, max: 2000 },
+            priceRange: { min: 0, max: 0, enabled: false },
             duration: '',
             startDate: '',
             endDate: '',
@@ -98,25 +112,50 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
                             <div className="p-6 space-y-8">
                                 {/* Price Range */}
                                 <div>
-                                    <h3 className="text-[16px] font-semibold text-neutrals-1 mb-4">Price Range</h3>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-[16px] font-semibold text-neutrals-1">Price Range</h3>
+                                        <label className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={localFilters.priceRange.enabled || false}
+                                                onChange={handlePriceFilterToggle}
+                                                className="mr-2 w-4 h-4 text-primary-1 border-neutrals-5 rounded focus:ring-primary-1"
+                                            />
+                                            <span className="text-[12px] text-neutrals-4">Enable</span>
+                                        </label>
+                                    </div>
                                     <div className="flex gap-4">
                                         <div className="flex-1">
-                                            <label className="block text-[12px] text-neutrals-4 mb-2">Min</label>
+                                            <label className={`block text-[12px] mb-2 ${
+                                                localFilters.priceRange.enabled ? 'text-neutrals-4' : 'text-neutrals-5'
+                                            }`}>Min</label>
                                             <input
                                                 type="number"
-                                                value={localFilters.priceRange.min}
+                                                value={localFilters.priceRange.min === 0 ? '' : localFilters.priceRange.min}
                                                 onChange={(e) => handlePriceChange('min', e.target.value)}
-                                                className="w-full px-3 py-2 border border-neutrals-6 rounded-lg text-[14px]"
+                                                disabled={!localFilters.priceRange.enabled}
+                                                className={`w-full px-3 py-2 border rounded-lg text-[14px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                                    localFilters.priceRange.enabled 
+                                                        ? 'border-neutrals-6 text-neutrals-1 bg-white' 
+                                                        : 'border-neutrals-7 text-neutrals-5 bg-neutrals-8'
+                                                }`}
                                                 placeholder="0"
                                             />
                                         </div>
                                         <div className="flex-1">
-                                            <label className="block text-[12px] text-neutrals-4 mb-2">Max</label>
+                                            <label className={`block text-[12px] mb-2 ${
+                                                localFilters.priceRange.enabled ? 'text-neutrals-4' : 'text-neutrals-5'
+                                            }`}>Max</label>
                                             <input
                                                 type="number"
-                                                value={localFilters.priceRange.max}
+                                                value={localFilters.priceRange.max === 0 ? '' : localFilters.priceRange.max}
                                                 onChange={(e) => handlePriceChange('max', e.target.value)}
-                                                className="w-full px-3 py-2 border border-neutrals-6 rounded-lg text-[14px]"
+                                                disabled={!localFilters.priceRange.enabled}
+                                                className={`w-full px-3 py-2 border rounded-lg text-[14px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                                    localFilters.priceRange.enabled 
+                                                        ? 'border-neutrals-6 text-neutrals-1 bg-white' 
+                                                        : 'border-neutrals-7 text-neutrals-5 bg-neutrals-8'
+                                                }`}
                                                 placeholder="2000"
                                             />
                                         </div>
@@ -245,25 +284,50 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
             <div className="space-y-8">
                 {/* Price Range */}
                 <div>
-                    <h3 className="text-[16px] font-semibold text-neutrals-1 mb-4">Price Range</h3>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-[16px] font-semibold text-neutrals-1">Price Range</h3>
+                        <label className="flex items-center">
+                            <input
+                                type="checkbox"
+                                checked={localFilters.priceRange.enabled || false}
+                                onChange={handlePriceFilterToggle}
+                                className="mr-2 w-4 h-4 text-primary-1 border-neutrals-5 rounded focus:ring-primary-1"
+                            />
+                            <span className="text-[12px] text-neutrals-4">Enable</span>
+                        </label>
+                    </div>
                     <div className="flex gap-4">
                         <div className="flex-1">
-                            <label className="block text-[12px] text-neutrals-4 mb-2">Min</label>
+                            <label className={`block text-[12px] mb-2 ${
+                                localFilters.priceRange.enabled ? 'text-neutrals-4' : 'text-neutrals-5'
+                            }`}>Min</label>
                             <input
                                 type="number"
-                                value={localFilters.priceRange.min}
+                                value={localFilters.priceRange.min === 0 ? '' : localFilters.priceRange.min}
                                 onChange={(e) => handlePriceChange('min', e.target.value)}
-                                className="w-full px-3 py-2 border border-neutrals-6 rounded-lg text-[14px]"
+                                disabled={!localFilters.priceRange.enabled}
+                                className={`w-full px-3 py-2 border rounded-lg text-[14px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                    localFilters.priceRange.enabled 
+                                        ? 'border-neutrals-6 text-neutrals-1 bg-white' 
+                                        : 'border-neutrals-7 text-neutrals-5 bg-neutrals-8'
+                                }`}
                                 placeholder="0"
                             />
                         </div>
                         <div className="flex-1">
-                            <label className="block text-[12px] text-neutrals-4 mb-2">Max</label>
+                            <label className={`block text-[12px] mb-2 ${
+                                localFilters.priceRange.enabled ? 'text-neutrals-4' : 'text-neutrals-5'
+                            }`}>Max</label>
                             <input
                                 type="number"
-                                value={localFilters.priceRange.max}
+                                value={localFilters.priceRange.max === 0 ? '' : localFilters.priceRange.max}
                                 onChange={(e) => handlePriceChange('max', e.target.value)}
-                                className="w-full px-3 py-2 border border-neutrals-6 rounded-lg text-[14px]"
+                                disabled={!localFilters.priceRange.enabled}
+                                className={`w-full px-3 py-2 border rounded-lg text-[14px] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                                    localFilters.priceRange.enabled 
+                                        ? 'border-neutrals-6 text-neutrals-1 bg-white' 
+                                        : 'border-neutrals-7 text-neutrals-5 bg-neutrals-8'
+                                }`}
                                 placeholder="2000"
                             />
                         </div>

@@ -4,7 +4,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import FilterPanel from '../components/FilterPanel';
-import SortDropdown from '../components/SortDropdown';
+import FilterBar from '../components/FilterBar';
 
 // Mock images - in production these would come from your image assets
 const experienceImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
@@ -92,11 +92,11 @@ const mockExperiences = [
         reviewCount: 245,
         duration: "Multi-day",
         durationHours: 168, // 7 days in hours
-        availableFrom: "2024-07-20",
-        availableTo: "2024-12-20",
+        availableFrom: "2025-07-20",
+        availableTo: "2025-12-20",
         isLiked: false,
         timeOfDay: "morning",
-        listingDate: "2024-06-01",
+        listingDate: "2025-06-01",
         relevanceScore: 0.95
     },
     { 
@@ -109,11 +109,11 @@ const mockExperiences = [
         reviewCount: 189,
         duration: "Multi-day",
         durationHours: 120, // 5 days in hours
-        availableFrom: "2024-08-01",
-        availableTo: "2024-11-30",
+        availableFrom: "2025-08-01",
+        availableTo: "2025-11-30",
         isLiked: true,
         timeOfDay: "afternoon",
-        listingDate: "2024-07-15",
+        listingDate: "2025-07-15",
         relevanceScore: 0.87
     },
     { 
@@ -126,11 +126,11 @@ const mockExperiences = [
         reviewCount: 156,
         duration: "1-3 hours",
         durationHours: 2.5,
-        availableFrom: "2024-09-15",
-        availableTo: "2024-12-15",
+        availableFrom: "2025-09-15",
+        availableTo: "2025-12-15",
         isLiked: false,
         timeOfDay: "evening",
-        listingDate: "2024-08-20",
+        listingDate: "2025-08-20",
         relevanceScore: 0.72
     },
     { 
@@ -143,11 +143,11 @@ const mockExperiences = [
         reviewCount: 312,
         duration: "Full day",
         durationHours: 8,
-        availableFrom: "2024-07-01",
-        availableTo: "2024-10-31",
+        availableFrom: "2025-07-01",
+        availableTo: "2025-10-31",
         isLiked: true,
         timeOfDay: "morning",
-        listingDate: "2024-05-10",
+        listingDate: "2025-05-10",
         relevanceScore: 0.83
     },
     { 
@@ -160,11 +160,11 @@ const mockExperiences = [
         reviewCount: 78,
         duration: "Multi-day",
         durationHours: 144, // 6 days in hours
-        availableFrom: "2024-06-01",
-        availableTo: "2024-09-30",
+        availableFrom: "2025-06-01",
+        availableTo: "2025-09-30",
         isLiked: false,
         timeOfDay: "morning",
-        listingDate: "2024-04-25",
+        listingDate: "2025-04-25",
         relevanceScore: 0.91
     },
     { 
@@ -177,11 +177,11 @@ const mockExperiences = [
         reviewCount: 203,
         duration: "Multi-day",
         durationHours: 240, // 10 days in hours
-        availableFrom: "2024-05-01",
-        availableTo: "2024-10-15",
+        availableFrom: "2025-05-01",
+        availableTo: "2025-10-15",
         isLiked: true,
         timeOfDay: "afternoon",
-        listingDate: "2024-03-12",
+        listingDate: "2025-03-12",
         relevanceScore: 0.79
     },
     { 
@@ -194,11 +194,11 @@ const mockExperiences = [
         reviewCount: 134,
         duration: "Multi-day",
         durationHours: 192, // 8 days in hours
-        availableFrom: "2024-04-01",
-        availableTo: "2024-11-30",
+        availableFrom: "2025-04-01",
+        availableTo: "2025-11-30",
         isLiked: false,
         timeOfDay: "evening",
-        listingDate: "2024-02-28",
+        listingDate: "2025-02-28",
         relevanceScore: 0.68
     },
     { 
@@ -211,11 +211,11 @@ const mockExperiences = [
         reviewCount: 267,
         duration: "Half day",
         durationHours: 4,
-        availableFrom: "2024-11-01",
-        availableTo: "2024-03-31",
+        availableFrom: "2025-11-01",
+        availableTo: "2025-12-31",
         isLiked: false,
         timeOfDay: "evening",
-        listingDate: "2024-09-05",
+        listingDate: "2025-09-05",
         relevanceScore: 0.88
     },
 ];
@@ -230,7 +230,7 @@ const SearchResultsPage = () => {
 
     // Filter states
     const [filters, setFilters] = useState({
-        priceRange: { min: 0, max: 2000 },
+        priceRange: { min: 0, max: 0, enabled: false }, // Start disabled
         duration: '',
         startDate: '',
         endDate: '',
@@ -239,7 +239,7 @@ const SearchResultsPage = () => {
     });
 
     // Sort state
-    const [sortBy, setSortBy] = useState('bestMatch');
+    const [sortBy, setSortBy] = useState('bestMatch'); // Default to best match for search relevance
 
     const query = searchParams.get('q') || '';
 
@@ -248,9 +248,14 @@ const SearchResultsPage = () => {
     // Filter function
     const applyFilters = (experiences) => {
         return experiences.filter(experience => {
-            // Price filter
-            if (experience.salePrice < filters.priceRange.min || experience.salePrice > filters.priceRange.max) {
-                return false;
+            // Price filter - only apply if enabled and values are set
+            if (filters.priceRange.enabled) {
+                if (filters.priceRange.min > 0 && experience.salePrice < filters.priceRange.min) {
+                    return false;
+                }
+                if (filters.priceRange.max > 0 && experience.salePrice > filters.priceRange.max) {
+                    return false;
+                }
             }
 
             // Duration filter
@@ -442,15 +447,16 @@ const SearchResultsPage = () => {
                                     
                                     {/* Results Content */}
                                     <div className="flex-1">
-                                        {/* Desktop Sort Control */}
-                                        <div className="hidden lg:flex items-center justify-between mb-6">
-                                            <p className="text-[14px] text-neutrals-4">
-                                                Showing {filteredResults.length} results
-                                            </p>
-                                            <SortDropdown
+                                        {/* Desktop Filter Bar */}
+                                        <div className="hidden lg:block mb-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <p className="text-[14px] text-neutrals-4">
+                                                    Showing {filteredResults.length} results
+                                                </p>
+                                            </div>
+                                            <FilterBar
                                                 currentSort={sortBy}
                                                 onSortChange={handleSortChange}
-                                                variant="desktop"
                                             />
                                         </div>
 
@@ -607,12 +613,12 @@ const SearchResultsPage = () => {
                         ) : filteredResults.length > 0 ? (
                             /* Search Results - Mobile */
                             <>
-                                {/* Mobile Sort Control */}
+                                {/* Mobile Filter Bar */}
                                 <div className="mb-4">
-                                    <SortDropdown
+                                    <FilterBar
                                         currentSort={sortBy}
                                         onSortChange={handleSortChange}
-                                        variant="mobile"
+                                        className="flex-wrap"
                                     />
                                 </div>
 
