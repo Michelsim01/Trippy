@@ -72,12 +72,14 @@ const Navbar = ({
                                         <input
                                             type="text"
                                             placeholder="Search everything"
-                                            className="w-full h-full bg-transparent rounded-full font-poppins text-neutrals-2 placeholder-[#B1B5C3] focus:outline-none focus:ring-2 focus:ring-primary-1 transition-all"
+                                            className="input-field white"
                                             style={{
                                                 paddingLeft: '50px',
                                                 paddingRight: '24px',
                                                 fontSize: '14px',
-                                                lineHeight: '24px'
+                                                lineHeight: '24px',
+                                                borderRadius: '9999px',
+                                                height: '56px'
                                             }}
                                         />
                                     </div>
