@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import ExperienceCard from '../components/ExperienceCard';
 
 // Mock images - in production these would come from your image assets
 const heroImage = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80";
@@ -31,82 +32,17 @@ const WelcomeBanner = () => {
     );
 };
 
-const ProductCard = ({ title = "Venice, Rome & Milan", location = "Karineside", originalPrice = 699, salePrice = 548, rating = 4.9, startDate = "Tue, Jul 20", endDate = "Fri, Jul 23" }) => {
-    return (
-        <div className="flex flex-col h-[365px] w-64 shrink-0">
-            {/* Image Container */}
-            <div className="relative flex-1 bg-neutrals-2 rounded-t-[16px] overflow-hidden">
-                <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${experienceImage})` }}
-                />
-                {/* Wishlist Button */}
-                <button className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#FF6B6B" />
-                    </svg>
-                </button>
-            </div>
-
-            {/* Card Info */}
-            <div className="bg-white p-5 rounded-b-[16px] flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <h3 className="text-[16px] font-medium text-neutrals-1 leading-[24px] mb-2">
-                            {title}
-                        </h3>
-                        <div className="flex items-start justify-between">
-                            <p className="text-[12px] text-neutrals-3 leading-[20px] flex-1">
-                                {location}
-                            </p>
-                            <div className="flex items-center gap-1.5">
-                                <div className="relative">
-                                    <span className="text-[12px] font-bold text-neutrals-5 line-through">
-                                        ${originalPrice}
-                                    </span>
-                                </div>
-                                <span className="text-[12px] font-bold text-primary-1 uppercase">
-                                    ${salePrice}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-neutrals-6 rounded-[1px]" />
-
-                {/* Date and Rating */}
-                <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                        <span>{startDate}</span>
-                        <span>-</span>
-                        <span>{endDate}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" />
-                        </svg>
-                        <span className="text-[12px] font-semibold text-neutrals-1">
-                            {rating}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 const DiscoverWeekly = () => {
     const experiences = [
-        { title: "Venice, Rome & Milan", location: "Karineside", originalPrice: 699, salePrice: 548 },
-        { title: "Paris & Lyon Adventure", location: "Franceville", originalPrice: 799, salePrice: 629 },
-        { title: "Tokyo City Explorer", location: "Shibuya", originalPrice: 899, salePrice: 749 },
-        { title: "Barcelona Highlights", location: "Catalunya", originalPrice: 599, salePrice: 459 },
-        { title: "Swiss Alps Journey", location: "Interlaken", originalPrice: 999, salePrice: 819 },
-        { title: "Greek Island Hopping", location: "Santorini", originalPrice: 849, salePrice: 679 },
-        { title: "Morocco Desert Trek", location: "Marrakech", originalPrice: 749, salePrice: 599 },
-        { title: "Northern Lights", location: "Reykjavik", originalPrice: 1199, salePrice: 999 },
+        { id: 1, title: "Venice, Rome & Milan", location: "Karineside", originalPrice: 699, salePrice: 548, rating: 4.9 },
+        { id: 2, title: "Paris & Lyon Adventure", location: "Franceville", originalPrice: 799, salePrice: 629, rating: 4.8 },
+        { id: 3, title: "Tokyo City Explorer", location: "Shibuya", originalPrice: 899, salePrice: 749, rating: 4.7 },
+        { id: 4, title: "Barcelona Highlights", location: "Catalunya", originalPrice: 599, salePrice: 459, rating: 4.6 },
+        { id: 5, title: "Swiss Alps Journey", location: "Interlaken", originalPrice: 999, salePrice: 819, rating: 4.9 },
+        { id: 6, title: "Greek Island Hopping", location: "Santorini", originalPrice: 849, salePrice: 679, rating: 4.8 },
+        { id: 7, title: "Morocco Desert Trek", location: "Marrakech", originalPrice: 749, salePrice: 599, rating: 4.5 },
+        { id: 8, title: "Northern Lights", location: "Reykjavik", originalPrice: 1199, salePrice: 999, rating: 4.9 },
     ];
 
     return (
@@ -139,17 +75,55 @@ const DiscoverWeekly = () => {
 
                 {/* Desktop Grid (hidden on mobile) */}
                 <div className="hidden lg:flex lg:flex-wrap lg:justify-center lg:gap-6 mb-10 w-full max-w-[1200px]">
-                    {experiences.map((experience, index) => (
-                        <ProductCard key={index} {...experience} />
-                    ))}
+                    {experiences.map((experience, index) => {
+                        // Transform data for ExperienceCard
+                        const transformedExperience = {
+                            id: experience.id,
+                            title: experience.title,
+                            location: experience.location,
+                            price: experience.salePrice,
+                            originalPrice: experience.originalPrice,
+                            rating: experience.rating,
+                            imageUrl: experienceImage,
+                            dateRange: "Tue, Jul 20 - Fri, Jul 23"
+                        };
+                        
+                        return (
+                            <ExperienceCard 
+                                key={index} 
+                                experience={transformedExperience}
+                                showWishlistButton={true}
+                                variant="default"
+                            />
+                        );
+                    })}
                 </div>
 
                 {/* Mobile Horizontal Scroll */}
                 <div className="lg:hidden mb-10 w-full">
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
-                        {experiences.slice(0, 4).map((experience, index) => (
-                            <ProductCard key={index} {...experience} />
-                        ))}
+                        {experiences.slice(0, 4).map((experience, index) => {
+                            // Transform data for ExperienceCard
+                            const transformedExperience = {
+                                id: experience.id,
+                                title: experience.title,
+                                location: experience.location,
+                                price: experience.salePrice,
+                                originalPrice: experience.originalPrice,
+                                rating: experience.rating,
+                                imageUrl: experienceImage,
+                                dateRange: "Tue, Jul 20 - Fri, Jul 23"
+                            };
+                            
+                            return (
+                                <ExperienceCard 
+                                    key={index} 
+                                    experience={transformedExperience}
+                                    showWishlistButton={true}
+                                    variant="default"
+                                />
+                            );
+                        })}
                     </div>
                 </div>
 
