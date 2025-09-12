@@ -119,6 +119,10 @@ export default function App() {
               element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
             />
             <Route
+              path="/experience/:id"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
+            />
+            <Route
               path="/experience-details-test"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageTest />}
             />

@@ -30,7 +30,7 @@ export default function CreateExperiencePricingPage() {
     }
 
     updateFormData({
-      pricePerPerson: formData.pricePerPerson,
+      price: formData.pricePerPerson,  // Changed to 'price' to match FormDataContext
       currency: formData.currency
     });
     

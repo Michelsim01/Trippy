@@ -19,7 +19,13 @@ export default function CreateExperienceSuccessPage() {
   }
 
   const handleViewExperience = () => {
-    navigate('/experience-details')
+    // Navigate to the dynamic route with the created experience ID
+    if (formData.createdExperience?.experienceId) {
+      navigate(`/experience/${formData.createdExperience.experienceId}`)
+    } else {
+      // Fallback to the static page if no ID available
+      navigate('/experience-details')
+    }
   }
 
   const handleCreateAnother = () => {
@@ -54,9 +60,20 @@ export default function CreateExperienceSuccessPage() {
               Experience Created Successfully!
             </h1>
             
-            <p className="text-lg text-neutrals-3 mb-8">
+            <p className="text-lg text-neutrals-3 mb-4">
               Congratulations! Your experience "{formData.title || 'Your Experience'}" has been created and is ready to welcome guests.
             </p>
+            
+            {/* Experience ID Display */}
+            {formData.createdExperience?.experienceId && (
+              <div className="bg-primary-1 bg-opacity-10 border border-primary-1 rounded-lg p-4 mb-8">
+                <div className="text-center">
+                  <span className="text-sm font-semibold text-primary-1 uppercase tracking-wide">Experience ID</span>
+                  <div className="text-2xl font-bold text-primary-1 mt-1">#{formData.createdExperience.experienceId}</div>
+                  <p className="text-xs text-neutrals-4 mt-2">Share this ID with travelers for easy booking</p>
+                </div>
+              </div>
+            )}
 
             {/* Experience Summary */}
             <div className="bg-neutrals-7 rounded-2xl p-6 mb-8 text-left">
@@ -155,9 +172,20 @@ export default function CreateExperienceSuccessPage() {
             Experience Created!
           </h1>
           
-          <p className="text-neutrals-3 mb-6 text-center">
+          <p className="text-neutrals-3 mb-4 text-center">
             "{formData.title || 'Your Experience'}" is ready for guests!
           </p>
+          
+          {/* Mobile Experience ID Display */}
+          {formData.createdExperience?.experienceId && (
+            <div className="bg-primary-1 bg-opacity-10 border border-primary-1 rounded-lg p-3 mb-6">
+              <div className="text-center">
+                <span className="text-xs font-semibold text-primary-1 uppercase tracking-wide">Experience ID</span>
+                <div className="text-xl font-bold text-primary-1 mt-1">#{formData.createdExperience.experienceId}</div>
+                <p className="text-xs text-neutrals-4 mt-1">Share with travelers for booking</p>
+              </div>
+            </div>
+          )}
 
           {/* Mobile Summary */}
           <div className="bg-neutrals-7 rounded-2xl p-4 mb-6">

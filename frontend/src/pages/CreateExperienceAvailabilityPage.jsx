@@ -3,14 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import { generateScheduleRecords } from '../utils/scheduleGenerator';
+import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 export default function CreateExperienceAvailabilityPage() {
   const navigate = useNavigate();
-  const { formData: contextData, updateFormData } = useFormData();
+  const { formData: contextData, updateFormData, getBackendPayload } = useFormData();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState(new Set(contextData?.availability?.selectedDates || []));
@@ -101,29 +104,61 @@ export default function CreateExperienceAvailabilityPage() {
     }));
   };
 
-  const handleNext = () => {
-    // Prepare availability data
-    const availabilityData = {
-      selectedDates: Array.from(selectedDates),
-      blockedDates: Array.from(blockedDates),
-      recurringSchedule
-    };
+  const handleNext = async () => {
+    if (isSubmitting) return; // Prevent double submission
     
-    // Generate schedule records (preventing duplicates)
-    const schedules = generateScheduleRecords(
-      availabilityData,
-      contextData?.duration || 3, // Use experience duration from previous step, default 3 hours
-      3 // Generate 3 months of schedules
-    );
+    setIsSubmitting(true);
+    setSubmitError(null);
     
-    // Update form data with both availability rules and generated schedules
-    updateFormData({
-      availability: availabilityData,
-      schedules: schedules
-    });
-    
-    console.log(`Generated ${schedules.length} schedule records`);
-    navigate('/create-experience/success');
+    try {
+      // Prepare availability data
+      const availabilityData = {
+        selectedDates: Array.from(selectedDates),
+        blockedDates: Array.from(blockedDates),
+        recurringSchedule
+      };
+      
+      // Generate schedule records (preventing duplicates)
+      const schedules = generateScheduleRecords(
+        availabilityData,
+        contextData?.duration || 3, // Use experience duration from previous step, default 3 hours
+        3 // Generate 3 months of schedules
+      );
+      
+      // Update form data with both availability rules and generated schedules
+      updateFormData({
+        availability: availabilityData,
+        schedules: schedules
+      });
+      
+      console.log(`Generated ${schedules.length} schedule records`);
+      
+      // Get the complete backend payload
+      const payload = getBackendPayload();
+      console.log('Submitting payload to backend:', payload);
+      
+      // Call the API to create the experience
+      const response = await experienceApi.createExperience(payload);
+      console.log('Experience created successfully:', response);
+      
+      // Store the created experience data for the success page
+      updateFormData({
+        createdExperience: {
+          experienceId: response.experienceId,
+          success: response.success,
+          message: response.message
+        }
+      });
+      
+      // Navigate to success page
+      navigate('/create-experience/success');
+      
+    } catch (error) {
+      console.error('Failed to create experience:', error);
+      setSubmitError(error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const toggleSidebar = () => {
@@ -374,12 +409,26 @@ export default function CreateExperienceAvailabilityPage() {
                   </div>
                 </div>
                 
+                {/* Error Message */}
+                {submitError && (
+                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="text-red-800 text-sm">
+                      <strong>Error:</strong> {submitError}
+                    </div>
+                  </div>
+                )}
+
                 <div className="pt-8" style={{marginBottom: '50px'}}>
                   <button
                     onClick={handleNext}
-                    className="w-full bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
+                    disabled={isSubmitting}
+                    className={`w-full font-bold py-6 rounded-full transition-colors text-xl shadow-lg hover:shadow-xl ${
+                      isSubmitting 
+                        ? 'bg-neutrals-5 text-neutrals-3 cursor-not-allowed' 
+                        : 'bg-primary-1 text-white hover:opacity-90'
+                    }`}
                   >
-                    Complete Experience
+                    {isSubmitting ? 'Creating Experience...' : 'Complete Experience'}
                   </button>
                 </div>
               </div>
@@ -631,12 +680,26 @@ export default function CreateExperienceAvailabilityPage() {
                 </div>
               </div>
               
+              {/* Error Message - Mobile */}
+              {submitError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-red-800 text-xs">
+                    <strong>Error:</strong> {submitError}
+                  </div>
+                </div>
+              )}
+
               <div style={{marginBottom: '15px'}}>
                 <button
                   onClick={handleNext}
-                  className="w-full bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
+                  disabled={isSubmitting}
+                  className={`w-full font-bold py-4 rounded-full transition-colors ${
+                    isSubmitting 
+                      ? 'bg-neutrals-5 text-neutrals-3 cursor-not-allowed' 
+                      : 'bg-primary-1 text-white hover:opacity-90'
+                  }`}
                 >
-                  Complete Experience
+                  {isSubmitting ? 'Creating Experience...' : 'Complete Experience'}
                 </button>
               </div>
             </div>

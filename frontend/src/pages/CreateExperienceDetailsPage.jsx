@@ -46,7 +46,7 @@ export default function CreateExperienceDetailsPage() {
     
     updateFormData({
       fullDescription: formData.fullDescription.trim(),
-      whatIsIncluded: formData.whatIsIncluded,
+      whatIncluded: formData.whatIsIncluded.join(', '),
       importantInfo: formData.importantInfo.trim(),
       itinerary: formData.itinerary
     });

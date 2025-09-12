@@ -1,19 +1,65 @@
 import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import { convertTo12Hr, generateScheduleRecords } from '../utils/scheduleGenerator';
+import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
 const ExperienceDetailsPage = () => {
+  const { id } = useParams();
   const { formData, updateFormData } = useFormData();
+  const [experienceData, setExperienceData] = useState(null);
+  const [mediaData, setMediaData] = useState([]);
+  const [itinerariesData, setItinerariesData] = useState([]);
+  const [schedulesData, setSchedulesData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showPhotoModal, setShowPhotoModal] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [guests, setGuests] = useState(2);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showAllSchedules, setShowAllSchedules] = useState(false);
+  
+  // Fetch experience data if ID is provided
+  useEffect(() => {
+    if (id) {
+      fetchAllExperienceData();
+    }
+  }, [id]);
+  
+  const fetchAllExperienceData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch all data in parallel
+      const [experience, media, itineraries, schedules] = await Promise.all([
+        experienceApi.getExperienceById(id),
+        experienceApi.getExperienceMedia(id),
+        experienceApi.getExperienceItineraries(id),
+        experienceApi.getExperienceSchedules(id)
+      ]);
+      
+      setExperienceData(experience);
+      setMediaData(media || []);
+      setItinerariesData(itineraries || []);
+      setSchedulesData(schedules || []);
+      
+      // Also update formData for compatibility
+      updateFormData(experience);
+    } catch (err) {
+      console.error('Failed to fetch experience data:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Use experienceData if available (from API), otherwise use formData (from context)
+  const displayData = experienceData || formData;
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -105,10 +151,11 @@ const ExperienceDetailsPage = () => {
   };
   // END DEMO MODE SECTION
 
-  // Use form data images or fallback to placeholder
+  // Build images array from cover photo + media data
   const images = [
-    formData.coverPhotoUrl || '/placeholder-cover.jpg',
-    ...(formData.additionalPhotos || [])
+    displayData.coverPhotoUrl || '/placeholder-cover.jpg',
+    ...(mediaData?.map(media => media.mediaUrl) || []),
+    ...(displayData.additionalPhotos || [])
   ].filter(Boolean);
   
   // Fallback images if no form data
@@ -122,8 +169,8 @@ const ExperienceDetailsPage = () => {
   const displayImages = images.length > 0 ? images : fallbackImages;
 
   // Convert highlights string to array or use fallback
-  const highlightsArray = formData.highlights 
-    ? formData.highlights.split('\n').filter(h => h.trim())
+  const highlightsArray = displayData.highlights 
+    ? displayData.highlights.split('\n').filter(h => h.trim())
     : [
         'Explore local eateries and street food culture',
         'Try 15 different dishes across 4 authentic venues', 
@@ -192,6 +239,35 @@ const ExperienceDetailsPage = () => {
     }
   ];
 
+  // Show loading state when fetching from API
+  if (loading && id) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-semibold text-neutrals-2">Loading experience...</div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error state if fetch failed
+  if (error && id) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-2xl font-semibold text-red-600">Error loading experience</div>
+          <p className="text-neutrals-3 mt-2">{error}</p>
+          <button 
+            onClick={fetchExperience}
+            className="mt-4 bg-primary-1 text-white px-6 py-2 rounded-lg hover:opacity-90"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutrals-8">
       {/* Desktop Layout */}
@@ -214,7 +290,7 @@ const ExperienceDetailsPage = () => {
             <div className="flex justify-between items-start mb-10">
               <div className="flex-1 max-w-4xl">
                 <h1 className="text-5xl font-bold text-neutrals-2 leading-tight mb-4 break-words" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                  {formData.title || 'Experience Title'}
+                  {displayData.title || 'Experience Title'}
                 </h1>
                 <div className="flex items-center gap-5">
                   <div className="flex items-center gap-2">
@@ -231,7 +307,7 @@ const ExperienceDetailsPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span className="text-neutrals-4 text-sm">{formData.location || 'Location not specified'}</span>
+                    <span className="text-neutrals-4 text-sm">{displayData.location || 'Location not specified'}</span>
                   </div>
                 </div>
               </div>
@@ -239,7 +315,7 @@ const ExperienceDetailsPage = () => {
               {/* Action Buttons */}
               <div className="flex items-center gap-4">
                 {/* DEMO MODE BUTTON - REMOVE THIS LATER */}
-                {!formData.title && (
+                {!displayData.title && (
                   <button 
                     onClick={loadDemoData}
                     className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
@@ -314,10 +390,10 @@ const ExperienceDetailsPage = () => {
             </div>
 
             {/* Short Description Caption */}
-            {(formData.shortDescription) && (
+            {(displayData.shortDescription) && (
               <div className="mb-8">
                 <p className="text-neutrals-3 text-lg leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                  {formData.shortDescription}
+                  {displayData.shortDescription}
                 </p>
               </div>
             )}
@@ -353,31 +429,31 @@ const ExperienceDetailsPage = () => {
                     Full Description
                   </h2>
                   <p className="text-neutrals-3 leading-relaxed break-words" style={{ fontFamily: 'Poppins', fontSize: '16px', lineHeight: '24px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                    {formData.fullDescription || formData.shortDescription || 'This is a sample experience page. To see real data, please go through the Create Experience flow: Basic Info → Details → Pricing → Availability → Success → View Experience.'}
+                    {displayData.fullDescription || displayData.shortDescription || 'This is a sample experience page. To see real data, please go through the Create Experience flow: Basic Info → Details → Pricing → Availability → Success → View Experience.'}
                   </p>
                 </div>
 
 
                 {/* Itinerary */}
-                {formData.itinerary && formData.itinerary.length > 0 && (
+                {itinerariesData && itinerariesData.length > 0 && (
                   <div>
                     <h2 className="text-2xl font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
                       Itinerary
                     </h2>
                     <div className="bg-neutrals-7 rounded-2xl p-6">
                       <div className="space-y-6" style={{padding: '10px'}}>
-                        {formData.itinerary.map((item, index) => (
+                        {itinerariesData.map((item, index) => (
                           <div key={index} className="relative">
                             <div className="flex items-start gap-5">
                               <div className="flex flex-col items-center">
                                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ${
-                                  item.type === 'start' ? 'bg-green-500' :
-                                  item.type === 'end' ? 'bg-red-500' : 'bg-blue-500'
+                                  item.stopType === 'start' ? 'bg-green-500' :
+                                  item.stopType === 'end' ? 'bg-red-500' : 'bg-blue-500'
                                 }`}>
-                                  {item.type === 'start' ? 'S' : 
-                                   item.type === 'end' ? 'E' : index}
+                                  {item.stopType === 'start' ? 'S' : 
+                                   item.stopType === 'end' ? 'E' : index}
                                 </div>
-                                {index < formData.itinerary.length - 1 && (
+                                {index < itinerariesData.length - 1 && (
                                   <div className="w-1 h-20 bg-neutrals-5 mt-3 rounded-full"></div>
                                 )}
                               </div>
@@ -386,13 +462,13 @@ const ExperienceDetailsPage = () => {
                                 <div className="flex items-center gap-3 mb-2">
                                   <MapPin className="w-5 h-5 text-neutrals-4" />
                                   <span className="text-lg font-semibold text-neutrals-1">
-                                    {item.location || item.locationName || 'Location'}
+                                    {item.locationName || 'Location'}
                                   </span>
                                 </div>
                                 
                                 <div className="flex items-center gap-3 text-sm text-neutrals-3">
                                   <Clock className="w-4 h-4 text-neutrals-4" />
-                                  <span>{item.time || item.duration || 'Duration not specified'}</span>
+                                  <span>{item.duration || 'Duration not specified'}</span>
                                 </div>
                               </div>
                             </div>
@@ -413,25 +489,25 @@ const ExperienceDetailsPage = () => {
                       <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{formData.whatIncluded ? formData.whatIncluded.split(',')[0]?.trim() : 'Food tastings'}</span>
+                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[0]?.trim() : 'Food tastings'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{formData.whatIncluded ? formData.whatIncluded.split(',')[1]?.trim() : 'Expert guide'}</span>
+                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[1]?.trim() : 'Expert guide'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{formData.whatIncluded ? formData.whatIncluded.split(',')[2]?.trim() : 'Cultural insights'}</span>
+                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[2]?.trim() : 'Cultural insights'}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{formData.whatIncluded ? formData.whatIncluded.split(',')[3]?.trim() : 'Small group'}</span>
+                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[3]?.trim() : 'Small group'}</span>
                     </div>
                   </div>
                 </div>
@@ -447,21 +523,21 @@ const ExperienceDetailsPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
                     <div>
-                      <p className="text-neutrals-2 font-medium mb-1">{formData.location || 'Meeting location will be provided after booking'}</p>
+                      <p className="text-neutrals-2 font-medium mb-1">{displayData.location || 'Meeting location will be provided after booking'}</p>
                       <p className="text-neutrals-4 text-sm">Exact meeting instructions will be sent via email after booking confirmation.</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Important Info */}
-                {formData.importantInfo && (
+                {displayData.importantInfo && (
                   <div>
                     <h2 className="text-2xl font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
                       Important Information
                     </h2>
                     <div className="bg-neutrals-7 rounded-lg p-4">
                       <p className="text-neutrals-3 leading-relaxed break-words" style={{ fontSize: '14px', lineHeight: '22px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                        {formData.importantInfo}
+                        {displayData.importantInfo}
                       </p>
                     </div>
                   </div>
@@ -474,8 +550,8 @@ const ExperienceDetailsPage = () => {
                   {/* Price Section */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-3 mb-2">
-                      <span className="text-lg text-neutrals-4 line-through">${(formData.price || 89) + 20}</span>
-                      <span className="text-3xl font-bold text-neutrals-2">${formData.price || '89'}</span>
+                      <span className="text-lg text-neutrals-4 line-through">${(displayData.price || 89) + 20}</span>
+                      <span className="text-3xl font-bold text-neutrals-2">${displayData.price || '89'}</span>
                       <span className="text-sm text-neutrals-4">/person</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -489,8 +565,8 @@ const ExperienceDetailsPage = () => {
 
                   {/* Available Schedules */}
                   <div className="space-y-3 mb-4">
-                    {formData.schedules && formData.schedules.length > 0 ? (
-                      formData.schedules.slice(0, 5).map((schedule, index) => (
+                    {schedulesData && schedulesData.length > 0 ? (
+                      schedulesData.slice(0, 5).map((schedule, index) => (
                         <div 
                           key={index} 
                           className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
@@ -596,9 +672,9 @@ const ExperienceDetailsPage = () => {
                         </button>
                         <span className="text-neutrals-2 min-w-[2rem] text-center">{guests}</span>
                         <button 
-                          onClick={() => setGuests(Math.min((formData.participantsAllowed || 8), guests + 1))}
+                          onClick={() => setGuests(Math.min((displayData.participantsAllowed || 8), guests + 1))}
                           className="w-8 h-8 rounded-full border border-neutrals-6 flex items-center justify-center hover:bg-neutrals-7 disabled:opacity-50"
-                          disabled={guests >= (formData.participantsAllowed || 8)}
+                          disabled={guests >= (displayData.participantsAllowed || 8)}
                         >
                           <span className="text-neutrals-2">+</span>
                         </button>
@@ -625,16 +701,16 @@ const ExperienceDetailsPage = () => {
                   <div className="border-t border-neutrals-6 pt-4">
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-neutrals-4">${formData.price || '89'} x {guests} guests</span>
-                        <span className="text-neutrals-2">${((formData.price || 89) * guests)}</span>
+                        <span className="text-neutrals-4">${displayData.price || '89'} x {guests} guests</span>
+                        <span className="text-neutrals-2">${((displayData.price || 89) * guests)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-neutrals-4">Service fee</span>
-                        <span className="text-neutrals-2">${Math.round(((formData.price || 89) * guests) * 0.1)}</span>
+                        <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
                       </div>
                       <div className="border-t border-neutrals-6 pt-2 flex justify-between font-semibold">
                         <span className="text-neutrals-2">Total</span>
-                        <span className="text-neutrals-2">${((formData.price || 89) * guests) + Math.round(((formData.price || 89) * guests) * 0.1)}</span>
+                        <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
                       </div>
                     </div>
                   </div>
@@ -781,7 +857,7 @@ const ExperienceDetailsPage = () => {
           {/* Mobile Hero */}
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-neutrals-2 leading-tight mb-3 break-words" style={{ fontFamily: 'DM Sans', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-              {formData.title || 'Experience Title'}
+              {displayData.title || 'Experience Title'}
             </h1>
             <div className="flex items-center gap-3 mb-4">
               <div className="flex items-center gap-1">
@@ -795,7 +871,7 @@ const ExperienceDetailsPage = () => {
             <div className="flex items-center gap-2 text-neutrals-3 text-sm mb-4">
               <MapPin className="w-4 h-4" />
               <span className="break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                {formData.location || 'Location not specified'}
+                {displayData.location || 'Location not specified'}
               </span>
             </div>
           </div>
@@ -845,10 +921,10 @@ const ExperienceDetailsPage = () => {
           </div>
 
           {/* Mobile Short Description */}
-          {formData.shortDescription && (
+          {displayData.shortDescription && (
             <div className="mb-6">
               <p className="text-neutrals-3 text-sm leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                {formData.shortDescription}
+                {displayData.shortDescription}
               </p>
             </div>
           )}
@@ -881,36 +957,36 @@ const ExperienceDetailsPage = () => {
                 Full Description
               </h2>
               <p className="text-neutrals-3 text-sm leading-relaxed break-words" style={{ fontFamily: 'Poppins', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                {formData.fullDescription || formData.shortDescription || 'This is a sample experience page. To see real data, please go through the Create Experience flow: Basic Info → Details → Pricing → Availability → Success → View Experience.'}
+                {displayData.fullDescription || displayData.shortDescription || 'This is a sample experience page. To see real data, please go through the Create Experience flow: Basic Info → Details → Pricing → Availability → Success → View Experience.'}
               </p>
             </div>
 
             {/* Mobile Itinerary */}
-            {formData.itinerary && formData.itinerary.length > 0 && (
+            {itinerariesData && itinerariesData.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-neutrals-2 mb-3" style={{ fontFamily: 'Poppins' }}>
                   Itinerary
                 </h2>
                 <div className="bg-neutrals-7 rounded-lg p-4">
                   <div className="space-y-4">
-                    {formData.itinerary.map((item, index) => (
+                    {itinerariesData.map((item, index) => (
                       <div key={index} className="relative">
                         <div className="flex gap-3">
                           <div className="flex flex-col items-center">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
-                              item.type === 'start' ? 'bg-green-500' :
-                              item.type === 'end' ? 'bg-red-500' : 'bg-blue-500'
+                              item.stopType === 'start' ? 'bg-green-500' :
+                              item.stopType === 'end' ? 'bg-red-500' : 'bg-blue-500'
                             }`}>
-                              {item.type === 'start' ? 'S' : 
-                               item.type === 'end' ? 'E' : index}
+                              {item.stopType === 'start' ? 'S' : 
+                               item.stopType === 'end' ? 'E' : index}
                             </div>
-                            {index < formData.itinerary.length - 1 && (
+                            {index < itinerariesData.length - 1 && (
                               <div className="w-0.5 h-16 bg-neutrals-5 mt-2 rounded-full"></div>
                             )}
                           </div>
                           <div className="flex-1 pt-1">
-                            <h4 className="text-sm font-medium text-neutrals-2 mb-1">{item.location}</h4>
-                            <p className="text-xs text-neutrals-4 break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.time}</p>
+                            <h4 className="text-sm font-medium text-neutrals-2 mb-1">{item.locationName}</h4>
+                            <p className="text-xs text-neutrals-4 break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.duration}</p>
                           </div>
                         </div>
                       </div>
@@ -926,7 +1002,7 @@ const ExperienceDetailsPage = () => {
                 What's Included
               </h2>
               <div className="text-neutrals-3 text-sm space-y-2">
-                {(formData.whatIncluded || 'Food tastings, Expert guide, Cultural insights, Small group experience').split(', ').map((item, index) => (
+                {(displayData.whatIncluded || 'Food tastings, Expert guide, Cultural insights, Small group experience').split(', ').map((item, index) => (
                   <div key={index} className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-primary-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -948,21 +1024,21 @@ const ExperienceDetailsPage = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 <div>
-                  <p className="text-neutrals-2 font-medium mb-1 text-sm">{formData.location || 'Meeting location will be provided after booking'}</p>
+                  <p className="text-neutrals-2 font-medium mb-1 text-sm">{displayData.location || 'Meeting location will be provided after booking'}</p>
                   <p className="text-neutrals-4 text-xs">Exact meeting instructions will be sent via email after booking confirmation.</p>
                 </div>
               </div>
             </div>
 
             {/* Important Information */}
-            {formData.importantInfo && (
+            {displayData.importantInfo && (
             <div>
               <h2 className="text-lg font-semibold text-neutrals-2 mb-3" style={{ fontFamily: 'Poppins' }}>
                 Important Information
               </h2>
               <div className="bg-neutrals-7 rounded-lg p-4">
                 <p className="text-neutrals-3 text-sm leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                  {formData.importantInfo}
+                  {displayData.importantInfo}
                 </p>
               </div>
             </div>
@@ -973,8 +1049,8 @@ const ExperienceDetailsPage = () => {
               {/* Price Section */}
               <div className="mb-4">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-sm text-neutrals-4 line-through">${(formData.price || 89) + 20}</span>
-                  <span className="text-2xl font-bold text-neutrals-2">${formData.price || '89'}</span>
+                  <span className="text-sm text-neutrals-4 line-through">${(displayData.price || 89) + 20}</span>
+                  <span className="text-2xl font-bold text-neutrals-2">${displayData.price || '89'}</span>
                   <span className="text-xs text-neutrals-4">/person</span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -988,8 +1064,8 @@ const ExperienceDetailsPage = () => {
 
               {/* Available Schedules */}
               <div className="space-y-2 mb-4">
-                {formData.schedules && formData.schedules.length > 0 ? (
-                  formData.schedules.slice(0, 3).map((schedule, index) => (
+                {schedulesData && schedulesData.length > 0 ? (
+                  schedulesData.slice(0, 3).map((schedule, index) => (
                     <div 
                       key={index} 
                       className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
@@ -1079,16 +1155,16 @@ const ExperienceDetailsPage = () => {
               <div className="mb-4">
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between">
-                    <span className="text-neutrals-4">${formData.price || '89'} x {guests} guests</span>
-                    <span className="text-neutrals-2">${((formData.price || 89) * guests)}</span>
+                    <span className="text-neutrals-4">${displayData.price || '89'} x {guests} guests</span>
+                    <span className="text-neutrals-2">${((displayData.price || 89) * guests)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-neutrals-4">Service fee</span>
-                    <span className="text-neutrals-2">${Math.round(((formData.price || 89) * guests) * 0.1)}</span>
+                    <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
                   </div>
                   <div className="border-t border-neutrals-6 pt-2 flex justify-between font-semibold">
                     <span className="text-neutrals-2">Total</span>
-                    <span className="text-neutrals-2">${((formData.price || 89) * guests) + Math.round(((formData.price || 89) * guests) * 0.1)}</span>
+                    <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
                   </div>
                 </div>
               </div>
@@ -1222,8 +1298,8 @@ const ExperienceDetailsPage = () => {
             {/* Modal Content */}
             <div className="p-6">
               <div className="space-y-3">
-                {formData.schedules && formData.schedules.length > 0 ? (
-                  formData.schedules.map((schedule, index) => (
+                {schedulesData && schedulesData.length > 0 ? (
+                  schedulesData.map((schedule, index) => (
                     <div 
                       key={index} 
                       className={`border rounded-lg p-4 transition-colors cursor-pointer ${
