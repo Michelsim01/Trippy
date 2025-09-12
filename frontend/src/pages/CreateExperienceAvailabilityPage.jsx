@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
+import { generateScheduleRecords } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -101,13 +102,27 @@ export default function CreateExperienceAvailabilityPage() {
   };
 
   const handleNext = () => {
+    // Prepare availability data
+    const availabilityData = {
+      selectedDates: Array.from(selectedDates),
+      blockedDates: Array.from(blockedDates),
+      recurringSchedule
+    };
+    
+    // Generate schedule records (preventing duplicates)
+    const schedules = generateScheduleRecords(
+      availabilityData,
+      contextData?.duration || 3, // Use experience duration from previous step, default 3 hours
+      3 // Generate 3 months of schedules
+    );
+    
+    // Update form data with both availability rules and generated schedules
     updateFormData({
-      availability: {
-        selectedDates: Array.from(selectedDates),
-        blockedDates: Array.from(blockedDates),
-        recurringSchedule
-      }
+      availability: availabilityData,
+      schedules: schedules
     });
+    
+    console.log(`Generated ${schedules.length} schedule records`);
     navigate('/create-experience/success');
   };
 

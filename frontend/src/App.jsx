@@ -14,7 +14,9 @@ import CreateExperienceBasicInfoPage from './pages/CreateExperienceBasicInfoPage
 import CreateExperienceDetailsPage from './pages/CreateExperienceDetailsPage'
 import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
 import CreateExperienceAvailabilityPage from './pages/CreateExperienceAvailabilityPage'
-// import CreateExperienceSuccess from './pages/CreateExperienceSuccess'
+import CreateExperienceSuccessPage from './pages/CreateExperienceSuccessPage'
+import ExperienceDetailsPage from './pages/ExperienceDetailsPage'
+import ExperienceDetailsPageTest from './pages/ExperienceDetailsPageTest'
 import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
@@ -110,7 +112,15 @@ export default function App() {
             />
             <Route
               path="/create-experience/success"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <PlaceholderPage title="Success Page" />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
+            />
+            <Route
+              path="/experience-details"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
+            />
+            <Route
+              path="/experience-details-test"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageTest />}
             />
             
             <Route
