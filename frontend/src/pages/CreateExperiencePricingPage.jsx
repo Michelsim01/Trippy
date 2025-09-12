@@ -12,22 +12,9 @@ export default function CreateExperiencePricingPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [formData, setFormData] = useState({
     pricePerPerson: contextData?.pricePerPerson || "",
-    currency: contextData?.currency || "$",
-    cancellationPolicy: contextData?.cancellationPolicy || "free_48h",
-    cancellationRate: contextData?.cancellationRate || 10
+    currency: contextData?.currency || "$"
   });
 
-  const [showCancellationPolicyDropdown, setShowCancellationPolicyDropdown] = useState(false);
-  const [showCancellationRateDropdown, setShowCancellationRateDropdown] = useState(false);
-
-  const cancellationPolicies = [
-    { value: 'free_48h', label: 'Free cancellation up to 48 hours before' },
-    { value: 'free_24h', label: 'Free cancellation up to 24 hours before' },
-    { value: 'no_refund', label: 'No refund' },
-    { value: 'custom', label: 'Custom policy' }
-  ];
-
-  const cancellationRates = [0, 5, 10, 15, 20, 25, 30, 50, 100];
 
   const handlePriceChange = (value) => {
     const numericValue = value.replace(/[^0-9.]/g, '');
@@ -44,9 +31,7 @@ export default function CreateExperiencePricingPage() {
 
     updateFormData({
       pricePerPerson: formData.pricePerPerson,
-      currency: formData.currency,
-      cancellationPolicy: formData.cancellationPolicy,
-      cancellationRate: formData.cancellationRate
+      currency: formData.currency
     });
     
     navigate('/create-experience/availability');
@@ -60,10 +45,6 @@ export default function CreateExperiencePricingPage() {
     setIsSidebarOpen(false);
   };
 
-  const getCancellationPolicyLabel = (value) => {
-    const policy = cancellationPolicies.find(p => p.value === value);
-    return policy ? policy.label : value;
-  };
 
   return (
     <div className="min-h-screen bg-neutrals-8">
@@ -138,65 +119,17 @@ export default function CreateExperiencePricingPage() {
                     </div>
                   </div>
 
-                  {/* Cancellation Policy */}
+                  {/* Cancellation Policy Information */}
                   <div style={{marginBottom: '15px'}}>
                     <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Cancellation Policy</label>
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowCancellationPolicyDropdown(!showCancellationPolicyDropdown)}
-                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 flex items-center justify-between transition-colors"
-                        style={{padding: '6px'}}
-                      >
-                        <span className="pr-4">{getCancellationPolicyLabel(formData.cancellationPolicy)}</span>
-                        <ChevronDown className="w-5 h-5 text-neutrals-4" />
-                      </button>
-                      {showCancellationPolicyDropdown && (
-                        <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-6 rounded-xl shadow-lg z-10">
-                          {cancellationPolicies.map(policy => (
-                            <button
-                              key={policy.value}
-                              onClick={() => {
-                                setFormData(prev => ({ ...prev, cancellationPolicy: policy.value }));
-                                setShowCancellationPolicyDropdown(false);
-                              }}
-                              className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium text-neutrals-2 first:rounded-t-xl last:rounded-b-xl transition-colors"
-                            >
-                              {policy.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Late Cancellation Fee */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Late Cancellation Fee (% of Total)</label>
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowCancellationRateDropdown(!showCancellationRateDropdown)}
-                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 flex items-center justify-between transition-colors"
-                        style={{padding: '6px'}}
-                      >
-                        <span>{formData.cancellationRate}%</span>
-                        <ChevronDown className="w-5 h-5 text-neutrals-4" />
-                      </button>
-                      {showCancellationRateDropdown && (
-                        <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-6 rounded-xl shadow-lg z-10 max-h-60 overflow-y-auto">
-                          {cancellationRates.map(rate => (
-                            <button
-                              key={rate}
-                              onClick={() => {
-                                setFormData(prev => ({ ...prev, cancellationRate: rate }));
-                                setShowCancellationRateDropdown(false);
-                              }}
-                              className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium text-neutrals-2 first:rounded-t-xl last:rounded-b-xl transition-colors"
-                            >
-                              {rate}%
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    <div className="border-2 border-neutrals-4 rounded-xl p-6 bg-neutrals-7">
+                      <div className="text-sm text-neutrals-2">
+                        <p className="mb-2"><strong>Free Cancellation:</strong> 24 hours after purchase for full refund</p>
+                        <p className="mb-2"><strong>7+ days before:</strong> Full refund (minus service fee)</p>
+                        <p className="mb-2"><strong>3-6 days before:</strong> 50% refund</p>
+                        <p className="mb-2"><strong>Less than 48 hours:</strong> Non-refundable</p>
+                        <p><strong>No-shows:</strong> Non-refundable</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -292,65 +225,17 @@ export default function CreateExperiencePricingPage() {
                 </div>
               </div>
 
-              {/* Cancellation Policy */}
+              {/* Cancellation Policy Information */}
               <div style={{marginBottom: '10px'}}>
                 <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Cancellation Policy</label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowCancellationPolicyDropdown(!showCancellationPolicyDropdown)}
-                    className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 flex items-center justify-between transition-colors"
-                    style={{padding: '6px'}}
-                  >
-                    <span className="pr-2 text-left">{getCancellationPolicyLabel(formData.cancellationPolicy)}</span>
-                    <ChevronDown className="w-4 h-4 text-neutrals-4 flex-shrink-0" />
-                  </button>
-                  {showCancellationPolicyDropdown && (
-                    <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-6 rounded-xl shadow-lg z-10">
-                      {cancellationPolicies.map(policy => (
-                        <button
-                          key={policy.value}
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, cancellationPolicy: policy.value }));
-                            setShowCancellationPolicyDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm font-medium text-neutrals-2 first:rounded-t-xl last:rounded-b-xl transition-colors"
-                        >
-                          {policy.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Late Cancellation Fee */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Late Cancellation Fee (% of Total)</label>
-                <div className="relative">
-                  <button
-                    onClick={() => setShowCancellationRateDropdown(!showCancellationRateDropdown)}
-                    className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 flex items-center justify-between transition-colors"
-                    style={{padding: '6px'}}
-                  >
-                    <span>{formData.cancellationRate}%</span>
-                    <ChevronDown className="w-4 h-4 text-neutrals-4" />
-                  </button>
-                  {showCancellationRateDropdown && (
-                    <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-6 rounded-xl shadow-lg z-10 max-h-48 overflow-y-auto">
-                      {cancellationRates.map(rate => (
-                        <button
-                          key={rate}
-                          onClick={() => {
-                            setFormData(prev => ({ ...prev, cancellationRate: rate }));
-                            setShowCancellationRateDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm font-medium text-neutrals-2 first:rounded-t-xl last:rounded-b-xl transition-colors"
-                        >
-                          {rate}%
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                <div className="border-2 border-neutrals-4 rounded-xl p-4 bg-neutrals-7">
+                  <div className="text-xs text-neutrals-2">
+                    <p className="mb-1"><strong>Free Cancellation:</strong> 24 hours after purchase for full refund</p>
+                    <p className="mb-1"><strong>7+ days before:</strong> Full refund (minus service fee)</p>
+                    <p className="mb-1"><strong>3-6 days before:</strong> 50% refund</p>
+                    <p className="mb-1"><strong>Less than 48 hours:</strong> Non-refundable</p>
+                    <p><strong>No-shows:</strong> Non-refundable</p>
+                  </div>
                 </div>
               </div>
 

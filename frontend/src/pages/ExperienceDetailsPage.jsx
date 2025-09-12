@@ -77,7 +77,6 @@ const ExperienceDetailsPage = () => {
       price: "89",
       participantsAllowed: "8",
       duration: "3",
-      cancellationPolicy: "Free cancellation up to 24 hours before",
       importantInfo: "Please wear comfortable walking shoes and dress appropriately for the weather. Inform us of any food allergies or dietary restrictions when booking. The tour involves moderate walking and may not be suitable for those with mobility issues.",
       coverPhotoUrl: "http://localhost:3845/assets/440aa07e1cf2f874a8ed58ab361e13b2e61750e5.png",
       additionalPhotos: [
@@ -612,9 +611,14 @@ const ExperienceDetailsPage = () => {
                     Book Now
                   </button>
 
-                  {/* Free Cancellation */}
-                  <div className="text-center text-sm text-neutrals-4 mb-4">
-                    {formData.cancellationPolicy || 'Free cancellation up to 24 hours before'}
+                  {/* Standardized Cancellation Policy */}
+                  <div className="text-center text-xs text-neutrals-4 mb-4">
+                    <div className="space-y-1">
+                      <p><strong>Free Cancellation:</strong> 24 hours after purchase</p>
+                      <p><strong>7+ days before:</strong> Full refund (minus service fee)</p>
+                      <p><strong>3-6 days before:</strong> 50% refund</p>
+                      <p><strong>Less than 48 hours:</strong> Non-refundable</p>
+                    </div>
                   </div>
 
                   {/* Price Breakdown */}

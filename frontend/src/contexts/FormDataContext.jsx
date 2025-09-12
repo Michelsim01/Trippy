@@ -35,7 +35,6 @@ export const FormDataProvider = ({ children }) => {
 
     // Step 3: Pricing - matching Experience entity fields
     price: '', // BigDecimal, changed from 'pricePerPerson'
-    cancellationPolicy: '', // CancellationPolicy enum
 
     // Step 4: Availability - will be converted to ExperienceSchedule records
     schedules: [] // Each item: { date, startTime, endTime, availableSpots, isAvailable }
@@ -51,13 +50,6 @@ export const FormDataProvider = ({ children }) => {
     'Others': 'OTHERS'
   };
 
-  // Cancellation policy mapping: Friendly names to backend enums
-  const cancellationPolicyMapping = {
-    'Free cancellation up to 24 hours before': 'FREE_24H',
-    'Free cancellation up to 48 hours before': 'FREE_48H',
-    'No refund': 'NO_REFUND',
-    'Custom policy': 'CUSTOM'
-  };
 
   const updateFormData = (newData) => {
     setFormData(prev => ({
@@ -84,7 +76,6 @@ export const FormDataProvider = ({ children }) => {
       importantInfo: '',
       itinerary: [],
       price: '',
-      cancellationPolicy: '',
       schedules: []
     });
   };
@@ -107,7 +98,6 @@ export const FormDataProvider = ({ children }) => {
         participantsAllowed: parseInt(formData.participantsAllowed) || null,
         duration: parseFloat(formData.duration) || null,
         location: formData.location,
-        cancellationPolicy: cancellationPolicyMapping[formData.cancellationPolicy],
         status: 'ACTIVE' // Default status
       },
 
@@ -148,8 +138,7 @@ export const FormDataProvider = ({ children }) => {
       updateFormData,
       clearFormData,
       getBackendPayload,
-      categoryMapping,
-      cancellationPolicyMapping
+      categoryMapping
     }}>
       {children}
     </FormDataContext.Provider>

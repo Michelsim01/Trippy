@@ -51,8 +51,6 @@ public class Experience {
 
     private String location;
 
-    @Enumerated(EnumType.STRING)
-    private CancellationPolicy cancellationPolicy;
 
     @Enumerated(EnumType.STRING)
     private ExperienceStatus status;
@@ -140,8 +138,6 @@ public class Experience {
     public void setDuration(BigDecimal duration) { this.duration = duration; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
-    public CancellationPolicy getCancellationPolicy() { return cancellationPolicy; }
-    public void setCancellationPolicy(CancellationPolicy cancellationPolicy) { this.cancellationPolicy = cancellationPolicy; }
     public ExperienceStatus getStatus() { return status; }
     public void setStatus(ExperienceStatus status) { this.status = status; }
     public BigDecimal getAverageRating() { return averageRating; }
