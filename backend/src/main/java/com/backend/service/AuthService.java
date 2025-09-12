@@ -112,21 +112,8 @@ public class AuthService {
             user.setCanCreateExperiences(false);
             user.setCreatedAt(LocalDateTime.now());
             
-            // Set role-based permissions
-            String role = registerRequest.getRole().toUpperCase();
-            switch (role) {
-                case "ADMIN":
-                    user.setIsAdmin(true);
-                    user.setCanCreateExperiences(true);
-                    break;
-                case "GUIDE":
-                    user.setCanCreateExperiences(true);
-                    break;
-                case "TRAVELER":
-                default:
-                    // Default permissions for traveler
-                    break;
-            }
+            // Set default permissions (all users start as travelers)
+            // Users can be upgraded to guides/admins later through admin actions
             
             // Save user to database
             User savedUser = userRepository.save(user);
@@ -135,11 +122,11 @@ public class AuthService {
             String token = jwtUtil.generateToken(org.springframework.security.core.userdetails.User.builder()
                 .username(savedUser.getEmail())
                 .password("")
-                .authorities("ROLE_" + role)
+                .authorities("ROLE_TRAVELER")
                 .build());
             
             // Create roles list
-            List<String> roles = List.of("ROLE_" + role);
+            List<String> roles = List.of("ROLE_TRAVELER");
             
             // Create and return response
             return new AuthResponse(

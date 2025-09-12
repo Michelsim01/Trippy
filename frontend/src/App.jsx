@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -17,82 +18,102 @@ import SettingsPage from './pages/SettingsPage'
 import LogoutPage from './pages/LogoutPage'
 import './App.css'
 
-// Mock authentication state - in real app this would come from context/redux
-const isAuthenticated = true
+// AppRoutes component that uses authentication context
+function AppRoutes() {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-neutrals-4 font-poppins">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="/"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <WelcomePage />}
+      />
+      <Route
+        path="/signup"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <SignUpPage />}
+      />
+      <Route
+        path="/signin"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <SignInPage />}
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/home"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
+      />
+      <Route
+        path="/notifications"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
+      />
+      <Route
+        path="/wishlist"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
+      />
+      <Route
+        path="/messages"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
+      />
+      <Route
+        path="/profile"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
+      />
+      <Route
+        path="/blog"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
+      />
+      <Route
+        path="/create-experience"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePage />}
+      />
+      <Route
+        path="/calendar"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
+      />
+      <Route
+        path="/about"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
+      />
+      <Route
+        path="/contact"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
+      />
+      <Route
+        path="/settings"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
+      />
+      <Route
+        path="/logout"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
+      />
+
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
 
 export default function App() {
   return (
     <Router>
-      <div className="App">
-        <Routes>
-          {/* Public routes */}
-          <Route
-            path="/"
-            element={isAuthenticated ? <Navigate to="/home" replace /> : <WelcomePage />}
-          />
-          <Route
-            path="/signup"
-            element={isAuthenticated ? <Navigate to="/home" replace /> : <SignUpPage />}
-          />
-          <Route
-            path="/signin"
-            element={isAuthenticated ? <Navigate to="/home" replace /> : <SignInPage />}
-          />
-
-          {/* Protected routes */}
-          <Route
-            path="/home"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
-          />
-          <Route
-            path="/notifications"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
-          />
-          <Route
-            path="/wishlist"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
-          />
-          <Route
-            path="/messages"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
-          />
-          <Route
-            path="/profile"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
-          />
-          <Route
-            path="/blog"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
-          />
-          <Route
-            path="/create-experience"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePage />}
-          />
-          <Route
-            path="/calendar"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
-          />
-          <Route
-            path="/about"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
-          />
-          <Route
-            path="/contact"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
-          />
-          <Route
-            path="/settings"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
-          />
-          <Route
-            path="/logout"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
-          />
-
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </div>
+      <AuthProvider>
+        <div className="App">
+          <AppRoutes />
+        </div>
+      </AuthProvider>
     </Router>
   )
 }

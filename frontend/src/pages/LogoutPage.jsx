@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
 const LogoutPage = () => {
+    const navigate = useNavigate();
+    const { logout, isLoading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     const toggleSidebar = () => {
@@ -11,6 +15,15 @@ const LogoutPage = () => {
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
+    };
+
+    const handleLogout = async () => {
+        await logout();
+        // Navigation is handled by the logout function in AuthContext
+    };
+
+    const handleCancel = () => {
+        navigate('/home');
     };
 
     return (
@@ -23,7 +36,6 @@ const LogoutPage = () => {
 
                 <div className="flex-1 w-full transition-all duration-300">
                     <Navbar
-                        isAuthenticated={true}
                         isSidebarOpen={isSidebarOpen}
                         onToggleSidebar={toggleSidebar}
                     />
@@ -42,10 +54,25 @@ const LogoutPage = () => {
                                 </p>
 
                                 <div className="space-y-4">
-                                    <button className="w-full bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors">
-                                        Yes, Log Out
+                                    <button 
+                                        onClick={handleLogout}
+                                        disabled={isLoading}
+                                        className="w-full bg-red-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isLoading ? (
+                                            <div className="flex items-center justify-center">
+                                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                Logging out...
+                                            </div>
+                                        ) : (
+                                            'Yes, Log Out'
+                                        )}
                                     </button>
-                                    <button className="w-full border border-neutrals-6 text-neutrals-2 px-6 py-3 rounded-lg font-medium hover:bg-neutrals-7 transition-colors">
+                                    <button 
+                                        onClick={handleCancel}
+                                        disabled={isLoading}
+                                        className="w-full border border-neutrals-6 text-neutrals-2 px-6 py-3 rounded-lg font-medium hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
                                         Cancel
                                     </button>
                                 </div>
@@ -58,8 +85,6 @@ const LogoutPage = () => {
             {/* Mobile Layout */}
             <div className="lg:hidden w-full">
                 <Navbar
-                    isAuthenticated={true}
-                    variant="mobile"
                     isSidebarOpen={isSidebarOpen}
                     onToggleSidebar={toggleSidebar}
                 />
@@ -79,10 +104,25 @@ const LogoutPage = () => {
                             </p>
 
                             <div className="space-y-3">
-                                <button className="w-full bg-red-600 text-white px-6 py-3 rounded-lg font-medium">
-                                    Yes, Log Out
+                                <button 
+                                    onClick={handleLogout}
+                                    disabled={isLoading}
+                                    className="w-full bg-red-600 text-white px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? (
+                                        <div className="flex items-center justify-center">
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                            Logging out...
+                                        </div>
+                                    ) : (
+                                        'Yes, Log Out'
+                                    )}
                                 </button>
-                                <button className="w-full border border-neutrals-6 text-neutrals-2 px-6 py-3 rounded-lg font-medium">
+                                <button 
+                                    onClick={handleCancel}
+                                    disabled={isLoading}
+                                    className="w-full border border-neutrals-6 text-neutrals-2 px-6 py-3 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     Cancel
                                 </button>
                             </div>

@@ -2,9 +2,11 @@ import React from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 const ProfilePage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { user } = useAuth();
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -41,8 +43,10 @@ const ProfilePage = () => {
                                         className="w-20 h-20 rounded-full object-cover"
                                     />
                                     <div>
-                                        <h2 className="text-xl font-semibold text-neutrals-1">John Doe</h2>
-                                        <p className="text-neutrals-3">john.doe@email.com</p>
+                                        <h2 className="text-xl font-semibold text-neutrals-1">
+                                            {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
+                                        </h2>
+                                        <p className="text-neutrals-3">{user?.email || 'Loading...'}</p>
                                         <p className="text-neutrals-4 text-sm">Member since 2024</p>
                                     </div>
                                 </div>
@@ -81,8 +85,10 @@ const ProfilePage = () => {
                                 className="w-16 h-16 rounded-full object-cover"
                             />
                             <div>
-                                <h2 className="text-lg font-semibold text-neutrals-1">John Doe</h2>
-                                <p className="text-neutrals-3 text-sm">john.doe@email.com</p>
+                                <h2 className="text-lg font-semibold text-neutrals-1">
+                                    {user ? `${user.firstName} ${user.lastName}` : 'Loading...'}
+                                </h2>
+                                <p className="text-neutrals-3 text-sm">{user?.email || 'Loading...'}</p>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">

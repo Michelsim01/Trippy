@@ -1,16 +1,28 @@
 import React from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
 
 const Navbar = ({
-    isAuthenticated = false,
     isSidebarOpen = false,
-    onToggleSidebar = () => { },
-    onSignIn = () => { },
-    onSignUp = () => { }
+    onToggleSidebar = () => { }
 }) => {
+    const navigate = useNavigate()
+    const { isAuthenticated, user, logout } = useAuth()
+
+    const handleSignIn = () => {
+        navigate('/signin')
+    }
+
+    const handleSignUp = () => {
+        navigate('/signup')
+    }
+
+    const handleLogout = () => {
+        logout()
+    }
     return (
         <nav className="bg-neutrals-8 border-b border-neutrals-6 relative z-30 w-full">
             {/* Desktop Navbar */}
@@ -79,13 +91,13 @@ const Navbar = ({
                                 /* Unauthenticated state */
                                 <>
                                     <button
-                                        onClick={onSignIn}
+                                        onClick={handleSignIn}
                                         className="border-2 border-neutrals-6 text-neutrals-2 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-neutrals-7 transition-colors"
                                     >
                                         Login
                                     </button>
                                     <button
-                                        onClick={onSignUp}
+                                        onClick={handleSignUp}
                                         className="bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors"
                                     >
                                         Sign up
@@ -116,10 +128,48 @@ const Navbar = ({
                                         </svg>
                                     </Link>
 
-                                    {/* Profile */}
-                                    <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors">
-                                        <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
-                                    </Link>
+                                    {/* Profile Dropdown */}
+                                    <div className="relative group">
+                                        <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors">
+                                            <img 
+                                                src={user?.profileImage || userAvatar} 
+                                                alt={user?.firstName || 'Profile'} 
+                                                className="w-full h-full object-cover" 
+                                            />
+                                        </Link>
+                                        
+                                        {/* Dropdown Menu */}
+                                        <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-neutrals-6 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                            <div className="p-3 border-b border-neutrals-6">
+                                                <p className="font-poppins font-medium text-sm text-neutrals-2">
+                                                    {user?.firstName} {user?.lastName}
+                                                </p>
+                                                <p className="font-poppins text-xs text-neutrals-4">
+                                                    {user?.email}
+                                                </p>
+                                            </div>
+                                            <div className="p-2">
+                                                <Link 
+                                                    to="/profile" 
+                                                    className="block w-full text-left px-3 py-2 text-sm text-neutrals-2 hover:bg-neutrals-7 rounded transition-colors"
+                                                >
+                                                    Profile
+                                                </Link>
+                                                <Link 
+                                                    to="/settings" 
+                                                    className="block w-full text-left px-3 py-2 text-sm text-neutrals-2 hover:bg-neutrals-7 rounded transition-colors"
+                                                >
+                                                    Settings
+                                                </Link>
+                                                <button 
+                                                    onClick={handleLogout}
+                                                    className="block w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                >
+                                                    Logout
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -160,13 +210,13 @@ const Navbar = ({
                             /* Unauthenticated state */
                             <>
                                 <button
-                                    onClick={onSignIn}
+                                    onClick={handleSignIn}
                                     className="border-2 border-neutrals-6 text-neutrals-2 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-neutrals-7 transition-colors"
                                 >
                                     Login
                                 </button>
                                 <button
-                                    onClick={onSignUp}
+                                    onClick={handleSignUp}
                                     className="bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors"
                                 >
                                     Sign up
@@ -206,7 +256,11 @@ const Navbar = ({
 
                                 {/* Profile */}
                                 <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors">
-                                    <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
+                                    <img 
+                                        src={user?.profileImage || userAvatar} 
+                                        alt={user?.firstName || 'Profile'} 
+                                        className="w-full h-full object-cover" 
+                                    />
                                 </Link>
                             </>
                         )}

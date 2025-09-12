@@ -21,11 +21,7 @@ const WelcomePage = () => {
 
     return (
         <div className="min-h-screen bg-neutrals-8">
-            <Navbar
-                isAuthenticated={false}
-                onSignIn={handleSignIn}
-                onSignUp={handleSignUp}
-            />
+            <Navbar />
 
             {/* Hero Section */}
             <section className="relative h-[597px] lg:h-[838px] overflow-hidden">

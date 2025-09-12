@@ -1,18 +1,23 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 // Placeholder image for background
 const backgroundImage = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80"
 
 const SignUpPage = () => {
     const navigate = useNavigate()
+    const { register, isLoading } = useAuth()
     const [formData, setFormData] = useState({
+        firstName: '',
+        lastName: '',
         email: '',
         password: '',
         confirmPassword: ''
     })
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [error, setError] = useState('')
 
     const handleInputChange = (e) => {
         setFormData({
@@ -21,11 +26,45 @@ const SignUpPage = () => {
         })
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        // For now, just navigate to home page
-        // In real app, this would handle authentication
-        navigate('/home')
+        setError('')
+        
+        // Validate form
+        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
+            setError('Please fill in all fields')
+            return
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+            setError('Passwords do not match')
+            return
+        }
+        
+        if (formData.password.length < 6) {
+            setError('Password must be at least 6 characters long')
+            return
+        }
+        
+        // Check password complexity (uppercase, lowercase, number)
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
+        if (!passwordRegex.test(formData.password)) {
+            setError('Password must contain at least one lowercase letter, one uppercase letter, and one number')
+            return
+        }
+        
+        // Call register function from auth context
+        const result = await register({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            password: formData.password
+        })
+        
+        if (!result.success) {
+            setError(result.error || 'Registration failed')
+        }
+        // If successful, the register function will handle navigation
     }
 
     return (
@@ -84,8 +123,41 @@ const SignUpPage = () => {
                         </p>
                     </div>
 
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 font-poppins text-sm">{error}</p>
+                        </div>
+                    )}
+
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* First Name Input */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                name="firstName"
+                                value={formData.firstName}
+                                onChange={handleInputChange}
+                                placeholder="First Name"
+                                className="w-full h-12 px-6 py-2 border-2 border-neutrals-6 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:border-primary-1 focus:outline-none transition-colors"
+                                required
+                            />
+                        </div>
+
+                        {/* Last Name Input */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                name="lastName"
+                                value={formData.lastName}
+                                onChange={handleInputChange}
+                                placeholder="Last Name"
+                                className="w-full h-12 px-6 py-2 border-2 border-neutrals-6 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:border-primary-1 focus:outline-none transition-colors"
+                                required
+                            />
+                        </div>
+
                         {/* Email Input */}
                         <div className="relative">
                             <input
@@ -159,9 +231,17 @@ const SignUpPage = () => {
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                className="w-[120px] bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors mx-auto block"
+                                disabled={isLoading}
+                                className="w-[120px] bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors mx-auto block disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Sign up
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center">
+                                        <div className="w-4 h-4 border-2 border-neutrals-8 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        Signing up...
+                                    </div>
+                                ) : (
+                                    'Sign up'
+                                )}
                             </button>
                         </div>
 

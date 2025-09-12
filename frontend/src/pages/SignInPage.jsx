@@ -1,16 +1,19 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 // Placeholder image for background
 const backgroundImage = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80"
 
 const SignInPage = () => {
     const navigate = useNavigate()
+    const { login, isLoading } = useAuth()
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     })
     const [showPassword, setShowPassword] = useState(false)
+    const [error, setError] = useState('')
 
     const handleInputChange = (e) => {
         setFormData({
@@ -19,11 +22,23 @@ const SignInPage = () => {
         })
     }
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault()
-        // For now, just navigate to home page
-        // In real app, this would handle authentication
-        navigate('/home')
+        setError('')
+        
+        // Validate form
+        if (!formData.email || !formData.password) {
+            setError('Please fill in all fields')
+            return
+        }
+        
+        // Call login function from auth context
+        const result = await login(formData.email, formData.password)
+        
+        if (!result.success) {
+            setError(result.error || 'Login failed')
+        }
+        // If successful, the login function will handle navigation
     }
 
     return (
@@ -82,6 +97,13 @@ const SignInPage = () => {
                         </p>
                     </div>
 
+                    {/* Error Message */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 font-poppins text-sm">{error}</p>
+                        </div>
+                    )}
+
                     {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {/* Email Input */}
@@ -139,9 +161,17 @@ const SignInPage = () => {
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                className="w-[120px] bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors mx-auto block"
+                                disabled={isLoading}
+                                className="w-[120px] bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors mx-auto block disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Sign in
+                                {isLoading ? (
+                                    <div className="flex items-center justify-center">
+                                        <div className="w-4 h-4 border-2 border-neutrals-8 border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        Signing in...
+                                    </div>
+                                ) : (
+                                    'Sign in'
+                                )}
                             </button>
                         </div>
 

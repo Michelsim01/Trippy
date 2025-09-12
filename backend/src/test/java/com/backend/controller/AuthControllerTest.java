@@ -64,12 +64,10 @@ public class AuthControllerTest {
     @Test
     void testUserRegistration() throws Exception {
         RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setUsername("testuser");
         registerRequest.setFirstName("Test");
         registerRequest.setLastName("User");
         registerRequest.setEmail("test@example.com");
         registerRequest.setPassword("Password123");
-        registerRequest.setRole("TRAVELER");
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -117,12 +115,10 @@ public class AuthControllerTest {
     @Test
     void testRegistrationWithInvalidData() throws Exception {
         RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setUsername("ab"); // Too short
         registerRequest.setFirstName(""); // Empty
         registerRequest.setLastName(""); // Empty
         registerRequest.setEmail("invalid-email"); // Invalid email
-        registerRequest.setPassword("123"); // Too short
-        registerRequest.setRole("INVALID_ROLE"); // Invalid role
+        registerRequest.setPassword("123"); // Too short, no uppercase/lowercase
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -146,12 +142,10 @@ public class AuthControllerTest {
     void testDuplicateEmailRegistration() throws Exception {
         // Create first user
         RegisterRequest firstUser = new RegisterRequest();
-        firstUser.setUsername("user1");
         firstUser.setFirstName("User");
         firstUser.setLastName("One");
         firstUser.setEmail("duplicate@example.com");
         firstUser.setPassword("Password123");
-        firstUser.setRole("TRAVELER");
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -160,12 +154,10 @@ public class AuthControllerTest {
 
         // Try to create second user with same email
         RegisterRequest secondUser = new RegisterRequest();
-        secondUser.setUsername("user2");
         secondUser.setFirstName("User");
         secondUser.setLastName("Two");
         secondUser.setEmail("duplicate@example.com");
         secondUser.setPassword("Password123");
-        secondUser.setRole("GUIDE");
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -174,50 +166,21 @@ public class AuthControllerTest {
     }
 
     @Test
-    void testDifferentUserRoles() throws Exception {
-        // Test TRAVELER registration
-        RegisterRequest travelerRequest = new RegisterRequest();
-        travelerRequest.setUsername("traveler");
-        travelerRequest.setFirstName("Traveler");
-        travelerRequest.setLastName("User");
-        travelerRequest.setEmail("traveler@example.com");
-        travelerRequest.setPassword("Password123");
-        travelerRequest.setRole("TRAVELER");
+    void testUserRegistrationWithDefaultRole() throws Exception {
+        // Test that all users are automatically assigned ROLE_TRAVELER
+        RegisterRequest userRequest = new RegisterRequest();
+        userRequest.setFirstName("Test");
+        userRequest.setLastName("User");
+        userRequest.setEmail("testuser@example.com");
+        userRequest.setPassword("Password123");
 
         mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(travelerRequest)))
+                .content(objectMapper.writeValueAsString(userRequest)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.roles[0]").value("ROLE_TRAVELER"));
 
-        // Test GUIDE registration
-        RegisterRequest guideRequest = new RegisterRequest();
-        guideRequest.setUsername("guide");
-        guideRequest.setFirstName("Guide");
-        guideRequest.setLastName("User");
-        guideRequest.setEmail("guide@example.com");
-        guideRequest.setPassword("Password123");
-        guideRequest.setRole("GUIDE");
-
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(guideRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.roles[0]").value("ROLE_GUIDE"));
-
-        // Test ADMIN registration
-        RegisterRequest adminRequest = new RegisterRequest();
-        adminRequest.setUsername("admin");
-        adminRequest.setFirstName("Admin");
-        adminRequest.setLastName("User");
-        adminRequest.setEmail("admin@example.com");
-        adminRequest.setPassword("Password123");
-        adminRequest.setRole("ADMIN");
-
-        mockMvc.perform(post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(adminRequest)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.roles[0]").value("ROLE_ADMIN"));
+        // Verify user was saved to database
+        assert userRepository.findByEmail("testuser@example.com").isPresent();
     }
 }

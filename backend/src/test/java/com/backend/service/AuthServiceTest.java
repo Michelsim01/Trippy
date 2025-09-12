@@ -43,12 +43,10 @@ public class AuthServiceTest {
     void testUserRegistration() throws Exception {
         // Given
         RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setUsername("testuser");
         registerRequest.setFirstName("Test");
         registerRequest.setLastName("User");
         registerRequest.setEmail("test@example.com");
         registerRequest.setPassword("Password123");
-        registerRequest.setRole("TRAVELER");
 
         // When
         AuthResponse response = authService.register(registerRequest);
@@ -111,12 +109,10 @@ public class AuthServiceTest {
         userRepository.save(existingUser);
 
         RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setUsername("newuser");
         registerRequest.setFirstName("New");
         registerRequest.setLastName("User");
         registerRequest.setEmail("duplicate@example.com");
         registerRequest.setPassword("Password123");
-        registerRequest.setRole("TRAVELER");
 
         // When & Then
         Exception exception = assertThrows(Exception.class, () -> {
@@ -142,41 +138,18 @@ public class AuthServiceTest {
     }
 
     @Test
-    void testDifferentUserRoles() throws Exception {
-        // Test TRAVELER role
-        RegisterRequest travelerRequest = new RegisterRequest();
-        travelerRequest.setUsername("traveler");
-        travelerRequest.setFirstName("Traveler");
-        travelerRequest.setLastName("User");
-        travelerRequest.setEmail("traveler@example.com");
-        travelerRequest.setPassword("Password123");
-        travelerRequest.setRole("TRAVELER");
+    void testDefaultUserRole() throws Exception {
+        // Test that all users are automatically assigned ROLE_TRAVELER
+        RegisterRequest userRequest = new RegisterRequest();
+        userRequest.setFirstName("Test");
+        userRequest.setLastName("User");
+        userRequest.setEmail("testuser@example.com");
+        userRequest.setPassword("Password123");
 
-        AuthResponse travelerResponse = authService.register(travelerRequest);
-        assertEquals("ROLE_TRAVELER", travelerResponse.getRoles().get(0));
-
-        // Test GUIDE role
-        RegisterRequest guideRequest = new RegisterRequest();
-        guideRequest.setUsername("guide");
-        guideRequest.setFirstName("Guide");
-        guideRequest.setLastName("User");
-        guideRequest.setEmail("guide@example.com");
-        guideRequest.setPassword("Password123");
-        guideRequest.setRole("GUIDE");
-
-        AuthResponse guideResponse = authService.register(guideRequest);
-        assertEquals("ROLE_GUIDE", guideResponse.getRoles().get(0));
-
-        // Test ADMIN role
-        RegisterRequest adminRequest = new RegisterRequest();
-        adminRequest.setUsername("admin");
-        adminRequest.setFirstName("Admin");
-        adminRequest.setLastName("User");
-        adminRequest.setEmail("admin@example.com");
-        adminRequest.setPassword("Password123");
-        adminRequest.setRole("ADMIN");
-
-        AuthResponse adminResponse = authService.register(adminRequest);
-        assertEquals("ROLE_ADMIN", adminResponse.getRoles().get(0));
+        AuthResponse response = authService.register(userRequest);
+        assertEquals("ROLE_TRAVELER", response.getRoles().get(0));
+        
+        // Verify user was saved to database
+        assertTrue(userRepository.findByEmail("testuser@example.com").isPresent());
     }
 }

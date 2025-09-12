@@ -11,10 +11,6 @@ import jakarta.validation.constraints.Size;
  */
 public class RegisterRequest { 
     
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 20, message = "Username must be between 3 and 20 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
-    private String username;
     
     @NotBlank(message = "First name is required")
     @Size(min = 2, max = 50, message = "First name must be between 2 and 50 characters")
@@ -34,31 +30,19 @@ public class RegisterRequest {
              message = "Password must contain at least one lowercase letter, one uppercase letter, and one number")
     private String password;
     
-    @NotBlank(message = "Role is required")
-    @Pattern(regexp = "^(TRAVELER|GUIDE|ADMIN)$", message = "Role must be TRAVELER, GUIDE, or ADMIN")
-    private String role;
     
     // Default constructor
     public RegisterRequest() {}
     
     // Constructor with parameters
-    public RegisterRequest(String username, String firstName, String lastName, String email, String password, String role) {
-        this.username = username;
+    public RegisterRequest(String firstName, String lastName, String email, String password) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.email = email;
         this.password = password;
-        this.role = role;
     }
     
     // Getters and setters
-    public String getUsername() {
-        return username;
-    }
-    
-    public void setUsername(String username) {
-        this.username = username;
-    }
     
     public String getFirstName() {
         return firstName;
@@ -92,23 +76,14 @@ public class RegisterRequest {
         this.password = password;
     }
     
-    public String getRole() {
-        return role;
-    }
-    
-    public void setRole(String role) {
-        this.role = role;
-    }
     
     @Override
     public String toString() {
         return "RegisterRequest{" +
-                "username='" + username + '\'' +
-                ", firstName='" + firstName + '\'' +
+                "firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", email='" + email + '\'' +
                 ", password='[PROTECTED]'" +
-                ", role='" + role + '\'' +
                 '}';
     }
 }
