@@ -10,6 +10,7 @@ import MessagesPage from './pages/MessagesPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
 import CreateExperiencePage from './pages/CreateExperiencePage'
+import ExperienceDetailPage from './pages/ExperienceDetailPage'
 import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
@@ -72,6 +73,10 @@ export default function App() {
           <Route
             path="/create-experience"
             element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePage />}
+          />
+          <Route
+            path="/experience/:id"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailPage />}
           />
           <Route
             path="/calendar"
