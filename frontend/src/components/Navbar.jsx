@@ -1,5 +1,5 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -11,6 +11,18 @@ const Navbar = ({
     onSignIn = () => { },
     onSignUp = () => { }
 }) => {
+    const navigate = useNavigate()
+    const [searchQuery, setSearchQuery] = useState('')
+
+    const handleSearchChange = (e) => {
+        setSearchQuery(e.target.value)
+    }
+
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'Enter' && searchQuery.trim()) {
+            navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+        }
+    }
     return (
         <nav className="bg-neutrals-8 border-b border-neutrals-6 relative z-30 w-full">
             {/* Desktop Navbar */}
@@ -60,6 +72,9 @@ const Navbar = ({
                                         <input
                                             type="text"
                                             placeholder="Search everything"
+                                            value={searchQuery}
+                                            onChange={handleSearchChange}
+                                            onKeyDown={handleSearchKeyDown}
                                             className="input-field white"
                                             style={{
                                                 paddingLeft: '50px',
@@ -178,7 +193,10 @@ const Navbar = ({
                             /* Authenticated state */
                             <>
                                 {/* Search icon */}
-                                <button className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
+                                <button 
+                                    onClick={() => navigate('/search')}
+                                    className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
+                                >
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
