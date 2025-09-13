@@ -135,10 +135,11 @@ const WishlistPage = () => {
                                             key={item.id}
                                             experience={item}
                                             showWishlistButton={true}
+                                            isInWishlist={true} // All items on wishlist page are in wishlist
                                             onWishlistToggle={(experienceId, wasAdded) => {
-                                                if (!wasAdded) {
-                                                    removeFromWishlist(item.id);
-                                                }
+                                                // Note: We don't remove from local state immediately
+                                                // The card stays visible until page refresh
+                                                console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                             }}
                                             showExplore={item.showExplore}
                                         />
@@ -184,10 +185,11 @@ const WishlistPage = () => {
                                     key={item.id}
                                     experience={item}
                                     showWishlistButton={true}
+                                    isInWishlist={true} // All items on wishlist page are in wishlist
                                     onWishlistToggle={(experienceId, wasAdded) => {
-                                        if (!wasAdded) {
-                                            removeFromWishlist(item.id);
-                                        }
+                                        // Note: We don't remove from local state immediately
+                                        // The card stays visible until page refresh
+                                        console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                     }}
                                     showExplore={item.showExplore}
                                 />

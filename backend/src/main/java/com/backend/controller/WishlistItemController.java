@@ -66,4 +66,19 @@ public class WishlistItemController {
     public void deleteWishlistItem(@PathVariable Long id) {
         wishlistItemRepository.deleteById(id);
     }
+
+    @DeleteMapping("/user/{userId}/experience/{experienceId}")
+    public ResponseEntity<String> deleteByUserAndExperience(@PathVariable Long userId, @PathVariable Long experienceId) {
+        try {
+            var wishlistItem = wishlistItemRepository.findByUser_IdAndExperience_ExperienceId(userId, experienceId);
+            if (wishlistItem.isPresent()) {
+                wishlistItemRepository.delete(wishlistItem.get());
+                return ResponseEntity.ok("Wishlist item removed successfully");
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error removing wishlist item: " + e.getMessage());
+        }
+    }
 }

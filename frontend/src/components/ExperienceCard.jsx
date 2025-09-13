@@ -6,16 +6,61 @@ const ExperienceCard = ({
     showWishlistButton = true,
     onWishlistToggle = null,
     variant = 'default',
-    showExplore = false
+    showExplore = false,
+    isInWishlist = false // New prop to indicate if this item is in the user's wishlist
 }) => {
-    const [isWishlisted, setIsWishlisted] = useState(true); // Default to true for demo
+    const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
     const navigate = useNavigate();
 
-    const handleWishlistToggle = (e) => {
+    const handleWishlistToggle = async (e) => {
         e.stopPropagation(); // Prevent card click when clicking wishlist button
-        setIsWishlisted(!isWishlisted);
-        if (onWishlistToggle) {
-            onWishlistToggle(experience?.experienceId || experience?.id, !isWishlisted);
+        
+        const newWishlistState = !isWishlisted;
+        setIsWishlisted(newWishlistState); // Update local state immediately for UI feedback
+        
+        try {
+            const experienceId = experience?.experienceId || experience?.id;
+            
+            if (newWishlistState) {
+                // Add to wishlist
+                const response = await fetch('http://localhost:8080/api/wishlist-items', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: 1, // TODO: Get from auth context
+                        experienceId: experienceId
+                    })
+                });
+                
+                if (!response.ok) {
+                    // Revert state if API call failed
+                    setIsWishlisted(!newWishlistState);
+                    console.error('Failed to add to wishlist');
+                }
+            } else {
+                // Remove from wishlist
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/1/experience/${experienceId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    // Revert state if API call failed
+                    setIsWishlisted(!newWishlistState);
+                    console.error('Failed to remove from wishlist');
+                }
+            }
+            
+            // Call the parent callback if provided
+            if (onWishlistToggle) {
+                onWishlistToggle(experienceId, newWishlistState);
+            }
+            
+        } catch (error) {
+            // Revert state if API call failed
+            setIsWishlisted(!newWishlistState);
+            console.error('Error toggling wishlist:', error);
         }
     };
 
@@ -73,10 +118,21 @@ const ExperienceCard = ({
                 {showWishlistButton && (
                     <button 
                         onClick={handleWishlistToggle}
-                        className="btn-icon absolute top-4 right-4"
+                        className={`absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${isWishlisted ? 'animate-pulse' : ''}`}
                     >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill={isWishlisted ? "#FD7FE9" : "#E5E7EB"} />
+                        <svg 
+                            width="20" 
+                            height="20" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className={`transition-all duration-300 ${isWishlisted ? 'scale-110' : 'scale-100'}`}
+                        >
+                            <path 
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                                fill={isWishlisted ? "#FD7FE9" : "#B1B5C3"}
+                                className="transition-colors duration-300"
+                            />
                         </svg>
                     </button>
                 )}
