@@ -5,5 +5,7 @@ public enum NotificationType {
     REMINDER,
     DISCOUNT,
     MESSAGE,
-    REVIEW_REQUEST
+    REVIEW_REQUEST,
+    PASSWORD_RESET,
+    UPDATE_INFO,
 }

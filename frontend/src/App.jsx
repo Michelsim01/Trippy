@@ -57,7 +57,7 @@ export default function App() {
             element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
           />
           <Route
-            path="/profile"
+            path="/profile/:id"
             element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
           />
           <Route

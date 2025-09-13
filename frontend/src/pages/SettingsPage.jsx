@@ -29,7 +29,6 @@ const SettingsPage = () => {
     const closeSidebar = () => setIsSidebarOpen(false);
     const toggleAddCard = () => setShowAddCard((prev) => !prev);
 
-    // Scroll to section and set active tab
     const handleTabClick = (id) => {
         setActiveTab(id);
         const el = document.getElementById(id);
@@ -38,21 +37,19 @@ const SettingsPage = () => {
         }
     };
 
-    // Listen to scroll to update active tab
     React.useEffect(() => {
         const handleScroll = () => {
             const offsets = sectionTabs.map(tab => {
                 const el = document.getElementById(tab.id);
                 if (!el) return { id: tab.id, top: Infinity };
                 const rect = el.getBoundingClientRect();
-                return { id: tab.id, top: Math.abs(rect.top - 80) }; // 80px offset for navbar
+                return { id: tab.id, top: Math.abs(rect.top - 80) };
             });
             const closest = offsets.reduce((a, b) => (a.top < b.top ? a : b));
             setActiveTab(closest.id);
         };
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-        // eslint-disable-next-line
     }, []);
 
     return (
@@ -131,5 +128,3 @@ const SettingsPage = () => {
     );
 };
 export default SettingsPage;
-
-
