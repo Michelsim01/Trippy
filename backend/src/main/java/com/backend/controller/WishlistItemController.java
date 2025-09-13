@@ -1,19 +1,30 @@
 package com.backend.controller;
 
 import com.backend.entity.WishlistItem;
+import com.backend.entity.User;
+import com.backend.entity.Experience;
 import com.backend.repository.WishlistItemRepository;
+import com.backend.repository.UserRepository;
+import com.backend.repository.ExperienceRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/wishlist-items")
 public class WishlistItemController {
     @Autowired
     private WishlistItemRepository wishlistItemRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private ExperienceRepository experienceRepository;
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<Map<String, Object>>> getByUser(@PathVariable Long userId) {
@@ -54,6 +65,50 @@ public class WishlistItemController {
     @PostMapping
     public WishlistItem createWishlistItem(@RequestBody WishlistItem wishlistItem) {
         return wishlistItemRepository.save(wishlistItem);
+    }
+
+    @PostMapping("/user/{userId}/experience/{experienceId}")
+    public ResponseEntity<Map<String, Object>> addToWishlist(@PathVariable Long userId, @PathVariable Long experienceId) {
+        try {
+            // Check if item already exists
+            var existingItem = wishlistItemRepository.findByUser_IdAndExperience_ExperienceId(userId, experienceId);
+            if (existingItem.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("message", "Item already in wishlist");
+                response.put("wishlistItemId", existingItem.get().getWishlistItemId());
+                return ResponseEntity.ok(response);
+            }
+
+            // Fetch user and experience
+            Optional<User> user = userRepository.findById(userId);
+            Optional<Experience> experience = experienceRepository.findById(experienceId);
+            
+            if (user.isEmpty() || experience.isEmpty()) {
+                Map<String, Object> errorResponse = new HashMap<>();
+                errorResponse.put("error", "User or Experience not found");
+                return ResponseEntity.badRequest().body(errorResponse);
+            }
+
+            // Create new wishlist item
+            WishlistItem newItem = new WishlistItem();
+            newItem.setUser(user.get());
+            newItem.setExperience(experience.get());
+            newItem.setAddedAt(java.time.LocalDateTime.now());
+            
+            WishlistItem savedItem = wishlistItemRepository.save(newItem);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Item added to wishlist successfully");
+            response.put("wishlistItemId", savedItem.getWishlistItemId());
+            response.put("userId", userId);
+            response.put("experienceId", experienceId);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", "Error adding to wishlist: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(errorResponse);
+        }
     }
 
     @PutMapping("/{id}")

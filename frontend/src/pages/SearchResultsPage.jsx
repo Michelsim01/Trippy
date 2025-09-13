@@ -5,220 +5,49 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import FilterPanel from '../components/FilterPanel';
 import FilterBar from '../components/FilterBar';
+import ExperienceCard from '../components/ExperienceCard';
 
-// Mock images - in production these would come from your image assets
-const experienceImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
-
-const ProductCard = ({ title = "Venice, Rome & Milan", location = "Karineside", originalPrice = 699, salePrice = 548, rating = 4.9, reviewCount = 0, startDate = "Tue, Jul 20", endDate = "Fri, Jul 23" }) => {
-    return (
-        <div className="flex flex-col h-[365px] w-64 shrink-0">
-            {/* Image Container */}
-            <div className="relative flex-1 bg-neutrals-2 rounded-t-[16px] overflow-hidden">
-                <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${experienceImage})` }}
-                />
-                {/* Wishlist Button */}
-                <button className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" fill="#FF6B6B" />
-                    </svg>
-                </button>
-            </div>
-
-            {/* Card Info */}
-            <div className="bg-white p-5 rounded-b-[16px] flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                        <h3 className="text-[16px] font-medium text-neutrals-1 leading-[24px] mb-2">
-                            {title}
-                        </h3>
-                        <div className="flex items-start justify-between">
-                            <p className="text-[12px] text-neutrals-3 leading-[20px] flex-1">
-                                {location}
-                            </p>
-                            <div className="flex items-center gap-1.5">
-                                <div className="relative">
-                                    <span className="text-[12px] font-bold text-neutrals-5 line-through">
-                                        ${originalPrice}
-                                    </span>
-                                </div>
-                                <span className="text-[12px] font-bold text-primary-1 uppercase">
-                                    ${salePrice}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-neutrals-6 rounded-[1px]" />
-
-                {/* Date and Rating */}
-                <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                        <span>{startDate}</span>
-                        <span>-</span>
-                        <span>{endDate}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#FFD700" />
-                        </svg>
-                        <span className="text-[12px] font-semibold text-neutrals-1">
-                            {rating}
-                        </span>
-                        {reviewCount > 0 && (
-                            <span className="text-[10px] text-neutrals-4 ml-1">
-                                ({reviewCount})
-                            </span>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+// Helper function to transform API data to match filter expectations
+const transformExperienceData = (apiData, wishlistItems = []) => {
+    const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
+    
+    return apiData.map(exp => ({
+        id: exp.experienceId,
+        experienceId: exp.experienceId,
+        title: exp.title,
+        location: exp.location,
+        originalPrice: exp.price ? exp.price * 1.2 : 0, // Add 20% markup for "original" price
+        salePrice: exp.price || 0,
+        rating: exp.averageRating || 4.5,
+        reviewCount: exp.totalReviews || 0,
+        duration: exp.duration ? `${exp.duration} hours` : "Unknown",
+        durationHours: exp.duration || 0,
+        availableFrom: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
+        availableTo: exp.updatedAt ? exp.updatedAt.split('T')[0] : "2025-12-31",
+        isLiked: wishlistedIds.has(exp.experienceId),
+        timeOfDay: "morning", // Default since we don't have this in API
+        listingDate: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
+        relevanceScore: 0.8, // Default relevance score
+        coverPhotoUrl: exp.coverPhotoUrl,
+        shortDescription: exp.shortDescription,
+        category: exp.category,
+        status: exp.status,
+        // Add all the fields that ExperienceCard expects
+        experience: {
+            experienceId: exp.experienceId,
+            title: exp.title,
+            location: exp.location,
+            price: exp.price,
+            averageRating: exp.averageRating,
+            coverPhotoUrl: exp.coverPhotoUrl, // Make sure this is passed correctly
+            shortDescription: exp.shortDescription,
+            duration: exp.duration,
+            category: exp.category,
+            status: exp.status,
+            totalReviews: exp.totalReviews
+        }
+    }));
 };
-
-// Mock search results - in production this would be an API call
-const mockExperiences = [
-    { 
-        id: 1,
-        title: "Venice, Rome & Milan", 
-        location: "Karineside", 
-        originalPrice: 699, 
-        salePrice: 548, 
-        rating: 4.9,
-        reviewCount: 245,
-        duration: "Multi-day",
-        durationHours: 168, // 7 days in hours
-        availableFrom: "2025-07-20",
-        availableTo: "2025-12-20",
-        isLiked: false,
-        timeOfDay: "morning",
-        listingDate: "2025-06-01",
-        relevanceScore: 0.95
-    },
-    { 
-        id: 2,
-        title: "Paris & Lyon Adventure", 
-        location: "Franceville", 
-        originalPrice: 799, 
-        salePrice: 629, 
-        rating: 4.8,
-        reviewCount: 189,
-        duration: "Multi-day",
-        durationHours: 120, // 5 days in hours
-        availableFrom: "2025-08-01",
-        availableTo: "2025-11-30",
-        isLiked: true,
-        timeOfDay: "afternoon",
-        listingDate: "2025-07-15",
-        relevanceScore: 0.87
-    },
-    { 
-        id: 3,
-        title: "Tokyo City Explorer", 
-        location: "Shibuya", 
-        originalPrice: 899, 
-        salePrice: 749, 
-        rating: 4.7,
-        reviewCount: 156,
-        duration: "1-3 hours",
-        durationHours: 2.5,
-        availableFrom: "2025-09-15",
-        availableTo: "2025-12-15",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-08-20",
-        relevanceScore: 0.72
-    },
-    { 
-        id: 4,
-        title: "Barcelona Highlights", 
-        location: "Catalunya", 
-        originalPrice: 599, 
-        salePrice: 459, 
-        rating: 4.6,
-        reviewCount: 312,
-        duration: "Full day",
-        durationHours: 8,
-        availableFrom: "2025-07-01",
-        availableTo: "2025-10-31",
-        isLiked: true,
-        timeOfDay: "morning",
-        listingDate: "2025-05-10",
-        relevanceScore: 0.83
-    },
-    { 
-        id: 5,
-        title: "Swiss Alps Journey", 
-        location: "Interlaken", 
-        originalPrice: 999, 
-        salePrice: 819, 
-        rating: 4.9,
-        reviewCount: 78,
-        duration: "Multi-day",
-        durationHours: 144, // 6 days in hours
-        availableFrom: "2025-06-01",
-        availableTo: "2025-09-30",
-        isLiked: false,
-        timeOfDay: "morning",
-        listingDate: "2025-04-25",
-        relevanceScore: 0.91
-    },
-    { 
-        id: 6,
-        title: "Greek Island Hopping", 
-        location: "Santorini", 
-        originalPrice: 849, 
-        salePrice: 679, 
-        rating: 4.8,
-        reviewCount: 203,
-        duration: "Multi-day",
-        durationHours: 240, // 10 days in hours
-        availableFrom: "2025-05-01",
-        availableTo: "2025-10-15",
-        isLiked: true,
-        timeOfDay: "afternoon",
-        listingDate: "2025-03-12",
-        relevanceScore: 0.79
-    },
-    { 
-        id: 7,
-        title: "Morocco Desert Trek", 
-        location: "Marrakech", 
-        originalPrice: 749, 
-        salePrice: 599, 
-        rating: 4.5,
-        reviewCount: 134,
-        duration: "Multi-day",
-        durationHours: 192, // 8 days in hours
-        availableFrom: "2025-04-01",
-        availableTo: "2025-11-30",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-02-28",
-        relevanceScore: 0.68
-    },
-    { 
-        id: 8,
-        title: "Northern Lights", 
-        location: "Reykjavik", 
-        originalPrice: 1199, 
-        salePrice: 999, 
-        rating: 4.9,
-        reviewCount: 267,
-        duration: "Half day",
-        durationHours: 4,
-        availableFrom: "2025-11-01",
-        availableTo: "2025-12-31",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-09-05",
-        relevanceScore: 0.88
-    },
-];
 
 const SearchResultsPage = () => {
     const [searchParams] = useSearchParams();
@@ -227,11 +56,14 @@ const SearchResultsPage = () => {
     const [filteredResults, setFilteredResults] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+    const [allExperiences, setAllExperiences] = useState([]);
+    const [wishlistItems, setWishlistItems] = useState([]);
+    const [error, setError] = useState(null);
 
     // Filter states
     const [filters, setFilters] = useState({
         priceRange: { min: 0, max: 0, enabled: false }, // Start disabled
-        duration: '',
+        duration: [], // Changed to array to support multiple selections
         startDate: '',
         endDate: '',
         onlyLiked: false,
@@ -243,7 +75,32 @@ const SearchResultsPage = () => {
 
     const query = searchParams.get('q') || '';
 
-    const popularExperiences = mockExperiences.slice(0, 4);
+    // Get popular experiences (first 4 from all experiences)
+    const popularExperiences = allExperiences.slice(0, 4);
+
+    // Helper function to check if duration matches any of the selected filters
+    const matchesDurationFilter = (durationHours, selectedDurations) => {
+        // If no duration filters are selected, show all
+        if (selectedDurations.length === 0) {
+            return true;
+        }
+        
+        // Check if the duration matches any of the selected filters
+        return selectedDurations.some(filterDuration => {
+            switch (filterDuration) {
+                case '1-3 hours':
+                    return durationHours >= 1 && durationHours <= 3;
+                case 'Half day':
+                    return durationHours >= 4 && durationHours <= 6;
+                case 'Full day':
+                    return durationHours >= 7 && durationHours <= 24;
+                case 'Multi-day':
+                    return durationHours > 24;
+                default:
+                    return false;
+            }
+        });
+    };
 
     // Filter function
     const applyFilters = (experiences) => {
@@ -258,8 +115,8 @@ const SearchResultsPage = () => {
                 }
             }
 
-            // Duration filter
-            if (filters.duration && experience.duration !== filters.duration) {
+            // Duration filter - now works with multiple selections and numeric hours
+            if (!matchesDurationFilter(experience.durationHours, filters.duration)) {
                 return false;
             }
 
@@ -334,30 +191,69 @@ const SearchResultsPage = () => {
         }
     };
 
+    // Fetch all experiences and wishlist data on component mount
     useEffect(() => {
-        // Mock search functionality - in production this would be an API call
-        const performSearch = async () => {
+        const fetchData = async () => {
+            try {
             setLoading(true);
-            
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
+                setError(null);
+
+                // Fetch experiences and wishlist items in parallel
+                const [experiencesResponse, wishlistResponse] = await Promise.all([
+                    fetch('http://localhost:8080/api/experiences'),
+                    fetch('http://localhost:8080/api/wishlist-items/user/1') // Using user ID 1 for now
+                ]);
+
+                if (!experiencesResponse.ok) {
+                    throw new Error(`Failed to fetch experiences: ${experiencesResponse.status}`);
+                }
+
+                const experiencesData = await experiencesResponse.json();
+                const transformedExperiences = transformExperienceData(experiencesData, []);
+                setAllExperiences(transformedExperiences);
+
+                // Handle wishlist response
+                if (wishlistResponse.ok) {
+                    const wishlistData = await wishlistResponse.json();
+                    const transformedWishlist = wishlistData.map(item => ({
+                        experienceId: item.experience.experienceId,
+                        wishlistItemId: item.wishlistItemId
+                    }));
+                    setWishlistItems(transformedWishlist);
+                    
+                    // Update experiences with wishlist status
+                    const updatedExperiences = transformExperienceData(experiencesData, transformedWishlist);
+                    setAllExperiences(updatedExperiences);
+                } else {
+                    // If wishlist fails, just set empty array
+                    setWishlistItems([]);
+                }
+
+            } catch (err) {
+                console.error("Failed to fetch data:", err);
+                setError(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Perform search when query changes
+    useEffect(() => {
             if (query.trim()) {
                 // Filter experiences based on query
-                const filtered = mockExperiences.filter(experience =>
+            const filtered = allExperiences.filter(experience =>
                     experience.title.toLowerCase().includes(query.toLowerCase()) ||
-                    experience.location.toLowerCase().includes(query.toLowerCase())
+                experience.location.toLowerCase().includes(query.toLowerCase()) ||
+                (experience.shortDescription && experience.shortDescription.toLowerCase().includes(query.toLowerCase()))
                 );
                 setSearchResults(filtered);
             } else {
                 setSearchResults([]);
             }
-            
-            setLoading(false);
-        };
-
-        performSearch();
-    }, [query]);
+    }, [query, allExperiences]);
 
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
@@ -432,7 +328,26 @@ const SearchResultsPage = () => {
                                 <div className="flex items-center justify-center py-20">
                                     <div className="text-center">
                                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
-                                        <p className="text-neutrals-4">Searching for experiences...</p>
+                                        <p className="text-neutrals-4">Loading experiences...</p>
+                                    </div>
+                                </div>
+                            ) : error ? (
+                                /* Error State */
+                                <div className="flex items-center justify-center py-20">
+                                    <div className="text-center">
+                                        <svg className="w-24 h-24 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <h3 className="text-[24px] font-bold text-neutrals-2 mb-2">Error loading experiences</h3>
+                                        <p className="text-[16px] text-neutrals-4 mb-6">
+                                            {error.message || 'Failed to load experiences. Please try again.'}
+                                        </p>
+                                        <button 
+                                            onClick={() => window.location.reload()} 
+                                            className="bg-primary-1 text-white px-6 py-2 rounded-lg hover:bg-primary-2 transition-colors"
+                                        >
+                                            Try Again
+                                        </button>
                                     </div>
                                 </div>
                             ) : filteredResults.length > 0 ? (
@@ -463,7 +378,12 @@ const SearchResultsPage = () => {
                                         {/* Desktop Grid */}
                                         <div className="hidden lg:flex lg:flex-wrap lg:justify-start lg:gap-6 mb-10">
                                             {filteredResults.map((experience, index) => (
-                                                <ProductCard key={experience.id || index} {...experience} />
+                                                <ExperienceCard 
+                                                    key={experience.id || index} 
+                                                    experience={experience.experience}
+                                                    showWishlistButton={true}
+                                                    isInWishlist={experience.isLiked}
+                                                />
                                             ))}
                                         </div>
 
@@ -471,7 +391,12 @@ const SearchResultsPage = () => {
                                         <div className="lg:hidden mb-10 w-full">
                                             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
                                                 {filteredResults.map((experience, index) => (
-                                                    <ProductCard key={experience.id || index} {...experience} />
+                                                    <ExperienceCard 
+                                                        key={experience.id || index} 
+                                                        experience={experience.experience}
+                                                        showWishlistButton={true}
+                                                        isInWishlist={experience.isLiked}
+                                                    />
                                                 ))}
                                             </div>
                                         </div>
@@ -523,7 +448,12 @@ const SearchResultsPage = () => {
                                             {/* Desktop Grid */}
                                             <div className="hidden lg:flex lg:justify-center lg:gap-6">
                                                 {popularExperiences.map((experience, index) => (
-                                                    <ProductCard key={index} {...experience} />
+                                                    <ExperienceCard 
+                                                        key={index} 
+                                                        experience={experience.experience}
+                                                        showWishlistButton={true}
+                                                        isInWishlist={experience.isLiked}
+                                                    />
                                                 ))}
                                             </div>
 
@@ -531,7 +461,12 @@ const SearchResultsPage = () => {
                                             <div className="lg:hidden">
                                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
                                                     {popularExperiences.map((experience, index) => (
-                                                        <ProductCard key={index} {...experience} />
+                                                        <ExperienceCard 
+                                                            key={index} 
+                                                            experience={experience.experience}
+                                                            showWishlistButton={true}
+                                                            isInWishlist={experience.isLiked}
+                                                        />
                                                     ))}
                                                 </div>
                                             </div>
@@ -607,7 +542,26 @@ const SearchResultsPage = () => {
                             <div className="flex items-center justify-center py-16">
                                 <div className="text-center">
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-1 mx-auto mb-4"></div>
-                                    <p className="text-neutrals-4 text-sm">Searching for experiences...</p>
+                                    <p className="text-neutrals-4 text-sm">Loading experiences...</p>
+                                </div>
+                            </div>
+                        ) : error ? (
+                            /* Error State */
+                            <div className="flex items-center justify-center py-16">
+                                <div className="text-center">
+                                    <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                    <h3 className="text-[18px] font-bold text-neutrals-2 mb-2">Error loading experiences</h3>
+                                    <p className="text-[14px] text-neutrals-4 mb-4 px-4">
+                                        {error.message || 'Failed to load experiences. Please try again.'}
+                                    </p>
+                                    <button 
+                                        onClick={() => window.location.reload()} 
+                                        className="bg-primary-1 text-white px-4 py-2 rounded-lg hover:bg-primary-2 transition-colors text-sm"
+                                    >
+                                        Try Again
+                                    </button>
                                 </div>
                             </div>
                         ) : filteredResults.length > 0 ? (
@@ -625,7 +579,12 @@ const SearchResultsPage = () => {
                                 {/* Mobile Results */}
                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                                     {filteredResults.map((experience, index) => (
-                                        <ProductCard key={experience.id || index} {...experience} />
+                                        <ExperienceCard 
+                                            key={experience.id || index} 
+                                            experience={experience.experience}
+                                            showWishlistButton={true}
+                                            isInWishlist={experience.isLiked}
+                                        />
                                     ))}
                                 </div>
                             </>
@@ -663,7 +622,12 @@ const SearchResultsPage = () => {
                                         </h4>
                                         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                                             {popularExperiences.map((experience, index) => (
-                                                <ProductCard key={index} {...experience} />
+                                                <ExperienceCard 
+                                                    key={index} 
+                                                    experience={experience.experience}
+                                                    showWishlistButton={true}
+                                                    isInWishlist={experience.isLiked}
+                                                />
                                             ))}
                                         </div>
                                     </div>

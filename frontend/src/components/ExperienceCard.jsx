@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const ExperienceCard = ({ 
@@ -7,10 +7,62 @@ const ExperienceCard = ({
     onWishlistToggle = null,
     variant = 'default',
     showExplore = false,
-    isInWishlist = false // New prop to indicate if this item is in the user's wishlist
+    isInWishlist = false, // New prop to indicate if this item is in the user's wishlist
+    schedules = [] // New prop for schedule data
 }) => {
     const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
     const navigate = useNavigate();
+
+    // Sync local state with prop changes
+    useEffect(() => {
+        setIsWishlisted(isInWishlist);
+    }, [isInWishlist]);
+
+    // Helper function to format schedule dates
+    const formatScheduleDates = (schedules) => {
+        if (!schedules || schedules.length === 0) {
+            return null;
+        }
+        
+        // Sort schedules by date and get the first available one
+        const sortedSchedules = schedules
+            .filter(schedule => schedule.isAvailable)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        if (sortedSchedules.length === 0) {
+            return null;
+        }
+        
+        const firstSchedule = sortedSchedules[0];
+        const date = new Date(firstSchedule.date);
+        
+        // Format as "Mon, Oct 20" style
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const dayName = dayNames[date.getDay()];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        
+        return `${dayName}, ${month} ${day}`;
+    };
+
+    // Helper function to generate sample dates based on experience data
+    const generateSampleDate = (experienceId) => {
+        // Generate different dates based on experience ID to show variety
+        const baseDate = new Date('2025-10-20');
+        const daysOffset = (experienceId % 7) * 2; // Different dates for different experiences
+        const date = new Date(baseDate.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+        
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const dayName = dayNames[date.getDay()];
+        const month = monthNames[date.getMonth()];
+        const day = date.getDate();
+        
+        return `${dayName}, ${month} ${day}`;
+    };
 
     const handleWishlistToggle = async (e) => {
         e.stopPropagation(); // Prevent card click when clicking wishlist button
@@ -23,15 +75,11 @@ const ExperienceCard = ({
             
             if (newWishlistState) {
                 // Add to wishlist
-                const response = await fetch('http://localhost:8080/api/wishlist-items', {
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/1/experience/${experienceId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        userId: 1, // TODO: Get from auth context
-                        experienceId: experienceId
-                    })
+                    }
                 });
                 
                 if (!response.ok) {
@@ -88,12 +136,12 @@ const ExperienceCard = ({
     };
 
     return (
-        <div 
-            className="flex flex-col h-[365px] w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+        <div
+            className="flex flex-col h-[365px] w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
             onClick={handleCardClick}
         >
             {/* Image Container */}
-            <div className="relative flex-1 bg-neutrals-2 rounded-t-[16px] overflow-hidden">
+            <div className="relative flex-1 bg-neutrals-2 overflow-hidden">
                 <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${cardData.imageUrl || cardData.image})` }}
@@ -139,7 +187,7 @@ const ExperienceCard = ({
             </div>
 
             {/* Card Info */}
-            <div className="bg-white p-5 rounded-b-[16px] flex flex-col gap-4">
+            <div className="bg-white p-5 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                     <div className="flex-1">
                         <h3 className="text-[16px] font-medium text-neutrals-1 leading-[24px] mb-2">
@@ -169,19 +217,36 @@ const ExperienceCard = ({
                 {/* Date and Rating */}
                 <div className="flex items-start justify-between">
                     <div className="flex items-start gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                        {cardData.dateRange ? (
-                            <>
-                                <span>{cardData.dateRange.split(' - ')[0]}</span>
-                                <span>-</span>
-                                <span>{cardData.dateRange.split(' - ')[1]}</span>
-                            </>
-                        ) : (
-                            <>
-                                <span>Tue, Jul 20</span>
-                                <span>-</span>
-                                <span>Fri, Jul 23</span>
-                            </>
-                        )}
+                        {(() => {
+                            const scheduleDate = formatScheduleDates(schedules);
+                            if (scheduleDate) {
+                                return (
+                                    <>
+                                        <span>{scheduleDate}</span>
+                                        <span>-</span>
+                                        <span>{scheduleDate}</span>
+                                    </>
+                                );
+                            } else if (cardData.dateRange) {
+                                return (
+                                    <>
+                                        <span>{cardData.dateRange.split(' - ')[0]}</span>
+                                        <span>-</span>
+                                        <span>{cardData.dateRange.split(' - ')[1]}</span>
+                                    </>
+                                );
+                            } else {
+                                // Generate sample dates based on experience ID
+                                const sampleDate = generateSampleDate(experience?.experienceId || experience?.id || 1);
+                                return (
+                                    <>
+                                        <span>{sampleDate}</span>
+                                        <span>-</span>
+                                        <span>{sampleDate}</span>
+                                    </>
+                                );
+                            }
+                        })()}
                     </div>
                     <div className="flex items-center gap-1">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">

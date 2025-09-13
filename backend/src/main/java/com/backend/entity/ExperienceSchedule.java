@@ -1,6 +1,7 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -15,6 +16,7 @@ public class ExperienceSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "experience_id", nullable = false)
+    @JsonIgnoreProperties({"mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems"})
     private Experience experience;
 
     private LocalDate date;
@@ -30,6 +32,7 @@ public class ExperienceSchedule {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private List<Booking> bookings;
 
     @OneToMany(
@@ -38,6 +41,7 @@ public class ExperienceSchedule {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private List<PersonalChat> personalChats;
 
     @OneToOne(
@@ -46,6 +50,7 @@ public class ExperienceSchedule {
         fetch = FetchType.LAZY,
         orphanRemoval = true
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private TripCohort tripCohort;
 
     public Long getScheduleId() { return scheduleId; }
