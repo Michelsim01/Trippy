@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
-import { generateScheduleRecords } from '../utils/scheduleGenerator';
+import { generateScheduleRecords, isMultiDayTour, getTourDurationInDays, validateManualDateSelection } from '../utils/scheduleGenerator';
 import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -14,17 +14,91 @@ export default function CreateExperienceAvailabilityPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
+  const [dateValidationError, setDateValidationError] = useState(null);
   
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDates, setSelectedDates] = useState(new Set(contextData?.availability?.selectedDates || []));
   const [blockedDates, setBlockedDates] = useState(new Set(contextData?.availability?.blockedDates || []));
   
+  // Extract the experience's start time if available (in 24-hour format for time input)
+  const getDefaultTimeSlot = () => {
+    // Check if we have a valid startDateTime (not empty string)
+    if (contextData?.startDateTime && contextData.startDateTime !== '') {
+      try {
+        const startTime = new Date(contextData.startDateTime);
+        
+        // Check if the date is valid
+        if (!isNaN(startTime.getTime())) {
+          const hours = startTime.getHours();
+          const minutes = startTime.getMinutes();
+          // Return in 24-hour format (HH:MM) for HTML time input
+          const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          
+          return formattedTime;
+        }
+      } catch (error) {
+        console.error('Error parsing start time:', error);
+      }
+    }
+    
+    return '10:00'; // 10:00 in 24-hour format
+  };
+
+  // Initialize recurring schedule with proper defaults
+  const initializeTimeSlots = () => {
+    // If we have saved time slots, validate and use them
+    if (contextData?.availability?.recurringSchedule?.timeSlots?.length > 0) {
+      // Convert any 12-hour format slots to 24-hour format for the time input
+      const convertedSlots = contextData.availability.recurringSchedule.timeSlots.map(slot => {
+        // If already in 24-hour format (HH:mm), keep it
+        if (slot && slot.match(/^\d{2}:\d{2}$/)) {
+          return slot;
+        }
+        // If in 12-hour format with AM/PM, convert to 24-hour
+        if (slot && (slot.includes('AM') || slot.includes('PM'))) {
+          const [time, period] = slot.split(' ');
+          const [hours, minutes] = time.split(':');
+          let hour = parseInt(hours);
+          
+          if (period === 'PM' && hour !== 12) {
+            hour += 12;
+          } else if (period === 'AM' && hour === 12) {
+            hour = 0;
+          }
+          
+          return `${hour.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
+        }
+        return null;
+      }).filter(slot => slot !== null);
+      
+      if (convertedSlots.length > 0) {
+        return convertedSlots;
+      }
+    }
+    
+    // Otherwise use the default from experience start time
+    return [getDefaultTimeSlot()];
+  };
+
   const [recurringSchedule, setRecurringSchedule] = useState({
     enabled: contextData?.availability?.recurringSchedule?.enabled || false,
     daysOfWeek: contextData?.availability?.recurringSchedule?.daysOfWeek || [],
-    timeSlots: contextData?.availability?.recurringSchedule?.timeSlots || ['10:00'],
-    maxGroupSize: contextData?.availability?.recurringSchedule?.maxGroupSize || 10
+    timeSlots: initializeTimeSlots()
   });
+
+  // Check if this is a multi-day tour
+  const isMultiDay = isMultiDayTour(contextData?.startDateTime, contextData?.endDateTime);
+  const tourDurationDays = isMultiDay ? getTourDurationInDays(contextData?.startDateTime, contextData?.endDateTime) : 1;
+
+  // Disable recurring schedule for multi-day tours
+  useEffect(() => {
+    if (isMultiDay && recurringSchedule.enabled) {
+      setRecurringSchedule(prev => ({
+        ...prev,
+        enabled: false
+      }));
+    }
+  }, [isMultiDay]);
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -55,12 +129,35 @@ export default function CreateExperienceAvailabilityPage() {
     const newSelected = new Set(selectedDates);
     const newBlocked = new Set(blockedDates);
     
+    // Clear any previous validation error
+    setDateValidationError(null);
+    
     if (selectedDates.has(dateStr)) {
+      // Removing a selected date - allow this
       newSelected.delete(dateStr);
       newBlocked.add(dateStr);
     } else if (blockedDates.has(dateStr)) {
+      // Removing from blocked dates - allow this
       newBlocked.delete(dateStr);
     } else {
+      // Adding a new selected date - validate for multi-day tours
+      if (isMultiDay) {
+        const validation = validateManualDateSelection(
+          dateStr,
+          {
+            startDateTime: contextData?.startDateTime,
+            endDateTime: contextData?.endDateTime
+          },
+          Array.from(selectedDates),
+          Array.from(blockedDates)
+        );
+        
+        if (!validation.isValid) {
+          setDateValidationError(validation.conflictReason);
+          return; // Don't add the date if validation fails
+        }
+      }
+      
       newSelected.add(dateStr);
     }
     
@@ -74,6 +171,42 @@ export default function CreateExperienceAvailabilityPage() {
     return checkDate < today;
   };
 
+  const getDateStatus = (day) => {
+    const dateStr = formatDate(day);
+    const isAvailable = selectedDates.has(dateStr);
+    const isBlocked = blockedDates.has(dateStr);
+    const isPast = isPastDate(day);
+    
+    // For multi-day tours, check if this date would conflict
+    let wouldConflict = false;
+    let conflictReason = '';
+    
+    if (isMultiDay && !isAvailable && !isBlocked && !isPast) {
+      const validation = validateManualDateSelection(
+        dateStr,
+        {
+          startDateTime: contextData?.startDateTime,
+          endDateTime: contextData?.endDateTime
+        },
+        Array.from(selectedDates),
+        Array.from(blockedDates)
+      );
+      
+      if (!validation.isValid) {
+        wouldConflict = true;
+        conflictReason = validation.conflictReason;
+      }
+    }
+    
+    return {
+      isAvailable,
+      isBlocked,
+      isPast,
+      wouldConflict,
+      conflictReason
+    };
+  };
+
   const toggleDayOfWeek = (day) => {
     setRecurringSchedule(prev => ({
       ...prev,
@@ -84,6 +217,7 @@ export default function CreateExperienceAvailabilityPage() {
   };
 
   const addTimeSlot = () => {
+    // Add a default afternoon slot (14:00 in 24-hour format)
     setRecurringSchedule(prev => ({
       ...prev,
       timeSlots: [...prev.timeSlots, '14:00']
@@ -91,10 +225,13 @@ export default function CreateExperienceAvailabilityPage() {
   };
 
   const updateTimeSlot = (index, time) => {
-    setRecurringSchedule(prev => ({
-      ...prev,
-      timeSlots: prev.timeSlots.map((t, i) => i === index ? time : t)
-    }));
+    // Validate the time input
+    if (time && time !== '') {
+      setRecurringSchedule(prev => ({
+        ...prev,
+        timeSlots: prev.timeSlots.map((t, i) => i === index ? time : t)
+      }));
+    }
   };
 
   const removeTimeSlot = (index) => {
@@ -111,18 +248,31 @@ export default function CreateExperienceAvailabilityPage() {
     setSubmitError(null);
     
     try {
+      // Auto-enable recurring schedule if user has selected days and times
+      const shouldEnableRecurring = recurringSchedule.daysOfWeek.length > 0 && recurringSchedule.timeSlots.length > 0;
+      
       // Prepare availability data
       const availabilityData = {
         selectedDates: Array.from(selectedDates),
         blockedDates: Array.from(blockedDates),
-        recurringSchedule
+        recurringSchedule: {
+          ...recurringSchedule,
+          enabled: shouldEnableRecurring // Auto-enable if user has configured recurring schedule
+        }
       };
+      
+      console.log('Availability data being used for schedule generation:', availabilityData);
       
       // Generate schedule records (preventing duplicates)
       const schedules = generateScheduleRecords(
         availabilityData,
         contextData?.duration || 3, // Use experience duration from previous step, default 3 hours
-        3 // Generate 3 months of schedules
+        3, // Generate 3 months of schedules
+        {
+          startDateTime: contextData?.startDateTime,
+          endDateTime: contextData?.endDateTime,
+          participantsAllowed: parseInt(contextData?.participantsAllowed) || 10
+        } // Pass experience info for multi-day detection and max participants
       );
       
       // Update form data with both availability rules and generated schedules
@@ -132,9 +282,11 @@ export default function CreateExperienceAvailabilityPage() {
       });
       
       console.log(`Generated ${schedules.length} schedule records`);
+      console.log('Sample schedules:', schedules.slice(0, 3));
       
-      // Get the complete backend payload
+      // Get the complete backend payload and override with the generated schedules
       const payload = getBackendPayload();
+      payload.schedules = schedules; // Use the generated schedules directly
       console.log('Submitting payload to backend:', payload);
       
       // Call the API to create the experience
@@ -159,6 +311,10 @@ export default function CreateExperienceAvailabilityPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleBack = () => {
+    navigate('/create-experience/pricing');
   };
 
   const toggleSidebar = () => {
@@ -231,16 +387,24 @@ export default function CreateExperienceAvailabilityPage() {
                       <div className="flex items-center justify-between mb-6">
                         <div>
                           <h3 className="text-lg font-semibold text-neutrals-1">Set Recurring Schedule</h3>
-                          <p className="text-sm text-neutrals-3 mt-1">Offer this experience on regular days</p>
+                          {isMultiDay ? (
+                            <p className="text-sm text-orange-600 mt-1">
+                              Recurring schedules disabled for multi-day tours ({tourDurationDays} days). Use manual date selection below.
+                            </p>
+                          ) : (
+                            <p className="text-sm text-neutrals-3 mt-1">Offer this experience on regular days</p>
+                          )}
                         </div>
                         <button
-                          onClick={() => setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
+                          onClick={() => !isMultiDay && setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
+                          disabled={isMultiDay}
                           className={`w-14 h-7 rounded-full relative transition-colors ${
+                            isMultiDay ? 'bg-neutrals-6 cursor-not-allowed' : 
                             recurringSchedule.enabled ? 'bg-primary-1' : 'bg-neutrals-5'
                           }`}
                         >
                           <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 transition-transform ${
-                            recurringSchedule.enabled ? 'translate-x-7' : 'translate-x-0.5'
+                            recurringSchedule.enabled && !isMultiDay ? 'translate-x-7' : 'translate-x-0.5'
                           }`} />
                         </button>
                       </div>
@@ -270,6 +434,9 @@ export default function CreateExperienceAvailabilityPage() {
                           {/* Time Slots */}
                           <div>
                             <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Time Slots</label>
+                            {!isMultiDay && (
+                              <p className="text-xs text-neutrals-3 mb-2">Each time slot creates a separate booking option for the selected days</p>
+                            )}
                             <div className="space-y-3">
                               {recurringSchedule.timeSlots.map((time, index) => (
                                 <div key={index} className="flex gap-3">
@@ -299,22 +466,6 @@ export default function CreateExperienceAvailabilityPage() {
                               </button>
                             </div>
                           </div>
-                          
-                          {/* Max Group Size */}
-                          <div>
-                            <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Max Group Size</label>
-                            <input
-                              type="number"
-                              value={recurringSchedule.maxGroupSize}
-                              onChange={(e) => setRecurringSchedule(prev => ({
-                                ...prev,
-                                maxGroupSize: parseInt(e.target.value) || 1
-                              }))}
-                              min="1"
-                              className="w-full px-4 py-3 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                              style={{padding: '6px'}}
-                            />
-                          </div>
                         </div>
                       )}
                     </div>
@@ -327,7 +478,10 @@ export default function CreateExperienceAvailabilityPage() {
                       {/* Month Navigation */}
                       <div className="flex items-center justify-between mb-6">
                         <button
-                          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                          onClick={() => {
+                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+                            setDateValidationError(null);
+                          }}
                           className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
                         >
                           <ChevronLeft className="w-5 h-5 text-neutrals-3" />
@@ -336,7 +490,10 @@ export default function CreateExperienceAvailabilityPage() {
                           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                         </h3>
                         <button
-                          onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                          onClick={() => {
+                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+                            setDateValidationError(null);
+                          }}
                           className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
                         >
                           <ChevronRight className="w-5 h-5 text-neutrals-3" />
@@ -357,34 +514,47 @@ export default function CreateExperienceAvailabilityPage() {
                         {getDaysInMonth(currentMonth).map((day, index) => {
                           if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
                           
-                          const dateStr = formatDate(day);
-                          const isAvailable = selectedDates.has(dateStr);
-                          const isBlocked = blockedDates.has(dateStr);
-                          const isPast = isPastDate(day);
+                          const status = getDateStatus(day);
                           
                           return (
                             <button
                               key={day}
-                              onClick={() => !isPast && toggleDate(day)}
-                              disabled={isPast}
+                              onClick={() => !status.isPast && toggleDate(day)}
+                              disabled={status.isPast || status.wouldConflict}
+                              title={status.wouldConflict ? status.conflictReason : undefined}
                               className={`
                                 aspect-square rounded-lg text-sm font-medium relative transition-colors
-                                ${isPast ? 'text-neutrals-5 cursor-not-allowed' : 'cursor-pointer'}
-                                ${isAvailable ? 'bg-primary-1 text-white hover:bg-primary-1/90' : ''}
-                                ${isBlocked ? 'bg-neutrals-5 text-white' : ''}
-                                ${!isAvailable && !isBlocked && !isPast ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
+                                ${status.isPast ? 'text-neutrals-5 cursor-not-allowed' : 'cursor-pointer'}
+                                ${status.isAvailable ? 'bg-primary-1 text-white hover:bg-primary-1/90' : ''}
+                                ${status.isBlocked ? 'bg-neutrals-5 text-white' : ''}
+                                ${status.wouldConflict ? 'bg-red-100 text-red-600 cursor-not-allowed border border-red-300' : ''}
+                                ${!status.isAvailable && !status.isBlocked && !status.isPast && !status.wouldConflict ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
                               `}
                             >
                               {day}
-                              {isBlocked && (
+                              {status.isBlocked && (
                                 <div className="absolute inset-0 flex items-center justify-center">
                                   <div className="w-full h-0.5 bg-white rotate-45"></div>
+                                </div>
+                              )}
+                              {status.wouldConflict && (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <div className="text-red-500 text-xs">⚠</div>
                                 </div>
                               )}
                             </button>
                           );
                         })}
                       </div>
+                      
+                      {/* Date Validation Error */}
+                      {dateValidationError && (
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-sm text-red-700 font-medium">
+                            ⚠️ {dateValidationError}
+                          </p>
+                        </div>
+                      )}
                       
                       {/* Legend */}
                       <div className="flex gap-6 mt-6 text-sm">
@@ -400,6 +570,16 @@ export default function CreateExperienceAvailabilityPage() {
                           </div>
                           <span className="text-neutrals-2">Blocked</span>
                         </div>
+                        {isMultiDay && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 bg-red-100 border border-red-300 rounded relative">
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-red-500 text-xs">⚠</div>
+                              </div>
+                            </div>
+                            <span className="text-neutrals-2">Conflicts</span>
+                          </div>
+                        )}
                       </div>
                       
                       <p className="text-sm text-neutrals-4 mt-4">
@@ -418,11 +598,18 @@ export default function CreateExperienceAvailabilityPage() {
                   </div>
                 )}
 
-                <div className="pt-8" style={{marginBottom: '50px'}}>
+                <div className="pt-8 flex gap-4" style={{marginBottom: '50px'}}>
+                  <button
+                    onClick={handleBack}
+                    disabled={isSubmitting}
+                    className="w-1/2 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Back
+                  </button>
                   <button
                     onClick={handleNext}
                     disabled={isSubmitting}
-                    className={`w-full font-bold py-6 rounded-full transition-colors text-xl shadow-lg hover:shadow-xl ${
+                    className={`w-1/2 font-bold py-6 rounded-full transition-colors text-xl shadow-lg hover:shadow-xl ${
                       isSubmitting 
                         ? 'bg-neutrals-5 text-neutrals-3 cursor-not-allowed' 
                         : 'bg-primary-1 text-white hover:opacity-90'
@@ -445,9 +632,6 @@ export default function CreateExperienceAvailabilityPage() {
                               ? `${recurringSchedule.daysOfWeek.map(d => daysOfWeek[d]).join(', ')} at ${recurringSchedule.timeSlots.join(', ')}`
                               : 'No recurring schedule set'
                             }
-                          </p>
-                          <p className="text-sm text-neutrals-3">
-                            Max group size: {recurringSchedule.maxGroupSize}
                           </p>
                         </div>
                       )}
@@ -503,16 +687,24 @@ export default function CreateExperienceAvailabilityPage() {
                   <div className="flex items-center justify-between mb-4">
                     <div>
                       <h3 className="text-sm font-semibold text-neutrals-1">Set Recurring Schedule</h3>
-                      <p className="text-xs text-neutrals-3 mt-1">Offer on regular days</p>
+                      {isMultiDay ? (
+                        <p className="text-xs text-orange-600 mt-1">
+                          Disabled for {tourDurationDays}-day tours. Use manual dates.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-neutrals-3 mt-1">Offer on regular days</p>
+                      )}
                     </div>
                     <button
-                      onClick={() => setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
+                      onClick={() => !isMultiDay && setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
+                      disabled={isMultiDay}
                       className={`w-12 h-6 rounded-full relative transition-colors ${
+                        isMultiDay ? 'bg-neutrals-6 cursor-not-allowed' : 
                         recurringSchedule.enabled ? 'bg-primary-1' : 'bg-neutrals-5'
                       }`}
                     >
                       <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
-                        recurringSchedule.enabled ? 'translate-x-6' : 'translate-x-0.5'
+                        recurringSchedule.enabled && !isMultiDay ? 'translate-x-6' : 'translate-x-0.5'
                       }`} />
                     </button>
                   </div>
@@ -542,6 +734,9 @@ export default function CreateExperienceAvailabilityPage() {
                       {/* Time Slots */}
                       <div>
                         <label className="block text-xs font-bold uppercase text-neutrals-5 mb-2">Time Slots</label>
+                        {!isMultiDay && (
+                          <p className="text-xs text-neutrals-3 mb-1">Each time slot creates a separate booking option</p>
+                        )}
                         <div className="space-y-2">
                           {recurringSchedule.timeSlots.map((time, index) => (
                             <div key={index} className="flex gap-2">
@@ -571,22 +766,6 @@ export default function CreateExperienceAvailabilityPage() {
                           </button>
                         </div>
                       </div>
-                      
-                      {/* Max Group Size */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-neutrals-5 mb-2">Max Group Size</label>
-                        <input
-                          type="number"
-                          value={recurringSchedule.maxGroupSize}
-                          onChange={(e) => setRecurringSchedule(prev => ({
-                            ...prev,
-                            maxGroupSize: parseInt(e.target.value) || 1
-                          }))}
-                          min="1"
-                          className="w-full px-3 py-2 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
-                          style={{padding: '6px'}}
-                        />
-                      </div>
                     </div>
                   )}
                 </div>
@@ -599,7 +778,10 @@ export default function CreateExperienceAvailabilityPage() {
                   {/* Month Navigation */}
                   <div className="flex items-center justify-between mb-4">
                     <button
-                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                      onClick={() => {
+                        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
+                        setDateValidationError(null);
+                      }}
                       className="p-1 hover:bg-neutrals-7 rounded transition-colors"
                     >
                       <ChevronLeft className="w-5 h-5 text-neutrals-3" />
@@ -608,7 +790,10 @@ export default function CreateExperienceAvailabilityPage() {
                       {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                     </h3>
                     <button
-                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                      onClick={() => {
+                        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
+                        setDateValidationError(null);
+                      }}
                       className="p-1 hover:bg-neutrals-7 rounded transition-colors"
                     >
                       <ChevronRight className="w-5 h-5 text-neutrals-3" />
@@ -629,34 +814,47 @@ export default function CreateExperienceAvailabilityPage() {
                     {getDaysInMonth(currentMonth).map((day, index) => {
                       if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
                       
-                      const dateStr = formatDate(day);
-                      const isAvailable = selectedDates.has(dateStr);
-                      const isBlocked = blockedDates.has(dateStr);
-                      const isPast = isPastDate(day);
+                      const status = getDateStatus(day);
                       
                       return (
                         <button
                           key={day}
-                          onClick={() => !isPast && toggleDate(day)}
-                          disabled={isPast}
+                          onClick={() => !status.isPast && toggleDate(day)}
+                          disabled={status.isPast || status.wouldConflict}
+                          title={status.wouldConflict ? status.conflictReason : undefined}
                           className={`
                             aspect-square rounded text-xs font-medium relative transition-colors
-                            ${isPast ? 'text-neutrals-5 cursor-not-allowed' : 'cursor-pointer'}
-                            ${isAvailable ? 'bg-primary-1 text-white' : ''}
-                            ${isBlocked ? 'bg-neutrals-5 text-white' : ''}
-                            ${!isAvailable && !isBlocked && !isPast ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
+                            ${status.isPast ? 'text-neutrals-5 cursor-not-allowed' : 'cursor-pointer'}
+                            ${status.isAvailable ? 'bg-primary-1 text-white' : ''}
+                            ${status.isBlocked ? 'bg-neutrals-5 text-white' : ''}
+                            ${status.wouldConflict ? 'bg-red-100 text-red-600 cursor-not-allowed border border-red-300' : ''}
+                            ${!status.isAvailable && !status.isBlocked && !status.isPast && !status.wouldConflict ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
                           `}
                         >
                           {day}
-                          {isBlocked && (
+                          {status.isBlocked && (
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="w-full h-0.5 bg-white rotate-45"></div>
+                            </div>
+                          )}
+                          {status.wouldConflict && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-red-500" style={{fontSize: '8px'}}>⚠</div>
                             </div>
                           )}
                         </button>
                       );
                     })}
                   </div>
+                  
+                  {/* Date Validation Error */}
+                  {dateValidationError && (
+                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+                      <p className="text-xs text-red-700 font-medium">
+                        ⚠️ {dateValidationError}
+                      </p>
+                    </div>
+                  )}
                   
                   {/* Legend */}
                   <div className="flex gap-4 mt-4 text-xs">
@@ -672,6 +870,16 @@ export default function CreateExperienceAvailabilityPage() {
                       </div>
                       <span className="text-neutrals-2">Blocked</span>
                     </div>
+                    {isMultiDay && (
+                      <div className="flex items-center gap-1">
+                        <div className="w-3 h-3 bg-red-100 border border-red-300 rounded relative">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="text-red-500" style={{fontSize: '8px'}}>⚠</div>
+                          </div>
+                        </div>
+                        <span className="text-neutrals-2">Conflicts</span>
+                      </div>
+                    )}
                   </div>
                   
                   <p className="text-xs text-neutrals-4 mt-3">
@@ -689,11 +897,18 @@ export default function CreateExperienceAvailabilityPage() {
                 </div>
               )}
 
-              <div style={{marginBottom: '15px'}}>
+              <div className="flex gap-3" style={{marginBottom: '15px'}}>
+                <button
+                  onClick={handleBack}
+                  disabled={isSubmitting}
+                  className="w-1/2 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Back
+                </button>
                 <button
                   onClick={handleNext}
                   disabled={isSubmitting}
-                  className={`w-full font-bold py-4 rounded-full transition-colors ${
+                  className={`w-1/2 font-bold py-4 rounded-full transition-colors ${
                     isSubmitting 
                       ? 'bg-neutrals-5 text-neutrals-3 cursor-not-allowed' 
                       : 'bg-primary-1 text-white hover:opacity-90'

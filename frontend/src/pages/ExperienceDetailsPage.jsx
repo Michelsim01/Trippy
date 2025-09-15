@@ -290,10 +290,6 @@ const ExperienceDetailsPage = () => {
   
   const displayImages = images.length > 0 ? images : fallbackImages;
 
-  // Convert highlights to array - handle both string and array formats
-  console.log('displayData.highlights:', displayData.highlights);
-  console.log('typeof displayData.highlights:', typeof displayData.highlights);
-
   let highlightsArray;
   if (Array.isArray(displayData.highlights)) {
     // Backend returned an array
