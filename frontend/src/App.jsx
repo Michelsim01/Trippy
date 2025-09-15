@@ -17,6 +17,10 @@ import CreateExperienceAvailabilityPage from './pages/CreateExperienceAvailabili
 import CreateExperienceSuccessPage from './pages/CreateExperienceSuccessPage'
 import ExperienceDetailsPage from './pages/ExperienceDetailsPage'
 import ExperienceDetailsPageTest from './pages/ExperienceDetailsPageTest'
+import EditExperienceBasicInfoPage from './pages/EditExperienceBasicInfoPage'
+import EditExperienceDetailsPage from './pages/EditExperienceDetailsPage'
+import EditExperiencePricingPage from './pages/EditExperiencePricingPage'
+import EditExperienceAvailabilityPage from './pages/EditExperienceAvailabilityPage'
 import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
@@ -27,21 +31,6 @@ import './App.css'
 // Mock authentication state - in real app this would come from context/redux
 const isAuthenticated = true
 
-// Temporary placeholder component for testing
-const PlaceholderPage = ({ title }) => (
-  <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
-    <div className="text-center">
-      <h1 className="text-3xl font-bold text-neutrals-1 mb-4">{title}</h1>
-      <p className="text-neutrals-3">This page is coming soon...</p>
-      <button 
-        onClick={() => window.history.back()}
-        className="mt-4 bg-primary-1 text-white px-6 py-2 rounded-lg hover:opacity-90"
-      >
-        Go Back
-      </button>
-    </div>
-  </div>
-)
 
 export default function App() {
   return (
@@ -125,6 +114,28 @@ export default function App() {
             <Route
               path="/experience-details-test"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageTest />}
+            />
+            
+            {/* Edit Experience Flow */}
+            <Route
+              path="/edit-experience/:id"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="basic-info" replace />}
+            />
+            <Route
+              path="/edit-experience/:id/basic-info"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceBasicInfoPage />}
+            />
+            <Route
+              path="/edit-experience/:id/details"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceDetailsPage />}
+            />
+            <Route
+              path="/edit-experience/:id/pricing"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperiencePricingPage />}
+            />
+            <Route
+              path="/edit-experience/:id/availability"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceAvailabilityPage />}
             />
             
             <Route

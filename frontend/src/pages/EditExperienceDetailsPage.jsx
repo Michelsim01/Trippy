@@ -1,20 +1,33 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Plus, X, Clock, MapPin, ChevronDown, Flag, Navigation, MapPinIcon } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Plus, X, Clock, MapPin, ChevronDown, Flag, Navigation, MapPinIcon, AlertCircle } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 
-export default function CreateExperienceDetailsPage() {
+export default function EditExperienceDetailsPage() {
   const navigate = useNavigate();
-  const { formData: contextData, updateFormData } = useFormData();
+  const { id } = useParams();
+  const {
+    formData: contextData,
+    updateFormData,
+    isEditMode,
+    hasBookings,
+    toggleBookings,
+    isFieldRestricted,
+    loadExistingExperience,
+    saveCurrentChanges
+  } = useFormData();
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
-    fullDescription: contextData?.fullDescription || "",
-    whatIsIncluded: contextData?.whatIsIncluded || [],
-    importantInfo: contextData?.importantInfo || "",
-    itinerary: contextData?.itinerary || []
+    fullDescription: "",
+    whatIsIncluded: [],
+    importantInfo: "",
+    itinerary: []
   });
 
   const [newIncludedItem, setNewIncludedItem] = useState("");
@@ -22,16 +35,75 @@ export default function CreateExperienceDetailsPage() {
   const [newItineraryItem, setNewItineraryItem] = useState({ location: "", time: "", type: "stop" });
   const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
 
+  // Load existing experience data on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      if (id && !isEditMode) {
+        await loadExistingExperience(id);
+      }
+      setIsLoading(false);
+    };
+    loadData();
+  }, [id, isEditMode, loadExistingExperience]);
+
+  // Update form data when context data changes (for edit mode)
+  useEffect(() => {
+    if (contextData && isEditMode) {
+      setFormData({
+        fullDescription: contextData?.fullDescription || "",
+        whatIsIncluded: contextData?.whatIncluded ?
+          (typeof contextData.whatIncluded === 'string' ?
+            contextData.whatIncluded.split(', ').filter(item => item.trim()) :
+            contextData.whatIncluded) : [],
+        importantInfo: contextData?.importantInfo || "",
+        itinerary: contextData?.itinerary || []
+      });
+    }
+  }, [contextData, isEditMode]);
+
   // Helper function to suggest the next appropriate type
   const getDefaultItemType = () => {
     const hasStart = formData.itinerary.some(item => item.type === 'start');
     const hasEnd = formData.itinerary.some(item => item.type === 'end');
-    
+
     // If no start exists, suggest start
     if (!hasStart) return 'start';
-    
+
     // If start exists but no end, suggest stop (user can change to end if they want)
     return 'stop';
+  };
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+
+      // Prepare complete data by merging context data with current form data
+      const completeData = {
+        ...contextData, // Start with all existing context data
+        fullDescription: formData.fullDescription.trim(),
+        whatIncluded: formData.whatIsIncluded.join(', '),
+        importantInfo: formData.importantInfo.trim(),
+        itinerary: formData.itinerary
+      };
+
+      // Save directly with the complete merged data
+      await saveCurrentChanges(completeData);
+
+      // Update context after successful save
+      updateFormData({
+        fullDescription: formData.fullDescription.trim(),
+        whatIncluded: formData.whatIsIncluded.join(', '),
+        importantInfo: formData.importantInfo.trim(),
+        itinerary: formData.itinerary
+      });
+
+      alert('Changes saved successfully!');
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      alert('Failed to save changes. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleNext = () => {
@@ -43,19 +115,19 @@ export default function CreateExperienceDetailsPage() {
       alert('Please add at least one item to what is included');
       return;
     }
-    
+
     updateFormData({
       fullDescription: formData.fullDescription.trim(),
       whatIncluded: formData.whatIsIncluded.join(', '),
       importantInfo: formData.importantInfo.trim(),
       itinerary: formData.itinerary
     });
-    
-    navigate('/create-experience/pricing');
+
+    navigate(`/edit-experience/${id}/pricing`);
   };
 
   const handleBack = () => {
-    navigate('/create-experience/basic-info');
+    navigate(`/edit-experience/${id}/basic-info`);
   };
 
   const handleInputChange = (field, value) => {
@@ -81,14 +153,14 @@ export default function CreateExperienceDetailsPage() {
 
   const addItineraryItem = () => {
     if (newItineraryItem.location.trim()) {
-      const newItem = { 
-        ...newItineraryItem, 
+      const newItem = {
+        ...newItineraryItem,
         type: newItineraryItem.type
       };
-      
+
       const updatedItinerary = [...formData.itinerary];
       const endIndex = updatedItinerary.findIndex(item => item.type === 'end');
-      
+
       // Insert item before end, or at the end if no end exists
       if (endIndex !== -1) {
         updatedItinerary.splice(endIndex, 0, newItem);
@@ -100,7 +172,7 @@ export default function CreateExperienceDetailsPage() {
         ...prev,
         itinerary: updatedItinerary
       }));
-      
+
       setNewItineraryItem({ location: "", time: "", type: "stop" });
       setShowItineraryForm(false);
     }
@@ -116,7 +188,7 @@ export default function CreateExperienceDetailsPage() {
   const updateItineraryItem = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      itinerary: prev.itinerary.map((item, i) => 
+      itinerary: prev.itinerary.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       )
     }));
@@ -129,6 +201,17 @@ export default function CreateExperienceDetailsPage() {
   const closeSidebar = () => {
     setIsSidebarOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-1"></div>
+          <p className="mt-4 text-neutrals-3">Loading experience data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutrals-8">
@@ -145,8 +228,56 @@ export default function CreateExperienceDetailsPage() {
             onToggleSidebar={toggleSidebar}
           />
           <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
+
+            {/* Booking Toggle Section */}
+            <div className="bg-white rounded-xl p-6 mb-6 border border-neutrals-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Status</h3>
+                  <p className="text-sm text-neutrals-3">
+                    Toggle this to simulate whether this experience has existing bookings.
+                    When enabled, certain fields will be restricted to prevent conflicts with existing bookings.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <span className={`text-sm ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
+                    No Bookings
+                  </span>
+                  <button
+                    onClick={toggleBookings}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
+                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        hasBookings ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-sm ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
+                    Has Bookings
+                  </span>
+                </div>
+              </div>
+
+              {hasBookings && (
+                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-orange-800">Restricted Fields</p>
+                      <p className="text-sm text-orange-700 mt-1">
+                        Price, dates, country, and max participants cannot be modified when bookings exist to prevent conflicts.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="mb-16">
-              <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Create New Experience</h1>
+              <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Edit Experience - Details</h1>
               <div className="flex items-start gap-16" style={{marginBottom: '30px'}}>
                 {[
                   { step: 1, label: "Basic Info", active: false },
@@ -167,13 +298,13 @@ export default function CreateExperienceDetailsPage() {
                         {item.label}
                       </span>
                     </div>
-                    <div 
+                    <div
                       style={{
                         backgroundColor: item.active ? '#000' : '#d1d5db',
                         width: '240px',
                         height: item.active ? '4px' : '2px',
                         marginTop: '4px'
-                      }} 
+                      }}
                     />
                   </div>
                 ))}
@@ -192,7 +323,7 @@ export default function CreateExperienceDetailsPage() {
                       placeholder="Provide a detailed description of your experience, including what guests will do, see, and learn"
                     />
                   </div>
-                  
+
                   {/* What is Included */}
                   <div style={{marginBottom: '15px'}}>
                     <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">What is Included?</label>
@@ -205,7 +336,7 @@ export default function CreateExperienceDetailsPage() {
                                 <span className="text-primary-1 font-bold text-lg">•</span>
                                 <span className="text-lg font-medium text-neutrals-2">{item}</span>
                               </div>
-                              <button 
+                              <button
                                 onClick={() => removeIncludedItem(index)}
                                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
                               >
@@ -229,7 +360,7 @@ export default function CreateExperienceDetailsPage() {
                           placeholder="Add included item..."
                           className="flex-1 px-4 py-3 text-lg font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
                         />
-                        <button 
+                        <button
                           onClick={addIncludedItem}
                           className="w-8 h-8 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
                         >
@@ -250,17 +381,24 @@ export default function CreateExperienceDetailsPage() {
                     />
                   </div>
                 </div>
-                
+
                 <div className="pt-8 flex gap-4" style={{marginBottom: '50px'}}>
                   <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-6 rounded-full hover:bg-primary-1 hover:text-white transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
                     onClick={handleBack}
-                    className="w-1/2 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl"
+                    className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl"
                   >
                     Back
                   </button>
                   <button
                     onClick={handleNext}
-                    className="w-1/2 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
+                    className="w-1/4 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
                   >
                     Next
                   </button>
@@ -289,7 +427,7 @@ export default function CreateExperienceDetailsPage() {
                                   <div className="w-1 h-20 bg-neutrals-5 mt-3 rounded-full"></div>
                                 )}
                               </div>
-                              
+
                               <div className="flex-1 pt-2">
                                 <div className="flex items-center gap-3 mb-2">
                                   <MapPin className="w-5 h-5 text-neutrals-4" />
@@ -300,7 +438,7 @@ export default function CreateExperienceDetailsPage() {
                                     className="flex-1 text-lg font-semibold text-neutrals-1 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all py-1"
                                     placeholder="Enter location name"
                                   />
-                                  <button 
+                                  <button
                                     onClick={() => removeItineraryItem(index)}
                                     className="text-red-500 hover:text-red-700 transition-colors p-1"
                                   >
@@ -491,11 +629,11 @@ export default function CreateExperienceDetailsPage() {
               </div>
             </div>
           </div>
-          
+
           <Footer />
         </div>
       </div>
-      
+
       {/* Mobile Layout */}
       <div className="lg:hidden w-full">
         <Navbar
@@ -504,12 +642,58 @@ export default function CreateExperienceDetailsPage() {
           onToggleSidebar={toggleSidebar}
         />
         <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
-        
+
         <main className="w-full">
           <div className="py-10" style={{paddingLeft: '20px', paddingRight: '20px'}}>
+            {/* Booking Toggle Section */}
+            <div className="bg-white rounded-xl p-4 mb-6 border border-neutrals-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-semibold text-neutrals-1 mb-2">Booking Status</h3>
+                  <p className="text-xs text-neutrals-3">
+                    Toggle to simulate whether this experience has existing bookings.
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className={`text-xs ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
+                    No Bookings
+                  </span>
+                  <button
+                    onClick={toggleBookings}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
+                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                        hasBookings ? 'translate-x-5' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                  <span className={`text-xs ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
+                    Has Bookings
+                  </span>
+                </div>
+              </div>
+
+              {hasBookings && (
+                <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-orange-800">Restricted Fields</p>
+                      <p className="text-xs text-orange-700 mt-1">
+                        Price, dates, country, and max participants cannot be modified when bookings exist.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="mb-10">
-              <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Create New Experience</h1>
-              
+              <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Edit Experience - Details</h1>
+
               <div className="flex gap-4 items-center" style={{marginBottom: '20px'}}>
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-neutrals-2">
                   2
@@ -531,7 +715,7 @@ export default function CreateExperienceDetailsPage() {
                   placeholder="Provide a detailed description of your experience, including what guests will do, see, and learn"
                 />
               </div>
-              
+
               {/* What is Included */}
               <div style={{marginBottom: '10px'}}>
                 <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">What is Included?</label>
@@ -544,7 +728,7 @@ export default function CreateExperienceDetailsPage() {
                             <span className="text-primary-1 font-bold text-sm">•</span>
                             <span className="text-sm font-medium text-neutrals-2">{item}</span>
                           </div>
-                          <button 
+                          <button
                             onClick={() => removeIncludedItem(index)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
                           >
@@ -568,7 +752,7 @@ export default function CreateExperienceDetailsPage() {
                       placeholder="Add included item..."
                       className="flex-1 px-3 py-3 text-sm font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
                     />
-                    <button 
+                    <button
                       onClick={addIncludedItem}
                       className="w-6 h-6 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
                     >
@@ -588,7 +772,7 @@ export default function CreateExperienceDetailsPage() {
                   placeholder="Provide relevant information for guests&#10;&#10;e.g.&#10;&#10;Not Allowed&#10;1. Vapes&#10;2. Weapons&#10;&#10;Know before you go&#10;1. Wear comfortable shoes&#10;2. Bring water bottle"
                 />
               </div>
-              
+
               {/* Mobile Itinerary Builder */}
               <div style={{marginBottom: '15px'}}>
                 <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Itinerary Builder</label>
@@ -611,7 +795,7 @@ export default function CreateExperienceDetailsPage() {
                               <div className="w-0.5 h-12 bg-neutrals-5 mt-2 rounded-full"></div>
                             )}
                           </div>
-                          
+
                           <div className="flex-1 pt-1">
                             <div className="flex items-center gap-2 mb-2">
                               <MapPin className="w-4 h-4 text-neutrals-4" />
@@ -622,7 +806,7 @@ export default function CreateExperienceDetailsPage() {
                                 className="flex-1 text-lg font-semibold text-neutrals-1 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all py-1"
                                 placeholder="Enter location name"
                               />
-                              <button 
+                              <button
                                 onClick={() => removeItineraryItem(index)}
                                 className="text-red-500 hover:text-red-700 transition-colors p-1"
                                 style={{marginRight: '8px'}}
@@ -682,7 +866,7 @@ export default function CreateExperienceDetailsPage() {
                       </button>
                     </div>
                   )}
-                  
+
                   {/* Mobile Add Form */}
                   {showItineraryForm && (
                     <div style={{
@@ -813,17 +997,24 @@ export default function CreateExperienceDetailsPage() {
                   )}
                 </div>
               </div>
-              
+
               <div className="flex gap-3" style={{marginBottom: '15px'}}>
                 <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-4 rounded-full hover:bg-primary-1 hover:text-white transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
                   onClick={handleBack}
-                  className="w-1/2 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
+                  className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleNext}
-                  className="w-1/2 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
+                  className="w-1/4 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
                 >
                   Next
                 </button>

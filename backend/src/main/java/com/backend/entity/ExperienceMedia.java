@@ -14,7 +14,7 @@ public class ExperienceMedia {
     @JoinColumn(name = "experience_id", nullable = false)
     private Experience experience;
 
-    @Column(name = "media_url")
+    @Column(name = "media_url", columnDefinition = "TEXT")
     private String mediaUrl;
 
     @Enumerated(EnumType.STRING)

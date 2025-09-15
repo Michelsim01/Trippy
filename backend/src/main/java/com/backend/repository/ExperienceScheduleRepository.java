@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface ExperienceScheduleRepository extends JpaRepository<ExperienceSchedule, Long> {
+    void deleteByExperienceExperienceId(Long experienceId);
 }

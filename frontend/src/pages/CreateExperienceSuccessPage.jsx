@@ -66,11 +66,11 @@ export default function CreateExperienceSuccessPage() {
             
             {/* Experience ID Display */}
             {formData.createdExperience?.experienceId && (
-              <div className="bg-primary-1 bg-opacity-10 border border-primary-1 rounded-lg p-4 mb-8">
+              <div className="bg-primary-1 rounded-lg p-4 mb-8">
                 <div className="text-center">
-                  <span className="text-sm font-semibold text-primary-1 uppercase tracking-wide">Experience ID</span>
-                  <div className="text-2xl font-bold text-primary-1 mt-1">#{formData.createdExperience.experienceId}</div>
-                  <p className="text-xs text-neutrals-4 mt-2">Share this ID with travelers for easy booking</p>
+                  <span className="text-sm font-semibold text-white text-opacity-80 uppercase tracking-wide">Experience ID</span>
+                  <div className="text-2xl font-bold text-white mt-1">#{formData.createdExperience.experienceId}</div>
+                  <p className="text-xs text-white text-opacity-70 mt-2">Share this ID with travelers for easy booking</p>
                 </div>
               </div>
             )}
@@ -178,11 +178,11 @@ export default function CreateExperienceSuccessPage() {
           
           {/* Mobile Experience ID Display */}
           {formData.createdExperience?.experienceId && (
-            <div className="bg-primary-1 bg-opacity-10 border border-primary-1 rounded-lg p-3 mb-6">
+            <div className="bg-primary-1 rounded-lg p-3 mb-6">
               <div className="text-center">
-                <span className="text-xs font-semibold text-primary-1 uppercase tracking-wide">Experience ID</span>
-                <div className="text-xl font-bold text-primary-1 mt-1">#{formData.createdExperience.experienceId}</div>
-                <p className="text-xs text-neutrals-4 mt-1">Share with travelers for booking</p>
+                <span className="text-xs font-semibold text-white text-opacity-80 uppercase tracking-wide">Experience ID</span>
+                <div className="text-xl font-bold text-white mt-1">#{formData.createdExperience.experienceId}</div>
+                <p className="text-xs text-white text-opacity-70 mt-1">Share with travelers for booking</p>
               </div>
             </div>
           )}

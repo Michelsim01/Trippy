@@ -53,6 +53,24 @@ public class ExperienceController {
         return experienceRepository.save(experience);
     }
 
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<?> updateCompleteExperience(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        try {
+            Experience updatedExperience = experienceService.updateCompleteExperience(id, payload);
+            return ResponseEntity.ok().body(Map.of(
+                "success", true,
+                "experienceId", updatedExperience.getExperienceId(),
+                "message", "Experience updated successfully",
+                "experience", updatedExperience
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Failed to update experience: " + e.getMessage()
+            ));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public void deleteExperience(@PathVariable Long id) {
         experienceRepository.deleteById(id);

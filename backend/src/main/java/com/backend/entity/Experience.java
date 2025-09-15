@@ -35,7 +35,7 @@ public class Experience {
     @ElementCollection(fetch = FetchType.EAGER)
     private List<String> tags;
 
-    @Column(name = "cover_photo_url")
+    @Column(name = "cover_photo_url", columnDefinition = "TEXT")
     private String coverPhotoUrl;
 
     @Column(name = "what_included", columnDefinition = "TEXT")
@@ -51,7 +51,15 @@ public class Experience {
 
     private BigDecimal duration;
 
+    @Column(name = "start_date_time")
+    private LocalDateTime startDateTime;
+
+    @Column(name = "end_date_time")
+    private LocalDateTime endDateTime;
+
     private String location;
+
+    private String country;
 
     @Enumerated(EnumType.STRING)
     private ExperienceStatus status;
@@ -201,12 +209,36 @@ public class Experience {
         this.duration = duration;
     }
 
+    public LocalDateTime getStartDateTime() {
+        return startDateTime;
+    }
+
+    public void setStartDateTime(LocalDateTime startDateTime) {
+        this.startDateTime = startDateTime;
+    }
+
+    public LocalDateTime getEndDateTime() {
+        return endDateTime;
+    }
+
+    public void setEndDateTime(LocalDateTime endDateTime) {
+        this.endDateTime = endDateTime;
+    }
+
     public String getLocation() {
         return location;
     }
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public String getCountry() {
+        return country;
+    }
+
+    public void setCountry(String country) {
+        this.country = country;
     }
 
     public ExperienceStatus getStatus() {
