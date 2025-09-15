@@ -90,11 +90,13 @@ const SearchResultsPage = () => {
             switch (filterDuration) {
                 case '1-3 hours':
                     return durationHours >= 1 && durationHours <= 3;
-                case 'Half day':
-                    return durationHours >= 4 && durationHours <= 6;
-                case 'Full day':
-                    return durationHours >= 7 && durationHours <= 24;
-                case 'Multi-day':
+                case '4-8 hours':
+                    return durationHours >= 4 && durationHours <= 8;
+                case '8-12 hours':
+                    return durationHours >= 8 && durationHours <= 12;
+                case '12-24 hours':
+                    return durationHours >= 12 && durationHours <= 24;
+                case '24+ hours':
                     return durationHours > 24;
                 default:
                     return false;

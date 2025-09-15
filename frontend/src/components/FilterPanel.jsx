@@ -84,9 +84,10 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
 
     const durationOptions = [
         "1-3 hours",
-        "Half day",
-        "Full day",
-        "Multi-day"
+        "4-8 hours", 
+        "8-12 hours",
+        "12-24 hours",
+        "24+ hours"
     ];
 
     if (variant === "mobile") {
