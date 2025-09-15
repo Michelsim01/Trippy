@@ -2,9 +2,7 @@ package com.backend.entity;
 
 import jakarta.persistence.*;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 @Entity
@@ -19,9 +17,8 @@ public class ExperienceSchedule {
     @JsonIgnoreProperties({"mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems"})
     private Experience experience;
 
-    private LocalDate date;
-    private LocalTime startTime;
-    private LocalTime endTime;
+    private LocalDateTime startDate;
+    private LocalDateTime endDate;
     private Integer availableSpots;
     private Boolean isAvailable;
     private LocalDateTime createdAt;
@@ -57,12 +54,10 @@ public class ExperienceSchedule {
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
     public Experience getExperience() { return experience; }
     public void setExperience(Experience experience) { this.experience = experience; }
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-    public LocalTime getStartTime() { return startTime; }
-    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
-    public LocalTime getEndTime() { return endTime; }
-    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public LocalDateTime getStartDate() { return startDate; }
+    public void setStartDate(LocalDateTime startDate) { this.startDate = startDate; }
+    public LocalDateTime getEndDate() { return endDate; }
+    public void setEndDate(LocalDateTime endDate) { this.endDate = endDate; }
     public Integer getAvailableSpots() { return availableSpots; }
     public void setAvailableSpots(Integer availableSpots) { this.availableSpots = availableSpots; }
     public Boolean getIsAvailable() { return isAvailable; }

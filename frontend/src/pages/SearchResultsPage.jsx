@@ -38,8 +38,9 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
             title: exp.title,
             location: exp.location,
             price: exp.price,
-            averageRating: exp.averageRating,
-            coverPhotoUrl: exp.coverPhotoUrl, // Make sure this is passed correctly
+            originalPrice: exp.price ? exp.price * 1.2 : 0,
+            rating: exp.averageRating || 4.5,
+            imageUrl: exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
             shortDescription: exp.shortDescription,
             duration: exp.duration,
             category: exp.category,
@@ -58,7 +59,20 @@ const SearchResultsPage = () => {
     const [showMobileFilters, setShowMobileFilters] = useState(false);
     const [allExperiences, setAllExperiences] = useState([]);
     const [wishlistItems, setWishlistItems] = useState([]);
+    const [schedules, setSchedules] = useState({});
     const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+
+    // Category options
+    const categoryOptions = [
+        { value: 'ALL', label: 'All Experiences' },
+        { value: 'GUIDED_TOUR', label: 'Guided Tour' },
+        { value: 'DAYTRIP', label: 'Day Trip' },
+        { value: 'ADVENTURE', label: 'Adventure' },
+        { value: 'WORKSHOP', label: 'Workshop' },
+        { value: 'WATER_ACTIVITY', label: 'Water Activity' },
+        { value: 'OTHERS', label: 'Others' }
+    ];
 
     // Filter states
     const [filters, setFilters] = useState({
@@ -105,8 +119,13 @@ const SearchResultsPage = () => {
     };
 
     // Filter function
-    const applyFilters = (experiences) => {
+    const applyFilters = (experiences, schedulesData = {}) => {
         return experiences.filter(experience => {
+            // Category filter
+            if (selectedCategory !== 'ALL' && experience.experience.category !== selectedCategory) {
+                return false;
+            }
+
             // Price filter - only apply if enabled and values are set
             if (filters.priceRange.enabled) {
                 if (filters.priceRange.min > 0 && experience.salePrice < filters.priceRange.min) {
@@ -122,12 +141,40 @@ const SearchResultsPage = () => {
                 return false;
             }
 
-            // Date range filter
-            if (filters.startDate && experience.availableFrom < filters.startDate) {
-                return false;
-            }
-            if (filters.endDate && experience.availableTo > filters.endDate) {
-                return false;
+            // Date range filter - now uses schedule data
+            if (filters.startDate || filters.endDate) {
+                const experienceSchedules = schedulesData[experience.experienceId] || [];
+                
+                // If no schedules available, skip this experience
+                if (experienceSchedules.length === 0) {
+                    return false;
+                }
+                
+                // Check if any schedule matches the date range
+                const hasMatchingSchedule = experienceSchedules.some(schedule => {
+                    const scheduleStartDate = new Date(schedule.startDate);
+                    const scheduleEndDate = new Date(schedule.endDate);
+                    
+                    // Extract just the date part (ignore time)
+                    const scheduleStartDateOnly = scheduleStartDate.toISOString().split('T')[0];
+                    const scheduleEndDateOnly = scheduleEndDate.toISOString().split('T')[0];
+                    
+                    // Check start date filter
+                    if (filters.startDate && scheduleStartDateOnly < filters.startDate) {
+                        return false;
+                    }
+                    
+                    // Check end date filter
+                    if (filters.endDate && scheduleEndDateOnly > filters.endDate) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                if (!hasMatchingSchedule) {
+                    return false;
+                }
             }
 
             // Liked filter
@@ -211,6 +258,24 @@ const SearchResultsPage = () => {
                 }
 
                 const experiencesData = await experiencesResponse.json();
+                
+                // Fetch schedule data for all experiences
+                const schedulePromises = experiencesData.map(exp => 
+                    fetch(`http://localhost:8080/api/experiences/${exp.experienceId}/schedules`)
+                        .then(response => response.ok ? response.json() : [])
+                        .catch(() => []) // If schedule fetch fails, use empty array
+                );
+                
+                const schedulesData = await Promise.all(schedulePromises);
+                
+                // Create schedules object with experience ID as key
+                const schedulesMap = {};
+                experiencesData.forEach((exp, index) => {
+                    schedulesMap[exp.experienceId] = schedulesData[index];
+                });
+                
+                setSchedules(schedulesMap);
+                
                 const transformedExperiences = transformExperienceData(experiencesData, []);
                 setAllExperiences(transformedExperiences);
 
@@ -251,6 +316,9 @@ const SearchResultsPage = () => {
                 experience.location.toLowerCase().includes(query.toLowerCase()) ||
                 (experience.shortDescription && experience.shortDescription.toLowerCase().includes(query.toLowerCase()))
                 );
+                console.log('Search query:', query);
+                console.log('All experiences:', allExperiences.map(exp => ({ title: exp.title, location: exp.location })));
+                console.log('Filtered results:', filtered.map(exp => ({ title: exp.title, location: exp.location })));
                 setSearchResults(filtered);
             } else {
                 setSearchResults([]);
@@ -259,10 +327,10 @@ const SearchResultsPage = () => {
 
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
-        const filtered = applyFilters(searchResults);
+        const filtered = applyFilters(searchResults, schedules);
         const sorted = applySorting(filtered);
         setFilteredResults(sorted);
-    }, [searchResults, filters, sortBy]);
+    }, [searchResults, filters, sortBy, selectedCategory, schedules]);
 
     const handleFiltersChange = (newFilters) => {
         setFilters(newFilters);
@@ -312,16 +380,20 @@ const SearchResultsPage = () => {
 
                             {/* Filter */}
                             <div className="flex items-center justify-center mb-10">
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">All Experiences</span>
-                                    </div>
-                                    <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">Adventure</span>
-                                    </div>
-                                    <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">Culture</span>
-                                    </div>
+                                <div className="flex items-center gap-2 flex-wrap justify-center">
+                                    {categoryOptions.map((category) => (
+                                        <button
+                                            key={category.value}
+                                            onClick={() => setSelectedCategory(category.value)}
+                                            className={`px-4 py-1.5 rounded-full transition-colors ${
+                                                selectedCategory === category.value
+                                                    ? 'bg-neutrals-1 text-white'
+                                                    : 'text-neutrals-4 hover:text-neutrals-1'
+                                            }`}
+                                        >
+                                            <span className="text-[14px] font-bold">{category.label}</span>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
@@ -385,6 +457,7 @@ const SearchResultsPage = () => {
                                                     experience={experience.experience}
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
+                                                    schedules={schedules[experience.experienceId] || []}
                                                 />
                                             ))}
                                         </div>
@@ -398,6 +471,7 @@ const SearchResultsPage = () => {
                                                         experience={experience.experience}
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
+                                                        schedules={schedules[experience.experienceId] || []}
                                                     />
                                                 ))}
                                             </div>
@@ -455,6 +529,7 @@ const SearchResultsPage = () => {
                                                         experience={experience.experience}
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
+                                                        schedules={schedules[experience.experienceId] || []}
                                                     />
                                                 ))}
                                             </div>
@@ -468,6 +543,7 @@ const SearchResultsPage = () => {
                                                             experience={experience.experience}
                                                             showWishlistButton={true}
                                                             isInWishlist={experience.isLiked}
+                                                            schedules={schedules[experience.experienceId] || []}
                                                         />
                                                     ))}
                                                 </div>
@@ -508,16 +584,20 @@ const SearchResultsPage = () => {
 
                         {/* Mobile Filter Button */}
                         <div className="flex items-center justify-between mb-6">
-                            <div className="flex overflow-x-auto gap-4 pb-2 flex-1">
-                                <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">All Experiences</span>
-                                </div>
-                                <div className="text-neutrals-4 px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">Adventure</span>
-                                </div>
-                                <div className="text-neutrals-4 px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">Culture</span>
-                                </div>
+                            <div className="flex overflow-x-auto gap-2 pb-2 flex-1">
+                                {categoryOptions.map((category) => (
+                                    <button
+                                        key={category.value}
+                                        onClick={() => setSelectedCategory(category.value)}
+                                        className={`px-4 py-1.5 rounded-full shrink-0 transition-colors ${
+                                            selectedCategory === category.value
+                                                ? 'bg-neutrals-1 text-white'
+                                                : 'text-neutrals-4 hover:text-neutrals-1'
+                                        }`}
+                                    >
+                                        <span className="text-[14px] font-bold">{category.label}</span>
+                                    </button>
+                                ))}
                             </div>
                             <button
                                 onClick={() => setShowMobileFilters(true)}
@@ -586,6 +666,7 @@ const SearchResultsPage = () => {
                                             experience={experience.experience}
                                             showWishlistButton={true}
                                             isInWishlist={experience.isLiked}
+                                            schedules={schedules[experience.experienceId] || []}
                                         />
                                     ))}
                                 </div>
@@ -629,6 +710,7 @@ const SearchResultsPage = () => {
                                                     experience={experience.experience}
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
+                                                    schedules={schedules[experience.experienceId] || []}
                                                 />
                                             ))}
                                         </div>

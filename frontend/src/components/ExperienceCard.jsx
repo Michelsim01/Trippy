@@ -24,27 +24,39 @@ const ExperienceCard = ({
             return null;
         }
         
-        // Sort schedules by date and get the first available one
+        // Sort schedules by start date and get the first available one
         const sortedSchedules = schedules
             .filter(schedule => schedule.isAvailable)
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
         
         if (sortedSchedules.length === 0) {
             return null;
         }
         
         const firstSchedule = sortedSchedules[0];
-        const date = new Date(firstSchedule.date);
+        const startDate = new Date(firstSchedule.startDate);
+        const endDate = new Date(firstSchedule.endDate);
         
         // Format as "Mon, Oct 20" style
         const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
-        const dayName = dayNames[date.getDay()];
-        const month = monthNames[date.getMonth()];
-        const day = date.getDate();
+        const formatDate = (date) => {
+            const dayName = dayNames[date.getDay()];
+            const month = monthNames[date.getMonth()];
+            const day = date.getDate();
+            return `${dayName}, ${month} ${day}`;
+        };
         
-        return `${dayName}, ${month} ${day}`;
+        const startFormatted = formatDate(startDate);
+        const endFormatted = formatDate(endDate);
+        
+        // If same day, return single date, otherwise return range
+        if (startDate.toDateString() === endDate.toDateString()) {
+            return startFormatted;
+        } else {
+            return `${startFormatted} - ${endFormatted}`;
+        }
     };
 
     // Helper function to generate sample dates based on experience data
@@ -220,13 +232,26 @@ const ExperienceCard = ({
                         {(() => {
                             const scheduleDate = formatScheduleDates(schedules);
                             if (scheduleDate) {
-                                return (
-                                    <>
-                                        <span>{scheduleDate}</span>
-                                        <span>-</span>
-                                        <span>{scheduleDate}</span>
-                                    </>
-                                );
+                                // Check if it's a date range (contains " - ")
+                                if (scheduleDate.includes(' - ')) {
+                                    const [startDate, endDate] = scheduleDate.split(' - ');
+                                    return (
+                                        <>
+                                            <span>{startDate}</span>
+                                            <span>-</span>
+                                            <span>{endDate}</span>
+                                        </>
+                                    );
+                                } else {
+                                    // Single date, show it twice for consistency
+                                    return (
+                                        <>
+                                            <span>{scheduleDate}</span>
+                                            <span>-</span>
+                                            <span>{scheduleDate}</span>
+                                        </>
+                                    );
+                                }
                             } else if (cardData.dateRange) {
                                 return (
                                     <>

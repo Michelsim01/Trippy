@@ -53,13 +53,13 @@ const AdditionalSortDropdown = ({ currentSort, onSortChange, className = "" }) =
                                 key={option.value}
                                 onClick={() => handleSortSelect(option.value)}
                                 className={`w-full px-4 py-3 text-left hover:bg-neutrals-8 transition-colors ${
-                                    currentSort === option.value ? 'bg-primary-1 bg-opacity-10 border-l-4 border-primary-1' : ''
+                                    currentSort === option.value ? 'border-l-4 border-primary-1' : ''
                                 } first:rounded-t-lg last:rounded-b-lg`}
                             >
                                 <div className="flex items-start justify-between">
                                     <div>
                                         <span className={`text-[14px] font-medium ${
-                                            currentSort === option.value ? 'text-primary-1' : 'text-neutrals-1'
+                                            currentSort === option.value ? 'text-neutrals-1' : 'text-neutrals-1'
                                         }`}>
                                             {option.label}
                                         </span>

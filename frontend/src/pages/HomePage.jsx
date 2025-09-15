@@ -32,7 +32,7 @@ const WelcomeBanner = () => {
     );
 };
 
-const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error }) => {
+const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange }) => {
     // Fallback dummy data in case API fails
     const fallbackExperiences = [
         { 
@@ -42,7 +42,8 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error 
             originalPrice: 699, 
             price: 548, 
             rating: 4.9,
-            imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "GUIDED_TOUR"
         },
         { 
             experienceId: 2,
@@ -51,7 +52,8 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error 
             originalPrice: 799, 
             price: 629, 
             rating: 4.8,
-            imageUrl: "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "ADVENTURE"
         },
         { 
             experienceId: 3,
@@ -60,7 +62,8 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error 
             originalPrice: 899, 
             price: 749, 
             rating: 4.9,
-            imageUrl: "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "DAYTRIP"
         },
         { 
             experienceId: 4,
@@ -69,12 +72,18 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error 
             originalPrice: 599, 
             price: 459, 
             rating: 4.7,
-            imageUrl: "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            imageUrl: "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "WORKSHOP"
         }
     ];
 
     // Use real data if available, otherwise fallback to dummy data
-    const displayExperiences = experiences && experiences.length > 0 ? experiences : fallbackExperiences;
+    const allExperiences = experiences && experiences.length > 0 ? experiences : fallbackExperiences;
+
+    // Filter experiences by category
+    const displayExperiences = selectedCategory === 'ALL' 
+        ? allExperiences 
+        : allExperiences.filter(exp => exp.category === selectedCategory);
 
     // Create a set of wishlisted experience IDs for quick lookup
     const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
@@ -94,16 +103,28 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error 
 
                 {/* Filter */}
                 <div className="flex items-center justify-center mb-10">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">All Experiences</span>
-                        </div>
-                        <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">Adventure</span>
-                        </div>
-                        <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">Culture</span>
-                        </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {[
+                            { value: 'ALL', label: 'All Experiences' },
+                            { value: 'GUIDED_TOUR', label: 'Guided Tour' },
+                            { value: 'DAYTRIP', label: 'Day Trip' },
+                            { value: 'ADVENTURE', label: 'Adventure' },
+                            { value: 'WORKSHOP', label: 'Workshop' },
+                            { value: 'WATER_ACTIVITY', label: 'Water Activity' },
+                            { value: 'OTHERS', label: 'Others' }
+                        ].map((category) => (
+                            <button
+                                key={category.value}
+                                onClick={() => onCategoryChange(category.value)}
+                                className={`px-4 py-1.5 rounded-full transition-colors ${
+                                    selectedCategory === category.value
+                                        ? 'bg-neutrals-1 text-white'
+                                        : 'text-neutrals-4 hover:text-neutrals-1'
+                                }`}
+                            >
+                                <span className="text-[14px] font-bold">{category.label}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -175,6 +196,7 @@ const HomePage = () => {
     const [schedules, setSchedules] = useState({}); // Store schedules by experience ID
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
 
     useEffect(() => {
         const fetchData = async () => {
@@ -207,6 +229,9 @@ const HomePage = () => {
                 experiencesData.forEach((exp, index) => {
                     schedulesMap[exp.experienceId] = schedulesData[index];
                 });
+                
+                console.log('HomePage - schedulesMap:', schedulesMap);
+                console.log('HomePage - schedulesData:', schedulesData);
                 
                 setSchedules(schedulesMap);
                 
@@ -263,6 +288,10 @@ const HomePage = () => {
         setIsSidebarOpen(false);
     };
 
+    const handleCategoryChange = (category) => {
+        setSelectedCategory(category);
+    };
+
     return (
         <div className="min-h-screen bg-neutrals-8">
             {/* Desktop Layout */}
@@ -287,6 +316,8 @@ const HomePage = () => {
                             schedules={schedules}
                             loading={loading}
                             error={error}
+                            selectedCategory={selectedCategory}
+                            onCategoryChange={handleCategoryChange}
                         />
                         <div className="h-px bg-neutrals-6 w-full" />
                         <Footer />
