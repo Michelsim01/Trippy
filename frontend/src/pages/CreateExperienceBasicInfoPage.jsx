@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, X, Camera, Upload } from 'lucide-react';
+import { ChevronDown, X, Camera, Upload, Plus, AlertCircle } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
+import { isMultiDayTour } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -15,10 +16,13 @@ export default function CreateExperienceBasicInfoPage() {
   const [formData, setFormData] = useState({
     title: contextData?.title || "",
     shortDescription: contextData?.shortDescription || "",
-    highlights: contextData?.highlights || "",
+    highlights: contextData?.highlights || [],
     category: contextData?.category || "",
     duration: contextData?.duration || "",
+    startDateTime: contextData?.startDateTime || "",
+    endDateTime: contextData?.endDateTime || "",
     location: contextData?.location || "",
+    country: contextData?.country || "",
     tags: contextData?.tags || [],
     languages: contextData?.languages || [],
     participantsAllowed: contextData?.participantsAllowed || "",
@@ -31,34 +35,62 @@ export default function CreateExperienceBasicInfoPage() {
     duration: false
   });
 
+  const [newHighlightItem, setNewHighlightItem] = useState("");
+
   const categories = Object.keys(categoryMapping);
-  const durations = ["0.5", "1", "2", "3", "4", "6", "8", "12"];
-  const durationLabels = {
-    "0.5": "30 minutes", "1": "1 hour", "2": "2 hours", "3": "3 hours",
-    "4": "4 hours", "6": "6 hours", "8": "8 hours", "12": "12 hours"
-  };
 
   const handleNext = () => {
     if (!formData.title.trim()) {
       alert('Please enter a title for your experience');
       return;
     }
+    if (!formData.shortDescription.trim()) {
+      alert('Please enter a short description for your experience');
+      return;
+    }
+    if (!formData.highlights || formData.highlights.length === 0) {
+      alert('Please add at least one highlight for your experience');
+      return;
+    }
     if (!formData.category) {
       alert('Please select a category');
+      return;
+    }
+    if (!formData.startDateTime) {
+      alert('Please select a start date and time for your experience');
+      return;
+    }
+    if (!formData.endDateTime) {
+      alert('Please select an end date and time for your experience');
       return;
     }
     if (!formData.location.trim()) {
       alert('Please enter a location');
       return;
     }
+    if (!formData.country.trim()) {
+      alert('Please enter a country');
+      return;
+    }
+    if (!formData.participantsAllowed || formData.participantsAllowed <= 0) {
+      alert('Please enter the maximum number of participants');
+      return;
+    }
+    if (!formData.coverPhotoUrl) {
+      alert('Please upload a cover photo for your experience');
+      return;
+    }
 
     updateFormData({
       title: formData.title.trim(),
       shortDescription: formData.shortDescription.trim(),
-      highlights: formData.highlights.trim(),
+      highlights: formData.highlights,
       category: formData.category,
       duration: formData.duration,
+      startDateTime: formData.startDateTime,
+      endDateTime: formData.endDateTime,
       location: formData.location.trim(),
+      country: formData.country.trim(),
       tags: formData.tags,
       languages: formData.languages,
       participantsAllowed: formData.participantsAllowed,
@@ -88,6 +120,68 @@ export default function CreateExperienceBasicInfoPage() {
 
   const removeLanguage = (language) => {
     setFormData(prev => ({ ...prev, languages: prev.languages.filter((l) => l !== language) }));
+  };
+
+  const addHighlightItem = () => {
+    if (newHighlightItem.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        highlights: [...prev.highlights, newHighlightItem.trim()]
+      }));
+      setNewHighlightItem("");
+    }
+  };
+
+  const removeHighlightItem = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      highlights: prev.highlights.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Helper function to check if tour spans multiple days
+  const isMultiDay = (startDateTime, endDateTime) => {
+    if (!startDateTime || !endDateTime) return false;
+    return isMultiDayTour(startDateTime, endDateTime);
+  };
+
+  // Helper function to calculate duration between start and end times
+  const calculateDuration = (startDateTime, endDateTime) => {
+    if (!startDateTime || !endDateTime) return '';
+    
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const diffMs = end.getTime() - start.getTime();
+    
+    if (diffMs <= 0) return '';
+    
+    const totalHours = diffMs / (1000 * 60 * 60);
+    const hours = Math.floor(totalHours);
+    const minutes = Math.round((totalHours - hours) * 60);
+    
+    // Always show duration in hours (backend expects hours)
+    if (hours === 0) {
+      return `${minutes} minutes`;
+    } else if (minutes === 0) {
+      return `${hours} hours`;
+    } else {
+      return `${hours}h ${minutes}min`;
+    }
+  };
+
+
+  const handleDateTimeChange = (field, value) => {
+    const newData = { ...formData, [field]: value };
+    
+    if (field === 'startDateTime' || field === 'endDateTime') {
+      const duration = calculateDuration(
+        field === 'startDateTime' ? value : formData.startDateTime,
+        field === 'endDateTime' ? value : formData.endDateTime
+      );
+      newData.duration = duration;
+    }
+    
+    setFormData(newData);
   };
 
   const handlePhotoUpload = (event, isMain = true) => {
@@ -188,7 +282,7 @@ export default function CreateExperienceBasicInfoPage() {
                     value={formData.title}
                     onChange={(e) => handleInputChange('title', e.target.value)}
                     className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                    placeholder="Tokyo: Shinjuku Food Tour (15 Dishes and 4 Eateries)"
+                    placeholder="Enter your experience title"
                   />
                 </div>
 
@@ -199,76 +293,138 @@ export default function CreateExperienceBasicInfoPage() {
                     value={formData.shortDescription}
                     onChange={(e) => handleInputChange('shortDescription', e.target.value)}
                     className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 h-36 resize-none text-lg font-medium text-neutrals-2 transition-colors"
-                    placeholder="Explore Tokyo's nightlife like a local on this small-group tour through Shinjuku, learning its history and culture while enjoying 13 traditional dishes from a izakaya, gastro bar, and food stalls!"
+                    placeholder="Brief description of your experience"
                   />
                 </div>
 
                 {/* Highlights */}
                 <div style={{marginBottom: '15px'}}>
                   <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
-                  <div className="border-2 border-neutrals-5 rounded-xl p-6">
-                    <textarea style={{padding: '6px'}}
-                      value={formData.highlights}
-                      onChange={(e) => handleInputChange('highlights', e.target.value)}
-                      className="w-full focus:outline-none text-lg font-medium h-48 resize-none"
-                      placeholder="• Explore hidden gems and uncover Tokyo's authentic local cuisine&#10;• Great introduction to the nightlife in Shinjuku&#10;• Enjoy a variety of up to 13 distinct Japanese dishes&#10;• Step into a Japanese culture with culinary history and traditions&#10;• Small-group tour (Maximum 10 guests for a more personal and intimate experience)"
-                    />
+                  <div className="border-2 border-neutrals-5 rounded-xl p-6 bg-white">
+                    {formData.highlights.length > 0 && (
+                      <ul className="mb-4" style={{padding: '6px'}}>
+                        {formData.highlights.map((item, index) => (
+                          <li key={index} className="group flex items-start justify-between mb-3">
+                            <div className="flex items-start flex-1 gap-3">
+                              <span className="text-primary-1 font-bold text-lg">•</span>
+                              <span className="text-lg font-medium text-neutrals-2">{item}</span>
+                            </div>
+                            <button 
+                              onClick={() => removeHighlightItem(index)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                            >
+                              <X className="w-4 h-4 text-red-500" />
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="flex gap-3 items-center" style={{padding: '4px 8px'}}>
+                      <input style={{padding: '6px'}}
+                        type="text"
+                        value={newHighlightItem}
+                        onChange={(e) => setNewHighlightItem(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addHighlightItem();
+                          }
+                        }}
+                        placeholder="Add highlight..."
+                        className="flex-1 px-4 py-3 text-lg font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
+                      />
+                      <button 
+                        onClick={addHighlightItem}
+                        className="w-8 h-8 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
+                      >
+                        <Plus className="w-4 h-4 text-white" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                {/* Category and Duration */}
+                {/* Category */}
+                <div style={{marginBottom: '15px'}}>
+                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
+                  <div className="relative">
+                    <button style={{padding: '6px'}}
+                      onClick={() => toggleDropdown('category')}
+                      className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-lg font-medium text-neutrals-2 transition-colors hover:border-neutrals-4"
+                    >
+                      <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
+                      <ChevronDown className="w-6 h-6 text-neutrals-4" />
+                    </button>
+                    {dropdownOpen.category && (
+                      <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
+                        {categories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => handleDropdownSelect('category', cat)}
+                            className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium first:rounded-t-xl last:rounded-b-xl transition-colors"
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Start and End Date/Time */}
                 <div className="grid grid-cols-2 gap-12" style={{marginBottom: '15px'}}>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
+                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Start Date & Time</label>
                     <div className="relative">
-                      <button style={{padding: '6px'}}
-                        onClick={() => toggleDropdown('category')}
-                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-lg font-medium text-neutrals-2 transition-colors hover:border-neutrals-4"
-                      >
-                        <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
-                        <ChevronDown className="w-6 h-6 text-neutrals-4" />
-                      </button>
-                      {dropdownOpen.category && (
-                        <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                          {categories.map(cat => (
-                            <button
-                              key={cat}
-                              onClick={() => handleDropdownSelect('category', cat)}
-                              className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium first:rounded-t-xl last:rounded-b-xl transition-colors"
-                            >
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                      <input style={{padding: '6px'}}
+                        type="datetime-local"
+                        value={formData.startDateTime}
+                        onChange={(e) => handleDateTimeChange('startDateTime', e.target.value)}
+                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
+                      />
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Duration</label>
+                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">End Date & Time</label>
                     <div className="relative">
-                      <button style={{padding: '6px'}}
-                        onClick={() => toggleDropdown('duration')}
-                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-lg font-medium text-neutrals-2 transition-colors hover:border-neutrals-4"
-                      >
-                        <span className={formData.duration ? "" : "text-neutrals-5"}>{formData.duration ? durationLabels[formData.duration] : "Select duration"}</span>
-                        <ChevronDown className="w-6 h-6 text-neutrals-4" />
-                      </button>
-                      {dropdownOpen.duration && (
-                        <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                          {durations.map(dur => (
-                            <button
-                              key={dur}
-                              onClick={() => handleDropdownSelect('duration', dur)}
-                              className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium first:rounded-t-xl last:rounded-b-xl transition-colors"
-                            >
-                              {durationLabels[dur]}
-                            </button>
-                          ))}
+                      <input style={{padding: '6px'}}
+                        type="datetime-local"
+                        value={formData.endDateTime}
+                        onChange={(e) => handleDateTimeChange('endDateTime', e.target.value)}
+                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Duration Display and Multi-day Indicator */}
+                {formData.startDateTime && formData.endDateTime && (
+                  <div style={{marginBottom: '15px'}}>
+                    <div className="flex items-center gap-4 bg-neutrals-7 px-6 py-4 rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold uppercase text-neutrals-5">Duration:</span>
+                        <span className="text-lg font-semibold text-neutrals-1">{formData.duration}</span>
+                      </div>
+                      {isMultiDay(formData.startDateTime, formData.endDateTime) && (
+                        <div className="flex items-center gap-2 ml-auto">
+                          <AlertCircle className="w-5 h-5 text-primary-1" />
+                          <span className="text-sm font-semibold text-primary-1">Multi-day Experience</span>
                         </div>
                       )}
                     </div>
                   </div>
+                )}
+
+                {/* Country */}
+                <div style={{marginBottom: '15px'}}>
+                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Country</label>
+                  <input style={{padding: '6px'}}
+                    type="text"
+                    value={formData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
+                    placeholder="Enter country"
+                  />
                 </div>
 
                 {/* Location */}
@@ -279,7 +435,7 @@ export default function CreateExperienceBasicInfoPage() {
                     value={formData.location}
                     onChange={(e) => handleInputChange('location', e.target.value)}
                     className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                    placeholder="Starbucks Coffee - Shinjuku Nishiguchi"
+                    placeholder="Enter meeting point or location"
                   />
                 </div>
 
@@ -293,7 +449,7 @@ export default function CreateExperienceBasicInfoPage() {
                     value={formData.participantsAllowed}
                     onChange={(e) => handleInputChange('participantsAllowed', e.target.value)}
                     className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                    placeholder="10"
+                    placeholder="Enter max participants"
                   />
                 </div>
 
@@ -315,7 +471,7 @@ export default function CreateExperienceBasicInfoPage() {
                       type="text"
                       placeholder="Add tags..."
                       className="w-full focus:outline-none text-lg font-medium placeholder-neutrals-4"
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
                           if (e.target.value.trim()) {
@@ -480,73 +636,138 @@ export default function CreateExperienceBasicInfoPage() {
                   value={formData.shortDescription}
                   onChange={(e) => handleInputChange('shortDescription', e.target.value)}
                   className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors  h-32 resize-none"
-                  placeholder="Brief description for the experience"
+                  placeholder="Brief description of your experience"
                 />
               </div>
 
               {/* Highlights */}
               <div style={{marginBottom: '10px'}}>
                 <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
-                <textarea style={{padding: '6px'}}
-                  value={formData.highlights}
-                  onChange={(e) => handleInputChange('highlights', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors  h-40 resize-none"
-                  placeholder="Key highlights of your experience"
-                />
+                <div className="border-2 border-neutrals-5 rounded-xl p-4 bg-white">
+                  {formData.highlights.length > 0 && (
+                    <ul className="mb-3" style={{padding: '3px'}}>
+                      {formData.highlights.map((item, index) => (
+                        <li key={index} className="group flex items-start justify-between mb-2">
+                          <div className="flex items-start flex-1 gap-2">
+                            <span className="text-primary-1 font-bold text-sm">•</span>
+                            <span className="text-sm font-medium text-neutrals-2">{item}</span>
+                          </div>
+                          <button 
+                            onClick={() => removeHighlightItem(index)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                          >
+                            <X className="w-3 h-3 text-red-500" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <div className="flex gap-2 items-center" style={{padding: '2px 4px'}}>
+                    <input style={{padding: '4px'}}
+                      type="text"
+                      value={newHighlightItem}
+                      onChange={(e) => setNewHighlightItem(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addHighlightItem();
+                        }
+                      }}
+                      placeholder="Add highlight..."
+                      className="flex-1 px-3 py-2 text-sm font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
+                    />
+                    <button 
+                      onClick={addHighlightItem}
+                      className="w-6 h-6 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
+                    >
+                      <Plus className="w-3 h-3 text-white" />
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              {/* Category and Duration */}
+              {/* Category */}
+              <div style={{marginBottom: '10px'}}>
+                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
+                <div className="relative">
+                  <button style={{padding: '6px'}}
+                    onClick={() => toggleDropdown('category')}
+                    className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-sm font-medium text-neutrals-2 transition-colors "
+                  >
+                    <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
+                    <ChevronDown className="w-4 h-4 text-neutrals-4" />
+                  </button>
+                  {dropdownOpen.category && (
+                    <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          onClick={() => handleDropdownSelect('category', cat)}
+                          className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm first:rounded-t-xl last:rounded-b-xl"
+                        >
+                          {cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Start and End Date/Time */}
               <div className="grid grid-cols-2 gap-4" style={{marginBottom: '10px'}}>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
+                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Start Date & Time</label>
                   <div className="relative">
-                    <button style={{padding: '6px'}}
-                      onClick={() => toggleDropdown('category')}
-                      className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-sm font-medium text-neutrals-2 transition-colors "
-                    >
-                      <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
-                      <ChevronDown className="w-4 h-4 text-neutrals-4" />
-                    </button>
-                    {dropdownOpen.category && (
-                      <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                        {categories.map(cat => (
-                          <button
-                            key={cat}
-                            onClick={() => handleDropdownSelect('category', cat)}
-                            className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm first:rounded-t-xl last:rounded-b-xl"
-                          >
-                            {cat}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    <input style={{padding: '4px'}}
+                      type="datetime-local"
+                      value={formData.startDateTime}
+                      onChange={(e) => handleDateTimeChange('startDateTime', e.target.value)}
+                      className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
+                    />
                   </div>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Duration</label>
+                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">End Date & Time</label>
                   <div className="relative">
-                    <button style={{padding: '6px'}}
-                      onClick={() => toggleDropdown('duration')}
-                      className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-sm font-medium text-neutrals-2 transition-colors "
-                    >
-                      <span className={formData.duration ? "" : "text-neutrals-5"}>{formData.duration ? durationLabels[formData.duration] : "Select duration"}</span>
-                      <ChevronDown className="w-4 h-4 text-neutrals-4" />
-                    </button>
-                    {dropdownOpen.duration && (
-                      <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                        {durations.map(dur => (
-                          <button
-                            key={dur}
-                            onClick={() => handleDropdownSelect('duration', dur)}
-                            className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm first:rounded-t-xl last:rounded-b-xl"
-                          >
-                            {durationLabels[dur]}
-                          </button>
-                        ))}
+                    <input style={{padding: '4px'}}
+                      type="datetime-local"
+                      value={formData.endDateTime}
+                      onChange={(e) => handleDateTimeChange('endDateTime', e.target.value)}
+                      className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Duration Display and Multi-day Indicator */}
+              {formData.startDateTime && formData.endDateTime && (
+                <div style={{marginBottom: '10px'}}>
+                  <div className="flex items-center gap-3 bg-neutrals-7 px-4 py-3 rounded-xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase text-neutrals-5">Duration:</span>
+                      <span className="text-sm font-semibold text-neutrals-1">{formData.duration}</span>
+                    </div>
+                    {isMultiDay(formData.startDateTime, formData.endDateTime) && (
+                      <div className="flex items-center gap-1 ml-auto">
+                        <AlertCircle className="w-4 h-4 text-primary-1" />
+                        <span className="text-xs font-semibold text-primary-1">Multi-day</span>
                       </div>
                     )}
                   </div>
                 </div>
+              )}
+
+              {/* Country */}
+              <div style={{marginBottom: '10px'}}>
+                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Country</label>
+                <input style={{padding: '6px'}}
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => handleInputChange('country', e.target.value)}
+                  className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
+                  placeholder="Enter country"
+                />
               </div>
 
               {/* Location */}
@@ -557,7 +778,7 @@ export default function CreateExperienceBasicInfoPage() {
                   value={formData.location}
                   onChange={(e) => handleInputChange('location', e.target.value)}
                   className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors "
-                  placeholder="Where does your experience take place?"
+                  placeholder="Enter meeting point or location"
                 />
               </div>
 
@@ -571,7 +792,7 @@ export default function CreateExperienceBasicInfoPage() {
                   value={formData.participantsAllowed}
                   onChange={(e) => handleInputChange('participantsAllowed', e.target.value)}
                   className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors "
-                  placeholder="e.g. 10"
+                  placeholder="Enter max participants"
                 />
               </div>
 
@@ -593,7 +814,7 @@ export default function CreateExperienceBasicInfoPage() {
                     type="text"
                     placeholder="Add tags..."
                     className="w-full focus:outline-none text-sm font-medium text-neutrals-2 transition-colors "
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
                         if (e.target.value.trim()) {

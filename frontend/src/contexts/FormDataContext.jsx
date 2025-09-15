@@ -14,11 +14,14 @@ export const FormDataProvider = ({ children }) => {
   const [formData, setFormData] = useState({
     // Step 1: Basic Info - matching Experience entity fields
     title: '',
-    shortDescription: '', // changed from 'description'
-    highlights: '', // String, not array (backend stores as String)
+    shortDescription: '',
+    highlights: [], // Array for UI, will be converted to String for backend
     category: '', // ExperienceCategory enum
-    duration: '', // BigDecimal in backend, will convert to number
+    duration: '', // BigDecimal in backend, will convert to number (calculated from start/end)
+    startDateTime: '', // New field: Start date and time for multi-day support
+    endDateTime: '', // New field: End date and time for multi-day support
     location: '',
+    country: '', // New field for country where experience is held
     tags: [], // List<String> in backend
     languages: [], // Not in backend Experience entity - will store in important_info or separate handling
     participantsAllowed: '', // Integer - NEW FIELD
@@ -62,10 +65,13 @@ export const FormDataProvider = ({ children }) => {
     setFormData({
       title: '',
       shortDescription: '',
-      highlights: '',
+      highlights: [],
       category: '',
       duration: '',
+      startDateTime: '',
+      endDateTime: '',
       location: '',
+      country: '',
       tags: [],
       languages: [],
       participantsAllowed: '',
@@ -88,7 +94,7 @@ export const FormDataProvider = ({ children }) => {
         title: formData.title,
         shortDescription: formData.shortDescription,
         fullDescription: formData.fullDescription,
-        highlights: formData.highlights, // String
+        highlights: Array.isArray(formData.highlights) ? formData.highlights.join(', ') : '', // Convert array to String for backend
         category: categoryMapping[formData.category], // Convert to enum
         tags: formData.tags, // Already array
         coverPhotoUrl: formData.coverPhotoUrl,
@@ -97,7 +103,10 @@ export const FormDataProvider = ({ children }) => {
         price: parseFloat(formData.price) || null,
         participantsAllowed: parseInt(formData.participantsAllowed) || null,
         duration: parseFloat(formData.duration) || null,
+        startDateTime: formData.startDateTime || null,
+        endDateTime: formData.endDateTime || null,
         location: formData.location,
+        country: formData.country,
         status: 'ACTIVE' // Default status
       },
 

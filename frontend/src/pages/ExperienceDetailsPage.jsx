@@ -2,11 +2,132 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
-import { convertTo12Hr, generateScheduleRecords } from '../utils/scheduleGenerator';
+import { convertTo12Hr, generateScheduleRecords, isMultiDayTour, getTourDurationInDays } from '../utils/scheduleGenerator';
 import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+
+// Utility function to parse and format important info text
+const parseImportantInfo = (text) => {
+  if (!text) return [];
+  
+  const lines = text.split('\n').filter(line => line.trim());
+  const elements = [];
+  
+  for (let line of lines) {
+    const trimmed = line.trim();
+    
+    // Detect numbered lines (1. 2. 3. etc.) - these are bullet points
+    if (trimmed.match(/^\d+[\.\)]\s/)) {
+      const content = trimmed.replace(/^\d+[\.\)]\s/, '');
+      elements.push({ type: 'bullet', content });
+    }
+    // All other non-empty lines are headers
+    else if (trimmed.length > 0) {
+      elements.push({ type: 'header', content: trimmed });
+    }
+  }
+  
+  return elements;
+};
+
+// Helper function to format schedule display for multi-day tours
+const formatScheduleDisplay = (schedule, experienceStartDateTime, experienceEndDateTime) => {
+  if (!schedule || !experienceStartDateTime || !experienceEndDateTime) {
+    return {
+      dateText: new Date(schedule.date).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      }),
+      timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
+    };
+  }
+
+  const isMultiDay = isMultiDayTour(experienceStartDateTime, experienceEndDateTime);
+  
+  if (isMultiDay) {
+    const tourDurationDays = getTourDurationInDays(experienceStartDateTime, experienceEndDateTime);
+    const startDate = new Date(schedule.date);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + tourDurationDays - 1);
+    
+    const startDateStr = startDate.toLocaleDateString('en-US', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
+    const endDateStr = endDate.toLocaleDateString('en-US', { 
+      day: 'numeric', 
+      month: 'short' 
+    });
+    
+    return {
+      dateText: `${startDateStr} - ${endDateStr}`,
+      timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
+    };
+  } else {
+    return {
+      dateText: new Date(schedule.date).toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      }),
+      timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
+    };
+  }
+};
+
+// Helper function to format duration display
+const formatDuration = (startDateTime, endDateTime) => {
+  if (!startDateTime || !endDateTime) return null;
+  
+  const isMultiDay = isMultiDayTour(startDateTime, endDateTime);
+  
+  if (isMultiDay) {
+    const days = getTourDurationInDays(startDateTime, endDateTime);
+    return `${days} Day${days > 1 ? 's' : ''}`;
+  } else {
+    // Calculate hours for single day
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    const durationMs = end - start;
+    const hours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10; // Round to 1 decimal
+    
+    if (hours === Math.floor(hours)) {
+      return `${hours} Hour${hours > 1 ? 's' : ''}`;
+    } else {
+      return `${hours} Hours`;
+    }
+  }
+};
+
+// Component to render formatted important info
+const FormattedImportantInfo = ({ text, isMobile = false }) => {
+  const elements = parseImportantInfo(text);
+  
+  return (
+    <div className="space-y-3">
+      {elements.map((element, index) => {
+        if (element.type === 'header') {
+          return (
+            <h3 key={index} className={`font-semibold text-neutrals-1 ${isMobile ? 'text-base' : 'text-lg'}`} style={{ fontFamily: 'Poppins' }}>
+              {element.content}
+            </h3>
+          );
+        } else if (element.type === 'bullet') {
+          return (
+            <div key={index} className={`text-neutrals-3 ${isMobile ? 'text-sm' : 'text-sm'} leading-relaxed flex items-start ml-4`}>
+              <span className="text-neutrals-4 mr-2 flex-shrink-0 mt-1">•</span>
+              <span>{element.content}</span>
+            </div>
+          );
+        }
+        return null;
+      })}
+    </div>
+  );
+};
 
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
@@ -151,12 +272,13 @@ const ExperienceDetailsPage = () => {
   };
   // END DEMO MODE SECTION
 
-  // Build images array from cover photo + media data
-  const images = [
-    displayData.coverPhotoUrl || '/placeholder-cover.jpg',
-    ...(mediaData?.map(media => media.mediaUrl) || []),
-    ...(displayData.additionalPhotos || [])
-  ].filter(Boolean);
+  // Build images array from media data (includes cover photo) or fallback to form data
+  const images = mediaData && mediaData.length > 0
+    ? mediaData.map(media => media.mediaUrl)
+    : [
+        displayData.coverPhotoUrl,
+        ...(displayData.additionalPhotos || [])
+      ].filter(Boolean);
   
   // Fallback images if no form data
   const fallbackImages = [
@@ -168,16 +290,33 @@ const ExperienceDetailsPage = () => {
   
   const displayImages = images.length > 0 ? images : fallbackImages;
 
-  // Convert highlights string to array or use fallback
-  const highlightsArray = displayData.highlights 
-    ? displayData.highlights.split('\n').filter(h => h.trim())
-    : [
-        'Explore local eateries and street food culture',
-        'Try 15 different dishes across 4 authentic venues', 
-        'Expert local guide with insider knowledge',
-        'Small group experience (max 8 people)',
-        'Vegetarian and dietary restrictions accommodated'
-      ];
+  // Convert highlights to array - handle both string and array formats
+  console.log('displayData.highlights:', displayData.highlights);
+  console.log('typeof displayData.highlights:', typeof displayData.highlights);
+
+  let highlightsArray;
+  if (Array.isArray(displayData.highlights)) {
+    // Backend returned an array
+    highlightsArray = displayData.highlights.length > 0 ? displayData.highlights : [
+      'Explore local eateries and street food culture',
+      'Try 15 different dishes across 4 authentic venues',
+      'Expert local guide with insider knowledge',
+      'Small group experience (max 8 people)',
+      'Vegetarian and dietary restrictions accommodated'
+    ];
+  } else if (typeof displayData.highlights === 'string' && displayData.highlights.trim()) {
+    // Backend returned a string - split by comma
+    highlightsArray = displayData.highlights.split(',').filter(h => h.trim());
+  } else {
+    // Fallback for null/undefined/empty
+    highlightsArray = [
+      'Explore local eateries and street food culture',
+      'Try 15 different dishes across 4 authentic venues',
+      'Expert local guide with insider knowledge',
+      'Small group experience (max 8 people)',
+      'Vegetarian and dietary restrictions accommodated'
+    ];
+  }
 
   const reviews = [
     {
@@ -289,6 +428,15 @@ const ExperienceDetailsPage = () => {
             {/* Title and Actions */}
             <div className="flex justify-between items-start mb-10">
               <div className="flex-1 max-w-4xl">
+                {/* Category Badge */}
+                {displayData.category && (
+                  <div className="mb-4">
+                    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary-1 text-white shadow-sm">
+                      {displayData.category}
+                    </span>
+                  </div>
+                )}
+                
                 <h1 className="text-5xl font-bold text-neutrals-2 leading-tight mb-4 break-words" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                   {displayData.title || 'Experience Title'}
                 </h1>
@@ -307,7 +455,7 @@ const ExperienceDetailsPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <span className="text-neutrals-4 text-sm">{displayData.location || 'Location not specified'}</span>
+                    <span className="text-neutrals-4 text-sm">{displayData.country || 'Country not specified'}</span>
                   </div>
                 </div>
               </div>
@@ -344,49 +492,111 @@ const ExperienceDetailsPage = () => {
             </div>
 
             {/* Image Gallery */}
-            <div className="grid grid-cols-4 gap-4 mb-10 max-w-full" style={{ height: '450px', maxHeight: '450px' }}>
-              <div className="col-span-1 rounded-2xl overflow-hidden">
-                <img 
-                  src={displayImages[0]} 
-                  alt="Experience image 1" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                  onClick={() => openPhotoModal(0)}
-                />
-              </div>
-              <div className="col-span-2 rounded-2xl overflow-hidden relative">
-                <img 
-                  src={displayImages[1]} 
-                  alt="Experience image 2" 
-                  className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                  onClick={() => openPhotoModal(1)}
-                />
-              </div>
-              <div className="col-span-1 flex flex-col gap-4">
-                <div className="h-[217px] rounded-2xl overflow-hidden">
+            <div className="grid gap-4 mb-5 max-w-full" style={{ height: '450px', maxHeight: '450px' }}>
+              {displayImages.length === 1 && (
+                <div className="rounded-2xl overflow-hidden h-full">
                   <img 
-                    src={displayImages[2]} 
-                    alt="Experience image 3" 
+                    src={displayImages[0]} 
+                    alt="Experience image 1" 
                     className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => openPhotoModal(2)}
+                    onClick={() => openPhotoModal(0)}
                   />
                 </div>
-                <div className="h-[217px] rounded-2xl overflow-hidden relative">
-                  <img 
-                    src={displayImages[3]} 
-                    alt="Experience image 4" 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
-                    onClick={() => openPhotoModal(3)}
-                  />
-                  {displayImages.length > 4 && (
-                    <div 
-                      className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center cursor-pointer hover:bg-opacity-70 transition-colors"
-                      onClick={() => openPhotoModal(3)}
-                    >
-                      <span className="text-white text-2xl font-bold">+{displayImages.length - 4}</span>
+              )}
+              {displayImages.length === 2 && (
+                <div className="grid grid-cols-2 gap-4 h-full">
+                  <div className="rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[0]} 
+                      alt="Experience image 1" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(0)}
+                    />
+                  </div>
+                  <div className="rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[1]} 
+                      alt="Experience image 2" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(1)}
+                    />
+                  </div>
+                </div>
+              )}
+              {displayImages.length === 3 && (
+                <div className="grid grid-cols-3 gap-4 h-full">
+                  <div className="rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[0]} 
+                      alt="Experience image 1" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(0)}
+                    />
+                  </div>
+                  <div className="rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[1]} 
+                      alt="Experience image 2" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(1)}
+                    />
+                  </div>
+                  <div className="rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[2]} 
+                      alt="Experience image 3" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(2)}
+                    />
+                  </div>
+                </div>
+              )}
+              {displayImages.length >= 4 && (
+                <div className="grid grid-cols-4 gap-4 h-full">
+                  <div className="col-span-1 rounded-2xl overflow-hidden">
+                    <img 
+                      src={displayImages[0]} 
+                      alt="Experience image 1" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(0)}
+                    />
+                  </div>
+                  <div className="col-span-2 rounded-2xl overflow-hidden relative">
+                    <img 
+                      src={displayImages[1]} 
+                      alt="Experience image 2" 
+                      className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                      onClick={() => openPhotoModal(1)}
+                    />
+                  </div>
+                  <div className="col-span-1 flex flex-col gap-4">
+                    <div className="h-[217px] rounded-2xl overflow-hidden">
+                      <img 
+                        src={displayImages[2]} 
+                        alt="Experience image 3" 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => openPhotoModal(2)}
+                      />
                     </div>
-                  )}
+                    <div className="h-[217px] rounded-2xl overflow-hidden relative">
+                      <img 
+                        src={displayImages[3]} 
+                        alt="Experience image 4" 
+                        className="w-full h-full object-cover hover:scale-105 transition-transform cursor-pointer"
+                        onClick={() => openPhotoModal(3)}
+                      />
+                      {displayImages.length > 4 && (
+                        <div 
+                          className="absolute inset-0 bg-black bg-opacity-60 flex items-center justify-center cursor-pointer hover:bg-opacity-70 transition-colors"
+                          onClick={() => openPhotoModal(3)}
+                        >
+                          <span className="text-white text-2xl font-bold">+{displayImages.length - 4}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Short Description Caption */}
@@ -446,12 +656,12 @@ const ExperienceDetailsPage = () => {
                           <div key={index} className="relative">
                             <div className="flex items-start gap-5">
                               <div className="flex flex-col items-center">
-                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ${
+                                <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-xs font-bold ${
                                   item.stopType === 'start' ? 'bg-green-500' :
                                   item.stopType === 'end' ? 'bg-red-500' : 'bg-blue-500'
                                 }`}>
-                                  {item.stopType === 'start' ? 'S' : 
-                                   item.stopType === 'end' ? 'E' : index}
+                                  {item.stopType === 'start' ? 'START' : 
+                                   item.stopType === 'end' ? 'END' : index}
                                 </div>
                                 {index < itinerariesData.length - 1 && (
                                   <div className="w-1 h-20 bg-neutrals-5 mt-3 rounded-full"></div>
@@ -466,10 +676,12 @@ const ExperienceDetailsPage = () => {
                                   </span>
                                 </div>
                                 
-                                <div className="flex items-center gap-3 text-sm text-neutrals-3">
-                                  <Clock className="w-4 h-4 text-neutrals-4" />
-                                  <span>{item.duration || 'Duration not specified'}</span>
-                                </div>
+                                {item.stopType !== 'start' && item.stopType !== 'end' && (
+                                  <div className="flex items-center gap-3 text-sm text-neutrals-3">
+                                    <Clock className="w-4 h-4 text-neutrals-4" />
+                                    <span>{item.duration || 'Duration not specified'}</span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -485,30 +697,31 @@ const ExperienceDetailsPage = () => {
                     What's included
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[0]?.trim() : 'Food tastings'}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[1]?.trim() : 'Expert guide'}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[2]?.trim() : 'Cultural insights'}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{displayData.whatIncluded ? displayData.whatIncluded.split(',')[3]?.trim() : 'Small group'}</span>
-                    </div>
+                    {displayData.whatIncluded ? (
+                      displayData.whatIncluded.split(',').filter(item => item.trim()).map((item, index) => (
+                        <div key={index} className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-neutrals-3 text-sm break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.trim()}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-neutrals-3 text-sm">Food tastings</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <svg className="w-5 h-5 text-primary-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-neutrals-3 text-sm">Expert guide</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -536,9 +749,7 @@ const ExperienceDetailsPage = () => {
                       Important Information
                     </h2>
                     <div className="bg-neutrals-7 rounded-lg p-4">
-                      <p className="text-neutrals-3 leading-relaxed break-words" style={{ fontSize: '14px', lineHeight: '22px', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                        {displayData.importantInfo}
-                      </p>
+                      <FormattedImportantInfo text={displayData.importantInfo} isMobile={false} />
                     </div>
                   </div>
                 )}
@@ -561,6 +772,16 @@ const ExperienceDetailsPage = () => {
                       <span className="text-sm font-semibold text-neutrals-2">4.8</span>
                       <span className="text-sm text-neutrals-4">(256 reviews)</span>
                     </div>
+                    
+                    {/* Duration Display */}
+                    {formatDuration(displayData.startDateTime, displayData.endDateTime) && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Clock className="w-4 h-4 text-neutrals-4" />
+                        <span className="text-sm text-neutrals-4">
+                          {formatDuration(displayData.startDateTime, displayData.endDateTime)}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Available Schedules */}
@@ -578,16 +799,19 @@ const ExperienceDetailsPage = () => {
                         >
                           <div className="flex justify-between items-center relative z-10">
                             <div>
-                              <div className={`font-semibold ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
-                                {new Date(schedule.date).toLocaleDateString('en-US', { 
-                                  weekday: 'long', 
-                                  day: 'numeric', 
-                                  month: 'long' 
-                                })}
-                              </div>
-                              <div className={`text-sm ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                                {convertTo12Hr(schedule.startTime)} - {convertTo12Hr(schedule.endTime)}
-                              </div>
+                              {(() => {
+                                const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                                return (
+                                  <>
+                                    <div className={`font-semibold ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
+                                      {formattedSchedule.dateText}
+                                    </div>
+                                    <div className={`text-sm ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
+                                      {formattedSchedule.timeText}
+                                    </div>
+                                  </>
+                                );
+                              })()}
                             </div>
                             <div className={`text-sm ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
                               {schedule.availableSpots || 4} spots available
@@ -776,6 +1000,76 @@ const ExperienceDetailsPage = () => {
 
           </div>
 
+          {/* About your host */}
+          <div className="max-w-7xl mx-auto px-10 mt-16">
+            <h2 className="text-2xl font-semibold text-neutrals-2 mb-8" style={{ fontFamily: 'Poppins' }}>
+              About your host
+            </h2>
+            <div className="bg-white border border-neutrals-6 rounded-2xl p-8">
+              <div className="flex items-start gap-6">
+                {/* Host Profile Photo */}
+                <div 
+                  className="cursor-pointer group"
+                  onClick={() => alert('Guide profile coming soon!')}
+                >
+                  <div className="w-20 h-20 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 transition-opacity">
+                    <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
+                      <span className="text-white font-bold text-2xl">SH</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Host Info */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-4">
+                    <h3 className="text-2xl font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
+                      Siri Homes
+                    </h3>
+                    {/* Verification Badge */}
+                    <div className="w-7 h-7 bg-primary-1 rounded-full flex items-center justify-center">
+                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid */}
+                  <div className="grid grid-cols-3 gap-8 mb-6">
+                    <div>
+                      <div className="text-2xl font-bold text-neutrals-1">223</div>
+                      <div className="text-neutrals-4 text-sm">Reviews</div>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1">
+                        <span className="text-2xl font-bold text-neutrals-1">4.87</span>
+                        <svg className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      </div>
+                      <div className="text-neutrals-4 text-sm">Rating</div>
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-neutrals-1">1</div>
+                      <div className="text-neutrals-4 text-sm">Year hosting</div>
+                    </div>
+                  </div>
+
+                  {/* Languages */}
+                  <div>
+                    <div className="text-neutrals-3 text-sm font-medium mb-2">Languages</div>
+                    <div className="flex flex-wrap gap-2">
+                      {['English', 'Mandarin', 'Malay'].map((language) => (
+                        <span key={language} className="px-3 py-1 bg-neutrals-7 text-neutrals-2 text-sm rounded-full">
+                          {language}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Related Tours */}
           <div className="max-w-7xl mx-auto px-10 mt-16">
             <div className="flex items-center justify-between mb-8">
@@ -856,6 +1150,15 @@ const ExperienceDetailsPage = () => {
         <div className="flex-1 min-h-screen" style={{ paddingTop: '20px', paddingBottom: '60px', paddingLeft: '16px', paddingRight: '16px' }}>
           {/* Mobile Hero */}
           <div className="mb-6">
+            {/* Category Badge - Mobile */}
+            {displayData.category && (
+              <div className="mb-3">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary-1 text-white shadow-sm">
+                  {displayData.category}
+                </span>
+              </div>
+            )}
+            
             <h1 className="text-2xl font-bold text-neutrals-2 leading-tight mb-3 break-words" style={{ fontFamily: 'DM Sans', wordWrap: 'break-word', overflowWrap: 'break-word' }}>
               {displayData.title || 'Experience Title'}
             </h1>
@@ -871,14 +1174,15 @@ const ExperienceDetailsPage = () => {
             <div className="flex items-center gap-2 text-neutrals-3 text-sm mb-4">
               <MapPin className="w-4 h-4" />
               <span className="break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                {displayData.location || 'Location not specified'}
+                {displayData.country || 'Country not specified'}
               </span>
             </div>
           </div>
 
           {/* Mobile Images */}
-          <div className="space-y-4 mb-6">
-            <div className="rounded-2xl overflow-hidden h-48">
+          <div className="mb-6">
+            {/* Main Image */}
+            <div className="rounded-2xl overflow-hidden mb-3" style={{ aspectRatio: '16/10' }}>
               <img 
                 src={displayImages[0]} 
                 alt="Experience image 1" 
@@ -886,38 +1190,34 @@ const ExperienceDetailsPage = () => {
                 onClick={() => openPhotoModal(0)}
               />
             </div>
-            <div className="grid grid-cols-3 gap-2 h-24">
-              <div className="rounded-lg overflow-hidden">
-                <img 
-                  src={displayImages[1]} 
-                  alt="Experience image 2" 
-                  className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => openPhotoModal(1)}
-                />
+            
+            {/* Additional Images Grid */}
+            {displayImages.length > 1 && (
+              <div className={`grid gap-2 ${
+                displayImages.length === 2 ? 'grid-cols-1' :
+                displayImages.length === 3 ? 'grid-cols-2' : 
+                'grid-cols-3'
+              }`}>
+                {displayImages.slice(1, displayImages.length >= 4 ? 4 : displayImages.length).map((image, index) => (
+                  <div key={index + 1} className="rounded-lg overflow-hidden relative" style={{ aspectRatio: '4/3' }}>
+                    <img 
+                      src={image} 
+                      alt={`Experience image ${index + 2}`} 
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => openPhotoModal(index + 1)}
+                    />
+                    {index === 2 && displayImages.length > 4 && (
+                      <button 
+                        className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center"
+                        onClick={() => openPhotoModal(index + 1)}
+                      >
+                        <span className="text-white text-xs font-bold">+{displayImages.length - 4}</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-              <div className="rounded-lg overflow-hidden">
-                <img 
-                  src={displayImages[2]} 
-                  alt="Experience image 3" 
-                  className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => openPhotoModal(2)}
-                />
-              </div>
-              <div className="rounded-lg overflow-hidden relative">
-                <img 
-                  src={displayImages[3]} 
-                  alt="Experience image 4" 
-                  className="w-full h-full object-cover cursor-pointer"
-                  onClick={() => openPhotoModal(3)}
-                />
-                <button 
-                  className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center"
-                  onClick={() => openPhotoModal(3)}
-                >
-                  <span className="text-white text-xs font-bold">+{displayImages.length - 3}</span>
-                </button>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Mobile Short Description */}
@@ -973,12 +1273,12 @@ const ExperienceDetailsPage = () => {
                       <div key={index} className="relative">
                         <div className="flex gap-3">
                           <div className="flex flex-col items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold ${
                               item.stopType === 'start' ? 'bg-green-500' :
                               item.stopType === 'end' ? 'bg-red-500' : 'bg-blue-500'
                             }`}>
-                              {item.stopType === 'start' ? 'S' : 
-                               item.stopType === 'end' ? 'E' : index}
+                              {item.stopType === 'start' ? 'ST' : 
+                               item.stopType === 'end' ? 'END' : index}
                             </div>
                             {index < itinerariesData.length - 1 && (
                               <div className="w-0.5 h-16 bg-neutrals-5 mt-2 rounded-full"></div>
@@ -986,7 +1286,9 @@ const ExperienceDetailsPage = () => {
                           </div>
                           <div className="flex-1 pt-1">
                             <h4 className="text-sm font-medium text-neutrals-2 mb-1">{item.locationName}</h4>
-                            <p className="text-xs text-neutrals-4 break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.duration}</p>
+                            {item.stopType !== 'start' && item.stopType !== 'end' && (
+                              <p className="text-xs text-neutrals-4 break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>{item.duration || 'Duration not specified'}</p>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1037,9 +1339,7 @@ const ExperienceDetailsPage = () => {
                 Important Information
               </h2>
               <div className="bg-neutrals-7 rounded-lg p-4">
-                <p className="text-neutrals-3 text-sm leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                  {displayData.importantInfo}
-                </p>
+                <FormattedImportantInfo text={displayData.importantInfo} isMobile={true} />
               </div>
             </div>
             )}
@@ -1060,6 +1360,16 @@ const ExperienceDetailsPage = () => {
                   <span className="text-xs font-semibold text-neutrals-2">4.8</span>
                   <span className="text-xs text-neutrals-4">(256 reviews)</span>
                 </div>
+                
+                {/* Duration Display - Mobile */}
+                {formatDuration(displayData.startDateTime, displayData.endDateTime) && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <Clock className="w-4 h-4 text-neutrals-4" />
+                    <span className="text-xs text-neutrals-4">
+                      {formatDuration(displayData.startDateTime, displayData.endDateTime)}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* Available Schedules */}
@@ -1080,16 +1390,19 @@ const ExperienceDetailsPage = () => {
                       )}
                       <div className="flex justify-between items-center relative z-10">
                         <div>
-                          <div className={`font-semibold text-xs ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
-                            {new Date(schedule.date).toLocaleDateString('en-US', { 
-                              weekday: 'long', 
-                              day: 'numeric', 
-                              month: 'long' 
-                            })}
-                          </div>
-                          <div className={`text-xs ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                            {convertTo12Hr(schedule.startTime)} - {convertTo12Hr(schedule.endTime)}
-                          </div>
+                          {(() => {
+                            const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                            return (
+                              <>
+                                <div className={`font-semibold text-xs ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
+                                  {formattedSchedule.dateText}
+                                </div>
+                                <div className={`text-xs ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
+                                  {formattedSchedule.timeText}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className={`text-xs ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
                           {schedule.availableSpots || 4} spots available
@@ -1221,6 +1534,76 @@ const ExperienceDetailsPage = () => {
               </div>
             </div>
 
+            {/* Mobile About your host */}
+            <div className="mt-8">
+              <h2 className="text-lg font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
+                About your host
+              </h2>
+              <div className="bg-white border border-neutrals-6 rounded-2xl p-6">
+                <div className="flex items-start gap-4 mb-6">
+                  {/* Mobile Host Profile Photo */}
+                  <div 
+                    className="cursor-pointer group"
+                    onClick={() => alert('Guide profile coming soon!')}
+                  >
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 transition-opacity">
+                      <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
+                        <span className="text-white font-bold text-lg">SH</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Mobile Host Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
+                        Siri Homes
+                      </h3>
+                      {/* Mobile Verification Badge */}
+                      <div className="w-5 h-5 bg-primary-1 rounded-full flex items-center justify-center">
+                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mobile Stats Grid */}
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-neutrals-1">223</div>
+                    <div className="text-neutrals-4 text-xs">Reviews</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-lg font-bold text-neutrals-1">4.87</span>
+                      <svg className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    </div>
+                    <div className="text-neutrals-4 text-xs">Rating</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-neutrals-1">1</div>
+                    <div className="text-neutrals-4 text-xs">Year hosting</div>
+                  </div>
+                </div>
+
+                {/* Mobile Languages */}
+                <div>
+                  <div className="text-neutrals-3 text-xs font-medium mb-2">Languages</div>
+                  <div className="flex flex-wrap gap-2">
+                    {['English', 'Mandarin', 'Malay'].map((language) => (
+                      <span key={language} className="px-2 py-1 bg-neutrals-7 text-neutrals-2 text-xs rounded-full">
+                        {language}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Mobile You May Be Interested */}
             <div className="mt-8">
               <div className="mb-6">
@@ -1314,17 +1697,19 @@ const ExperienceDetailsPage = () => {
                     >
                       <div className="flex justify-between items-center">
                         <div>
-                          <div className={`font-semibold ${selectedSchedule === index ? 'text-primary-1' : 'text-neutrals-2'}`}>
-                            {new Date(schedule.date).toLocaleDateString('en-US', { 
-                              weekday: 'long', 
-                              day: 'numeric', 
-                              month: 'long',
-                              year: 'numeric'
-                            })}
-                          </div>
-                          <div className="text-sm text-neutrals-4">
-                            {convertTo12Hr(schedule.startTime)} - {convertTo12Hr(schedule.endTime)}
-                          </div>
+                          {(() => {
+                            const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                            return (
+                              <>
+                                <div className={`font-semibold ${selectedSchedule === index ? 'text-primary-1' : 'text-neutrals-2'}`}>
+                                  {formattedSchedule.dateText}
+                                </div>
+                                <div className="text-sm text-neutrals-4">
+                                  {formattedSchedule.timeText}
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
                         <div className="text-sm text-neutrals-4">
                           {schedule.availableSpots || 4} spots available
