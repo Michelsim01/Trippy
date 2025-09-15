@@ -1,5 +1,8 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import SearchSuggestions from './SearchSuggestions'
+import SearchModal from './SearchModal'
+import useSearchSuggestions from '../hooks/useSearchSuggestions'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -13,15 +16,51 @@ const Navbar = ({
 }) => {
     const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
+    const [showMobileSearchModal, setShowMobileSearchModal] = useState(false)
+    const { suggestions, loading, isOpen: suggestionsOpen, searchWithDebounce, clearSuggestions, setIsOpen } = useSearchSuggestions()
 
     const handleSearchChange = (e) => {
-        setSearchQuery(e.target.value)
+        const value = e.target.value
+        setSearchQuery(value)
+        
+        if (value.length >= 2) {
+            setIsOpen(true) // Open dropdown immediately for visual feedback
+        }
+        
+        searchWithDebounce(value)
     }
 
     const handleSearchKeyDown = (e) => {
         if (e.key === 'Enter' && searchQuery.trim()) {
             navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+            clearSuggestions()
+        } else if (e.key === 'Escape') {
+            clearSuggestions()
         }
+    }
+
+    const handleSuggestionClick = (suggestion) => {
+        if (suggestion.type === 'experience' && suggestion.experienceId) {
+            // Navigate to specific experience page if it exists
+            navigate(`/experience/${suggestion.experienceId}`)
+        } else {
+            // Navigate to search results with the suggestion text
+            navigate(`/search?q=${encodeURIComponent(suggestion.text)}`)
+        }
+        setSearchQuery('')
+        clearSuggestions()
+    }
+
+    const handleSearchFocus = () => {
+        if (searchQuery.length >= 2) {
+            setIsOpen(true)
+            // Re-trigger search to refresh suggestions
+            searchWithDebounce(searchQuery)
+        }
+    }
+
+    const handleMobileSearchClick = () => {
+        setShowMobileSearchModal(true)
     }
     return (
         <nav className="bg-neutrals-8 border-b border-neutrals-6 relative z-30 w-full">
@@ -75,6 +114,7 @@ const Navbar = ({
                                             value={searchQuery}
                                             onChange={handleSearchChange}
                                             onKeyDown={handleSearchKeyDown}
+                                            onFocus={handleSearchFocus}
                                             className="input-field white"
                                             style={{
                                                 paddingLeft: '50px',
@@ -86,6 +126,15 @@ const Navbar = ({
                                             }}
                                         />
                                     </div>
+                                    
+                                    {/* Search Suggestions Dropdown */}
+                                    <SearchSuggestions
+                                        isOpen={suggestionsOpen}
+                                        suggestions={suggestions}
+                                        onSuggestionClick={handleSuggestionClick}
+                                        onClose={clearSuggestions}
+                                        loading={loading}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -194,7 +243,7 @@ const Navbar = ({
                             <>
                                 {/* Search icon */}
                                 <button 
-                                    onClick={() => navigate('/search')}
+                                    onClick={handleMobileSearchClick}
                                     className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
                                 >
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,6 +282,12 @@ const Navbar = ({
                     </div>
                 </div>
             </div>
+            
+            {/* Mobile Search Modal */}
+            <SearchModal 
+                isOpen={showMobileSearchModal} 
+                onClose={() => setShowMobileSearchModal(false)} 
+            />
         </nav>
     )
 }

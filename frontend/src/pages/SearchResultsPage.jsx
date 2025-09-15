@@ -173,17 +173,17 @@ const SearchResultsPage = () => {
 
     const query = searchParams.get('q') || '';
 
-    const popularExperiences = mockExperiences.slice(0, 4);
+    const [popularExperiences, setPopularExperiences] = useState([]);
 
     // Filter function
     const applyFilters = (experiences) => {
         return experiences.filter(experience => {
             // Price filter - only apply if enabled and values are set
             if (filters.priceRange.enabled) {
-                if (filters.priceRange.min > 0 && experience.salePrice < filters.priceRange.min) {
+                if (filters.priceRange.min > 0 && experience.price < filters.priceRange.min) {
                     return false;
                 }
-                if (filters.priceRange.max > 0 && experience.salePrice > filters.priceRange.max) {
+                if (filters.priceRange.max > 0 && experience.price > filters.priceRange.max) {
                     return false;
                 }
             }
@@ -224,7 +224,7 @@ const SearchResultsPage = () => {
 
         switch (sortBy) {
             case 'cheapest':
-                return sorted.sort((a, b) => a.salePrice - b.salePrice);
+                return sorted.sort((a, b) => a.price - b.price);
             
             case 'trustiest':
                 return sorted.sort((a, b) => {
@@ -265,21 +265,53 @@ const SearchResultsPage = () => {
     };
 
     useEffect(() => {
-        // Mock search functionality - in production this would be an API call
         const performSearch = async () => {
             setLoading(true);
             
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-            
-            if (query.trim()) {
-                // Filter experiences based on query
-                const filtered = mockExperiences.filter(experience =>
-                    experience.title.toLowerCase().includes(query.toLowerCase()) ||
-                    experience.location.toLowerCase().includes(query.toLowerCase())
-                );
-                setSearchResults(filtered);
-            } else {
+            try {
+                if (query.trim()) {
+                    // Fetch experiences from the backend API
+                    const response = await fetch(`http://localhost:8080/api/experiences`);
+                    
+                    if (response.ok) {
+                        const allExperiences = await response.json();
+                        console.log('Fetched experiences:', allExperiences);
+                        
+                        // Filter experiences based on query (client-side for now)
+                        const filtered = allExperiences.filter(experience =>
+                            experience.title.toLowerCase().includes(query.toLowerCase()) ||
+                            experience.location.toLowerCase().includes(query.toLowerCase())
+                        );
+                        
+                        // Transform backend data to match frontend format
+                        const transformedResults = filtered.map(exp => ({
+                            id: exp.experienceId,
+                            title: exp.title,
+                            location: exp.location,
+                            originalPrice: null, // No discount, so no original price
+                            price: exp.price ? parseFloat(exp.price) : 99, // Use 'price' field that ExperienceCard expects, default to $99 if no price
+                            rating: exp.averageRating ? parseFloat(exp.averageRating) : 4.5,
+                            reviewCount: exp.totalReviews || 0,
+                            duration: exp.duration ? `${exp.duration} hours` : "Multi-day",
+                            durationHours: exp.duration ? parseFloat(exp.duration) : 48,
+                            availableFrom: "2025-07-20",
+                            availableTo: "2025-12-20",
+                            isLiked: false,
+                            timeOfDay: "morning",
+                            listingDate: exp.createdAt || "2025-06-01",
+                            relevanceScore: 0.95
+                        }));
+                        
+                        setSearchResults(transformedResults);
+                    } else {
+                        console.error('Failed to fetch experiences');
+                        setSearchResults([]);
+                    }
+                } else {
+                    setSearchResults([]);
+                }
+            } catch (error) {
+                console.error('Error fetching experiences:', error);
                 setSearchResults([]);
             }
             
@@ -288,6 +320,48 @@ const SearchResultsPage = () => {
 
         performSearch();
     }, [query]);
+
+    // Load popular experiences for fallback
+    useEffect(() => {
+        const loadPopularExperiences = async () => {
+            try {
+                const response = await fetch(`http://localhost:8080/api/experiences`);
+                if (response.ok) {
+                    const allExperiences = await response.json();
+                    
+                    // Transform and take first 4 as popular experiences
+                    const transformedPopular = allExperiences.slice(0, 4).map(exp => ({
+                        id: exp.experienceId,
+                        title: exp.title,
+                        location: exp.location,
+                        originalPrice: null, // No discount, so no original price
+                        price: exp.price ? parseFloat(exp.price) : 99, // Use 'price' field that ExperienceCard expects, default to $99 if no price
+                        rating: exp.averageRating ? parseFloat(exp.averageRating) : 4.5,
+                        reviewCount: exp.totalReviews || 0,
+                        duration: exp.duration ? `${exp.duration} hours` : "Multi-day",
+                        durationHours: exp.duration ? parseFloat(exp.duration) : 48,
+                        availableFrom: "2025-07-20",
+                        availableTo: "2025-12-20",
+                        isLiked: false,
+                        timeOfDay: "morning",
+                        listingDate: exp.createdAt || "2025-06-01",
+                        relevanceScore: 0.95
+                    }));
+                    
+                    setPopularExperiences(transformedPopular);
+                } else {
+                    // Fallback to mock data if API fails
+                    setPopularExperiences(mockExperiences.slice(0, 4));
+                }
+            } catch (error) {
+                console.error('Error loading popular experiences:', error);
+                // Fallback to mock data if API fails
+                setPopularExperiences(mockExperiences.slice(0, 4));
+            }
+        };
+
+        loadPopularExperiences();
+    }, []);
 
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
@@ -342,21 +416,6 @@ const SearchResultsPage = () => {
                                 )}
                             </div>
 
-                            {/* Filter */}
-                            <div className="flex items-center justify-center mb-10">
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">All Experiences</span>
-                                    </div>
-                                    <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">Adventure</span>
-                                    </div>
-                                    <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                                        <span className="text-[14px] font-bold">Culture</span>
-                                    </div>
-                                </div>
-                            </div>
-
                             {loading ? (
                                 /* Loading State */
                                 <div className="flex items-center justify-center py-20">
@@ -398,7 +457,7 @@ const SearchResultsPage = () => {
                                                     id: experience.id,
                                                     title: experience.title,
                                                     location: experience.location,
-                                                    price: experience.salePrice,
+                                                    price: experience.price,
                                                     originalPrice: experience.originalPrice,
                                                     rating: experience.rating,
                                                     imageUrl: experienceImage,
@@ -425,7 +484,7 @@ const SearchResultsPage = () => {
                                                         id: experience.id,
                                                         title: experience.title,
                                                         location: experience.location,
-                                                        price: experience.salePrice,
+                                                        price: experience.price,
                                                         originalPrice: experience.originalPrice,
                                                         rating: experience.rating,
                                                         imageUrl: experienceImage,
@@ -496,7 +555,7 @@ const SearchResultsPage = () => {
                                                         id: experience.id,
                                                         title: experience.title,
                                                         location: experience.location,
-                                                        price: experience.salePrice,
+                                                        price: experience.price,
                                                         originalPrice: experience.originalPrice,
                                                         rating: experience.rating,
                                                         imageUrl: experienceImage,
@@ -523,7 +582,7 @@ const SearchResultsPage = () => {
                                                             id: experience.id,
                                                             title: experience.title,
                                                             location: experience.location,
-                                                            price: experience.salePrice,
+                                                            price: experience.price,
                                                             originalPrice: experience.originalPrice,
                                                             rating: experience.rating,
                                                             imageUrl: experienceImage,
@@ -636,7 +695,7 @@ const SearchResultsPage = () => {
                                             id: experience.id,
                                             title: experience.title,
                                             location: experience.location,
-                                            price: experience.salePrice,
+                                            price: experience.price,
                                             originalPrice: experience.originalPrice,
                                             rating: experience.rating,
                                             imageUrl: experienceImage,
@@ -693,7 +752,7 @@ const SearchResultsPage = () => {
                                                     id: experience.id,
                                                     title: experience.title,
                                                     location: experience.location,
-                                                    price: experience.salePrice,
+                                                    price: experience.price,
                                                     originalPrice: experience.originalPrice,
                                                     rating: experience.rating,
                                                     imageUrl: experienceImage,

@@ -39,7 +39,13 @@ const ExperienceCard = ({
 
     // Format price to show as currency
     const formatPrice = (price) => {
-        return typeof price === 'number' ? Math.round(price) : price;
+        if (typeof price === 'number' && price > 0) {
+            return Math.round(price);
+        }
+        if (typeof price === 'string' && !isNaN(parseFloat(price))) {
+            return Math.round(parseFloat(price));
+        }
+        return '99'; // Default fallback price
     };
 
     return (
