@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
-import { useUser } from '../contexts/UserContext';
 import { kycService } from '../services/kycService';
 
 const idTypes = [
@@ -15,10 +14,9 @@ const idTypes = [
 export default function KycVerificationPage() {
     const navigate = useNavigate();
     const { user: authUser, isAuthenticated, isLoading: authLoading, token } = useAuth();
-    const { user, updateKycStatus } = useUser();
     
-    // Get user ID from either auth context or user context
-    const currentUserId = authUser?.id || user?.id;
+    // Get user ID from auth context
+    const currentUserId = authUser?.id;
 
     function handleKycClick() {
         navigate('/kyc-verification');
