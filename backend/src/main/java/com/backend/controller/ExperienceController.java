@@ -22,10 +22,10 @@ import java.util.HashMap;
 public class ExperienceController {
     @Autowired
     private ExperienceRepository experienceRepository;
-    
+
     @Autowired
     private ExperienceScheduleRepository experienceScheduleRepository;
-    
+
     @Autowired
     private ExperienceService experienceService;
 
@@ -33,12 +33,13 @@ public class ExperienceController {
     public List<Map<String, Object>> getAllExperiences() {
         List<Experience> experiences = experienceRepository.findAll();
         List<Map<String, Object>> result = new ArrayList<>();
-        
+
         for (Experience exp : experiences) {
             Map<String, Object> expMap = new HashMap<>();
             expMap.put("experienceId", exp.getExperienceId());
             expMap.put("title", exp.getTitle());
             expMap.put("location", exp.getLocation());
+            expMap.put("country", exp.getCountry());
             expMap.put("price", exp.getPrice());
             expMap.put("averageRating", exp.getAverageRating());
             expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
@@ -49,7 +50,7 @@ public class ExperienceController {
             expMap.put("totalReviews", exp.getTotalReviews());
             expMap.put("createdAt", exp.getCreatedAt());
             expMap.put("updatedAt", exp.getUpdatedAt());
-            
+
             // Add guide info without lazy loading issues
             if (exp.getGuide() != null) {
                 Map<String, Object> guideMap = new HashMap<>();
@@ -60,10 +61,10 @@ public class ExperienceController {
                 guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
                 expMap.put("guide", guideMap);
             }
-            
+
             result.add(expMap);
         }
-        
+
         return result;
     }
 
@@ -73,11 +74,12 @@ public class ExperienceController {
         if (exp == null) {
             return null;
         }
-        
+
         Map<String, Object> expMap = new HashMap<>();
         expMap.put("experienceId", exp.getExperienceId());
         expMap.put("title", exp.getTitle());
         expMap.put("location", exp.getLocation());
+        expMap.put("country", exp.getCountry());
         expMap.put("price", exp.getPrice());
         expMap.put("averageRating", exp.getAverageRating());
         expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
@@ -94,7 +96,7 @@ public class ExperienceController {
         expMap.put("participantsAllowed", exp.getParticipantsAllowed());
         expMap.put("createdAt", exp.getCreatedAt());
         expMap.put("updatedAt", exp.getUpdatedAt());
-        
+
         // Add guide info without lazy loading issues
         if (exp.getGuide() != null) {
             Map<String, Object> guideMap = new HashMap<>();
@@ -105,7 +107,7 @@ public class ExperienceController {
             guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
             expMap.put("guide", guideMap);
         }
-        
+
         return expMap;
     }
 
@@ -114,16 +116,14 @@ public class ExperienceController {
         try {
             Experience createdExperience = experienceService.createCompleteExperience(payload);
             return ResponseEntity.ok().body(Map.of(
-                "success", true,
-                "experienceId", createdExperience.getExperienceId(),
-                "message", "Experience created successfully",
-                "experience", createdExperience
-            ));
+                    "success", true,
+                    "experienceId", createdExperience.getExperienceId(),
+                    "message", "Experience created successfully",
+                    "experience", createdExperience));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Failed to create experience: " + e.getMessage()
-            ));
+                    "success", false,
+                    "message", "Failed to create experience: " + e.getMessage()));
         }
     }
 
@@ -138,16 +138,14 @@ public class ExperienceController {
         try {
             Experience updatedExperience = experienceService.updateCompleteExperience(id, payload);
             return ResponseEntity.ok().body(Map.of(
-                "success", true,
-                "experienceId", updatedExperience.getExperienceId(),
-                "message", "Experience updated successfully",
-                "experience", updatedExperience
-            ));
+                    "success", true,
+                    "experienceId", updatedExperience.getExperienceId(),
+                    "message", "Experience updated successfully",
+                    "experience", updatedExperience));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "success", false,
-                "message", "Failed to update experience: " + e.getMessage()
-            ));
+                    "success", false,
+                    "message", "Failed to update experience: " + e.getMessage()));
         }
     }
 
@@ -155,32 +153,32 @@ public class ExperienceController {
     public void deleteExperience(@PathVariable Long id) {
         experienceRepository.deleteById(id);
     }
-    
+
     @GetMapping("/search/suggestions")
     public List<SearchSuggestionDTO> getSearchSuggestions(@RequestParam String q) {
         List<SearchSuggestionDTO> suggestions = new ArrayList<>();
-        
+
         // Return empty list if query is too short
         if (q == null || q.trim().length() < 2) {
             return suggestions;
         }
-        
+
         String query = q.trim();
-        
+
         // Get location suggestions (limit to 3)
         List<String> locations = experienceRepository.findLocationSuggestions(query);
         suggestions.addAll(locations.stream()
                 .limit(3)
                 .map(SearchSuggestionDTO::location)
                 .collect(Collectors.toList()));
-        
+
         // Get experience suggestions (limit to 2)
         List<Experience> experiences = experienceRepository.findExperienceSuggestions(query);
         suggestions.addAll(experiences.stream()
                 .limit(2)
                 .map(exp -> SearchSuggestionDTO.experience(exp.getTitle(), exp.getLocation(), exp.getExperienceId()))
                 .collect(Collectors.toList()));
-        
+
         // Limit total suggestions to 5
         return suggestions.stream().limit(5).collect(Collectors.toList());
     }
@@ -188,7 +186,7 @@ public class ExperienceController {
     @GetMapping("/{id}/schedules")
     public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long id) {
         List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(id);
-        
+
         List<Map<String, Object>> result = new ArrayList<>();
         for (ExperienceSchedule schedule : schedules) {
             Map<String, Object> scheduleMap = new HashMap<>();
@@ -200,7 +198,7 @@ public class ExperienceController {
             scheduleMap.put("createdAt", schedule.getCreatedAt());
             result.add(scheduleMap);
         }
-        
+
         return result;
     }
 
@@ -215,8 +213,7 @@ public class ExperienceController {
             return ResponseEntity.ok(experience.getMediaList());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "error", "Failed to fetch media: " + e.getMessage()
-            ));
+                    "error", "Failed to fetch media: " + e.getMessage()));
         }
     }
 
@@ -230,8 +227,7 @@ public class ExperienceController {
             return ResponseEntity.ok(experience.getItineraries());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "error", "Failed to fetch itineraries: " + e.getMessage()
-            ));
+                    "error", "Failed to fetch itineraries: " + e.getMessage()));
         }
     }
 
