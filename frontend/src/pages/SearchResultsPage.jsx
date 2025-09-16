@@ -41,7 +41,13 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
             status: exp.status,
             totalReviews: exp.totalReviews,
             participantsAllowed: exp.participantsAllowed || 20,
-            isLiked: wishlistedIds.has(exp.experienceId)
+            isLiked: wishlistedIds.has(exp.experienceId),
+            // Add fields needed for sorting
+            reviewCount: exp.totalReviews || 0,
+            durationHours: exp.duration ? parseInt(exp.duration.toString().split(' ')[0]) || 0 : 0,
+            timeOfDay: "morning", // Default since we don't have this in API
+            relevanceScore: 0.8, // Default relevance score
+            listingDate: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01"
         };
     });
 };
@@ -230,26 +236,38 @@ const SearchResultsPage = () => {
     // Sorting function
     const applySorting = (experiences) => {
         const sorted = [...experiences];
+        
+        console.log('SearchResultsPage - Applying sorting:', {
+            sortBy,
+            totalExperiences: sorted.length,
+            firstExperience: sorted[0] ? {
+                title: sorted[0].title,
+                price: sorted[0].price,
+                rating: sorted[0].rating,
+                reviewCount: sorted[0].reviewCount,
+                durationHours: sorted[0].durationHours
+            } : null
+        });
 
         switch (sortBy) {
             case 'cheapest':
-                return sorted.sort((a, b) => a.price - b.price);
+                return sorted.sort((a, b) => (a.price || 0) - (b.price || 0));
             
             case 'trustiest':
                 return sorted.sort((a, b) => {
                     // Calculate trust score (weighted combination of rating and review count)
-                    const trustScoreA = (a.rating * 0.7) + (Math.min(a.reviewCount / 100, 3) * 0.3);
-                    const trustScoreB = (b.rating * 0.7) + (Math.min(b.reviewCount / 100, 3) * 0.3);
+                    const trustScoreA = ((a.rating || 0) * 0.7) + (Math.min((a.reviewCount || 0) / 100, 3) * 0.3);
+                    const trustScoreB = ((b.rating || 0) * 0.7) + (Math.min((b.reviewCount || 0) / 100, 3) * 0.3);
                     
                     if (Math.abs(trustScoreA - trustScoreB) < 0.01) {
                         // If trust scores are very close, prioritize more reviews
-                        return b.reviewCount - a.reviewCount;
+                        return (b.reviewCount || 0) - (a.reviewCount || 0);
                     }
                     return trustScoreB - trustScoreA;
                 });
             
-            case 'quickest':
-                return sorted.sort((a, b) => a.durationHours - b.durationHours);
+            case 'shortest':
+                return sorted.sort((a, b) => (a.durationHours || 0) - (b.durationHours || 0));
             
             case 'timeOfDay':
                 // Sort by time of day: morning, afternoon, evening
@@ -259,17 +277,17 @@ const SearchResultsPage = () => {
                     const orderB = timeOrder[b.timeOfDay] ?? 3;
                     if (orderA === orderB) {
                         // Secondary sort by relevance if same time of day
-                        return b.relevanceScore - a.relevanceScore;
+                        return (b.relevanceScore || 0) - (a.relevanceScore || 0);
                     }
                     return orderA - orderB;
                 });
             
             case 'newest':
-                return sorted.sort((a, b) => new Date(b.listingDate) - new Date(a.listingDate));
+                return sorted.sort((a, b) => new Date(b.listingDate || '2025-01-01') - new Date(a.listingDate || '2025-01-01'));
             
             case 'bestMatch':
             default:
-                return sorted.sort((a, b) => b.relevanceScore - a.relevanceScore);
+                return sorted.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
         }
     };
 
@@ -403,6 +421,14 @@ const SearchResultsPage = () => {
     useEffect(() => {
         const filtered = applyFilters(searchResults, schedules);
         const sorted = applySorting(filtered);
+        console.log('SearchResultsPage - Final sorted results:', {
+            sortBy,
+            filteredCount: filtered.length,
+            sortedCount: sorted.length,
+            sortedTitles: sorted.map(exp => exp.title),
+            sortedPrices: sorted.map(exp => exp.price),
+            sortedRatings: sorted.map(exp => exp.rating)
+        });
         setFilteredResults(sorted);
     }, [searchResults, filters, sortBy, selectedCategory, schedules]);
 
@@ -411,6 +437,10 @@ const SearchResultsPage = () => {
     };
 
     const handleSortChange = (newSort) => {
+        console.log('SearchResultsPage - Sort change:', {
+            from: sortBy,
+            to: newSort
+        });
         setSortBy(newSort);
     };
 

@@ -5,7 +5,7 @@ const FilterBar = ({ currentSort, onSortChange, className = "" }) => {
     const sortOptions = [
         { value: 'cheapest', label: 'Cheapest' },
         { value: 'trustiest', label: 'Trustiest' },
-        { value: 'quickest', label: 'Shortest' }
+        { value: 'shortest', label: 'Shortest' }
     ];
 
     const handleSortClick = (sortValue) => {

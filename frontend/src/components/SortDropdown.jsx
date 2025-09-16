@@ -7,7 +7,7 @@ const SortDropdown = ({ currentSort, onSortChange, variant = "desktop" }) => {
         { value: 'bestMatch', label: 'Best Match', description: 'Most relevant to your search' },
         { value: 'cheapest', label: 'Cheapest', description: 'Lowest price first' },
         { value: 'trustiest', label: 'Trustiest', description: 'Highest rated with most reviews' },
-        { value: 'quickest', label: 'Shortest', description: 'Shortest duration first' },
+        { value: 'shortest', label: 'Shortest', description: 'Shortest duration first' },
         { value: 'timeOfDay', label: 'Time of Day', description: 'Morning, afternoon, evening' },
         { value: 'newest', label: 'Newest', description: 'Most recently listed' }
     ];
