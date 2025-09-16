@@ -19,8 +19,21 @@ export const UserProvider = ({ children }) => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Fetch user data from backend (using test user ID 1)
-        const response = await axios.get('http://localhost:8080/api/users/1');
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('No token found, skipping user data fetch');
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch user data from backend with authentication
+        const response = await axios.get('http://localhost:8080/api/users/1', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         const userData = response.data;
 
         setUser({

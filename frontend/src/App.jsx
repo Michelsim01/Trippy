@@ -2,7 +2,6 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
-import { UserProvider } from './contexts/UserContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -220,13 +219,11 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <UserProvider>
-          <FormDataProvider>
-            <div className="App">
-              <AppRoutes />
-            </div>
-          </FormDataProvider>
-        </UserProvider>
+        <FormDataProvider>
+          <div className="App">
+            <AppRoutes />
+          </div>
+        </FormDataProvider>
       </AuthProvider>
       </Router>
   )
