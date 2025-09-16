@@ -16,7 +16,7 @@ export default function CreateExperienceBasicInfoPage() {
   const [formData, setFormData] = useState({
     title: contextData?.title || "",
     shortDescription: contextData?.shortDescription || "",
-    highlights: contextData?.highlights || [],
+    highlights: Array.isArray(contextData?.highlights) ? contextData.highlights : [],
     category: contextData?.category || "",
     duration: contextData?.duration || "",
     startDateTime: contextData?.startDateTime || "",
@@ -48,7 +48,7 @@ export default function CreateExperienceBasicInfoPage() {
       alert('Please enter a short description for your experience');
       return;
     }
-    if (!formData.highlights || formData.highlights.length === 0) {
+    if (!Array.isArray(formData.highlights) || formData.highlights.length === 0) {
       alert('Please add at least one highlight for your experience');
       return;
     }
@@ -301,7 +301,7 @@ export default function CreateExperienceBasicInfoPage() {
                 <div style={{marginBottom: '15px'}}>
                   <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
                   <div className="border-2 border-neutrals-5 rounded-xl p-6 bg-white">
-                    {formData.highlights.length > 0 && (
+                    {Array.isArray(formData.highlights) && formData.highlights.length > 0 && (
                       <ul className="mb-4" style={{padding: '6px'}}>
                         {formData.highlights.map((item, index) => (
                           <li key={index} className="group flex items-start justify-between mb-3">
@@ -644,7 +644,7 @@ export default function CreateExperienceBasicInfoPage() {
               <div style={{marginBottom: '10px'}}>
                 <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
                 <div className="border-2 border-neutrals-5 rounded-xl p-4 bg-white">
-                  {formData.highlights.length > 0 && (
+                  {Array.isArray(formData.highlights) && formData.highlights.length > 0 && (
                     <ul className="mb-3" style={{padding: '3px'}}>
                       {formData.highlights.map((item, index) => (
                         <li key={index} className="group flex items-start justify-between mb-2">

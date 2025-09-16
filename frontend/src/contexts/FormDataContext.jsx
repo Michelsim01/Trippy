@@ -110,7 +110,7 @@ export const FormDataProvider = ({ children }) => {
         // Basic Info
         title: experienceData.title || '',
         shortDescription: experienceData.shortDescription || '',
-        highlights: experienceData.highlights ? experienceData.highlights.split(', ') : [],
+        highlights: experienceData.highlights && typeof experienceData.highlights === 'string' ? experienceData.highlights.split(', ') : [],
         category: Object.keys(categoryMapping).find(key => categoryMapping[key] === experienceData.category) || '',
         duration: experienceData.duration || '',
         startDateTime: experienceData.startDateTime || '',

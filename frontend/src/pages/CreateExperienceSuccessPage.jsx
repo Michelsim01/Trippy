@@ -7,7 +7,7 @@ import Footer from '../components/Footer'
 
 export default function CreateExperienceSuccessPage() {
   const navigate = useNavigate()
-  const { formData } = useFormData()
+  const { formData, clearFormData } = useFormData()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   const toggleSidebar = () => {
@@ -29,6 +29,7 @@ export default function CreateExperienceSuccessPage() {
   }
 
   const handleCreateAnother = () => {
+    clearFormData(); // Clear the form data before creating another experience
     navigate('/create-experience/basic-info')
   }
 

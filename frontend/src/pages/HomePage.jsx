@@ -230,9 +230,6 @@ const HomePage = () => {
                     schedulesMap[exp.experienceId] = schedulesData[index];
                 });
                 
-                console.log('HomePage - schedulesMap:', schedulesMap);
-                console.log('HomePage - schedulesData:', schedulesData);
-                
                 setSchedules(schedulesMap);
                 
                 // Transform experiences data to match our component structure

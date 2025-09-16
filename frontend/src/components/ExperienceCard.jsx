@@ -18,63 +18,6 @@ const ExperienceCard = ({
         setIsWishlisted(isInWishlist);
     }, [isInWishlist]);
 
-    // Helper function to format schedule dates
-    const formatScheduleDates = (schedules) => {
-        if (!schedules || schedules.length === 0) {
-            return null;
-        }
-        
-        // Sort schedules by start date and get the first available one
-        const sortedSchedules = schedules
-            .filter(schedule => schedule.isAvailable)
-            .sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
-        
-        if (sortedSchedules.length === 0) {
-            return null;
-        }
-        
-        const firstSchedule = sortedSchedules[0];
-        const startDate = new Date(firstSchedule.startDate);
-        const endDate = new Date(firstSchedule.endDate);
-        
-        // Format as "Mon, Oct 20" style
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
-        const formatDate = (date) => {
-            const dayName = dayNames[date.getDay()];
-            const month = monthNames[date.getMonth()];
-            const day = date.getDate();
-            return `${dayName}, ${month} ${day}`;
-        };
-        
-        const startFormatted = formatDate(startDate);
-        const endFormatted = formatDate(endDate);
-        
-        // If same day, return single date, otherwise return range
-        if (startDate.toDateString() === endDate.toDateString()) {
-            return startFormatted;
-        } else {
-            return `${startFormatted} - ${endFormatted}`;
-        }
-    };
-
-    // Helper function to generate sample dates based on experience data
-    const generateSampleDate = (experienceId) => {
-        // Generate different dates based on experience ID to show variety
-        const baseDate = new Date('2025-10-20');
-        const daysOffset = (experienceId % 7) * 2; // Different dates for different experiences
-        const date = new Date(baseDate.getTime() + daysOffset * 24 * 60 * 60 * 1000);
-        
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
-        const dayName = dayNames[date.getDay()];
-        const month = monthNames[date.getMonth()];
-        const day = date.getDate();
-        
-        return `${dayName}, ${month} ${day}`;
-    };
 
     const handleWishlistToggle = async (e) => {
         e.stopPropagation(); // Prevent card click when clicking wishlist button
@@ -136,8 +79,9 @@ const ExperienceCard = ({
         title: "Venice, Rome & Milan",
         location: "Karineside",
         price: 548,
-        originalPrice: 699,
-        dateRange: "Tue, Jul 20 - Fri, Jul 23",
+        duration: 3,
+        category: "GUIDED_TOUR",
+        participantsAllowed: 12,
         rating: 4.9,
         imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
     };
@@ -159,10 +103,14 @@ const ExperienceCard = ({
             onClick={handleCardClick}
         >
             {/* Image Container */}
-            <div className="relative flex-1 bg-neutrals-2 overflow-hidden">
+            <div className="relative h-48 bg-neutrals-2 overflow-hidden">
                 <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${cardData.imageUrl || cardData.image})` }}
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{ 
+                        backgroundImage: `url(${cardData.imageUrl || cardData.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center'
+                    }}
                 />
                 
                 {/* Explore Button - shows on some cards */}
@@ -215,16 +163,9 @@ const ExperienceCard = ({
                             <p className="text-[12px] text-neutrals-3 leading-[20px] flex-1">
                                 {cardData.location}
                             </p>
-                            <div className="flex items-center gap-1.5">
-                                {cardData.originalPrice && cardData.originalPrice > cardData.price && (
-                                    <span className="text-[12px] font-bold text-neutrals-5 line-through">
-                                        ${formatPrice(cardData.originalPrice)}
-                                    </span>
-                                )}
-                                <span className="text-[12px] font-bold text-primary-1 uppercase">
-                                    ${formatPrice(cardData.price)}
-                                </span>
-                            </div>
+                            <span className="text-[12px] font-bold text-primary-1 uppercase">
+                                ${formatPrice(cardData.price)}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -232,52 +173,13 @@ const ExperienceCard = ({
                 {/* Divider */}
                 <div className="h-px bg-neutrals-6 rounded-[1px]" />
 
-                {/* Date and Rating */}
+                {/* Duration and Rating */}
                 <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                        {(() => {
-                            const scheduleDate = formatScheduleDates(schedules);
-                            if (scheduleDate) {
-                                // Check if it's a date range (contains " - ")
-                                if (scheduleDate.includes(' - ')) {
-                                    const [startDate, endDate] = scheduleDate.split(' - ');
-                                    return (
-                                        <>
-                                            <span>{startDate}</span>
-                                            <span>-</span>
-                                            <span>{endDate}</span>
-                                        </>
-                                    );
-                                } else {
-                                    // Single date, show it twice for consistency
-                                    return (
-                                        <>
-                                            <span>{scheduleDate}</span>
-                                            <span>-</span>
-                                            <span>{scheduleDate}</span>
-                                        </>
-                                    );
-                                }
-                            } else if (cardData.dateRange) {
-                                return (
-                                    <>
-                                        <span>{cardData.dateRange.split(' - ')[0]}</span>
-                                        <span>-</span>
-                                        <span>{cardData.dateRange.split(' - ')[1]}</span>
-                                    </>
-                                );
-                            } else {
-                                // Generate sample dates based on experience ID
-                                const sampleDate = generateSampleDate(experience?.experienceId || experience?.id || 1);
-                                return (
-                                    <>
-                                        <span>{sampleDate}</span>
-                                        <span>-</span>
-                                        <span>{sampleDate}</span>
-                                    </>
-                                );
-                            }
-                        })()}
+                    <div className="flex items-center gap-1 text-[12px] text-neutrals-4 leading-[20px]">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#B1B5C3"/>
+                        </svg>
+                        <span>{cardData.duration || 3}h</span>
                     </div>
                     <div className="flex items-center gap-1">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -287,6 +189,30 @@ const ExperienceCard = ({
                             {cardData.rating || cardData.averageRating || 4.9}
                         </span>
                     </div>
+                </div>
+
+                {/* Participants */}
+                <div className="flex items-center gap-1 text-[12px] text-neutrals-4 leading-[20px]">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H16c-.8 0-1.54.37-2.01.99L12 11l-1.99-2.01A2.5 2.5 0 0 0 8 8H5.46c-.8 0-1.54.37-2.01.99L1 12.5V22h2v-6h2.5l2.54 7.63A1.5 1.5 0 0 0 9.46 24H12c.8 0 1.54-.37 2.01-.99L16 21l1.99 2.01A2.5 2.5 0 0 0 20 24h2.54c.8 0 1.54-.37 2.01-.99L27 19.5V22h2z" fill="#B1B5C3"/>
+                    </svg>
+                    <span>
+                        {(() => {
+                            // Show total participants from schedules if available
+                            if (schedules && schedules.length > 0) {
+                                const totalSpots = schedules.reduce((sum, schedule) => sum + (schedule.availableSpots || 0), 0);
+                                return `${totalSpots} participants`;
+                            }
+                            // Show participantsAllowed if available
+                            else if (cardData.participantsAllowed) {
+                                return `${cardData.participantsAllowed} participants`;
+                            }
+                            // Default fallback
+                            else {
+                                return '10 participants';
+                            }
+                        })()}
+                    </span>
                 </div>
             </div>
         </div>

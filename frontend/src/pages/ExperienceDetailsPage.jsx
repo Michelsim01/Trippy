@@ -282,10 +282,10 @@ const ExperienceDetailsPage = () => {
   
   // Fallback images if no form data
   const fallbackImages = [
-    'http://localhost:3845/assets/440aa07e1cf2f874a8ed58ab361e13b2e61750e5.png',
-    'http://localhost:3845/assets/d11f55d9454b6b35380c62dac08a81af17218673.png',
-    'http://localhost:3845/assets/3606e80fb39d00578b8b37878d6dc6a044ae9eb7.png',
-    'http://localhost:3845/assets/c70e08fe455bbc4a8db9dbe6c8a641cf5a0a013c.png'
+    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&h=600&fit=crop',
+    'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=800&h=600&fit=crop'
   ];
   
   const displayImages = images.length > 0 ? images : fallbackImages;
@@ -1610,7 +1610,7 @@ const ExperienceDetailsPage = () => {
               </div>
 
               <div className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <style jsx>{`
+                <style>{`
                   div::-webkit-scrollbar {
                     display: none;
                   }

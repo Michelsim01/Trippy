@@ -44,18 +44,15 @@ public class Experience {
     @Column(name = "important_info", columnDefinition = "TEXT")
     private String importantInfo;
 
+    @Column(name = "cancellation_policy", columnDefinition = "TEXT")
+    private String cancellationPolicy;
+
     private BigDecimal price;
 
     @Column(name = "participants_allowed")
     private Integer participantsAllowed;
 
     private BigDecimal duration;
-
-    @Column(name = "start_date_time")
-    private LocalDateTime startDateTime;
-
-    @Column(name = "end_date_time")
-    private LocalDateTime endDateTime;
 
     private String location;
 
@@ -185,6 +182,14 @@ public class Experience {
         this.importantInfo = importantInfo;
     }
 
+    public String getCancellationPolicy() {
+        return cancellationPolicy;
+    }
+
+    public void setCancellationPolicy(String cancellationPolicy) {
+        this.cancellationPolicy = cancellationPolicy;
+    }
+
     public BigDecimal getPrice() {
         return price;
     }
@@ -207,22 +212,6 @@ public class Experience {
 
     public void setDuration(BigDecimal duration) {
         this.duration = duration;
-    }
-
-    public LocalDateTime getStartDateTime() {
-        return startDateTime;
-    }
-
-    public void setStartDateTime(LocalDateTime startDateTime) {
-        this.startDateTime = startDateTime;
-    }
-
-    public LocalDateTime getEndDateTime() {
-        return endDateTime;
-    }
-
-    public void setEndDateTime(LocalDateTime endDateTime) {
-        this.endDateTime = endDateTime;
     }
 
     public String getLocation() {

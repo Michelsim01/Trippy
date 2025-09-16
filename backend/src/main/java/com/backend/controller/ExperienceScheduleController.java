@@ -32,8 +32,8 @@ public class ExperienceScheduleController {
         return schedules.stream().map(schedule -> {
             Map<String, Object> scheduleMap = new HashMap<>();
             scheduleMap.put("scheduleId", schedule.getScheduleId());
-            scheduleMap.put("startDate", schedule.getStartDate());
-            scheduleMap.put("endDate", schedule.getEndDate());
+            scheduleMap.put("startDateTime", schedule.getStartDateTime());
+            scheduleMap.put("endDateTime", schedule.getEndDateTime());
             scheduleMap.put("availableSpots", schedule.getAvailableSpots());
             scheduleMap.put("isAvailable", schedule.getIsAvailable());
             scheduleMap.put("createdAt", schedule.getCreatedAt());

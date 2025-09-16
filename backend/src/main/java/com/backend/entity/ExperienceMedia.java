@@ -20,6 +20,7 @@ public class ExperienceMedia {
     @Enumerated(EnumType.STRING)
     private MediaType mediaType;
 
+    @Column(name = "caption", columnDefinition = "TEXT")
     private String caption;
 
     @Column(name = "display_order")

@@ -17,8 +17,12 @@ public class ExperienceSchedule {
     @JsonIgnoreProperties({"mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems"})
     private Experience experience;
 
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    @Column(name = "start_date_time")
+    private LocalDateTime startDateTime;
+    
+    @Column(name = "end_date_time")
+    private LocalDateTime endDateTime;
+    
     private Integer availableSpots;
     private Boolean isAvailable;
     private LocalDateTime createdAt;
@@ -54,10 +58,10 @@ public class ExperienceSchedule {
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
     public Experience getExperience() { return experience; }
     public void setExperience(Experience experience) { this.experience = experience; }
-    public LocalDateTime getStartDate() { return startDate; }
-    public void setStartDate(LocalDateTime startDate) { this.startDate = startDate; }
-    public LocalDateTime getEndDate() { return endDate; }
-    public void setEndDate(LocalDateTime endDate) { this.endDate = endDate; }
+    public LocalDateTime getStartDateTime() { return startDateTime; }
+    public void setStartDateTime(LocalDateTime startDateTime) { this.startDateTime = startDateTime; }
+    public LocalDateTime getEndDateTime() { return endDateTime; }
+    public void setEndDateTime(LocalDateTime endDateTime) { this.endDateTime = endDateTime; }
     public Integer getAvailableSpots() { return availableSpots; }
     public void setAvailableSpots(Integer availableSpots) { this.availableSpots = availableSpots; }
     public Boolean getIsAvailable() { return isAvailable; }

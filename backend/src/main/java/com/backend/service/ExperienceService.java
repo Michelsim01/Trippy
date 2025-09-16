@@ -30,8 +30,12 @@ public class ExperienceService {
 
     @Transactional
     public Experience createCompleteExperience(Map<String, Object> payload) {
-        // Extract main experience data
-        Map<String, Object> experienceData = (Map<String, Object>) payload.get("experience");
+        try {
+            System.out.println("Starting createCompleteExperience with payload: " + payload);
+            
+            // Extract main experience data
+            Map<String, Object> experienceData = (Map<String, Object>) payload.get("experience");
+            System.out.println("Experience data: " + experienceData);
         
         // Create Experience entity
         Experience experience = new Experience();
@@ -44,7 +48,7 @@ public class ExperienceService {
         experience.setShortDescription((String) experienceData.get("shortDescription"));
         experience.setFullDescription((String) experienceData.get("fullDescription"));
         experience.setHighlights((String) experienceData.get("highlights"));
-        experience.setCategory(ExperienceCategory.valueOf((String) experienceData.get("category")));
+        experience.setCategory(ExperienceCategory.valueOf((String) experienceData.getOrDefault("category", "ADVENTURE")));
         experience.setTags((List<String>) experienceData.get("tags"));
         experience.setCoverPhotoUrl((String) experienceData.get("coverPhotoUrl"));
         experience.setWhatIncluded((String) experienceData.get("whatIncluded"));
@@ -61,41 +65,18 @@ public class ExperienceService {
             experience.setParticipantsAllowed((Integer) participantsObj);
         }
         
-        // Handle start and end date-time
-        String startDateTimeStr = (String) experienceData.get("startDateTime");
-        String endDateTimeStr = (String) experienceData.get("endDateTime");
-        
-        if (startDateTimeStr != null && endDateTimeStr != null) {
-            try {
-                LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr);
-                LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr);
-                
-                experience.setStartDateTime(startDateTime);
-                experience.setEndDateTime(endDateTime);
-                
-                // Calculate duration in hours
-                long hours = java.time.Duration.between(startDateTime, endDateTime).toHours();
-                experience.setDuration(java.math.BigDecimal.valueOf(hours));
-                
-            } catch (Exception e) {
-                System.err.println("Error parsing date-time fields: " + e.getMessage());
-                // Fall back to manual duration if provided
-                Object durationObj = experienceData.get("duration");
-                if (durationObj != null && durationObj instanceof Number) {
-                    experience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
-                }
-            }
+        // Handle duration - set from payload or use default
+        Object durationObj = experienceData.get("duration");
+        if (durationObj != null && durationObj instanceof Number) {
+            experience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
         } else {
-            // Legacy support: Handle duration - check for null
-            Object durationObj = experienceData.get("duration");
-            if (durationObj != null && durationObj instanceof Number) {
-                experience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
-            }
+            // If no duration provided, use default of 3 hours
+            experience.setDuration(java.math.BigDecimal.valueOf(3));
         }
         
         experience.setLocation((String) experienceData.get("location"));
         experience.setCountry((String) experienceData.get("country"));
-        experience.setStatus(ExperienceStatus.valueOf((String) experienceData.get("status")));
+        experience.setStatus(ExperienceStatus.valueOf((String) experienceData.getOrDefault("status", "ACTIVE")));
         experience.setCreatedAt(LocalDateTime.now());
         experience.setUpdatedAt(LocalDateTime.now());
         
@@ -150,13 +131,15 @@ public class ExperienceService {
                 try {
                     ExperienceSchedule schedule = new ExperienceSchedule();
                     schedule.setExperience(savedExperience);
-                    schedule.setDate(LocalDate.parse((String) scheduleData.get("date")));
-                    schedule.setStartTime(LocalTime.parse((String) scheduleData.get("startTime")));
-                    schedule.setEndTime(LocalTime.parse((String) scheduleData.get("endTime")));
+                    LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
+                    LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
+                    LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
+                    schedule.setStartDateTime(LocalDateTime.of(date, startTime));
+                    schedule.setEndDateTime(LocalDateTime.of(date, endTime));
                     schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
                     schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
                     ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);
-                    System.out.println("Saved schedule: " + savedSchedule.getDate() + " " + savedSchedule.getStartTime());
+                    System.out.println("Saved schedule: " + savedSchedule.getStartDateTime() + " to " + savedSchedule.getEndDateTime());
                 } catch (Exception e) {
                     System.err.println("Error saving schedule: " + e.getMessage());
                     e.printStackTrace();
@@ -167,6 +150,11 @@ public class ExperienceService {
         }
         
         return savedExperience;
+        } catch (Exception e) {
+            System.err.println("Error in createCompleteExperience: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to create experience: " + e.getMessage(), e);
+        }
     }
 
     @Transactional
@@ -188,7 +176,7 @@ public class ExperienceService {
         existingExperience.setShortDescription((String) experienceData.get("shortDescription"));
         existingExperience.setFullDescription((String) experienceData.get("fullDescription"));
         existingExperience.setHighlights((String) experienceData.get("highlights"));
-        existingExperience.setCategory(ExperienceCategory.valueOf((String) experienceData.get("category")));
+        existingExperience.setCategory(ExperienceCategory.valueOf((String) experienceData.getOrDefault("category", "ADVENTURE")));
         existingExperience.setTags((List<String>) experienceData.get("tags"));
         existingExperience.setCoverPhotoUrl((String) experienceData.get("coverPhotoUrl"));
         existingExperience.setWhatIncluded((String) experienceData.get("whatIncluded"));
@@ -206,41 +194,18 @@ public class ExperienceService {
             existingExperience.setParticipantsAllowed((Integer) participantsObj);
         }
 
-        // Handle start and end date-time
-        String startDateTimeStr = (String) experienceData.get("startDateTime");
-        String endDateTimeStr = (String) experienceData.get("endDateTime");
-
-        if (startDateTimeStr != null && endDateTimeStr != null) {
-            try {
-                LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr);
-                LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr);
-
-                existingExperience.setStartDateTime(startDateTime);
-                existingExperience.setEndDateTime(endDateTime);
-
-                // Calculate duration in hours
-                long hours = java.time.Duration.between(startDateTime, endDateTime).toHours();
-                existingExperience.setDuration(java.math.BigDecimal.valueOf(hours));
-
-            } catch (Exception e) {
-                System.err.println("Error parsing date-time fields: " + e.getMessage());
-                // Fall back to manual duration if provided
-                Object durationObj = experienceData.get("duration");
-                if (durationObj != null && durationObj instanceof Number) {
-                    existingExperience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
-                }
-            }
+        // Handle duration - set from payload or use default
+        Object durationObj = experienceData.get("duration");
+        if (durationObj != null && durationObj instanceof Number) {
+            existingExperience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
         } else {
-            // Legacy support: Handle duration - check for null
-            Object durationObj = experienceData.get("duration");
-            if (durationObj != null && durationObj instanceof Number) {
-                existingExperience.setDuration(java.math.BigDecimal.valueOf(((Number) durationObj).doubleValue()));
-            }
+            // If no duration provided, use default of 3 hours
+            existingExperience.setDuration(java.math.BigDecimal.valueOf(3));
         }
 
         existingExperience.setLocation((String) experienceData.get("location"));
         existingExperience.setCountry((String) experienceData.get("country"));
-        existingExperience.setStatus(ExperienceStatus.valueOf((String) experienceData.get("status")));
+        existingExperience.setStatus(ExperienceStatus.valueOf((String) experienceData.getOrDefault("status", "ACTIVE")));
         existingExperience.setUpdatedAt(LocalDateTime.now());
 
         // Save updated experience
@@ -293,13 +258,15 @@ public class ExperienceService {
                 try {
                     ExperienceSchedule schedule = new ExperienceSchedule();
                     schedule.setExperience(updatedExperience);
-                    schedule.setDate(LocalDate.parse((String) scheduleData.get("date")));
-                    schedule.setStartTime(LocalTime.parse((String) scheduleData.get("startTime")));
-                    schedule.setEndTime(LocalTime.parse((String) scheduleData.get("endTime")));
+                    LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
+                    LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
+                    LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
+                    schedule.setStartDateTime(LocalDateTime.of(date, startTime));
+                    schedule.setEndDateTime(LocalDateTime.of(date, endTime));
                     schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
                     schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
                     ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);
-                    System.out.println("Updated schedule: " + savedSchedule.getDate() + " " + savedSchedule.getStartTime());
+                    System.out.println("Updated schedule: " + savedSchedule.getStartDateTime() + " to " + savedSchedule.getEndDateTime());
                 } catch (Exception e) {
                     System.err.println("Error updating schedule: " + e.getMessage());
                     e.printStackTrace();

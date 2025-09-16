@@ -10,6 +10,10 @@
  * @returns {string} Time in 24-hour format (e.g., "10:00", "14:30")
  */
 export const convertTo24Hr = (time12h) => {
+  if (!time12h) {
+    return '10:00'; // Default fallback
+  }
+  
   // Handle various input formats
   const timeStr = time12h.trim();
   
@@ -44,6 +48,10 @@ export const convertTo24Hr = (time12h) => {
  * @returns {string} Time in 12-hour format (e.g., "2:30 PM")
  */
 export const convertTo12Hr = (time24h) => {
+  if (!time24h) {
+    return '12:00 AM'; // Default fallback
+  }
+  
   const [hours, minutes] = time24h.split(':');
   let hour = parseInt(hours);
   const period = hour >= 12 ? 'PM' : 'AM';

@@ -193,8 +193,8 @@ public class ExperienceController {
         for (ExperienceSchedule schedule : schedules) {
             Map<String, Object> scheduleMap = new HashMap<>();
             scheduleMap.put("scheduleId", schedule.getScheduleId());
-            scheduleMap.put("startDate", schedule.getStartDate());
-            scheduleMap.put("endDate", schedule.getEndDate());
+            scheduleMap.put("startDateTime", schedule.getStartDateTime());
+            scheduleMap.put("endDateTime", schedule.getEndDateTime());
             scheduleMap.put("availableSpots", schedule.getAvailableSpots());
             scheduleMap.put("isAvailable", schedule.getIsAvailable());
             scheduleMap.put("createdAt", schedule.getCreatedAt());
@@ -235,18 +235,4 @@ public class ExperienceController {
         }
     }
 
-    @GetMapping("/{id}/schedules")
-    public ResponseEntity<?> getExperienceSchedules(@PathVariable Long id) {
-        try {
-            Experience experience = experienceRepository.findById(id).orElse(null);
-            if (experience == null) {
-                return ResponseEntity.notFound().build();
-            }
-            return ResponseEntity.ok(experience.getSchedules());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                "error", "Failed to fetch schedules: " + e.getMessage()
-            ));
-        }
-    }
 }
