@@ -37,7 +37,7 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
     const fallbackExperiences = [
         { 
             experienceId: 1,
-            title: "Venice, Rome & Milan", 
+            title: "Venice, Rome & Msssilan", 
             location: "Karineside", 
             originalPrice: 699, 
             price: 548, 
@@ -94,7 +94,7 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
                 {/* Header */}
                 <div className="flex flex-col items-center text-center mb-10">
                     <h2 className="text-[32px] lg:text-[40px] font-bold text-neutrals-1 leading-[40px] lg:leading-[48px] tracking-[-0.32px] mb-5">
-                        Discover Weekly
+                        Discover Weeklyyyy
                     </h2>
                     <p className="text-[16px] text-neutrals-4 leading-[24px]">
                         For your Next Trip
