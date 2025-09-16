@@ -2,7 +2,6 @@ package com.backend.service;
 
 import com.backend.entity.User;
 import com.backend.repository.UserRepository;
-import com.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,9 +24,6 @@ public class PasswordResetService {
     private PasswordEncoder passwordEncoder;
     
     @Autowired
-    private JwtUtil jwtUtil;
-    
-    @Autowired
     private EmailService emailService;
     
     // Token expiration time: 1 hour
@@ -38,22 +34,17 @@ public class PasswordResetService {
      * 
      * @param email The email address to generate reset token for
      * @return The generated reset token
-     * @throws Exception if user not found or email not verified
+     * @throws Exception if user not found
      */
     public String generatePasswordResetToken(String email) throws Exception {
         // Find user by email
-        Optional<User> userOptional = userRepository.findByEmailAndIsActive(email, true);
+        Optional<User> userOptional = userRepository.findByEmail(email);
         
         if (userOptional.isEmpty()) {
             throw new Exception("User not found with email: " + email);
         }
         
         User user = userOptional.get();  
-        
-        // Check if email is verified
-        if (!user.getIsEmailVerified()) {
-            throw new Exception("Email address is not verified. Please verify your email first.");
-        }
         
         // Generate a unique reset token
         String resetToken = UUID.randomUUID().toString();

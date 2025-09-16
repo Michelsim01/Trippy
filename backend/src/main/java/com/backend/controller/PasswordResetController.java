@@ -3,7 +3,6 @@ package com.backend.controller;
 import com.backend.dto.request.ForgotPasswordRequest;
 import com.backend.dto.request.ResetPasswordRequest;
 import com.backend.service.PasswordResetService;
-import com.backend.service.EmailService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -21,15 +20,12 @@ public class PasswordResetController {
     @Autowired
     private PasswordResetService passwordResetService;
     
-    @Autowired
-    private EmailService emailService;
-    
     /**
      * Endpoint for forgot password request.
      * Generates a password reset token and sends it via email.
      * 
      * @param request The forgot password request containing email
-     * @return ResponseEntity with success message
+     * @return ResponseEntity with success message or error
      */
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
@@ -37,12 +33,15 @@ public class PasswordResetController {
             // Generate password reset token and send email
             passwordResetService.generatePasswordResetToken(request.getEmail());
             
-            // For security reasons, always return the same message regardless of whether user exists
-            return ResponseEntity.ok().body("If an account with that email exists, password reset instructions have been sent.");
+            return ResponseEntity.ok().body("Password reset instructions have been sent to your email address.");
             
         } catch (Exception e) {
-            // For security reasons, always return the same message regardless of whether user exists
-            return ResponseEntity.ok().body("If an account with that email exists, password reset instructions have been sent.");
+            // Return specific error messages to help users
+            if (e.getMessage().contains("User not found")) {
+                return ResponseEntity.badRequest().body("No account found with that email address.");
+            } else {
+                return ResponseEntity.badRequest().body("Failed to send password reset instructions. Please try again.");
+            }
         }
     }  
     
