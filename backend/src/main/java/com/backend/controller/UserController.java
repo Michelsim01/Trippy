@@ -11,6 +11,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -27,6 +28,9 @@ import java.util.UUID;
 public class UserController {
     @Autowired
     private UserRepository userRepository;
+    
+    @Autowired
+    private PasswordEncoder passwordEncoder;
     
     private final String UPLOAD_DIR = "uploads/profilepicture/";
 
@@ -110,7 +114,8 @@ public class UserController {
                 return ResponseEntity.badRequest().body(error);
             }
 
-            user.setPassword(newPassword);
+            // Hash the new password before storing
+            user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
 
             Map<String, Object> response = new HashMap<>();
@@ -137,8 +142,8 @@ public class UserController {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("User not found"));
 
-            boolean isValid = user.getPassword().equals(currentPassword);
-            System.out.println("Verifying password for user ID: " + currentPassword + " / " + user.getPassword());
+            // Use BCrypt to verify the password against the hashed password in database
+            boolean isValid = passwordEncoder.matches(currentPassword, user.getPassword());
             System.out.println("Password verification for user ID " + id + ": " + isValid);
 
             return ResponseEntity.ok(Map.of("isValid", isValid));

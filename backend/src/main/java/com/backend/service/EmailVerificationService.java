@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for handling email verification functionality.
@@ -31,6 +32,10 @@ public class EmailVerificationService {
     
     // Token expiration time: 24 hours
     private static final int TOKEN_EXPIRATION_HOURS = 24;
+    
+    // In-memory cache to track verified profile update emails
+    // This is a simple solution - in production you might use Redis or database table
+    private final ConcurrentHashMap<String, LocalDateTime> verifiedProfileEmails = new ConcurrentHashMap<>();
     
     /**
      * Generate a verification token.
@@ -98,33 +103,59 @@ public class EmailVerificationService {
             // If not a pending user, check if it's an existing user who needs re-verification
             Optional<User> userOptional = userRepository.findByEmailAndIsActive(email, true);
             
-            if (userOptional.isEmpty()) {
-                return new EmailVerificationResponse(false, "User not found with email: " + email);
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                
+                // Check if email is already verified
+                if (user.getIsEmailVerified()) {
+                    return new EmailVerificationResponse(true, "Email is already verified", true);
+                }
+                
+                // Generate a unique verification token
+                String verificationToken = UUID.randomUUID().toString();
+                
+                // Set token and expiration time
+                user.setEmailVerificationToken(verificationToken);
+                user.setEmailVerificationTokenExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRATION_HOURS));
+                
+                // Save user with verification token
+                userRepository.save(user);
+                
+                // Send verification email
+                try {
+                    emailService.sendEmailVerificationEmail(user.getEmail(), verificationToken, user.getFirstName());
+                    return new EmailVerificationResponse(true, "Verification email sent successfully to: " + email);
+                } catch (Exception e) {
+                    // Log the error but don't fail the token generation
+                    System.err.println("Failed to send verification email: " + e.getMessage());
+                    return new EmailVerificationResponse(false, "Failed to send verification email. Please try again.");
+                }
             }
-             
-            User user = userOptional.get();
             
-            // Check if email is already verified
-            if (user.getIsEmailVerified()) {
-                return new EmailVerificationResponse(true, "Email is already verified", true);
-            }
-            
-            // Generate a unique verification token
+            // If no existing user or pending user found, this might be for a profile update
+            // Create a temporary verification record for profile updates
             String verificationToken = UUID.randomUUID().toString();
             
-            // Set token and expiration time
-            user.setEmailVerificationToken(verificationToken);
-            user.setEmailVerificationTokenExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRATION_HOURS));
+            // Create a temporary pending user record for the verification
+            PendingUser tempVerification = new PendingUser();
+            tempVerification.setEmail(email);
+            tempVerification.setFirstName("User"); // Default name for profile updates
+            tempVerification.setLastName("");
+            tempVerification.setPassword("PROFILE_UPDATE_TEMP"); // Special marker
+            tempVerification.setVerificationToken(verificationToken);
+            tempVerification.setExpiresAt(LocalDateTime.now().plusHours(TOKEN_EXPIRATION_HOURS));
+            tempVerification.setCreatedAt(LocalDateTime.now()); // Set created_at to avoid null constraint violation
             
-            // Save user with verification token
-            userRepository.save(user);
+            // Save the temporary verification record
+            pendingUserRepository.save(tempVerification);
             
             // Send verification email
             try {
-                emailService.sendEmailVerificationEmail(user.getEmail(), verificationToken, user.getFirstName());
+                emailService.sendEmailVerificationEmail(email, verificationToken, "User");
                 return new EmailVerificationResponse(true, "Verification email sent successfully to: " + email);
             } catch (Exception e) {
-                // Log the error but don't fail the token generation
+                // Clean up the temporary record if email sending fails
+                pendingUserRepository.delete(tempVerification);
                 System.err.println("Failed to send verification email: " + e.getMessage());
                 return new EmailVerificationResponse(false, "Failed to send verification email. Please try again.");
             }
@@ -159,6 +190,15 @@ public class EmailVerificationService {
                     // Clean up expired pending user
                     cleanupPendingUser(pendingUser);
                     return new EmailVerificationResponse(false, "Verification token has expired. Please register again.");
+                }
+                
+                // Check if this is a profile update verification (temporary record)
+                if (pendingUser.getPassword().equals("PROFILE_UPDATE_TEMP")) {
+                    // This is a profile update verification - mark email as verified in cache
+                    String email = pendingUser.getEmail();
+                    verifiedProfileEmails.put(email, LocalDateTime.now().plusHours(1)); // Cache for 1 hour
+                    pendingUserRepository.delete(pendingUser);
+                    return new EmailVerificationResponse(true, "Email verified successfully for profile update!", true);
                 }
                 
                 // Create user from pending user (no need to check if user exists - this is a fresh verification)
@@ -294,20 +334,43 @@ public class EmailVerificationService {
     }
     
     /**
-     * Check if a user's email is verified.
+     * Check if a user's email is verified or if it's a verified profile update email.
      * 
      * @param email The email address to check
      * @return true if email is verified, false otherwise
      */
     public boolean isEmailVerified(String email) {
         try {
+            // First check if this email belongs to an existing verified user
             Optional<User> userOptional = userRepository.findByEmailAndIsActive(email, true);
-            return userOptional.isPresent() && userOptional.get().getIsEmailVerified();
+            if (userOptional.isPresent() && userOptional.get().getIsEmailVerified()) {
+                return true;
+            }
+            
+            // Check if this email was recently verified for a profile update
+            LocalDateTime expiryTime = verifiedProfileEmails.get(email);
+            if (expiryTime != null && expiryTime.isAfter(LocalDateTime.now())) {
+                return true;
+            } else if (expiryTime != null) {
+                // Clean up expired entry
+                verifiedProfileEmails.remove(email);
+            }
+            
+            return false;
         } catch (Exception e) {
             return false;
         }
     }
     
+    /**
+     * Clear verified profile email from cache (called after successful profile update).
+     * 
+     * @param email The email to clear from verification cache
+     */
+    public void clearVerifiedProfileEmail(String email) {
+        verifiedProfileEmails.remove(email);
+    }
+
     /**
      * Clear expired email verification tokens.
      * This method can be called periodically to clean up expired tokens.
