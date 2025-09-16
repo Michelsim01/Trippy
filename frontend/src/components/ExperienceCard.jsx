@@ -120,20 +120,20 @@ const ExperienceCard = ({
     };
 
     return (
-        <div
-            className="flex flex-col w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
-            onClick={handleCardClick}
-        >
-            {/* Image Container */}
-            <div className="relative w-full aspect-[4/3] bg-neutrals-2 overflow-hidden">
-                <div
-                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-                    style={{ 
-                        backgroundImage: `url(${cardData.imageUrl || cardData.image})`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                    }}
-                />
+            <div
+                className="flex flex-col w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
+                onClick={handleCardClick}
+            >
+                {/* Image Container */}
+                <div className="relative w-full aspect-[4/3] bg-neutrals-2 overflow-hidden">
+                    <div
+                        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                        style={{ 
+                            backgroundImage: `url(${cardData.coverPhotoUrl || cardData.imageUrl || cardData.image})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center'
+                        }}
+                    />
                 {/* Edit Button (only if showEditButton) */}
                 {showEditButton && (
                     <Edit
