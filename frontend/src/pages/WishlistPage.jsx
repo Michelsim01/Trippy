@@ -20,6 +20,7 @@ const experienceImages = [
 const WishlistPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [wishlistItems, setWishlistItems] = useState([]);
+    const [schedules, setSchedules] = useState({}); // Store schedules by experience ID
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
@@ -71,6 +72,23 @@ const WishlistPage = () => {
                 }));
                 
                 setWishlistItems(transformedData);
+                
+                // Fetch schedule data for all experiences in wishlist
+                const schedulePromises = data.map(item => 
+                    fetch(`http://localhost:8080/api/experiences/${item.experience.experienceId}/schedules`)
+                        .then(response => response.ok ? response.json() : [])
+                        .catch(() => []) // If schedule fetch fails, use empty array
+                );
+                
+                const schedulesData = await Promise.all(schedulePromises);
+                
+                // Create schedules object with experience ID as key
+                const schedulesMap = {};
+                data.forEach((item, index) => {
+                    schedulesMap[item.experience.experienceId] = schedulesData[index];
+                });
+                
+                setSchedules(schedulesMap);
                 setError(null);
             } catch (err) {
                 console.error("Failed to fetch wishlist:", err);
@@ -135,10 +153,12 @@ const WishlistPage = () => {
                                             key={item.id}
                                             experience={item}
                                             showWishlistButton={true}
+                                            isInWishlist={true} // All items on wishlist page are in wishlist
+                                            schedules={schedules[item.experienceId] || []}
                                             onWishlistToggle={(experienceId, wasAdded) => {
-                                                if (!wasAdded) {
-                                                    removeFromWishlist(item.id);
-                                                }
+                                                // Note: We don't remove from local state immediately
+                                                // The card stays visible until page refresh
+                                                console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                             }}
                                             showExplore={item.showExplore}
                                         />
@@ -184,10 +204,12 @@ const WishlistPage = () => {
                                     key={item.id}
                                     experience={item}
                                     showWishlistButton={true}
+                                    isInWishlist={true} // All items on wishlist page are in wishlist
+                                    schedules={schedules[item.experienceId] || []}
                                     onWishlistToggle={(experienceId, wasAdded) => {
-                                        if (!wasAdded) {
-                                            removeFromWishlist(item.id);
-                                        }
+                                        // Note: We don't remove from local state immediately
+                                        // The card stays visible until page refresh
+                                        console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                     }}
                                     showExplore={item.showExplore}
                                 />

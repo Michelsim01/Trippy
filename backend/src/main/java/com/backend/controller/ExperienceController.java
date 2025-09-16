@@ -1,30 +1,130 @@
 package com.backend.controller;
 
 import com.backend.entity.Experience;
+import com.backend.entity.ExperienceSchedule;
 import com.backend.repository.ExperienceRepository;
+import com.backend.repository.ExperienceScheduleRepository;
+import com.backend.dto.SearchSuggestionDTO;
+import com.backend.dto.ExperienceResponseDTO;
+import com.backend.service.ExperienceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/experiences")
 public class ExperienceController {
     @Autowired
     private ExperienceRepository experienceRepository;
+    
+    @Autowired
+    private ExperienceScheduleRepository experienceScheduleRepository;
+    
+    @Autowired
+    private ExperienceService experienceService;
 
     @GetMapping
-    public List<Experience> getAllExperiences() {
-        return experienceRepository.findAll();
+    public List<Map<String, Object>> getAllExperiences() {
+        List<Experience> experiences = experienceRepository.findAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        
+        for (Experience exp : experiences) {
+            Map<String, Object> expMap = new HashMap<>();
+            expMap.put("experienceId", exp.getExperienceId());
+            expMap.put("title", exp.getTitle());
+            expMap.put("location", exp.getLocation());
+            expMap.put("price", exp.getPrice());
+            expMap.put("averageRating", exp.getAverageRating());
+            expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+            expMap.put("shortDescription", exp.getShortDescription());
+            expMap.put("duration", exp.getDuration());
+            expMap.put("category", exp.getCategory());
+            expMap.put("status", exp.getStatus());
+            expMap.put("totalReviews", exp.getTotalReviews());
+            expMap.put("createdAt", exp.getCreatedAt());
+            expMap.put("updatedAt", exp.getUpdatedAt());
+            
+            // Add guide info without lazy loading issues
+            if (exp.getGuide() != null) {
+                Map<String, Object> guideMap = new HashMap<>();
+                guideMap.put("userId", exp.getGuide().getId());
+                guideMap.put("firstName", exp.getGuide().getFirstName());
+                guideMap.put("lastName", exp.getGuide().getLastName());
+                guideMap.put("email", exp.getGuide().getEmail());
+                guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+                expMap.put("guide", guideMap);
+            }
+            
+            result.add(expMap);
+        }
+        
+        return result;
     }
 
     @GetMapping("/{id}")
-    public Experience getExperienceById(@PathVariable Long id) {
-        return experienceRepository.findById(id).orElse(null);
+    public Map<String, Object> getExperienceById(@PathVariable Long id) {
+        Experience exp = experienceRepository.findById(id).orElse(null);
+        if (exp == null) {
+            return null;
+        }
+        
+        Map<String, Object> expMap = new HashMap<>();
+        expMap.put("experienceId", exp.getExperienceId());
+        expMap.put("title", exp.getTitle());
+        expMap.put("location", exp.getLocation());
+        expMap.put("price", exp.getPrice());
+        expMap.put("averageRating", exp.getAverageRating());
+        expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+        expMap.put("shortDescription", exp.getShortDescription());
+        expMap.put("fullDescription", exp.getFullDescription());
+        expMap.put("duration", exp.getDuration());
+        expMap.put("category", exp.getCategory());
+        expMap.put("status", exp.getStatus());
+        expMap.put("totalReviews", exp.getTotalReviews());
+        expMap.put("highlights", exp.getHighlights());
+        expMap.put("whatIncluded", exp.getWhatIncluded());
+        expMap.put("importantInfo", exp.getImportantInfo());
+        expMap.put("cancellationPolicy", exp.getCancellationPolicy());
+        expMap.put("participantsAllowed", exp.getParticipantsAllowed());
+        expMap.put("createdAt", exp.getCreatedAt());
+        expMap.put("updatedAt", exp.getUpdatedAt());
+        
+        // Add guide info without lazy loading issues
+        if (exp.getGuide() != null) {
+            Map<String, Object> guideMap = new HashMap<>();
+            guideMap.put("userId", exp.getGuide().getId());
+            guideMap.put("firstName", exp.getGuide().getFirstName());
+            guideMap.put("lastName", exp.getGuide().getLastName());
+            guideMap.put("email", exp.getGuide().getEmail());
+            guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+            expMap.put("guide", guideMap);
+        }
+        
+        return expMap;
     }
 
     @PostMapping
-    public Experience createExperience(@RequestBody Experience experience) {
-        return experienceRepository.save(experience);
+    public ResponseEntity<?> createExperience(@RequestBody Map<String, Object> payload) {
+        try {
+            Experience createdExperience = experienceService.createCompleteExperience(payload);
+            return ResponseEntity.ok().body(Map.of(
+                "success", true,
+                "experienceId", createdExperience.getExperienceId(),
+                "message", "Experience created successfully",
+                "experience", createdExperience
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Failed to create experience: " + e.getMessage()
+            ));
+        }
     }
 
     @PutMapping("/{id}")
@@ -33,8 +133,106 @@ public class ExperienceController {
         return experienceRepository.save(experience);
     }
 
+    @PutMapping("/{id}/complete")
+    public ResponseEntity<?> updateCompleteExperience(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
+        try {
+            Experience updatedExperience = experienceService.updateCompleteExperience(id, payload);
+            return ResponseEntity.ok().body(Map.of(
+                "success", true,
+                "experienceId", updatedExperience.getExperienceId(),
+                "message", "Experience updated successfully",
+                "experience", updatedExperience
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Failed to update experience: " + e.getMessage()
+            ));
+        }
+    }
+
     @DeleteMapping("/{id}")
     public void deleteExperience(@PathVariable Long id) {
         experienceRepository.deleteById(id);
     }
+    
+    @GetMapping("/search/suggestions")
+    public List<SearchSuggestionDTO> getSearchSuggestions(@RequestParam String q) {
+        List<SearchSuggestionDTO> suggestions = new ArrayList<>();
+        
+        // Return empty list if query is too short
+        if (q == null || q.trim().length() < 2) {
+            return suggestions;
+        }
+        
+        String query = q.trim();
+        
+        // Get location suggestions (limit to 3)
+        List<String> locations = experienceRepository.findLocationSuggestions(query);
+        suggestions.addAll(locations.stream()
+                .limit(3)
+                .map(SearchSuggestionDTO::location)
+                .collect(Collectors.toList()));
+        
+        // Get experience suggestions (limit to 2)
+        List<Experience> experiences = experienceRepository.findExperienceSuggestions(query);
+        suggestions.addAll(experiences.stream()
+                .limit(2)
+                .map(exp -> SearchSuggestionDTO.experience(exp.getTitle(), exp.getLocation(), exp.getExperienceId()))
+                .collect(Collectors.toList()));
+        
+        // Limit total suggestions to 5
+        return suggestions.stream().limit(5).collect(Collectors.toList());
+    }
+
+    @GetMapping("/{id}/schedules")
+    public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long id) {
+        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(id);
+        
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ExperienceSchedule schedule : schedules) {
+            Map<String, Object> scheduleMap = new HashMap<>();
+            scheduleMap.put("scheduleId", schedule.getScheduleId());
+            scheduleMap.put("startDateTime", schedule.getStartDateTime());
+            scheduleMap.put("endDateTime", schedule.getEndDateTime());
+            scheduleMap.put("availableSpots", schedule.getAvailableSpots());
+            scheduleMap.put("isAvailable", schedule.getIsAvailable());
+            scheduleMap.put("createdAt", schedule.getCreatedAt());
+            result.add(scheduleMap);
+        }
+        
+        return result;
+    }
+
+    // Separate endpoints for related data
+    @GetMapping("/{id}/media")
+    public ResponseEntity<?> getExperienceMedia(@PathVariable Long id) {
+        try {
+            Experience experience = experienceRepository.findById(id).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(experience.getMediaList());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", "Failed to fetch media: " + e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/{id}/itineraries")
+    public ResponseEntity<?> getExperienceItineraries(@PathVariable Long id) {
+        try {
+            Experience experience = experienceRepository.findById(id).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+            return ResponseEntity.ok(experience.getItineraries());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "error", "Failed to fetch itineraries: " + e.getMessage()
+            ));
+        }
+    }
+
 }

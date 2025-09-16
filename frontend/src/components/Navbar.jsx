@@ -1,8 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import React, { useState, useRef, useEffect }, { useState } from 'react'
+import { Link, useNavigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { userService } from '../services/userService'
 import LogoutModal from './LogoutModal'
+import SearchSuggestions from './SearchSuggestions'
+import SearchModal from './SearchModal'
+import useSearchSuggestions from '../hooks/useSearchSuggestions'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -91,6 +94,54 @@ const Navbar = ({
         setIsLogoutModalOpen(true)
     }
     
+    const navigate = useNavigate()
+    const [searchQuery, setSearchQuery] = useState('')
+    const [showMobileSearchModal, setShowMobileSearchModal] = useState(false)
+    const { suggestions, loading, isOpen: suggestionsOpen, searchWithDebounce, clearSuggestions, setIsOpen } = useSearchSuggestions()
+
+    const handleSearchChange = (e) => {
+        const value = e.target.value
+        setSearchQuery(value)
+        
+        if (value.length >= 2) {
+            setIsOpen(true) // Open dropdown immediately for visual feedback
+        }
+        
+        searchWithDebounce(value)
+    }
+
+    const handleSearchKeyDown = (e) => {
+        if (e.key === 'Enter' && searchQuery.trim()) {
+            navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`)
+            clearSuggestions()
+        } else if (e.key === 'Escape') {
+            clearSuggestions()
+        }
+    }
+
+    const handleSuggestionClick = (suggestion) => {
+        if (suggestion.type === 'experience' && suggestion.experienceId) {
+            // Navigate to specific experience page if it exists
+            navigate(`/experience/${suggestion.experienceId}`)
+        } else {
+            // Navigate to search results with the suggestion text
+            navigate(`/search?q=${encodeURIComponent(suggestion.text)}`)
+        }
+        setSearchQuery('')
+        clearSuggestions()
+    }
+
+    const handleSearchFocus = () => {
+        if (searchQuery.length >= 2) {
+            setIsOpen(true)
+            // Re-trigger search to refresh suggestions
+            searchWithDebounce(searchQuery)
+        }
+    }
+
+    const handleMobileSearchClick = () => {
+        setShowMobileSearchModal(true)
+    }
     return (
         <>
         <nav className="bg-neutrals-8 border-b border-neutrals-6 relative z-30 w-full">
@@ -141,6 +192,10 @@ const Navbar = ({
                                         <input
                                             type="text"
                                             placeholder="Search everything"
+                                            value={searchQuery}
+                                            onChange={handleSearchChange}
+                                            onKeyDown={handleSearchKeyDown}
+                                            onFocus={handleSearchFocus}
                                             className="input-field white"
                                             style={{
                                                 paddingLeft: '50px',
@@ -152,6 +207,15 @@ const Navbar = ({
                                             }}
                                         />
                                     </div>
+                                    
+                                    {/* Search Suggestions Dropdown */}
+                                    <SearchSuggestions
+                                        isOpen={suggestionsOpen}
+                                        suggestions={suggestions}
+                                        onSuggestionClick={handleSuggestionClick}
+                                        onClose={clearSuggestions}
+                                        loading={loading}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -309,7 +373,10 @@ const Navbar = ({
                             /* Authenticated state */
                             <>
                                 {/* Search icon */}
-                                <button className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
+                                <button 
+                                    onClick={handleMobileSearchClick}
+                                    className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
+                                >
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
@@ -355,6 +422,12 @@ const Navbar = ({
                     </div>
                 </div>
             </div>
+            
+            {/* Mobile Search Modal */}
+            <SearchModal 
+                isOpen={showMobileSearchModal} 
+                onClose={() => setShowMobileSearchModal(false)} 
+            />
         </nav>
         
         {/* Logout Modal */}

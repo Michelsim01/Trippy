@@ -1,9 +1,13 @@
 import React, { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import LogoutModal from './LogoutModal'
+import { useFormData } from '../contexts/FormDataContext'
 
 const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+    const navigate = useNavigate();
+    const { clearFormData } = useFormData();
+    
     const navItems = [
         { id: 'blog', label: 'Blog' },
         { id: 'create-experience', label: 'Create an Experience' },
@@ -11,6 +15,12 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         { id: 'about', label: 'About' },
         { id: 'contact', label: 'Contact' },
     ]
+    
+    const handleCreateExperienceClick = () => {
+        clearFormData(); // Clear any existing form data
+        navigate('/create-experience');
+        onClose(); // Close the sidebar
+    };
 
     const handleLogout = () => {
         onClose() // Close sidebar first
@@ -69,13 +79,22 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
                         <ul className="space-y-[22px]">
                             {navItems.map((item) => (
                                 <li key={item.id}>
-                                    <Link
-                                        to={`/${item.id}`}
-                                        className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
-                                        onClick={onClose}
-                                    >
-                                        {item.label}
-                                    </Link>
+                                    {item.id === 'create-experience' ? (
+                                        <button
+                                            onClick={handleCreateExperienceClick}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left"
+                                        >
+                                            {item.label}
+                                        </button>
+                                    ) : (
+                                        <Link
+                                            to={`/${item.id}`}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                                            onClick={onClose}
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    )}
                                 </li>
                             ))}
                         </ul>
