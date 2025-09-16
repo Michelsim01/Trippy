@@ -52,12 +52,12 @@ export const UserProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser({ ...userData, isAuthenticated: true });
-    localStorage.setItem('authToken', 'mock-token');
+    localStorage.setItem('token', 'mock-token'); // Use 'token' key to match AuthContext
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('authToken');
+    localStorage.removeItem('token'); // Use 'token' key to match AuthContext
   };
 
   const updateKycStatus = (status) => {

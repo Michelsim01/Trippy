@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useAuth } from '../contexts/AuthContext';
 import { useUser } from '../contexts/UserContext';
 import { kycService } from '../services/kycService';
 
@@ -13,7 +14,11 @@ const idTypes = [
 
 export default function KycVerificationPage() {
     const navigate = useNavigate();
+    const { user: authUser, isAuthenticated, isLoading: authLoading, token } = useAuth();
     const { user, updateKycStatus } = useUser();
+    
+    // Get user ID from either auth context or user context
+    const currentUserId = authUser?.id || user?.id;
 
     function handleKycClick() {
         navigate('/kyc-verification');
@@ -21,6 +26,8 @@ export default function KycVerificationPage() {
 
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const [form, setForm] = useState({
         fullName: "",
@@ -34,17 +41,54 @@ export default function KycVerificationPage() {
         mobileNumber: "",
         declaration: false,
         consent: false,
-        // idFile: null, // For future use
+        documentFile: null,
+        documentFileUrl: null,
     });
     const [submitting, setSubmitting] = useState(false);
     const [errors, setErrors] = useState({});
+    const [uploadingDocument, setUploadingDocument] = useState(false);
+
+    // Handle authentication checks
+    useEffect(() => {
+        // Don't check auth if still loading
+        if (authLoading) {
+            return;
+        }
+        
+        // If user is not authenticated, redirect to signin
+        if (!isAuthenticated) {
+            setError('You must be logged in to access KYC verification');
+            setTimeout(() => {
+                navigate('/signin');
+            }, 2000);
+            return;
+        }
+        
+        // Clear any previous errors if authenticated
+        if (isAuthenticated && currentUserId) {
+            setError(null);
+        }
+    }, [isAuthenticated, authLoading, currentUserId, navigate]);
 
     function handleChange(e) {
         const { name, value, type, checked } = e.target;
-        setForm((prev) => ({
-            ...prev,
-            [name]: type === "checkbox" ? checked : value,
-        }));
+        setForm((prev) => {
+            const newForm = {
+                ...prev,
+                [name]: type === "checkbox" ? checked : value,
+            };
+            
+            // If ID type changes and we already have a document, clear it so user uploads new one
+            if (name === 'idType' && prev.documentFile) {
+                newForm.documentFile = null;
+                newForm.documentFileUrl = null;
+                // Clear file input
+                const fileInput = document.getElementById('documentFile');
+                if (fileInput) fileInput.value = '';
+            }
+            
+            return newForm;
+        });
 
         // Clear error when user starts typing
         if (errors[name]) {
@@ -52,6 +96,78 @@ export default function KycVerificationPage() {
                 ...prev,
                 [name]: ''
             }));
+        }
+    }
+
+    function handleFileChange(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Validate file type
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+            if (!allowedTypes.includes(file.type)) {
+                setErrors(prev => ({
+                    ...prev,
+                    documentFile: 'Only JPG, PNG, and PDF files are allowed'
+                }));
+                return;
+            }
+
+            // Validate file size (10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                setErrors(prev => ({
+                    ...prev,
+                    documentFile: 'File size must be less than 10MB'
+                }));
+                return;
+            }
+
+            setForm(prev => ({
+                ...prev,
+                documentFile: file
+            }));
+
+            // Clear any previous errors
+            setErrors(prev => ({
+                ...prev,
+                documentFile: ''
+            }));
+
+            // Upload the file immediately
+            uploadDocument(file);
+        }
+    }
+
+    async function uploadDocument(file) {
+        if (!currentUserId || !form.idType) {
+            setErrors(prev => ({
+                ...prev,
+                documentFile: 'Please select ID type first'
+            }));
+            return;
+        }
+
+        setUploadingDocument(true);
+        try {
+            const docType = form.idType === 'other' ? form.otherIdType : form.idType;
+            const response = await kycService.uploadDocument(currentUserId, file, docType);
+            
+            setForm(prev => ({
+                ...prev,
+                documentFileUrl: response.fileUrl
+            }));
+
+            setErrors(prev => ({
+                ...prev,
+                documentFile: ''
+            }));
+        } catch (error) {
+            console.error('Document upload failed:', error);
+            setErrors(prev => ({
+                ...prev,
+                documentFile: error.message
+            }));
+        } finally {
+            setUploadingDocument(false);
         }
     }
 
@@ -76,6 +192,11 @@ export default function KycVerificationPage() {
         // Mobile is optional but if one is filled, require both
         if ((form.mobileCountry && !form.mobileNumber.trim()) || (!form.mobileCountry && form.mobileNumber.trim())) {
             newErrors.mobileNumber = 'Please provide both country code and number';
+        }
+
+        // Document upload is required
+        if (!form.documentFile && !form.documentFileUrl) {
+            newErrors.documentFile = 'Please upload your ID document';
         }
 
         setErrors(newErrors);
@@ -107,23 +228,45 @@ export default function KycVerificationPage() {
             return;
         }
 
-        if (!user?.id) {
-            alert("User not authenticated. Please log in first.");
+        if (!currentUserId || !isAuthenticated || !token) {
+            setError('Authentication required to submit KYC verification');
+            alert("Authentication required. Please log in again.");
+            setTimeout(() => {
+                navigate('/signin');
+            }, 2000);
             return;
         }
 
         setSubmitting(true);
         setErrors({});
+        setError(null);
+
+        console.log('Submitting KYC with userId:', currentUserId, 'documentFileUrl:', form.documentFileUrl);
 
         try {
-            await kycService.submitKyc(user.id, form);
+            if (form.documentFileUrl) {
+                // If document was uploaded, use the new submission method with document
+                await kycService.submitKycWithDocument(currentUserId, form, form.documentFileUrl);
+            } else {
+                // Fallback to original method if no document
+                await kycService.submitKyc(currentUserId, form);
+            }
             updateKycStatus('PENDING');
             alert("KYC submitted successfully! Your application is under review.");
             navigate("/kyc-submitted");
         } catch (error) {
             console.error('KYC submission failed:', error);
-            setErrors({ submit: error.message });
-            alert(`Submission failed: ${error.message}`);
+            
+            if (error.message.includes('Authentication') || error.message.includes('401')) {
+                setError('Authentication required. Please log in again.');
+                setTimeout(() => {
+                    navigate('/signin');
+                }, 2000);
+            } else {
+                setErrors({ submit: error.message });
+                setError(`Submission failed: ${error.message}`);
+                alert(`Submission failed: ${error.message}`);
+            }
         } finally {
             setSubmitting(false);
         }
@@ -136,7 +279,7 @@ export default function KycVerificationPage() {
             {/* Navbar */}
             <Navbar
                 onToggleSidebar={() => setSidebarOpen(true)}
-                isAuthenticated={true}
+                isAuthenticated={isAuthenticated}
             />
 
             {/* Sidebar */}
@@ -144,27 +287,55 @@ export default function KycVerificationPage() {
                 isOpen={isSidebarOpen}
                 onClose={() => setSidebarOpen(false)}
                 variant="mobile"
-                isAuthenticated={true}
+                isAuthenticated={isAuthenticated}
             />
 
             {/* Main Content */}
             <div className={`transition-all duration-300 ${isSidebarOpen ? 'blur-sm' : ''} py-8`}>
                 <div className="max-w-2xl mx-auto px-4">
-                    {/* Progress Header */}
-                    <div className="text-center mb-8">
-                        <h1
-                            className="text-3xl font-bold text-neutrals-1 mb-2"
-                            style={{ fontFamily: 'var(--font-family-poppins)' }}
-                        >
-                            Guide Verification
-                        </h1>
-                        <p
-                            className="text-neutrals-4 text-lg"
-                            style={{ fontFamily: 'var(--font-family-dm-sans)' }}
-                        >
-                            Help us verify your identity to become a trusted guide
-                        </p>
-                    </div>
+                    {/* Error Display */}
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 text-center">{error}</p>
+                            {!isAuthenticated && (
+                                <div className="mt-2 text-center">
+                                    <button
+                                        onClick={() => navigate('/signin')}
+                                        className="px-4 py-2 bg-primary-1 text-white rounded-lg hover:bg-primary-2 transition-colors"
+                                    >
+                                        Sign In
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    
+                    {/* Loading Display */}
+                    {(authLoading || loading) && (
+                        <div className="text-center py-12">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-1 border-t-transparent mx-auto mb-4"></div>
+                            <span className="text-neutrals-4">Loading...</span>
+                        </div>
+                    )}
+                    
+                    {/* Only show form if authenticated and not loading */}
+                    {isAuthenticated && !authLoading && !error && (
+                        <>
+                            {/* Progress Header */}
+                            <div className="text-center mb-8">
+                                <h1
+                                    className="text-3xl font-bold text-neutrals-1 mb-2"
+                                    style={{ fontFamily: 'var(--font-family-poppins)' }}
+                                >
+                                    KYC Verification
+                                </h1>
+                                <p
+                                    className="text-neutrals-4 text-lg"
+                                    style={{ fontFamily: 'var(--font-family-dm-sans)' }}
+                                >
+                                    Help us verify your identity to become a trusted guide
+                                </p>
+                            </div>
 
                     {/* Progress Bar */}
                     <div className="mb-8">
@@ -432,24 +603,72 @@ export default function KycVerificationPage() {
                                             )}
                                         </div>
 
-                                        {/* Future file upload field */}
+                                        {/* ID Document Upload */}
                                         <div>
                                             <label className="block text-sm font-medium text-neutrals-2 mb-2">
-                                                ID Document Upload
+                                                ID Document Upload *
                                             </label>
-                                            <div className="border-2 border-dashed border-neutrals-6 rounded-lg p-6 text-center">
-                                                <div className="text-neutrals-4 mb-2">
-                                                    <svg className="mx-auto h-12 w-12 text-neutrals-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                                    </svg>
-                                                </div>
-                                                <p className="text-sm text-neutrals-4 mb-1">
-                                                    Document upload coming soon
-                                                </p>
-                                                <p className="text-xs text-neutrals-5">
-                                                    You'll be able to upload your ID document in the next update
-                                                </p>
+                                            <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                                                form.documentFile ? 'border-green-400 bg-green-50' : 
+                                                errors.documentFile ? 'border-red-400 bg-red-50' : 
+                                                'border-neutrals-6 hover:border-neutrals-4'
+                                            }`}>
+                                                {uploadingDocument ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary-1 border-t-transparent mb-2"></div>
+                                                        <p className="text-sm text-neutrals-4">Uploading document...</p>
+                                                    </div>
+                                                ) : form.documentFile ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <svg className="h-12 w-12 text-green-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+                                                            <path d="M9 12l2 2 4-4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            <path d="M21 6H9a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2V8a2 2 0 00-2-2z" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                        </svg>
+                                                        <p className="text-sm text-green-600 font-medium mb-1">
+                                                            Document uploaded successfully!
+                                                        </p>
+                                                        <p className="text-xs text-neutrals-4 mb-2">
+                                                            {form.documentFile.name}
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => document.getElementById('documentFile').click()}
+                                                            className="text-xs text-primary-1 hover:underline"
+                                                        >
+                                                            Upload different file
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div>
+                                                        <svg className="mx-auto h-12 w-12 text-neutrals-4 mb-2" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                                        </svg>
+                                                        <p className="text-sm text-neutrals-4 mb-1">
+                                                            Click to upload or drag and drop
+                                                        </p>
+                                                        <p className="text-xs text-neutrals-5 mb-2">
+                                                            JPG, PNG, or PDF (max 10MB)
+                                                        </p>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => document.getElementById('documentFile').click()}
+                                                            className="px-4 py-2 text-sm bg-primary-1 text-white rounded-lg hover:bg-primary-2 transition-colors"
+                                                        >
+                                                            Select File
+                                                        </button>
+                                                    </div>
+                                                )}
+                                                <input
+                                                    id="documentFile"
+                                                    type="file"
+                                                    accept=".jpg,.jpeg,.png,.pdf"
+                                                    onChange={handleFileChange}
+                                                    className="hidden"
+                                                />
                                             </div>
+                                            {errors.documentFile && (
+                                                <p className="text-red-500 text-sm mt-1">{errors.documentFile}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -491,6 +710,12 @@ export default function KycVerificationPage() {
                                                 <div className="flex justify-between">
                                                     <span className="text-neutrals-4">Email:</span>
                                                     <span className="text-neutrals-2">{form.email || 'Not provided'}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutrals-4">Document:</span>
+                                                    <span className={`text-sm ${form.documentFile ? 'text-green-600' : 'text-red-500'}`}>
+                                                        {form.documentFile ? '✓ Uploaded' : '✗ Not uploaded'}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -584,6 +809,8 @@ export default function KycVerificationPage() {
                             </a>
                         </p>
                     </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
