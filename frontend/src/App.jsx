@@ -2,6 +2,7 @@ import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
+import { UserProvider } from './contexts/UserContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -31,6 +32,9 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import SettingsPage from './pages/SettingsPage'
 import SearchResultsPage from './pages/SearchResultsPage'
+import KycOnboardingPage from './pages/KycOnboardingPage'
+import KycVerificationPage from './pages/KycVerificationPage'
+import KycSubmittedPage from './pages/KycSubmittedPage'
 import './App.css' 
 
 // AppRoutes component that uses authentication context
@@ -191,6 +195,21 @@ function AppRoutes() {
             />
 
 
+          <Route
+            path="/kyc-onboarding"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycOnboardingPage />}
+          />
+
+          <Route
+            path="/kyc-verification"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycVerificationPage />}
+          />
+
+          <Route
+            path="/kyc-submitted"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
+          />
+
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -201,12 +220,14 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <FormDataProvider>
-          <div className="App">
-            <AppRoutes />
-          </div>
-        </FormDataProvider>
+        <UserProvider>
+          <FormDataProvider>
+            <div className="App">
+              <AppRoutes />
+            </div>
+          </FormDataProvider>
+        </UserProvider>
       </AuthProvider>
-    </Router>
+      </Router>
   )
 }
