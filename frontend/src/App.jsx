@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { FormDataProvider } from './contexts/FormDataContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -188,10 +189,7 @@ function AppRoutes() {
               path="/settings"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
             />
-            <Route
-              path="/logout"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
-            />
+
 
       {/* Catch all route */}
       <Route path="*" element={<Navigate to="/" replace />} />
@@ -203,9 +201,11 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <div className="App">
-          <AppRoutes />
-        </div>
+        <FormDataProvider>
+          <div className="App">
+            <AppRoutes />
+          </div>
+        </FormDataProvider>
       </AuthProvider>
     </Router>
   )

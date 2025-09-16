@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect }, { useState } from 'react'
-import { Link, useNavigate, useNavigate } from 'react-router-dom'
+import React, { useState, useRef, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { userService } from '../services/userService'
 import LogoutModal from './LogoutModal'
@@ -94,7 +94,6 @@ const Navbar = ({
         setIsLogoutModalOpen(true)
     }
     
-    const navigate = useNavigate()
     const [searchQuery, setSearchQuery] = useState('')
     const [showMobileSearchModal, setShowMobileSearchModal] = useState(false)
     const { suggestions, loading, isOpen: suggestionsOpen, searchWithDebounce, clearSuggestions, setIsOpen } = useSearchSuggestions()
@@ -386,7 +385,7 @@ const Navbar = ({
                                 <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 0 0 1-3.46 0" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 0 0 1 0 -3.46" />
                                     </svg>
                                 </Link>
 

@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ExperienceCard from '../components/ExperienceCard';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mock images for experiences
 const experienceImages = [
@@ -18,6 +19,7 @@ const experienceImages = [
 ];
 
 const WishlistPage = () => {
+    const { user } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [wishlistItems, setWishlistItems] = useState([]);
     const [schedules, setSchedules] = useState({}); // Store schedules by experience ID
@@ -43,7 +45,7 @@ const WishlistPage = () => {
         const fetchWishlist = async () => {
             try {
                 setLoading(true);
-                const response = await fetch('http://localhost:8080/api/wishlist-items/user/1'); // Using user ID 1 as shown in your database
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -100,8 +102,10 @@ const WishlistPage = () => {
             }
         };
 
-        fetchWishlist();
-    }, []);
+        if (user?.userId) {
+            fetchWishlist();
+        }
+    }, [user?.userId]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);

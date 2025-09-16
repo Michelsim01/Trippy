@@ -1,5 +1,15 @@
 const API_BASE_URL = 'http://localhost:8080/api';
 
+// Helper function to get auth headers
+const getAuthHeaders = () => {
+  const token = localStorage.getItem('token');
+  return {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+};
+
 export const experienceApi = {
   /**
    * Creates a new experience with all related data (itinerary, media, schedules)
@@ -10,10 +20,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include', // For CORS
         body: JSON.stringify(payload)
       });
