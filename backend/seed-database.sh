@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 
 # Compile and run the seeding application
 echo "📦 Compiling and running the database seeder..."
-./mvnw compile exec:java -Dexec.mainClass="com.backend.SeedDatabaseRunner" -Dexec.classpathScope=runtime
+./mvnw compile exec:java -Dexec.mainClass="com.backend.SeedDatabaseRunner"
 
 echo "✅ Database seeding process completed!"
 echo ""
