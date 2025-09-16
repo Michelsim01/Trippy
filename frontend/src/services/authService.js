@@ -391,41 +391,6 @@ export const authService = {
     }
   },
 
-  // Cancel pending user registration (public endpoint, no auth needed)
-  cancelPendingRegistration: async (email) => {
-    try {
-      // Use axios directly instead of the api instance to avoid sending auth token
-      const response = await axios.post(`${API_BASE_URL}/api/email-verification/cancel-pending`, null, {
-        params: { email },
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      })
-      
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      console.error('Cancel pending registration error:', error)
-      
-      let errorMessage = 'Failed to cancel pending registration'
-      if (error.response?.data) {
-        if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message
-        }
-      } else if (error.message) {
-        errorMessage = error.message
-      }
-      
-      return {
-        success: false,
-        error: errorMessage,
-      }
-    }
-  },
 }
 
 export default authService

@@ -32,17 +32,7 @@ const VerifyEmailPage = () => {
                 setIsSuccess(true)
                 setMessage(result.data.message || 'Email verified successfully!')
                 
-                // Update user data in localStorage to mark email as verified
-                const storedUser = localStorage.getItem('user')
-                if (storedUser) {
-                    try {
-                        const user = JSON.parse(storedUser)
-                        const updatedUser = { ...user, emailVerified: true }
-                        localStorage.setItem('user', JSON.stringify(updatedUser))
-                    } catch (error) {
-                        console.error('Error updating user data:', error)
-                    }
-                }
+                // No localStorage clearing needed since no tokens are stored during registration
             } else {
                 setError(result.error || 'Verification failed. Please try again.')
             }
@@ -54,7 +44,7 @@ const VerifyEmailPage = () => {
     }
 
     const handleResendVerification = () => {
-        navigate('/email-verification')
+        navigate('/signup')
     }
 
 
@@ -103,7 +93,7 @@ const VerifyEmailPage = () => {
                                 <p className="text-green-700">{message}</p>
                             </div>
                             <p className="text-neutrals-4 mb-4">
-                                You can now access all features of the application.
+                                Please sign in with your verified account to access all features.
                             </p>
                         </div>
                     )}
@@ -124,10 +114,10 @@ const VerifyEmailPage = () => {
                         <div className="space-y-3">
                             {isSuccess ? (
                                 <button
-                                    onClick={() => window.location.href = '/home'}
+                                    onClick={() => navigate('/signin')}
                                     className="w-full bg-primary-1 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-1/90 transition-colors"
                                 >
-                                    Go to Home
+                                    Sign In to Your Account
                                 </button>
                             ) : (
                                 <>
@@ -135,13 +125,13 @@ const VerifyEmailPage = () => {
                                         onClick={handleResendVerification}
                                         className="w-full bg-primary-1 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-1/90 transition-colors"
                                     >
-                                        Request New Verification Email
+                                        Try Again
                                     </button>
                                     <button
-                                        onClick={() => navigate('/home')}
+                                        onClick={() => navigate('/signup')}
                                         className="w-full bg-neutrals-6 text-neutrals-2 py-2 px-4 rounded-lg font-medium hover:bg-neutrals-5 transition-colors"
                                     >
-                                        Back to Home
+                                        Back to Sign Up
                                     </button>
                                 </>
                             )}
