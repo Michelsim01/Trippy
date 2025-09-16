@@ -10,7 +10,7 @@ import MyReviewsTab from '../components/profile/MyReviewsTab';
 import BlogsTab from '../components/profile/BlogsTab';
 
 const ProfilePage = () => {
-    const { id } = useParams(); 
+    const { id } = useParams();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Introduction');
     const [currentRole, setCurrentRole] = useState(UserRole.TOURIST);
@@ -61,17 +61,7 @@ const ProfilePage = () => {
     }, [id]);
 
     const isTourGuide = currentRole === UserRole.TOUR_GUIDE;
-    const isTourist = currentRole === UserRole.TOURIST;
-
-    const userAvatar = userData?.profilePicture || (isTourGuide 
-        ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
-        : "https://images.unsplash.com/photo-1494790108755-2616b332c27?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80");
-
     const userName = userData?.firstName || (isTourGuide ? 'Farley' : 'Sarah');
-    const userStats = userData?.stats || (isTourGuide 
-        ? { rating: 4.8, reviews: '100+ reviews' }
-        : { rating: 4.5, reviews: 'Diamond member' });
-
     const backgroundImage = isTourGuide
         ? "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
         : "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80";

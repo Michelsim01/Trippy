@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Edit } from 'lucide-react'
 
 const ExperienceCard = ({ 
     experience,
     showWishlistButton = true,
     onWishlistToggle = null,
     variant = 'default',
-    showExplore = false
+    showExplore = false,
+    showEditButton = false 
 }) => {
-    const [isWishlisted, setIsWishlisted] = useState(true); // Default to true for demo
+    const [isWishlisted, setIsWishlisted] = useState(true);
     const navigate = useNavigate();
 
     const handleWishlistToggle = (e) => {
-        e.stopPropagation(); // Prevent card click when clicking wishlist button
+        e.stopPropagation();
         setIsWishlisted(!isWishlisted);
         if (onWishlistToggle) {
             onWishlistToggle(experience?.experienceId || experience?.id, !isWishlisted);
@@ -53,6 +55,19 @@ const ExperienceCard = ({
                     className="absolute inset-0 bg-cover bg-center"
                     style={{ backgroundImage: `url(${cardData.imageUrl || cardData.image})` }}
                 />
+                {/* Edit Button (only if showEditButton) */}
+                {showEditButton && (
+                    <Edit
+                        size={20}
+                        className="absolute top-4 left-4 z-20 bg-white hover:bg-white rounded-full p-1 shadow"
+                        onClick={e => {
+                            e.stopPropagation();
+                            // link to edit experience - darryl
+                        }}
+                        title="Edit Experience"
+                    >
+                    </Edit>
+                )}
                 
                 {/* Explore Button - shows on some cards */}
                 {showExplore && (

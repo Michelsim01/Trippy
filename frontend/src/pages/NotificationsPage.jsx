@@ -1,4 +1,10 @@
 import React, { useState, useEffect } from 'react';
+const Spinner = () => (
+    <div className="flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-1 border-t-transparent"></div>
+        <span className="text-neutrals-4 mt-4">Loading...</span>
+    </div>
+);
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { Trash } from 'lucide-react';
@@ -10,7 +16,7 @@ const NotificationsPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // For now, use user_id 111 as specified
+    // For now, use user_id 111 - CHANGE
     const currentUserId = 111;
 
     const toggleSidebar = () => {
@@ -144,8 +150,7 @@ const NotificationsPage = () => {
         if (loading) {
             return (
                 <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto"></div>
-                    <p className="text-neutrals-4 mt-4">Loading notifications...</p>
+                    <Spinner />
                 </div>
             );
         }

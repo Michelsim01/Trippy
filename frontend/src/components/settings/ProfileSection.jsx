@@ -10,20 +10,25 @@ const ProfileSection = () => {
     const [originalData, setOriginalData] = useState({});
     const [emailError, setEmailError] = useState('');
     const [areaCodeError, setAreaCodeError] = useState('');
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const [stagedImageFile, setStagedImageFile] = useState(null);
+    const [stagedImageUrl, setStagedImageUrl] = useState(null);
+    const [refreshing, setRefreshing] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
-        areaCode: '+65',
+        areaCode: '',
         phoneNumber: '',
         profilePicture: ''
     });
 
+    // For now, use user_id 111 - CHANGE
     const userId = 111; 
     
     const parsePhoneNumber = (fullPhoneNumber) => {
-        if (!fullPhoneNumber) return { areaCode: '+65', phoneNumber: '' };
-        
+        if (!fullPhoneNumber) return { areaCode: '', phoneNumber: '' };
+
         const parts = fullPhoneNumber.split(' ');
         
         if (parts.length === 2) {
@@ -110,11 +115,15 @@ const ProfileSection = () => {
                 email: data.email || '',
                 areaCode: areaCode,
                 phoneNumber: phoneNumber,
-                profilePicture: data.profileImageUrl || ''
+                profilePicture: data.profileImageUrl ? 
+                    (data.profileImageUrl.startsWith('http') ? data.profileImageUrl : `http://localhost:8080${data.profileImageUrl}`) 
+                    : ''
             };
             setFormData(userData);
             setOriginalData(userData);
             setHasChanges(false);
+            setStagedImageFile(null);
+            setStagedImageUrl(null);
             setError(null);
             setAreaCodeError('');
         } catch (err) {
@@ -149,7 +158,7 @@ const ProfileSection = () => {
             }
         }
         
-        const editableFields = ['email', 'areaCode', 'phoneNumber', 'profilePicture'];
+        const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
         const hasChanged = editableFields.some(field => {
             if (field === 'areaCode' || field === 'phoneNumber') {
                 const originalCombined = combinePhoneNumber(originalData.areaCode, originalData.phoneNumber);
@@ -158,7 +167,10 @@ const ProfileSection = () => {
             }
             return updatedFormData[field] !== originalData[field];
         });
-        setHasChanges(hasChanged);
+        
+        const hasImageChanges = stagedImageFile !== null || stagedImageUrl !== null;
+        
+        setHasChanges(hasChanged || hasImageChanges);
     };
 
     const handleProfilePictureChange = () => {
@@ -168,65 +180,164 @@ const ProfileSection = () => {
         fileInput.onchange = (e) => {
             const file = e.target.files[0];
             if (file) {
-                const previewUrl = URL.createObjectURL(file);
-                const updatedFormData = {
-                    ...formData,
-                    profilePicture: previewUrl
-                };
-                setFormData(updatedFormData);
+                if (file.size > 5 * 1024 * 1024) {
+                    setError('File size too large. Maximum 5MB allowed.');
+                    swal.fire({
+                        icon: 'error',
+                        title: 'File Too Large',
+                        text: 'File size too large. Maximum 5MB allowed.',
+                    });
+                    return;
+                }
+
+                if (!file.type.startsWith('image/')) {
+                    setError('Only image files are allowed.');
+                    swal.fire({
+                        icon: 'error',
+                        title: 'Invalid File Type',
+                        text: 'Only image files are allowed.',
+                    });
+                    return;
+                }
+
+                setStagedImageFile(file);
+                setStagedImageUrl(URL.createObjectURL(file));
+                setError(null);
                 
-                const editableFields = ['email', 'areaCode', 'phoneNumber', 'profilePicture'];
-                const hasChanged = editableFields.some(field => {
+                const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
+                const hasFormChanges = editableFields.some(field => {
                     if (field === 'areaCode' || field === 'phoneNumber') {
                         const originalCombined = combinePhoneNumber(originalData.areaCode, originalData.phoneNumber);
-                        const updatedCombined = combinePhoneNumber(updatedFormData.areaCode, updatedFormData.phoneNumber);
-                        return originalCombined !== updatedCombined;
+                        const currentCombined = combinePhoneNumber(formData.areaCode, formData.phoneNumber);
+                        return originalCombined !== currentCombined;
                     }
-                    return updatedFormData[field] !== originalData[field];
+                    return formData[field] !== originalData[field];
                 });
-                setHasChanges(hasChanged);
-                
-                console.log('Profile picture selected:', file.name);
+                setHasChanges(hasFormChanges || true); 
             }
         };
         fileInput.click();
     };
 
-    const handleSubmit = async (e) => {
+    const handleRemoveProfilePicture = () => {
+        swal.fire({
+            title: 'Remove Profile Picture?',
+            text: 'Are you sure you want to remove your profile picture?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, remove it!'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setStagedImageFile(null);
+                setStagedImageUrl('');
+                
+                const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
+                const hasFormChanges = editableFields.some(field => {
+                    if (field === 'areaCode' || field === 'phoneNumber') {
+                        const originalCombined = combinePhoneNumber(originalData.areaCode, originalData.phoneNumber);
+                        const currentCombined = combinePhoneNumber(formData.areaCode, formData.phoneNumber);
+                        return originalCombined !== currentCombined;
+                    }
+                    return formData[field] !== originalData[field];
+                });
+                setHasChanges(hasFormChanges || true);
+            }
+        });
+    };
+
+    const handleCancelChanges = () => {
+        swal.fire({
+            title: 'Cancel Changes?',
+            text: 'Are you sure you want to cancel all changes? This will reset the form to its original state.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel changes'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                setFormData(originalData);
+                setStagedImageFile(null);
+                setStagedImageUrl(null);
+                setEmailError('');
+                setAreaCodeError('');
+                setError(null);
+                setHasChanges(false);
+                swal.fire({
+                    icon: 'success',
+                    title: 'Changes Cancelled',
+                    text: 'All changes have been cancelled.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+        });
+    };    const handleSubmit = async (e) => {
         e.preventDefault();
         
-        // Validate required fields
+        if (!formData.firstName) {
+            setError('First name is required');
+            return;
+        }
+        if (!formData.lastName) {
+            setError('Last name is required');
+            return;
+        }
         if (!formData.email) {
             setEmailError('Email is required');
             return;
         }
-        
         if (!validateEmail(formData.email)) {
             setEmailError('Please enter a valid email address');
             return;
         }
-        
         if (!formData.areaCode) {
             setAreaCodeError('Area code is required');
             return;
         }
-        
         if (!validateAreaCode(formData.areaCode)) {
             setAreaCodeError('Area code must start with + followed by numbers (e.g., +65)');
             return;
         }
-        
         setSaving(true);
-        
         try {
+            let profileImageUrl = formData.profilePicture;
+        
+            if (stagedImageFile) {
+                setUploadingImage(true);
+                const imageFormData = new FormData();
+                imageFormData.append('file', stagedImageFile);
+
+                const imageResponse = await fetch(`http://localhost:8080/api/users/${userId}/profile-picture`, {
+                    method: 'POST',
+                    body: imageFormData,
+                });
+
+                if (imageResponse.ok) {
+                    const imageData = await imageResponse.json();
+                    profileImageUrl = `http://localhost:8080${imageData.imageUrl}`;
+                } else {
+                    const errorData = await imageResponse.json();
+                    throw new Error(errorData.error || 'Failed to upload profile picture');
+                }
+                setUploadingImage(false);
+            } else if (stagedImageUrl === '') {
+                profileImageUrl = '';
+            }
+
             const profileData = {
+                firstName: formData.firstName,
+                lastName: formData.lastName,
                 email: formData.email,
                 phoneNumber: combinePhoneNumber(formData.areaCode, formData.phoneNumber)
             };
-            if (formData.profilePicture !== originalData.profilePicture) {
-                profileData.profileImageUrl = formData.profilePicture;
+            
+            // Include profile image URL if it has changed
+            if (profileImageUrl !== originalData.profilePicture) {
+                profileData.profileImageUrl = profileImageUrl;
             }
-
             const response = await fetch(`http://localhost:8080/api/users/${userId}/details`, {
                 method: 'PUT',
                 headers: {
@@ -234,36 +345,35 @@ const ProfileSection = () => {
                 },
                 body: JSON.stringify(profileData),
             });
-
             if (response.ok) {
                 const result = await response.json();
                 const updatedData = result.user;
                 setUserData(updatedData);
-                
                 const { areaCode, phoneNumber } = parsePhoneNumber(updatedData.phoneNumber);
-                
                 const newFormData = {
                     firstName: updatedData.firstName || '',
                     lastName: updatedData.lastName || '',
                     email: updatedData.email || '',
                     areaCode: areaCode,
                     phoneNumber: phoneNumber,
-                    profilePicture: updatedData.profileImageUrl || ''
+                    profilePicture: updatedData.profileImageUrl ? 
+                        (updatedData.profileImageUrl.startsWith('http') ? updatedData.profileImageUrl : `http://localhost:8080${updatedData.profileImageUrl}`) 
+                        : formData.profilePicture
                 };
                 setFormData(newFormData);
                 setOriginalData(newFormData);
                 setHasChanges(false);
+                setStagedImageFile(null);
+                setStagedImageUrl(null);
+                
                 setEmailError('');
                 setAreaCodeError('');
-                swal.fire({
-                    icon: 'success',
-                    title: 'Profile Updated',
-                    text: 'Your profile has been updated successfully.',
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
+                setRefreshing(true);
                 await successfulUpdateNotification();
                 setError(null);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1200);
             } else {
                 const errorData = await response.json();
                 throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`);
@@ -278,6 +388,7 @@ const ProfileSection = () => {
             });
         } finally {
             setSaving(false);
+            setUploadingImage(false);
         }
     };
 
@@ -318,22 +429,43 @@ const ProfileSection = () => {
                 <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-[#FFBC99] rounded-full overflow-hidden">
                         <img
-                            src={formData.profilePicture || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"}
+                            src={
+                                stagedImageUrl !== null 
+                                    ? (stagedImageUrl === '' ? `https://ui-avatars.com/api/?name=${userData.firstName}+${userData.lastName}&background=random` : stagedImageUrl)
+                                    : (formData.profilePicture || `https://ui-avatars.com/api/?name=${userData.firstName}+${userData.lastName}&background=random`)
+                            }
                             alt="Profile"
                             className="w-full h-full object-cover"
                         />
                     </div>
                     <div className="flex-1">
                         <h3 className="font-medium text-neutrals-1">Profile Photo</h3>
-                        <p className="text-sm text-neutrals-4">Update your profile picture</p>
+                        <p className="text-sm text-neutrals-4">
+                            {stagedImageFile ? 'New image selected' : 
+                             stagedImageUrl === '' ? 'Image will be removed' : 
+                             'Update your profile picture'}
+                        </p>
                     </div>
-                    <button 
-                        type="button"
-                        onClick={handleProfilePictureChange}
-                        className="px-4 py-2 border border-neutrals-6 rounded-lg text-sm font-medium hover:bg-neutrals-7 transition-colors"
-                    >
-                        Change
-                    </button>
+                    <div className="flex gap-2">
+                        <button 
+                            type="button"
+                            onClick={handleProfilePictureChange}
+                            disabled={saving || uploadingImage}
+                            className="px-4 py-2 border border-neutrals-6 rounded-lg text-sm font-medium hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {uploadingImage ? 'Uploading...' : 'Change'}
+                        </button>
+                        {(formData.profilePicture || stagedImageFile || stagedImageUrl) && (
+                            <button 
+                                type="button"
+                                onClick={handleRemoveProfilePicture}
+                                disabled={saving || uploadingImage}
+                                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Remove
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
@@ -344,12 +476,11 @@ const ProfileSection = () => {
                             id="firstName"
                             name="firstName"
                             type="text"
-                            className="input-field white bg-neutrals-7 cursor-not-allowed"
+                            className="input-field white"
                             value={formData.firstName}
-                            readOnly
-                            disabled
+                            onChange={handleInputChange}
+                            required
                         />
-                        <p className="text-xs text-neutrals-4 mt-1">First name cannot be changed</p>
                     </div>
                     <div>
                         <label className="field-label" htmlFor="lastName">
@@ -359,12 +490,11 @@ const ProfileSection = () => {
                             id="lastName"
                             name="lastName"
                             type="text"
-                            className="input-field white bg-neutrals-7 cursor-not-allowed"
+                            className="input-field white"
                             value={formData.lastName}
-                            readOnly
-                            disabled
+                            onChange={handleInputChange}
+                            required
                         />
-                        <p className="text-xs text-neutrals-4 mt-1">Last name cannot be changed</p>
                     </div>
                 </div>
                 <div>
@@ -415,13 +545,29 @@ const ProfileSection = () => {
                         />
                     </div>
                 </div>
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end gap-3 pt-4">
+                    {hasChanges && (
+                        <button
+                            type="button"
+                            onClick={handleCancelChanges}
+                            disabled={saving || uploadingImage}
+                            className="btn btn-md btn-outline-secondary"
+                        >
+                            Cancel
+                        </button>
+                    )}
                     <button
                         className={`btn btn-md ${hasChanges && !emailError && !areaCodeError ? 'btn-primary' : 'btn-outline-primary'}`}
                         type="submit"
-                        disabled={saving || !hasChanges || emailError || areaCodeError}
+                        disabled={saving || uploadingImage || refreshing || !hasChanges || emailError || areaCodeError}
+                        style={{ position: 'relative' }}
                     >
-                        {saving ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
+                        {refreshing ? (
+                            <span className="flex items-center justify-center">
+                                <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
+                                Refreshing...
+                            </span>
+                        ) : saving ? (uploadingImage ? 'Uploading Image...' : 'Saving...') : hasChanges ? 'Save Changes' : 'No Changes'}
                     </button>
                 </div>
             </form>

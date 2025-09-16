@@ -14,6 +14,7 @@ const LoginSection = () => {
     const [updating, setUpdating] = useState(false);
     const [currentPasswordError, setCurrentPasswordError] = useState('');
 
+    // For now, use user_id 111 - CHANGE
     const userId = 111;
 
     const fetchUserData = async () => {
@@ -96,6 +97,14 @@ const LoginSection = () => {
         }
     };
 
+    const passwordMeetsRequirements = (password) => {
+        // At least 1 uppercase, 1 lowercase, 1 number, and 8+ characters
+        return /[A-Z]/.test(password) &&
+               /[a-z]/.test(password) &&
+               /[0-9]/.test(password) &&
+               password.length >= 8;
+    };
+
     const updatePassword = async () => {
         setCurrentPasswordError('');
 
@@ -104,8 +113,8 @@ const LoginSection = () => {
             return;
         }
 
-        if (passwordData.newPassword.length < 8) {
-            setCurrentPasswordError('New password must be at least 8 characters long');
+        if (!passwordMeetsRequirements(passwordData.newPassword)) {
+            setCurrentPasswordError('New password must be at least 8 characters long and containing at least 1 uppercase letter, 1 lowercase letter, and 1 number');
             return;
         }
 
@@ -153,7 +162,7 @@ const LoginSection = () => {
                 icon: 'success',
                 title: 'Password Updated',
                 text: 'Your password has been updated successfully.',
-                timer: 2000,
+                timer: 3000,
                 showConfirmButton: false,
             });
             await successfulUpdateNotification();
@@ -280,14 +289,14 @@ const LoginSection = () => {
                             id="newPassword"
                             name="newPassword"
                             type="password"
-                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError == 'New password must be at least 8 characters long' ? 'error' : ''}`}
+                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
                             value={passwordData.newPassword}
                             onChange={handlePasswordInputChange}
                             minLength="8"
                             required
                         />
                         <p className="text-sm text-neutrals-4 mt-1">
-                            Password must be at least 8 characters long
+                            Password must be at least 8 characters, contain 1 uppercase, 1 lowercase, and 1 number
                         </p>
                     </div>
                     <div>
@@ -298,12 +307,12 @@ const LoginSection = () => {
                             id="confirmPassword"
                             name="confirmPassword"
                             type="password"
-                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError == 'New password must be at least 8 characters long' ? 'error' : ''}`}
+                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
                             value={passwordData.confirmPassword}
                             onChange={handlePasswordInputChange}
                             required
                         />
-                        {(currentPasswordError == 'New passwords do not match' || currentPasswordError == 'New password must be at least 8 characters long' ) && (
+                        {(currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must')) && (
                             <div className="error-message">{currentPasswordError}</div>
                         )}
                     </div>
