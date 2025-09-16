@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { convertTo12Hr, generateScheduleRecords } from '../utils/scheduleGenerator';
 import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
@@ -176,6 +177,7 @@ const FormattedImportantInfo = ({ text, isMobile = false }) => {
 
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
+  const { user } = useAuth();
   const { formData, updateFormData } = useFormData();
   const [experienceData, setExperienceData] = useState(null);
   const [mediaData, setMediaData] = useState([]);
@@ -189,6 +191,7 @@ const ExperienceDetailsPage = () => {
   const [guests, setGuests] = useState(2);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showAllSchedules, setShowAllSchedules] = useState(false);
+  const [isWishlisted, setIsWishlisted] = useState(false);
   
   // Fetch experience data if ID is provided
   useEffect(() => {
@@ -196,6 +199,34 @@ const ExperienceDetailsPage = () => {
       fetchAllExperienceData();
     }
   }, [id]);
+
+  // Check if experience is in user's wishlist
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (user && id) {
+        try {
+          const userId = user?.id || user?.userId;
+          const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${userId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            }
+          });
+          
+          if (response.ok) {
+            const wishlistItems = await response.json();
+            const isInWishlist = wishlistItems.some(item => 
+              (item.experience?.experienceId || item.experience?.id) === parseInt(id)
+            );
+            setIsWishlisted(isInWishlist);
+          }
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+        }
+      }
+    };
+
+    checkWishlistStatus();
+  }, [user, id]);
   
   const fetchAllExperienceData = async () => {
     setLoading(true);
@@ -233,6 +264,57 @@ const ExperienceDetailsPage = () => {
 
   const closeSidebar = () => {
     setIsSidebarOpen(false);
+  };
+
+  const handleWishlistToggle = async (e) => {
+    e.stopPropagation();
+    
+    const newWishlistState = !isWishlisted;
+    setIsWishlisted(newWishlistState);
+    
+    try {
+      const experienceId = displayData?.experienceId || id;
+      const userId = user?.id || user?.userId;
+      
+      if (!userId) {
+        console.error('No user ID available for wishlist operation');
+        setIsWishlisted(!newWishlistState);
+        return;
+      }
+      
+      if (newWishlistState) {
+        // Add to wishlist
+        const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${userId}/experience/${experienceId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          }
+        });
+        
+        if (!response.ok) {
+          setIsWishlisted(!newWishlistState);
+          console.error('Failed to add to wishlist');
+        }
+      } else {
+        // Remove from wishlist
+        const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${userId}/experience/${experienceId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          }
+        });
+        
+        if (!response.ok) {
+          setIsWishlisted(!newWishlistState);
+          console.error('Failed to remove from wishlist');
+        }
+      }
+      
+    } catch (error) {
+      setIsWishlisted(!newWishlistState);
+      console.error('Error toggling wishlist:', error);
+    }
   };
 
   const openPhotoModal = (imageIndex) => {
@@ -277,45 +359,6 @@ const ExperienceDetailsPage = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showPhotoModal, showAllSchedules]);
 
-  // DEMO MODE - REMOVE THIS SECTION LATER
-  const loadDemoData = () => {
-    updateFormData({
-      title: "Tokyo: Shinjuku Food Tour (15 Dishes and 4 Eateries) - An Incredibly Long Experience Name That Should Test Our Text Wrapping Functionality",
-      location: "Shinjuku, Tokyo, Japan - Near the busiest train station in the world with millions of commuters daily",
-      shortDescription: "Discover authentic Japanese cuisine in Tokyo's most vibrant district through this extraordinarily comprehensive culinary adventure that will take you on a journey of taste and cultural discovery",
-      fullDescription: "Embark on a culinary journey through Tokyo's vibrant Shinjuku district. This immersive food tour takes you to 4 carefully selected local eateries where you'll sample 15 authentic Japanese dishes. From hidden ramen shops to traditional izakayas, discover the true flavors of Tokyo with our expert local guide who will share fascinating insights about Japanese food culture and history. This is an exceptionally long description with superlongwordsthatdonothavespacesbetweenthemandshouldbebrokenproperlybythebrowserrenderingenginetopreventoverflowissues.",
-      highlights: "Explore local eateries and street food culture with incredibly detailed explanations of each venue\nTry 15 different dishes across 4 authentic venues including superlongdishnameswithoutspaces\nExpert local guide with insider knowledge and superlongexpertiseinsomeveryspecializedculinaryareasofjapanesecooking\nSmall group experience (max 8 people) with personalized attention to dietary restrictions\nVegetarian and dietary restrictions accommodated with extensive menu customization options",
-      whatIncluded: "Food tastings, Expert guide, Cultural insights, Small group experience",
-      price: "89",
-      participantsAllowed: "8",
-      duration: "3",
-      importantInfo: "Please wear comfortable walking shoes and dress appropriately for the weather. Inform us of any food allergies or dietary restrictions when booking. The tour involves moderate walking and may not be suitable for those with mobility issues.",
-      coverPhotoUrl: "http://localhost:3845/assets/440aa07e1cf2f874a8ed58ab361e13b2e61750e5.png",
-      additionalPhotos: [
-        "http://localhost:3845/assets/d11f55d9454b6b35380c62dac08a81af17218673.png",
-        "http://localhost:3845/assets/3606e80fb39d00578b8b37878d6dc6a044ae9eb7.png",
-        "http://localhost:3845/assets/c70e08fe455bbc4a8db9dbe6c8a641cf5a0a013c.png"
-      ],
-      itinerary: [
-        { type: 'start', location: 'Shinjuku Station East Exit', time: '6:00 PM - Meet your guide' },
-        { type: 'stop', location: 'Omoide Yokocho (Memory Lane)', time: '6:15 PM - Traditional yakitori (30 min)' },
-        { type: 'stop', location: 'Local Ramen Shop', time: '7:00 PM - Authentic tonkotsu ramen (45 min)' },
-        { type: 'stop', location: 'Izakaya Restaurant', time: '8:00 PM - Sushi and sake tasting (45 min)' },
-        { type: 'end', location: 'Shinjuku Station', time: '9:00 PM - Tour ends' }
-      ],
-      schedules: generateScheduleRecords({
-        selectedDates: [], // No manually selected dates
-        blockedDates: [], // No blocked dates
-        recurringSchedule: {
-          enabled: true,
-          daysOfWeek: [1, 2, 4, 6], // Monday, Tuesday, Thursday, Saturday
-          timeSlots: ['10:00', '14:00', '18:00'], // 10am, 2pm, 6pm
-          maxGroupSize: 8
-        }
-      }, 3, 3) // 3-hour experience, generate 3 months of schedules
-    });
-  };
-  // END DEMO MODE SECTION
 
   // Build images array from media data (includes cover photo) or fallback to form data
   const images = mediaData && mediaData.length > 0
@@ -487,9 +530,9 @@ const ExperienceDetailsPage = () => {
                       <svg className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
-                      <span className="text-neutrals-2 font-medium text-sm">4.8</span>
+                      <span className="text-neutrals-2 font-medium text-sm">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
                     </div>
-                    <span className="text-neutrals-4 text-sm">(256 reviews)</span>
+                    <span className="text-neutrals-4 text-sm">({displayData.totalReviews|| 256} reviews)</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -503,30 +546,35 @@ const ExperienceDetailsPage = () => {
               
               {/* Action Buttons */}
               <div className="flex items-center gap-4">
-                {/* DEMO MODE BUTTON - REMOVE THIS LATER */}
-                {!displayData.title && (
-                  <button 
-                    onClick={loadDemoData}
-                    className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors text-sm font-bold"
-                  >
-                    🚀 DEMO MODE
-                  </button>
-                )}
-                {/* END DEMO MODE BUTTON */}
                 
                 <button className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7 transition-colors">
                   <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </button>
                 <button className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7 transition-colors">
                   <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
                   </svg>
-                </button>
-                <button className="p-2 border-2 border-neutrals-6 rounded-full bg-neutrals-8 shadow-lg hover:bg-neutrals-7 transition-colors">
-                  <svg className="w-6 h-6 text-primary-1" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                </button> 
+                <button 
+                  onClick={handleWishlistToggle}
+                  className={`p-2 border-2 border-neutrals-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
+                    isWishlisted ? 'bg-red-50 animate-pulse' : 'bg-neutrals-8 hover:bg-neutrals-7'
+                  }`}
+                >
+                  <svg 
+                    className="w-6 h-6 transition-all duration-300" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path 
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                      fill={isWishlisted ? "#FD7FE9" : "#B1B5C3"}
+                      className="transition-colors duration-300"
+                    />
                   </svg>
                 </button>
               </div>
@@ -802,7 +850,6 @@ const ExperienceDetailsPage = () => {
                   {/* Price Section */}
                   <div className="mb-6">
                     <div className="flex items-baseline gap-3 mb-2">
-                      <span className="text-lg text-neutrals-4 line-through">${(displayData.price || 89) + 20}</span>
                       <span className="text-3xl font-bold text-neutrals-2">${displayData.price || '89'}</span>
                       <span className="text-sm text-neutrals-4">/person</span>
                     </div>
@@ -810,8 +857,8 @@ const ExperienceDetailsPage = () => {
                       <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
-                      <span className="text-sm font-semibold text-neutrals-2">4.8</span>
-                      <span className="text-sm text-neutrals-4">(256 reviews)</span>
+                      <span className="text-sm font-semibold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
+                      <span className="text-sm text-neutrals-4">({displayData.totalReviews || 256} reviews)</span>
                     </div>
                     
                     {/* Duration Display */}
@@ -992,7 +1039,7 @@ const ExperienceDetailsPage = () => {
               </h2>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-4xl font-bold text-neutrals-2">4.8</span>
+                  <span className="text-4xl font-bold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
@@ -1001,7 +1048,7 @@ const ExperienceDetailsPage = () => {
                     ))}
                   </div>
                 </div>
-                <span className="text-neutrals-4">Based on 256 reviews</span>
+                <span className="text-neutrals-4">Based on {displayData.totalReviews || 256} reviews</span>
               </div>
             </div>
 
@@ -1077,12 +1124,12 @@ const ExperienceDetailsPage = () => {
                   {/* Stats Grid */}
                   <div className="grid grid-cols-3 gap-8 mb-6">
                     <div>
-                      <div className="text-2xl font-bold text-neutrals-1">223</div>
+                      <div className="text-2xl font-bold text-neutrals-1">{displayData.totalReviews || 223}</div>
                       <div className="text-neutrals-4 text-sm">Reviews</div>
                     </div>
                     <div>
                       <div className="flex items-center gap-1">
-                        <span className="text-2xl font-bold text-neutrals-1">4.87</span>
+                        <span className="text-2xl font-bold text-neutrals-1">{displayData.averageRating ? Number(displayData.averageRating).toFixed(2) : '4.87'}</span>
                         <svg className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
                           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                         </svg>
@@ -1125,7 +1172,7 @@ const ExperienceDetailsPage = () => {
                   <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                   </svg>
-                </button>
+                </button> 
                 <button className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7">
                   <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -1208,15 +1255,52 @@ const ExperienceDetailsPage = () => {
                 <svg className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                 </svg>
-                <span className="text-neutrals-2 font-medium text-sm">4.8</span>
+                <span className="text-neutrals-2 font-medium text-sm">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
               </div>
-              <span className="text-neutrals-4 text-sm">(256 reviews)</span>
+              <span className="text-neutrals-4 text-sm">({displayData.totalReviews || 256} reviews)</span>
             </div>
-            <div className="flex items-center gap-2 text-neutrals-3 text-sm mb-4">
-              <MapPin className="w-4 h-4" />
-              <span className="break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
-                {displayData.country || 'Country not specified'}
-              </span>
+            
+            {/* Mobile Action Buttons */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2 text-neutrals-3 text-sm">
+                <MapPin className="w-4 h-4" />
+                <span className="break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                  {displayData.country || 'Country not specified'}
+                </span>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button className="p-2 border border-neutrals-6 rounded-full bg-white shadow-sm hover:bg-neutrals-7 transition-colors">
+                  <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+                <button className="p-2 border border-neutrals-6 rounded-full bg-white shadow-sm hover:bg-neutrals-7 transition-colors">
+                  <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                  </svg>
+                </button> 
+                <button 
+                  onClick={handleWishlistToggle}
+                  className={`p-2 border border-neutrals-6 rounded-full shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105 active:scale-95 ${
+                    isWishlisted ? 'bg-red-50' : 'bg-white hover:bg-neutrals-7'
+                  }`}
+                >
+                  <svg 
+                    className="w-5 h-5 transition-all duration-300" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path 
+                      d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                      fill={isWishlisted ? "#FD7FE9" : "#B1B5C3"}
+                      className="transition-colors duration-300"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1390,7 +1474,6 @@ const ExperienceDetailsPage = () => {
               {/* Price Section */}
               <div className="mb-4">
                 <div className="flex items-baseline gap-2 mb-2">
-                  <span className="text-sm text-neutrals-4 line-through">${(displayData.price || 89) + 20}</span>
                   <span className="text-2xl font-bold text-neutrals-2">${displayData.price || '89'}</span>
                   <span className="text-xs text-neutrals-4">/person</span>
                 </div>
@@ -1398,8 +1481,8 @@ const ExperienceDetailsPage = () => {
                   <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                   </svg>
-                  <span className="text-xs font-semibold text-neutrals-2">4.8</span>
-                  <span className="text-xs text-neutrals-4">(256 reviews)</span>
+                  <span className="text-xs font-semibold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
+                  <span className="text-xs text-neutrals-4">({displayData.totalReviews || 256} reviews)</span>
                 </div>
                 
                 {/* Duration Display - Mobile */}
@@ -1540,7 +1623,7 @@ const ExperienceDetailsPage = () => {
               <h2 className="text-lg font-semibold text-neutrals-2 mb-3" style={{ fontFamily: 'Poppins' }}>Reviews</h2>
               <div className="flex items-center gap-3 mb-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-neutrals-2">4.8</span>
+                  <span className="text-2xl font-bold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
@@ -1549,7 +1632,7 @@ const ExperienceDetailsPage = () => {
                     ))}
                   </div>
                 </div>
-                <span className="text-neutrals-4 text-xs">Based on 256 reviews</span>
+                <span className="text-neutrals-4 text-xs">Based on {displayData.totalReviews || 256} reviews</span>
               </div>
               <div className="space-y-4">
                 {reviews.slice(0, 2).map((review) => (
@@ -1613,12 +1696,12 @@ const ExperienceDetailsPage = () => {
                 {/* Mobile Stats Grid */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="text-center">
-                    <div className="text-lg font-bold text-neutrals-1">223</div>
+                    <div className="text-lg font-bold text-neutrals-1">{displayData.totalReviews || 223}</div>
                     <div className="text-neutrals-4 text-xs">Reviews</div>
                   </div>
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-lg font-bold text-neutrals-1">4.87</span>
+                      <span className="text-lg font-bold text-neutrals-1">{displayData.averageRating ? Number(displayData.averageRating).toFixed(2) : '4.87'}</span>
                       <svg className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>

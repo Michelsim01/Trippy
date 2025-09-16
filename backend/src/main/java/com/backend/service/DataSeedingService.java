@@ -141,28 +141,28 @@ public class DataSeedingService {
             .filter(user -> user.getCanCreateExperiences() && user.getKycStatus() == KycStatus.APPROVED)
             .toList();
 
-        // Experience data
+        // Experience data: title, location, country, description, category, duration, price, participants, coverPhotoUrl
         Object[][] experienceData = {
-            {"Sunrise Hike in the Swiss Alps", "Zermatt, Switzerland", "Watch the sunrise from the Matterhorn base with professional mountain guide", ExperienceCategory.GUIDED_TOUR, 4.5, 150.00, 8, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4"},
-            {"Tokyo Street Food Adventure", "Tokyo, Japan", "Explore hidden local food spots in Shibuya and taste authentic Japanese cuisine", ExperienceCategory.DAYTRIP, 3.0, 85.00, 12, "https://images.unsplash.com/photo-1545892204-e37749721199"},
-            {"Bali Volcano Trekking", "Mount Batur, Bali", "Challenging trek to active volcano summit with sunrise breakfast", ExperienceCategory.ADVENTURE, 6.0, 120.00, 8, "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2"},
-            {"Venetian Mask Making Workshop", "Venice, Italy", "Learn traditional Venetian mask making from local artisan", ExperienceCategory.WORKSHOP, 2.5, 75.00, 6, "https://images.unsplash.com/photo-1505142468610-359e7d316be0"},
-            {"Maldives Coral Snorkeling", "Malé, Maldives", "Discover vibrant coral reefs and tropical fish in crystal clear waters", ExperienceCategory.WATER_ACTIVITY, 4.0, 95.00, 10, "https://images.unsplash.com/photo-1573843981267-be1999ff37cd"},
-            {"Barcelona Gothic Quarter Walking Tour", "Barcelona, Spain", "Explore medieval streets and hidden gems of the Gothic Quarter", ExperienceCategory.GUIDED_TOUR, 2.5, 35.00, 15, "https://images.unsplash.com/photo-1503377992-e1123f72969b"},
-            {"Tuscany Wine Tasting Day Trip", "Chianti, Italy", "Visit family-owned vineyards and taste premium Italian wines", ExperienceCategory.DAYTRIP, 8.0, 180.00, 8, "https://images.unsplash.com/photo-1506377295352-e3154d43ea9e"},
-            {"Rock Climbing in Joshua Tree", "California, USA", "Experience world-class rock climbing with certified instructor", ExperienceCategory.ADVENTURE, 6.0, 200.00, 4, "https://images.unsplash.com/photo-1544745630-6175b529b36e"},
-            {"Thai Cooking Class Experience", "Bangkok, Thailand", "Learn to cook authentic Thai dishes in traditional cooking school", ExperienceCategory.WORKSHOP, 4.0, 60.00, 10, "https://images.unsplash.com/photo-1559181567-c3190ca9959b"},
-            {"Norwegian Fjord Kayaking", "Geiranger, Norway", "Paddle through stunning fjords with dramatic waterfalls", ExperienceCategory.WATER_ACTIVITY, 5.0, 140.00, 6, "https://images.unsplash.com/photo-1469474968028-56623f02e42e"},
-            {"Marrakech Medina Cultural Tour", "Marrakech, Morocco", "Navigate the bustling souks and discover Berber culture", ExperienceCategory.GUIDED_TOUR, 3.0, 45.00, 12, "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e"},
-            {"Patagonia Hiking Expedition", "Torres del Paine, Chile", "Multi-day trek through pristine Patagonian wilderness", ExperienceCategory.ADVENTURE, 10.0, 350.00, 6, "https://images.unsplash.com/photo-1520637836862-4d197d17c23a"},
-            {"Pottery Making in Kyoto", "Kyoto, Japan", "Create traditional Japanese ceramics in historic pottery district", ExperienceCategory.WORKSHOP, 3.0, 90.00, 8, "https://images.unsplash.com/photo-1556911220-bff31c812dba"},
-            {"Great Barrier Reef Diving", "Cairns, Australia", "Certified scuba diving experience in the world's largest reef system", ExperienceCategory.WATER_ACTIVITY, 6.0, 250.00, 8, "https://images.unsplash.com/photo-1544551763-46a013bb70d5"},
-            {"Santorini Sunset Wine Tour", "Santorini, Greece", "Watch the famous sunset while tasting local Assyrtiko wines", ExperienceCategory.GUIDED_TOUR, 4.0, 110.00, 10, "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff"},
-            {"Amazon Rainforest Expedition", "Iquitos, Peru", "3-day jungle adventure with indigenous guide", ExperienceCategory.ADVENTURE, 72.0, 400.00, 8, "https://images.unsplash.com/photo-1556075798-4825dfaaf498"},
-            {"Iceland Northern Lights Tour", "Reykjavik, Iceland", "Chase the Aurora Borealis with professional photographer guide", ExperienceCategory.OTHERS, 6.0, 160.00, 12, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4"},
-            {"Cooking with Nonna in Rome", "Rome, Italy", "Learn family recipes from Roman grandmother in her home", ExperienceCategory.WORKSHOP, 3.5, 85.00, 6, "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f"},
-            {"Surfing Lessons in Costa Rica", "Tamarindo, Costa Rica", "Learn to surf on perfect beginner waves with certified instructor", ExperienceCategory.WATER_ACTIVITY, 3.0, 70.00, 8, "https://images.unsplash.com/photo-1502680390469-be75c86b636f"},
-            {"Sahara Desert Camel Trek", "Merzouga, Morocco", "Overnight camel expedition with Berber camp experience", ExperienceCategory.ADVENTURE, 18.0, 220.00, 6, "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9"}
+            {"Sunrise Hike in the Swiss Alps", "Zermatt", "Switzerland", "Watch the sunrise from the Matterhorn base with professional mountain guide", ExperienceCategory.GUIDED_TOUR, 4.5, 150.00, 8, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4"},
+            {"Tokyo Street Food Adventure", "Tokyo", "Japan", "Explore hidden local food spots in Shibuya and taste authentic Japanese cuisine", ExperienceCategory.DAYTRIP, 3.0, 85.00, 12, "https://images.unsplash.com/photo-1545892204-e37749721199"},
+            {"Bali Volcano Trekking", "Mount Batur", "Indonesia", "Challenging trek to active volcano summit with sunrise breakfast", ExperienceCategory.ADVENTURE, 6.0, 120.00, 8, "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2"},
+            {"Venetian Mask Making Workshop", "Venice", "Italy", "Learn traditional Venetian mask making from local artisan", ExperienceCategory.WORKSHOP, 2.5, 75.00, 6, "https://images.unsplash.com/photo-1505142468610-359e7d316be0"},
+            {"Maldives Coral Snorkeling", "Malé", "Maldives", "Discover vibrant coral reefs and tropical fish in crystal clear waters", ExperienceCategory.WATER_ACTIVITY, 4.0, 95.00, 10, "https://images.unsplash.com/photo-1573843981267-be1999ff37cd"},
+            {"Barcelona Gothic Quarter Walking Tour", "Barcelona", "Spain", "Explore medieval streets and hidden gems of the Gothic Quarter", ExperienceCategory.GUIDED_TOUR, 2.5, 35.00, 15, "https://images.unsplash.com/photo-1503377992-e1123f72969b"},
+            {"Tuscany Wine Tasting Day Trip", "Chianti", "Italy", "Visit family-owned vineyards and taste premium Italian wines", ExperienceCategory.DAYTRIP, 8.0, 180.00, 8, "https://images.unsplash.com/photo-1506377295352-e3154d43ea9e"},
+            {"Rock Climbing in Joshua Tree", "California", "United States", "Experience world-class rock climbing with certified instructor", ExperienceCategory.ADVENTURE, 6.0, 200.00, 4, "https://images.unsplash.com/photo-1544745630-6175b529b36e"},
+            {"Thai Cooking Class Experience", "Bangkok", "Thailand", "Learn to cook authentic Thai dishes in traditional cooking school", ExperienceCategory.WORKSHOP, 4.0, 60.00, 10, "https://images.unsplash.com/photo-1559181567-c3190ca9959b"},
+            {"Norwegian Fjord Kayaking", "Geiranger", "Norway", "Paddle through stunning fjords with dramatic waterfalls", ExperienceCategory.WATER_ACTIVITY, 5.0, 140.00, 6, "https://images.unsplash.com/photo-1469474968028-56623f02e42e"},
+            {"Marrakech Medina Cultural Tour", "Marrakech", "Morocco", "Navigate the bustling souks and discover Berber culture", ExperienceCategory.GUIDED_TOUR, 3.0, 45.00, 12, "https://images.unsplash.com/photo-1539650116574-75c0c6d73a0e"},
+            {"Patagonia Hiking Expedition", "Torres del Paine", "Chile", "Multi-day trek through pristine Patagonian wilderness", ExperienceCategory.ADVENTURE, 10.0, 350.00, 6, "https://images.unsplash.com/photo-1520637836862-4d197d17c23a"},
+            {"Pottery Making in Kyoto", "Kyoto", "Japan", "Create traditional Japanese ceramics in historic pottery district", ExperienceCategory.WORKSHOP, 3.0, 90.00, 8, "https://images.unsplash.com/photo-1556911220-bff31c812dba"},
+            {"Great Barrier Reef Diving", "Cairns", "Australia", "Certified scuba diving experience in the world's largest reef system", ExperienceCategory.WATER_ACTIVITY, 6.0, 250.00, 8, "https://images.unsplash.com/photo-1544551763-46a013bb70d5"},
+            {"Santorini Sunset Wine Tour", "Santorini", "Greece", "Watch the famous sunset while tasting local Assyrtiko wines", ExperienceCategory.GUIDED_TOUR, 4.0, 110.00, 10, "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff"},
+            {"Amazon Rainforest Expedition", "Iquitos", "Peru", "3-day jungle adventure with indigenous guide", ExperienceCategory.ADVENTURE, 72.0, 400.00, 8, "https://images.unsplash.com/photo-1556075798-4825dfaaf498"},
+            {"Iceland Northern Lights Tour", "Reykjavik", "Iceland", "Chase the Aurora Borealis with professional photographer guide", ExperienceCategory.OTHERS, 6.0, 160.00, 12, "https://images.unsplash.com/photo-1506905925346-21bda4d32df4"},
+            {"Cooking with Nonna in Rome", "Rome", "Italy", "Learn family recipes from Roman grandmother in her home", ExperienceCategory.WORKSHOP, 3.5, 85.00, 6, "https://images.unsplash.com/photo-1515003197210-e0cd71810b5f"},
+            {"Surfing Lessons in Costa Rica", "Tamarindo", "Costa Rica", "Learn to surf on perfect beginner waves with certified instructor", ExperienceCategory.WATER_ACTIVITY, 3.0, 70.00, 8, "https://images.unsplash.com/photo-1502680390469-be75c86b636f"},
+            {"Sahara Desert Camel Trek", "Merzouga", "Morocco", "Overnight camel expedition with Berber camp experience", ExperienceCategory.ADVENTURE, 18.0, 220.00, 6, "https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9"}
         };
 
         for (int i = 0; i < experienceData.length; i++) {
@@ -173,13 +173,14 @@ public class DataSeedingService {
             experience.setGuide(guide);
             experience.setTitle((String) data[0]);
             experience.setLocation((String) data[1]);
-            experience.setShortDescription((String) data[2]);
-            experience.setFullDescription(generateFullDescription((String) data[2]));
-            experience.setCategory((ExperienceCategory) data[3]);
-            experience.setDuration(BigDecimal.valueOf((Double) data[4]));
-            experience.setPrice(BigDecimal.valueOf((Double) data[5]));
-            experience.setParticipantsAllowed((Integer) data[6]);
-            experience.setCoverPhotoUrl((String) data[7]);
+            experience.setCountry((String) data[2]);
+            experience.setShortDescription((String) data[3]);
+            experience.setFullDescription(generateFullDescription((String) data[3]));
+            experience.setCategory((ExperienceCategory) data[4]);
+            experience.setDuration(BigDecimal.valueOf((Double) data[5]));
+            experience.setPrice(BigDecimal.valueOf((Double) data[6]));
+            experience.setParticipantsAllowed((Integer) data[7]);
+            experience.setCoverPhotoUrl((String) data[8]);
             experience.setStatus(ExperienceStatus.ACTIVE);
             experience.setAverageRating(BigDecimal.valueOf(4.0 + random.nextDouble() * 1.0)); // 4.0-5.0
             experience.setTotalReviews(random.nextInt(50) + 10); // 10-59 reviews
@@ -187,7 +188,7 @@ public class DataSeedingService {
             experience.setWhatIncluded(generateWhatIncluded());
             experience.setImportantInfo(generateImportantInfo());
             experience.setCancellationPolicy(generateCancellationPolicy());
-            experience.setTags(generateTags((ExperienceCategory) data[3]));
+            experience.setTags(generateTags((ExperienceCategory) data[4]));
             experience.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(90)));
             experience.setUpdatedAt(LocalDateTime.now());
             
