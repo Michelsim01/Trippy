@@ -123,7 +123,8 @@ const ExperienceCard = ({
                         className="absolute top-4 left-4 z-20 bg-white hover:bg-white rounded-full p-1 shadow"
                         onClick={e => {
                             e.stopPropagation();
-                            // link to edit experience - darryl
+                            const experienceId = experience?.experienceId || experience?.id;
+                            navigate(`/edit-experience/${experienceId}`);
                         }}
                         title="Edit Experience"
                     >
