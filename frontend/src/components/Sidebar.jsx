@@ -2,15 +2,26 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LogoutModal from './LogoutModal'
 import { useFormData } from '../contexts/FormDataContext'
+import { useAuth } from '../contexts/AuthContext'
 
 const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
     const navigate = useNavigate();
     const { clearFormData } = useFormData();
+    const { user } = useAuth();
+    console.log('Sidebar - User Object:', user);
+    const isKycApproved = user?.kycStatus === 'APPROVED';
+    
+    // Debug logging
+    console.log('Sidebar - User KYC Status:', user?.kycStatus, 'Is Approved:', isKycApproved);
     
     const navItems = [
         { id: 'blog', label: 'Blog' },
-        { id: 'create-experience', label: 'Create an Experience' },
+        // Conditionally include create-experience or kyc based on KYC status
+        ...(isKycApproved 
+            ? [{ id: 'create-experience', label: 'Create an Experience' }]
+            : [{ id: 'kyc-onboarding', label: 'Complete KYC to Create' }]
+        ),
         { id: 'calendar', label: 'Calendar' },
         { id: 'about', label: 'About' },
         { id: 'contact', label: 'Contact' },
@@ -19,6 +30,11 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const handleCreateExperienceClick = () => {
         clearFormData(); // Clear any existing form data
         navigate('/create-experience');
+        onClose(); // Close the sidebar
+    };
+
+    const handleKycClick = () => {
+        navigate('/kyc-onboarding');
         onClose(); // Close the sidebar
     };
 
@@ -84,6 +100,14 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
                                             onClick={handleCreateExperienceClick}
                                             className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left"
                                         >
+                                            {item.label}
+                                        </button>
+                                    ) : item.id === 'kyc-onboarding' ? (
+                                        <button
+                                            onClick={handleKycClick}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left flex items-center gap-2"
+                                        >
+                                            <span className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span>
                                             {item.label}
                                         </button>
                                     ) : (

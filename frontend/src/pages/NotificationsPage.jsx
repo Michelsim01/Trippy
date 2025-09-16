@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { Trash } from 'lucide-react';
@@ -14,14 +15,21 @@ const Spinner = () => (
 
 const NotificationsPage = () => {
     const navigate = useNavigate();
-    const { user, isAuthenticated, isLoading: authLoading, token } = useAuth();
+    const { isAuthenticated, isLoading: authLoading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('user');
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    const currentUserId = user?.id;
+    
+    // Use the notifications hook
+    const { 
+        notifications, 
+        loading, 
+        error, 
+        categorizedNotifications, 
+        markAsRead, 
+        deleteNotification,
+        getUnreadCountByCategory,
+        fetchNotifications
+    } = useNotifications();
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -29,126 +37,6 @@ const NotificationsPage = () => {
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
-    };
-
-    const fetchNotifications = async () => {
-        if (!currentUserId || !isAuthenticated || !token) {
-            setError('Authentication required to view notifications');
-            setLoading(false);
-            return;
-        }
-
-        try {
-            setLoading(true);
-            const response = await fetch(`http://localhost:8080/api/notifications/users/${currentUserId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    setError('Authentication required. Please log in again.');
-                    setTimeout(() => {
-                        navigate('/signin');
-                    }, 2000);
-                    return;
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const userNotifications = await response.json();
-            const sortedNotifications = userNotifications.sort((a, b) => {
-                if (a.isRead !== b.isRead) {
-                    return a.isRead ? 1 : -1;
-                }
-                return new Date(b.createdAt) - new Date(a.createdAt);
-            });
-            setNotifications(sortedNotifications);
-            setError(null);
-        } catch (err) {
-            console.error('Error fetching notifications:', err);
-            setError('Failed to load notifications. Please try again later.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const markAsRead = async (notificationId) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/notifications/${notificationId}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ...notifications.find(n => n.notificationId === notificationId),
-                    isRead: true
-                })
-            });
-
-            if (response.ok) {
-                setNotifications(prevNotifications =>
-                    prevNotifications.map(notification =>
-                        notification.notificationId === notificationId
-                            ? { ...notification, isRead: true }
-                            : notification
-                    )
-                );
-            }
-        } catch (err) {
-            console.error('Error marking notification as read:', err);
-        }
-    };
-
-    const deleteNotification = async (notificationId) => {
-        try {
-            const response = await fetch(`http://localhost:8080/api/notifications/${notificationId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            if (response.ok) {
-                setNotifications(prevNotifications =>
-                    prevNotifications.filter(notification => notification.notificationId !== notificationId)
-                );
-            }
-        } catch (err) {
-            console.error('Error deleting notification:', err);
-        }
-    };
-
-    // Handle authentication and data fetching
-    useEffect(() => {
-        // Don't fetch data if auth is still loading
-        if (authLoading) {
-            return;
-        }
-        
-        // If user is not authenticated, show error
-        if (!isAuthenticated) {
-            setError('You must be logged in to view notifications');
-            setLoading(false);
-            return;
-        }
-        
-        // If authenticated, fetch notifications
-        if (currentUserId) {
-            fetchNotifications();
-        }
-    }, [isAuthenticated, authLoading, currentUserId, token]);
-
-    // Categorize notifications based on the enum types (already sorted by date)
-    const categorizedNotifications = {
-        user: notifications.filter(n => n.type === 'PASSWORD_RESET' || n.type === 'UPDATE_INFO'),
-        tours: notifications.filter(n => n.type === 'BOOKING_CONFIRMATION' || n.type === 'REMINDER' || n.type === 'DISCOUNT'),
-        reviews: notifications.filter(n => n.type === 'REVIEW_REQUEST'),
-        messages: notifications.filter(n => n.type === 'MESSAGE')
     };
 
     const tabs = [
@@ -160,10 +48,6 @@ const NotificationsPage = () => {
 
     const hasUnread = (tabId) => {
         return categorizedNotifications[tabId]?.some(n => !n.isRead);
-    };
-
-    const getUnreadCount = (tabId) => {
-        return categorizedNotifications[tabId]?.filter(n => !n.isRead).length || 0;
     };
 
     const getTypeLabel = (type) => {
@@ -311,10 +195,10 @@ const NotificationsPage = () => {
                                                     }`}
                                             >
                                                 <span>{tab.label}</span>
-                                                {getUnreadCount(tab.id) > 0 && (
+                                                {getUnreadCountByCategory(tab.id) > 0 && (
                                                     <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
                                                         <span className="text-white text-xs font-medium">
-                                                            {getUnreadCount(tab.id)}
+                                                            {getUnreadCountByCategory(tab.id)}
                                                         </span>
                                                     </div>
                                                 )}
@@ -366,7 +250,7 @@ const NotificationsPage = () => {
                                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                                 )}
                                 <span className="text-white text-xs font-medium">
-                                    {getUnreadCount(tab.id)}
+                                    {getUnreadCountByCategory(tab.id)}
                                 </span>
                             </button>
                         ))}

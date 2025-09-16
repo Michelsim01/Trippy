@@ -4,7 +4,7 @@ import { userService } from '../../services/userService';
 import swal from 'sweetalert2';
 
 const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [loading, setLoading] = useState(!propUserData);
     const [error, setError] = useState(null);
     const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -55,10 +55,12 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
             };
             console.log('Notification payload:', notificationPayload);
             
+            const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:8080/api/notifications`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
                 body: JSON.stringify(notificationPayload),
             });
@@ -128,15 +130,19 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
             if (!response.success) {
                 throw new Error(response.error || 'Failed to change password');
             }
+            await successfulUpdateNotification();
 
             swal.fire({
                 icon: 'success',
-                title: 'Password Updated',
-                text: 'Your password has been updated successfully.',
-                timer: 3000,
-                showConfirmButton: false,
+                title: 'Password Updated Successfully',
+                text: 'Your password has been updated. For security purposes, you will be logged out and need to sign in again with your new password.',
+                showConfirmButton: true,
+                confirmButtonText: 'Understand',
+                allowOutsideClick: false,
+                allowEscapeKey: false
+            }).then(() => {
+                logout();
             });
-            await successfulUpdateNotification();
 
             setShowPasswordForm(false);
             setPasswordData({
@@ -145,11 +151,6 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 confirmPassword: ''
             });
             setCurrentPasswordError('');
-            
-            // Notify parent component if callback is provided
-            if (onUserDataUpdate && propUserData) {
-                onUserDataUpdate(propUserData); // Trigger refresh in parent
-            }
         } catch (err) {
             console.error('Error updating password:', err);
             swal.fire({

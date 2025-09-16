@@ -5,7 +5,7 @@ import { authService } from '../../services/authService';
 import swal from 'sweetalert2';
 
 const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [loading, setLoading] = useState(!propUserData);
     const [error, setError] = useState(null);
     const [saving, setSaving] = useState(false);
@@ -30,20 +30,20 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
         profilePicture: ''
     });
 
-    const userId = user?.id; 
-    
+    const userId = user?.id;
+
     const parsePhoneNumber = (fullPhoneNumber) => {
         if (!fullPhoneNumber) return { areaCode: '', phoneNumber: '' };
 
         const parts = fullPhoneNumber.split(' ');
-        
+
         if (parts.length === 2) {
             return {
                 areaCode: parts[0],
                 phoneNumber: parts[1]
             };
         }
-        
+
         return {
             areaCode: '+65',
             phoneNumber: fullPhoneNumber
@@ -60,7 +60,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 type: 'UPDATE_INFO',
             };
             console.log('Notification payload:', notificationPayload);
-            
+
             const token = localStorage.getItem('token');
             const response = await fetch(`http://localhost:8080/api/notifications`, {
                 method: 'POST',
@@ -70,20 +70,57 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 },
                 body: JSON.stringify(notificationPayload),
             });
-            
+
             console.log('Notification response status:', response.status);
-            
+
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error('Notification error response:', errorText);
                 throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
             }
-            
+
             const data = await response.json();
             console.log('Notification sent successfully:', data);
         }
         catch (error) {
             console.error('Error sending notification:', error);
+        }
+    };
+
+    const successfulEmailUpdateNotification = async () => {
+        try {
+            console.log('Sending email update notification for userId:', userId);
+            const notificationPayload = {
+                title: 'Email Updated',
+                message: 'Your email address has been updated successfully.',
+                userId: userId,
+                type: 'EMAIL_UPDATE',
+            };
+            console.log('Email notification payload:', notificationPayload);
+
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:8080/api/notifications`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(notificationPayload),
+            });
+
+            console.log('Email notification response status:', response.status);
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('Email notification error response:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            }
+
+            const data = await response.json();
+            console.log('Email notification sent successfully:', data);
+        }
+        catch (error) {
+            console.error('Error sending email notification:', error);
         }
     };
 
@@ -106,15 +143,15 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
 
     const processUserData = (data) => {
         const { areaCode, phoneNumber } = parsePhoneNumber(data.phoneNumber);
-        
+
         const userData = {
             firstName: data.firstName || '',
             lastName: data.lastName || '',
             email: data.email || '',
             areaCode: areaCode,
             phoneNumber: phoneNumber,
-            profilePicture: data.profileImageUrl ? 
-                (data.profileImageUrl.startsWith('http') ? data.profileImageUrl : `http://localhost:8080${data.profileImageUrl}`) 
+            profilePicture: data.profileImageUrl ?
+                (data.profileImageUrl.startsWith('http') ? data.profileImageUrl : `http://localhost:8080${data.profileImageUrl}`)
                 : ''
         };
         setFormData(userData);
@@ -139,7 +176,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
         try {
             setLoading(true);
             const response = await userService.getUserById(userId);
-            
+
             if (response.success) {
                 processUserData(response.data);
                 setError(null);
@@ -161,14 +198,14 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
             [name]: value
         };
         setFormData(updatedFormData);
-        
+
         if (name === 'email') {
             if (value && !validateEmail(value)) {
                 setEmailError('Please enter a valid email address');
             } else {
                 setEmailError('');
             }
-            
+
             // Check if email has changed from original to determine verification status
             if (value !== originalData.email) {
                 setNewEmailVerified(false);
@@ -180,7 +217,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setPendingVerificationEmail('');
             }
         }
-        
+
         if (name === 'areaCode') {
             if (value && !validateAreaCode(value)) {
                 setAreaCodeError('Area code must start with + followed by numbers (e.g., +65)');
@@ -188,7 +225,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setAreaCodeError('');
             }
         }
-        
+
         const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
         const hasChanged = editableFields.some(field => {
             if (field === 'areaCode' || field === 'phoneNumber') {
@@ -198,9 +235,9 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
             }
             return updatedFormData[field] !== originalData[field];
         });
-        
+
         const hasImageChanges = stagedImageFile !== null || stagedImageUrl !== null;
-        
+
         setHasChanges(hasChanged || hasImageChanges);
     };
 
@@ -234,7 +271,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setStagedImageFile(file);
                 setStagedImageUrl(URL.createObjectURL(file));
                 setError(null);
-                
+
                 const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
                 const hasFormChanges = editableFields.some(field => {
                     if (field === 'areaCode' || field === 'phoneNumber') {
@@ -244,7 +281,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     }
                     return formData[field] !== originalData[field];
                 });
-                setHasChanges(hasFormChanges || true); 
+                setHasChanges(hasFormChanges || true);
             }
         };
         fileInput.click();
@@ -263,7 +300,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
             if (result.isConfirmed) {
                 setStagedImageFile(null);
                 setStagedImageUrl('');
-                
+
                 const editableFields = ['firstName', 'lastName', 'email', 'areaCode', 'phoneNumber'];
                 const hasFormChanges = editableFields.some(field => {
                     if (field === 'areaCode' || field === 'phoneNumber') {
@@ -325,7 +362,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
         setSendingVerification(true);
         try {
             const result = await authService.sendVerificationEmail(formData.email);
-            
+
             if (result.success) {
                 setEmailVerificationSent(true);
                 setPendingVerificationEmail(formData.email);
@@ -362,7 +399,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
 
         try {
             const result = await authService.checkEmailVerification(pendingVerificationEmail);
-            
+
             if (result.success && result.data.emailVerified) {
                 setNewEmailVerified(true);
                 setEmailVerificationSent(false);
@@ -388,9 +425,9 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 text: 'Failed to check verification status. Please try again.',
             });
         }
-    };    const handleSubmit = async (e) => {
+    }; const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!formData.firstName) {
             setError('First name is required');
             return;
@@ -418,7 +455,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
         setSaving(true);
         try {
             let profileImageUrl = formData.profilePicture;
-        
+
             if (stagedImageFile) {
                 setUploadingImage(true);
                 const imageResponse = await userService.uploadProfilePicture(userId, stagedImageFile);
@@ -439,25 +476,27 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 email: formData.email,
                 phoneNumber: combinePhoneNumber(formData.areaCode, formData.phoneNumber)
             };
-            
+
             // Include profile image URL if it has changed
             if (profileImageUrl !== originalData.profilePicture) {
                 profileData.profileImageUrl = profileImageUrl;
             }
-            
+
             const response = await userService.updateUserDetails(userId, profileData);
-            
+
             if (response.success) {
                 const updatedData = response.data.user;
                 const { areaCode, phoneNumber } = parsePhoneNumber(updatedData.phoneNumber);
+                const emailChanged = formData.email !== originalData.email;
+
                 const newFormData = {
                     firstName: updatedData.firstName || '',
                     lastName: updatedData.lastName || '',
                     email: updatedData.email || '',
                     areaCode: areaCode,
                     phoneNumber: phoneNumber,
-                    profilePicture: updatedData.profileImageUrl ? 
-                        (updatedData.profileImageUrl.startsWith('http') ? updatedData.profileImageUrl : `http://localhost:8080${updatedData.profileImageUrl}`) 
+                    profilePicture: updatedData.profileImageUrl ?
+                        (updatedData.profileImageUrl.startsWith('http') ? updatedData.profileImageUrl : `http://localhost:8080${updatedData.profileImageUrl}`)
                         : formData.profilePicture
                 };
                 setFormData(newFormData);
@@ -468,27 +507,47 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setNewEmailVerified(true); // Reset email verification state
                 setEmailVerificationSent(false);
                 setPendingVerificationEmail('');
-                
+
                 // Update parent component with new user data
-                if (onUserDataUpdate) {
+                if (onUserDataUpdate && !emailChanged) {
                     onUserDataUpdate(updatedData);
                 }
-                
+
                 setEmailError('');
                 setAreaCodeError('');
                 setRefreshing(true);
-                await successfulUpdateNotification();
                 setError(null);
-                
-                // Show success message instead of reloading
-                swal.fire({
-                    icon: 'success',
-                    title: 'Profile Updated',
-                    text: 'Your profile has been updated successfully!',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
-                
+
+                if (emailChanged) {
+                    // Send email update notification
+                    await successfulEmailUpdateNotification();
+
+                    // Email was changed - log out user for security
+                    await swal.fire({
+                        icon: 'success',
+                        title: 'Email Updated Successfully',
+                        text: 'Your email has been updated. For security purposes, you will be logged out and need to sign in again with your new email address.',
+                        showConfirmButton: true,
+                        confirmButtonText: 'Understand',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false
+                    });
+
+                    logout();
+                } else {
+                    // Send regular profile update notification
+                    await successfulUpdateNotification();
+
+                    // Show success message instead of reloading
+                    swal.fire({
+                        icon: 'success',
+                        title: 'Profile Updated',
+                        text: 'Your profile has been updated successfully!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                }
+
                 setRefreshing(false);
             } else {
                 throw new Error(response.error || 'Failed to update profile');
@@ -556,7 +615,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     <div className="w-16 h-16 bg-[#FFBC99] rounded-full overflow-hidden">
                         <img
                             src={
-                                stagedImageUrl !== null 
+                                stagedImageUrl !== null
                                     ? (stagedImageUrl === '' ? `https://ui-avatars.com/api/?name=${(propUserData || {}).firstName || formData.firstName}+${(propUserData || {}).lastName || formData.lastName}&background=random` : stagedImageUrl)
                                     : (formData.profilePicture || `https://ui-avatars.com/api/?name=${(propUserData || {}).firstName || formData.firstName}+${(propUserData || {}).lastName || formData.lastName}&background=random`)
                             }
@@ -567,13 +626,13 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     <div className="flex-1">
                         <h3 className="font-medium text-neutrals-1">Profile Photo</h3>
                         <p className="text-sm text-neutrals-4">
-                            {stagedImageFile ? 'New image selected' : 
-                             stagedImageUrl === '' ? 'Image will be removed' : 
-                             'Update your profile picture'}
+                            {stagedImageFile ? 'New image selected' :
+                                stagedImageUrl === '' ? 'Image will be removed' :
+                                    'Update your profile picture'}
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <button 
+                        <button
                             type="button"
                             onClick={handleProfilePictureChange}
                             disabled={saving || uploadingImage}
@@ -582,7 +641,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                             {uploadingImage ? 'Uploading...' : 'Change'}
                         </button>
                         {(formData.profilePicture || stagedImageFile || stagedImageUrl) && (
-                            <button 
+                            <button
                                 type="button"
                                 onClick={handleRemoveProfilePicture}
                                 disabled={saving || uploadingImage}
@@ -662,7 +721,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                                 </div>
                             )}
                         </div>
-                        
+
                         {/* Email verification status messages */}
                         {formData.email !== originalData.email && formData.email && validateEmail(formData.email) && (
                             <div className="space-y-1">

@@ -190,8 +190,7 @@ const ProfileCard = ({
                     <button 
                         className="btn btn-primary btn-md gap-2"
                         onClick={() => {
-                            // TODO: Implement profile editing functionality
-                            console.log('Edit Profile clicked');
+                            window.location.href = '/settings';
                         }}
                     >
                         <Edit className="w-4 h-4" />
