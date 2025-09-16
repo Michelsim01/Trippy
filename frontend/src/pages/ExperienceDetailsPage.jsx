@@ -32,6 +32,19 @@ const parseImportantInfo = (text) => {
   return elements;
 };
 
+// Helper function to convert category enum to display name
+const getCategoryDisplayName = (enumValue) => {
+  const categoryDisplayMap = {
+    'GUIDED_TOUR': 'Guided Tour',
+    'DAYTRIP': 'Day Trip',
+    'ADVENTURE': 'Adventure & Sports',
+    'WORKSHOP': 'Workshop & Classes',
+    'WATER_ACTIVITY': 'Water Activities',
+    'OTHERS': 'Others'
+  };
+  return categoryDisplayMap[enumValue] || enumValue;
+};
+
 // Helper function to format schedule display
 const formatScheduleDisplay = (schedule) => {
   if (!schedule) {
@@ -460,7 +473,7 @@ const ExperienceDetailsPage = () => {
                 {displayData.category && (
                   <div className="mb-4">
                     <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-primary-1 text-white shadow-sm">
-                      {displayData.category}
+                      {getCategoryDisplayName(displayData.category)}
                     </span>
                   </div>
                 )}
@@ -1182,7 +1195,7 @@ const ExperienceDetailsPage = () => {
             {displayData.category && (
               <div className="mb-3">
                 <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-primary-1 text-white shadow-sm">
-                  {displayData.category}
+                  {getCategoryDisplayName(displayData.category)}
                 </span>
               </div>
             )}
