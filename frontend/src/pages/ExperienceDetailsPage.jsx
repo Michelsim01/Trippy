@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
-import { convertTo12Hr, generateScheduleRecords, isMultiDayTour, getTourDurationInDays } from '../utils/scheduleGenerator';
+import { convertTo12Hr, generateScheduleRecords } from '../utils/scheduleGenerator';
 import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -32,74 +32,106 @@ const parseImportantInfo = (text) => {
   return elements;
 };
 
-// Helper function to format schedule display for multi-day tours
-const formatScheduleDisplay = (schedule, experienceStartDateTime, experienceEndDateTime) => {
-  if (!schedule || !experienceStartDateTime || !experienceEndDateTime) {
+// Helper function to format schedule display
+const formatScheduleDisplay = (schedule) => {
+  if (!schedule) {
     return {
-      dateText: new Date(schedule.date).toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
+      dateText: 'Invalid Date',
+      timeText: 'Invalid Time'
+    };
+  }
+
+  // Use the schedule's startDateTime and endDateTime for formatting
+  if (schedule.startDateTime && schedule.endDateTime) {
+    const startDateTime = new Date(schedule.startDateTime);
+    const endDateTime = new Date(schedule.endDateTime);
+
+    // Check if it's a multi-day schedule (different days)
+    const isMultiDay = startDateTime.toDateString() !== endDateTime.toDateString();
+
+    if (isMultiDay) {
+      const startDateStr = startDateTime.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short'
+      });
+      const endDateStr = endDateTime.toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short'
+      });
+
+      return {
+        dateText: `${startDateStr} - ${endDateStr}`,
+        timeText: `${startDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${endDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+      };
+    } else {
+      return {
+        dateText: startDateTime.toLocaleDateString('en-US', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long'
+        }),
+        timeText: `${startDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${endDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
+      };
+    }
+  }
+
+  // Fallback to old format if startDateTime/endDateTime not available but date/startTime/endTime are
+  if (schedule.date && schedule.startTime && schedule.endTime) {
+    return {
+      dateText: new Date(schedule.date).toLocaleDateString('en-US', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
       }),
       timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
     };
   }
 
-  const isMultiDay = isMultiDayTour(experienceStartDateTime, experienceEndDateTime);
-  
-  if (isMultiDay) {
-    const tourDurationDays = getTourDurationInDays(experienceStartDateTime, experienceEndDateTime);
-    const startDate = new Date(schedule.date);
-    const endDate = new Date(startDate);
-    endDate.setDate(startDate.getDate() + tourDurationDays - 1);
-    
-    const startDateStr = startDate.toLocaleDateString('en-US', { 
-      day: 'numeric', 
-      month: 'short' 
-    });
-    const endDateStr = endDate.toLocaleDateString('en-US', { 
-      day: 'numeric', 
-      month: 'short' 
-    });
-    
-    return {
-      dateText: `${startDateStr} - ${endDateStr}`,
-      timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
-    };
-  } else {
-    return {
-      dateText: new Date(schedule.date).toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        day: 'numeric', 
-        month: 'long' 
-      }),
-      timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
-    };
-  }
+  return {
+    dateText: 'Invalid Date',
+    timeText: 'Invalid Time'
+  };
 };
 
-// Helper function to format duration display
-const formatDuration = (startDateTime, endDateTime) => {
-  if (!startDateTime || !endDateTime) return null;
-  
-  const isMultiDay = isMultiDayTour(startDateTime, endDateTime);
-  
-  if (isMultiDay) {
-    const days = getTourDurationInDays(startDateTime, endDateTime);
-    return `${days} Day${days > 1 ? 's' : ''}`;
-  } else {
-    // Calculate hours for single day
-    const start = new Date(startDateTime);
-    const end = new Date(endDateTime);
-    const durationMs = end - start;
-    const hours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10; // Round to 1 decimal
-    
-    if (hours === Math.floor(hours)) {
+// Helper function to format duration display using experience duration or schedules
+const formatDuration = (experienceData, schedulesData) => {
+  // First try to use the experience duration field if available
+  if (experienceData && experienceData.duration) {
+    const hours = parseFloat(experienceData.duration);
+    if (hours >= 24) {
+      const days = Math.floor(hours / 24);
+      return `${days} Day${days > 1 ? 's' : ''}`;
+    } else if (hours === Math.floor(hours)) {
       return `${hours} Hour${hours > 1 ? 's' : ''}`;
     } else {
       return `${hours} Hours`;
     }
   }
+
+  // Fallback: calculate from schedules if available
+  if (schedulesData && schedulesData.length > 0) {
+    const firstSchedule = schedulesData[0];
+    const lastSchedule = schedulesData[schedulesData.length - 1];
+
+    if (firstSchedule.startDateTime && lastSchedule.endDateTime) {
+      const start = new Date(firstSchedule.startDateTime);
+      const end = new Date(lastSchedule.endDateTime);
+      const durationMs = end - start;
+      const hours = Math.round((durationMs / (1000 * 60 * 60)) * 10) / 10;
+
+      if (hours >= 24) {
+        const days = Math.floor(hours / 24);
+        return `${days} Day${days > 1 ? 's' : ''}`;
+      } else if (hours === Math.floor(hours)) {
+        return `${hours} Hour${hours > 1 ? 's' : ''}`;
+      } else {
+        return `${hours} Hours`;
+      }
+    }
+  }
+
+  // Default fallback
+  return null;
 };
 
 // Component to render formatted important info
@@ -770,11 +802,11 @@ const ExperienceDetailsPage = () => {
                     </div>
                     
                     {/* Duration Display */}
-                    {formatDuration(displayData.startDateTime, displayData.endDateTime) && (
+                    {formatDuration(displayData, schedulesData) && (
                       <div className="flex items-center gap-2 mt-2">
                         <Clock className="w-4 h-4 text-neutrals-4" />
                         <span className="text-sm text-neutrals-4">
-                          {formatDuration(displayData.startDateTime, displayData.endDateTime)}
+                          {formatDuration(displayData, schedulesData)}
                         </span>
                       </div>
                     )}
@@ -796,7 +828,7 @@ const ExperienceDetailsPage = () => {
                           <div className="flex justify-between items-center relative z-10">
                             <div>
                               {(() => {
-                                const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                                const formattedSchedule = formatScheduleDisplay(schedule);
                                 return (
                                   <>
                                     <div className={`font-semibold ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
@@ -1358,11 +1390,11 @@ const ExperienceDetailsPage = () => {
                 </div>
                 
                 {/* Duration Display - Mobile */}
-                {formatDuration(displayData.startDateTime, displayData.endDateTime) && (
+                {formatDuration(displayData, schedulesData) && (
                   <div className="flex items-center gap-2 mt-2">
                     <Clock className="w-4 h-4 text-neutrals-4" />
                     <span className="text-xs text-neutrals-4">
-                      {formatDuration(displayData.startDateTime, displayData.endDateTime)}
+                      {formatDuration(displayData, schedulesData)}
                     </span>
                   </div>
                 )}
@@ -1387,7 +1419,7 @@ const ExperienceDetailsPage = () => {
                       <div className="flex justify-between items-center relative z-10">
                         <div>
                           {(() => {
-                            const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                            const formattedSchedule = formatScheduleDisplay(schedule);
                             return (
                               <>
                                 <div className={`font-semibold text-xs ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
@@ -1694,7 +1726,7 @@ const ExperienceDetailsPage = () => {
                       <div className="flex justify-between items-center">
                         <div>
                           {(() => {
-                            const formattedSchedule = formatScheduleDisplay(schedule, displayData.startDateTime, displayData.endDateTime);
+                            const formattedSchedule = formatScheduleDisplay(schedule);
                             return (
                               <>
                                 <div className={`font-semibold ${selectedSchedule === index ? 'text-primary-1' : 'text-neutrals-2'}`}>
