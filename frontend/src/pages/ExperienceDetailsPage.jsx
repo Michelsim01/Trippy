@@ -249,29 +249,39 @@ const ExperienceDetailsPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch experience data first
-      const experience = await experienceApi.getExperienceById(id);
-      
-      // Try to fetch media, but handle errors gracefully
-      let media = [];
-      try {
-        media = await experienceApi.getExperienceMedia(id);
-      } catch (mediaError) {
-        console.warn('Failed to fetch experience media, using fallback:', mediaError.message);
-        // Use fallback images if media fetch fails
-        media = [{
-          mediaId: 1,
-          mediaUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
-          mediaType: "IMAGE",
-          caption: "Experience Image",
-          displayOrder: 1
-        }];
-      }
-      
-      // Fetch other data in parallel
-      const [itineraries, schedules] = await Promise.all([
-        experienceApi.getExperienceItineraries(id).catch(() => []),
-        experienceApi.getExperienceSchedules(id).catch(() => [])
+      // Fetch all data in parallel using direct fetch calls like WishlistPage
+      const [experienceResponse, mediaResponse, itinerariesResponse, schedulesResponse] = await Promise.all([
+        fetch(`http://localhost:8080/api/experiences/${id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`http://localhost:8080/api/experiences/${id}/media`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`http://localhost:8080/api/experiences/${id}/itineraries`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }),
+        fetch(`http://localhost:8080/api/experiences/${id}/schedules`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      ]);
+
+      const [experience, media, itineraries, schedules] = await Promise.all([
+        experienceResponse.ok ? experienceResponse.json() : null,
+        mediaResponse.ok ? mediaResponse.json() : [],
+        itinerariesResponse.ok ? itinerariesResponse.json() : [],
+        schedulesResponse.ok ? schedulesResponse.json() : []
       ]);
       
       setExperienceData(experience);
