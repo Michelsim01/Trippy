@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { MapPin, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -107,6 +107,22 @@ const formatScheduleDisplay = (schedule) => {
   };
 };
 
+// Helper function to get guide initials
+const getGuideInitials = (guide) => {
+  if (!guide || !guide.firstName) return 'G';
+  const firstName = guide.firstName || '';
+  const lastName = guide.lastName || '';
+  return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase();
+};
+
+// Helper function to get guide full name
+const getGuideFullName = (guide) => {
+  if (!guide) return 'Guide';
+  const firstName = guide.firstName || '';
+  const lastName = guide.lastName || '';
+  return `${firstName} ${lastName}`.trim() || 'Guide';
+};
+
 // Helper function to format duration display using experience duration or schedules
 const formatDuration = (experienceData, schedulesData) => {
   // First try to use the experience duration field if available
@@ -178,6 +194,7 @@ const FormattedImportantInfo = ({ text, isMobile = false }) => {
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { formData, updateFormData } = useFormData();
   const [experienceData, setExperienceData] = useState(null);
   const [mediaData, setMediaData] = useState([]);
@@ -314,6 +331,14 @@ const ExperienceDetailsPage = () => {
     } catch (error) {
       setIsWishlisted(!newWishlistState);
       console.error('Error toggling wishlist:', error);
+    }
+  };
+
+  const handleGuideProfileClick = () => {
+    if (displayData.guide && displayData.guide.userId) {
+      navigate(`/profile/${displayData.guide.userId}`);
+    } else {
+      alert('Guide profile is not available');
     }
   };
 
@@ -1090,36 +1115,47 @@ const ExperienceDetailsPage = () => {
 
           {/* About your host */}
           <div className="max-w-7xl mx-auto px-10 mt-16">
-            <h2 className="text-2xl font-semibold text-neutrals-2 mb-8" style={{ fontFamily: 'Poppins' }}>
-              About your host
-            </h2>
-            <div className="bg-white border border-neutrals-6 rounded-2xl p-8">
-              <div className="flex items-start gap-6">
-                {/* Host Profile Photo */}
-                <div 
-                  className="cursor-pointer group"
-                  onClick={() => alert('Guide profile coming soon!')}
-                >
-                  <div className="w-20 h-20 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 transition-opacity">
-                    <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
-                      <span className="text-white font-bold text-2xl">SH</span>
+              <h2 className="text-2xl font-semibold text-neutrals-2 mb-8" style={{ fontFamily: 'Poppins' }}>
+                About your host
+              </h2>
+              <div className="bg-white border border-neutrals-6 rounded-2xl p-8">
+                <div className="flex items-start gap-6">
+                  {/* Host Profile Photo */}
+                  <div 
+                    className="cursor-pointer group"
+                    onClick={handleGuideProfileClick}
+                    title="View guide profile"
+                  >
+                    <div className="w-20 h-20 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 group-hover:scale-105 transition-all duration-200 shadow-md group-hover:shadow-lg">
+                      {displayData.guide && displayData.guide.profileImageUrl ? (
+                        <img 
+                          src={displayData.guide.profileImageUrl} 
+                          alt={getGuideFullName(displayData.guide)}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
+                          <span className="text-white font-bold text-2xl">
+                            {getGuideInitials(displayData.guide)}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                {/* Host Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-4">
-                    <h3 className="text-2xl font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
-                      Siri Homes
-                    </h3>
-                    {/* Verification Badge */}
-                    <div className="w-7 h-7 bg-primary-1 rounded-full flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                  {/* Host Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <h3 className="text-2xl font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
+                        {getGuideFullName(displayData.guide)}
+                      </h3>
+                      {/* Verification Badge */}
+                      <div className="w-7 h-7 bg-primary-1 rounded-full flex items-center justify-center">
+                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
 
                   {/* Stats Grid */}
                   <div className="grid grid-cols-3 gap-8 mb-6">
@@ -1218,7 +1254,7 @@ const ExperienceDetailsPage = () => {
             </div>
           </div>
 
-        </div>
+          </div>
 
           <Footer />
         </div>
@@ -1660,38 +1696,49 @@ const ExperienceDetailsPage = () => {
 
             {/* Mobile About your host */}
             <div className="mt-8">
-              <h2 className="text-lg font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
-                About your host
-              </h2>
-              <div className="bg-white border border-neutrals-6 rounded-2xl p-6">
-                <div className="flex items-start gap-4 mb-6">
-                  {/* Mobile Host Profile Photo */}
-                  <div 
-                    className="cursor-pointer group"
-                    onClick={() => alert('Guide profile coming soon!')}
-                  >
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 transition-opacity">
-                      <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">SH</span>
+                <h2 className="text-lg font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
+                  About your host
+                </h2>
+                <div className="bg-white border border-neutrals-6 rounded-2xl p-6">
+                  <div className="flex items-start gap-4 mb-6">
+                    {/* Mobile Host Profile Photo */}
+                    <div 
+                      className="cursor-pointer group"
+                      onClick={handleGuideProfileClick}
+                      title="View guide profile"
+                    >
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 group-hover:scale-105 transition-all duration-200 shadow-md group-hover:shadow-lg">
+                        {displayData.guide && displayData.guide.profileImageUrl ? (
+                          <img 
+                            src={displayData.guide.profileImageUrl} 
+                            alt={getGuideFullName(displayData.guide)}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
+                            <span className="text-white font-bold text-lg">
+                              {getGuideInitials(displayData.guide)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Mobile Host Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="text-lg font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
-                        Siri Homes
-                      </h3>
-                      {/* Mobile Verification Badge */}
-                      <div className="w-5 h-5 bg-primary-1 rounded-full flex items-center justify-center">
-                        <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                    {/* Mobile Host Info */}
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
+                          {getGuideFullName(displayData.guide)}
+                        </h3>
+                        {/* Mobile Verification Badge */}
+                        <div className="w-5 h-5 bg-primary-1 rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
                 {/* Mobile Stats Grid */}
                 <div className="grid grid-cols-3 gap-4 mb-4">
