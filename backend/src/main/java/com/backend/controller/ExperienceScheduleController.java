@@ -5,6 +5,9 @@ import com.backend.repository.ExperienceScheduleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/experience-schedules")
@@ -20,6 +23,22 @@ public class ExperienceScheduleController {
     @GetMapping("/{id}")
     public ExperienceSchedule getExperienceScheduleById(@PathVariable Long id) {
         return experienceScheduleRepository.findById(id).orElse(null);
+    }
+
+    @GetMapping("/experience/{experienceId}")
+    public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long experienceId) {
+        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(experienceId);
+        
+        return schedules.stream().map(schedule -> {
+            Map<String, Object> scheduleMap = new HashMap<>();
+            scheduleMap.put("scheduleId", schedule.getScheduleId());
+            scheduleMap.put("startDate", schedule.getStartDate());
+            scheduleMap.put("endDate", schedule.getEndDate());
+            scheduleMap.put("availableSpots", schedule.getAvailableSpots());
+            scheduleMap.put("isAvailable", schedule.getIsAvailable());
+            scheduleMap.put("createdAt", schedule.getCreatedAt());
+            return scheduleMap;
+        }).collect(Collectors.toList());
     }
 
     @PostMapping

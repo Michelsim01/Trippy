@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -32,18 +32,61 @@ const WelcomeBanner = () => {
     );
 };
 
-
-const DiscoverWeekly = () => {
-    const experiences = [
-        { id: 1, title: "Venice, Rome & Milan", location: "Karineside", originalPrice: 699, salePrice: 548, rating: 4.9 },
-        { id: 2, title: "Paris & Lyon Adventure", location: "Franceville", originalPrice: 799, salePrice: 629, rating: 4.8 },
-        { id: 3, title: "Tokyo City Explorer", location: "Shibuya", originalPrice: 899, salePrice: 749, rating: 4.7 },
-        { id: 4, title: "Barcelona Highlights", location: "Catalunya", originalPrice: 599, salePrice: 459, rating: 4.6 },
-        { id: 5, title: "Swiss Alps Journey", location: "Interlaken", originalPrice: 999, salePrice: 819, rating: 4.9 },
-        { id: 6, title: "Greek Island Hopping", location: "Santorini", originalPrice: 849, salePrice: 679, rating: 4.8 },
-        { id: 7, title: "Morocco Desert Trek", location: "Marrakech", originalPrice: 749, salePrice: 599, rating: 4.5 },
-        { id: 8, title: "Northern Lights", location: "Reykjavik", originalPrice: 1199, salePrice: 999, rating: 4.9 },
+const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange }) => {
+    // Fallback dummy data in case API fails
+    const fallbackExperiences = [
+        { 
+            experienceId: 1,
+            title: "Venice, Rome & Milan", 
+            location: "Karineside", 
+            originalPrice: 699, 
+            price: 548, 
+            rating: 4.9,
+            imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "GUIDED_TOUR"
+        },
+        { 
+            experienceId: 2,
+            title: "Paris & Lyon Adventure", 
+            location: "Franceville", 
+            originalPrice: 799, 
+            price: 629, 
+            rating: 4.8,
+            imageUrl: "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "ADVENTURE"
+        },
+        { 
+            experienceId: 3,
+            title: "Tokyo City Explorer", 
+            location: "Shibuya", 
+            originalPrice: 899, 
+            price: 749, 
+            rating: 4.9,
+            imageUrl: "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "DAYTRIP"
+        },
+        { 
+            experienceId: 4,
+            title: "Barcelona Highlights", 
+            location: "Catalunya", 
+            originalPrice: 599, 
+            price: 459, 
+            rating: 4.7,
+            imageUrl: "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            category: "WORKSHOP"
+        }
     ];
+
+    // Use real data if available, otherwise fallback to dummy data
+    const allExperiences = experiences && experiences.length > 0 ? experiences : fallbackExperiences;
+
+    // Filter experiences by category
+    const displayExperiences = selectedCategory === 'ALL' 
+        ? allExperiences 
+        : allExperiences.filter(exp => exp.category === selectedCategory);
+
+    // Create a set of wishlisted experience IDs for quick lookup
+    const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
 
     return (
         <div className="bg-neutrals-8 py-10 px-8 w-full">
@@ -60,70 +103,71 @@ const DiscoverWeekly = () => {
 
                 {/* Filter */}
                 <div className="flex items-center justify-center mb-10">
-                    <div className="flex items-center gap-4">
-                        <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">All Experiences</span>
-                        </div>
-                        <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">Adventure</span>
-                        </div>
-                        <div className="text-neutrals-4 px-4 py-1.5 rounded-full">
-                            <span className="text-[14px] font-bold">Culture</span>
-                        </div>
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                        {[
+                            { value: 'ALL', label: 'All Experiences' },
+                            { value: 'GUIDED_TOUR', label: 'Guided Tour' },
+                            { value: 'DAYTRIP', label: 'Day Trip' },
+                            { value: 'ADVENTURE', label: 'Adventure' },
+                            { value: 'WORKSHOP', label: 'Workshop' },
+                            { value: 'WATER_ACTIVITY', label: 'Water Activity' },
+                            { value: 'OTHERS', label: 'Others' }
+                        ].map((category) => (
+                            <button
+                                key={category.value}
+                                onClick={() => onCategoryChange(category.value)}
+                                className={`px-4 py-1.5 rounded-full transition-colors ${
+                                    selectedCategory === category.value
+                                        ? 'bg-neutrals-1 text-white'
+                                        : 'text-neutrals-4 hover:text-neutrals-1'
+                                }`}
+                            >
+                                <span className="text-[14px] font-bold">{category.label}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
 
+                {/* Loading State */}
+                {loading && (
+                    <div className="text-center py-10">
+                        <p className="text-lg text-gray-600">Loading experiences...</p>
+                    </div>
+                )}
+
+                {/* Error State */}
+                {error && (
+                    <div className="text-center py-10 text-red-600">
+                        <p className="text-lg font-semibold">Error loading experiences: {error.message}</p>
+                        <p className="text-md text-gray-600">Displaying sample data as a fallback.</p>
+                    </div>
+                )}
+
                 {/* Desktop Grid (hidden on mobile) */}
                 <div className="hidden lg:flex lg:flex-wrap lg:justify-center lg:gap-6 mb-10 w-full max-w-[1200px]">
-                    {experiences.map((experience, index) => {
-                        // Transform data for ExperienceCard
-                        const transformedExperience = {
-                            id: experience.id,
-                            title: experience.title,
-                            location: experience.location,
-                            price: experience.salePrice,
-                            originalPrice: experience.originalPrice,
-                            rating: experience.rating,
-                            imageUrl: experienceImage,
-                            dateRange: "Tue, Jul 20 - Fri, Jul 23"
-                        };
-                        
-                        return (
-                            <ExperienceCard 
-                                key={index} 
-                                experience={transformedExperience}
-                                showWishlistButton={true}
-                                variant="default"
-                            />
-                        );
-                    })}
+                    {displayExperiences.map((experience) => (
+                        <ExperienceCard
+                            key={experience.experienceId || experience.id}
+                            experience={experience}
+                            showWishlistButton={true}
+                            isInWishlist={wishlistedIds.has(experience.experienceId || experience.id)}
+                            schedules={schedules[experience.experienceId] || []}
+                        />
+                    ))}
                 </div>
 
                 {/* Mobile Horizontal Scroll */}
                 <div className="lg:hidden mb-10 w-full">
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
-                        {experiences.slice(0, 4).map((experience, index) => {
-                            // Transform data for ExperienceCard
-                            const transformedExperience = {
-                                id: experience.id,
-                                title: experience.title,
-                                location: experience.location,
-                                price: experience.salePrice,
-                                originalPrice: experience.originalPrice,
-                                rating: experience.rating,
-                                imageUrl: experienceImage,
-                                dateRange: "Tue, Jul 20 - Fri, Jul 23"
-                            };
-                            
-                            return (
-                                <ExperienceCard 
-                                    key={index} 
-                                    experience={transformedExperience}
-                                    showWishlistButton={true}
-                                    variant="default"
-                                />
-                            );
-                        })}
+                        {displayExperiences.slice(0, 4).map((experience) => (
+                            <ExperienceCard
+                                key={experience.experienceId || experience.id}
+                                experience={experience}
+                                showWishlistButton={true}
+                                isInWishlist={wishlistedIds.has(experience.experienceId || experience.id)}
+                                schedules={schedules[experience.experienceId] || []}
+                            />
+                        ))}
                     </div>
                 </div>
 
@@ -147,6 +191,94 @@ const DiscoverWeekly = () => {
 
 const HomePage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [experiences, setExperiences] = useState([]);
+    const [wishlistItems, setWishlistItems] = useState([]);
+    const [schedules, setSchedules] = useState({}); // Store schedules by experience ID
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+                
+                // Fetch experiences and wishlist items in parallel
+                const [experiencesResponse, wishlistResponse] = await Promise.all([
+                    fetch('http://localhost:8080/api/experiences'),
+                    fetch('http://localhost:8080/api/wishlist-items/user/1') // Using user ID 1 for now
+                ]);
+
+                if (!experiencesResponse.ok) {
+                    throw new Error(`Failed to fetch experiences: ${experiencesResponse.status}`);
+                }
+
+                const experiencesData = await experiencesResponse.json();
+                
+                // Fetch schedule data for all experiences
+                const schedulePromises = experiencesData.map(exp => 
+                    fetch(`http://localhost:8080/api/experiences/${exp.experienceId}/schedules`)
+                        .then(response => response.ok ? response.json() : [])
+                        .catch(() => []) // If schedule fetch fails, use empty array
+                );
+                
+                const schedulesData = await Promise.all(schedulePromises);
+                
+                // Create schedules object with experience ID as key
+                const schedulesMap = {};
+                experiencesData.forEach((exp, index) => {
+                    schedulesMap[exp.experienceId] = schedulesData[index];
+                });
+                
+                console.log('HomePage - schedulesMap:', schedulesMap);
+                console.log('HomePage - schedulesData:', schedulesData);
+                
+                setSchedules(schedulesMap);
+                
+                // Transform experiences data to match our component structure
+                const transformedExperiences = experiencesData.map(exp => ({
+                    experienceId: exp.experienceId,
+                    id: exp.experienceId,
+                    title: exp.title,
+                    location: exp.location,
+                    price: exp.price,
+                    originalPrice: exp.price * 1.2, // Add some original price for demo
+                    rating: exp.averageRating || 4.9,
+                    imageUrl: exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                    shortDescription: exp.shortDescription,
+                    duration: exp.duration,
+                    category: exp.category,
+                    status: exp.status,
+                    totalReviews: exp.totalReviews
+                }));
+
+                setExperiences(transformedExperiences);
+
+                // Handle wishlist response
+                if (wishlistResponse.ok) {
+                    const wishlistData = await wishlistResponse.json();
+                    const transformedWishlist = wishlistData.map(item => ({
+                        experienceId: item.experience.experienceId,
+                        wishlistItemId: item.wishlistItemId
+                    }));
+                    setWishlistItems(transformedWishlist);
+                } else {
+                    // If wishlist fails, just set empty array
+                    setWishlistItems([]);
+                }
+
+                setError(null);
+            } catch (err) {
+                console.error("Failed to fetch data:", err);
+                setError(err);
+                // Keep fallback data (empty arrays will trigger fallback in DiscoverWeekly)
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchData();
+    }, []);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -154,6 +286,10 @@ const HomePage = () => {
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
+    };
+
+    const handleCategoryChange = (category) => {
+        setSelectedCategory(category);
     };
 
     return (
@@ -174,7 +310,15 @@ const HomePage = () => {
                     />
                     <main className="w-full">
                         <WelcomeBanner />
-                        <DiscoverWeekly />
+                        <DiscoverWeekly 
+                            experiences={experiences}
+                            wishlistItems={wishlistItems}
+                            schedules={schedules}
+                            loading={loading}
+                            error={error}
+                            selectedCategory={selectedCategory}
+                            onCategoryChange={handleCategoryChange}
+                        />
                         <div className="h-px bg-neutrals-6 w-full" />
                         <Footer />
                     </main>
@@ -192,7 +336,13 @@ const HomePage = () => {
                 <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
                 <main className="w-full">
                     <WelcomeBanner />
-                    <DiscoverWeekly />
+                    <DiscoverWeekly 
+                        experiences={experiences}
+                        wishlistItems={wishlistItems}
+                        schedules={schedules}
+                        loading={loading}
+                        error={error}
+                    />
                     <div className="h-px bg-neutrals-6 w-full" />
                     <Footer />
                 </main>

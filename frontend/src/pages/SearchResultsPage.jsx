@@ -7,148 +7,48 @@ import FilterPanel from '../components/FilterPanel';
 import FilterBar from '../components/FilterBar';
 import ExperienceCard from '../components/ExperienceCard';
 
-// Mock images - in production these would come from your image assets
-const experienceImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
-
-// Mock search results - in production this would be an API call
-const mockExperiences = [
-    { 
-        id: 1,
-        title: "Venice, Rome & Milan", 
-        location: "Karineside", 
-        originalPrice: 699, 
-        salePrice: 548, 
-        rating: 4.9,
-        reviewCount: 245,
-        duration: "Multi-day",
-        durationHours: 168, // 7 days in hours
-        availableFrom: "2025-07-20",
-        availableTo: "2025-12-20",
-        isLiked: false,
-        timeOfDay: "morning",
-        listingDate: "2025-06-01",
-        relevanceScore: 0.95
-    },
-    { 
-        id: 2,
-        title: "Paris & Lyon Adventure", 
-        location: "Franceville", 
-        originalPrice: 799, 
-        salePrice: 629, 
-        rating: 4.8,
-        reviewCount: 189,
-        duration: "Multi-day",
-        durationHours: 120, // 5 days in hours
-        availableFrom: "2025-08-01",
-        availableTo: "2025-11-30",
-        isLiked: true,
-        timeOfDay: "afternoon",
-        listingDate: "2025-07-15",
-        relevanceScore: 0.87
-    },
-    { 
-        id: 3,
-        title: "Tokyo City Explorer", 
-        location: "Shibuya", 
-        originalPrice: 899, 
-        salePrice: 749, 
-        rating: 4.7,
-        reviewCount: 156,
-        duration: "1-3 hours",
-        durationHours: 2.5,
-        availableFrom: "2025-09-15",
-        availableTo: "2025-12-15",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-08-20",
-        relevanceScore: 0.72
-    },
-    { 
-        id: 4,
-        title: "Barcelona Highlights", 
-        location: "Catalunya", 
-        originalPrice: 599, 
-        salePrice: 459, 
-        rating: 4.6,
-        reviewCount: 312,
-        duration: "Full day",
-        durationHours: 8,
-        availableFrom: "2025-07-01",
-        availableTo: "2025-10-31",
-        isLiked: true,
-        timeOfDay: "morning",
-        listingDate: "2025-05-10",
-        relevanceScore: 0.83
-    },
-    { 
-        id: 5,
-        title: "Swiss Alps Journey", 
-        location: "Interlaken", 
-        originalPrice: 999, 
-        salePrice: 819, 
-        rating: 4.9,
-        reviewCount: 78,
-        duration: "Multi-day",
-        durationHours: 144, // 6 days in hours
-        availableFrom: "2025-06-01",
-        availableTo: "2025-09-30",
-        isLiked: false,
-        timeOfDay: "morning",
-        listingDate: "2025-04-25",
-        relevanceScore: 0.91
-    },
-    { 
-        id: 6,
-        title: "Greek Island Hopping", 
-        location: "Santorini", 
-        originalPrice: 849, 
-        salePrice: 679, 
-        rating: 4.8,
-        reviewCount: 203,
-        duration: "Multi-day",
-        durationHours: 240, // 10 days in hours
-        availableFrom: "2025-05-01",
-        availableTo: "2025-10-15",
-        isLiked: true,
-        timeOfDay: "afternoon",
-        listingDate: "2025-03-12",
-        relevanceScore: 0.79
-    },
-    { 
-        id: 7,
-        title: "Morocco Desert Trek", 
-        location: "Marrakech", 
-        originalPrice: 749, 
-        salePrice: 599, 
-        rating: 4.5,
-        reviewCount: 134,
-        duration: "Multi-day",
-        durationHours: 192, // 8 days in hours
-        availableFrom: "2025-04-01",
-        availableTo: "2025-11-30",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-02-28",
-        relevanceScore: 0.68
-    },
-    { 
-        id: 8,
-        title: "Northern Lights", 
-        location: "Reykjavik", 
-        originalPrice: 1199, 
-        salePrice: 999, 
-        rating: 4.9,
-        reviewCount: 267,
-        duration: "Half day",
-        durationHours: 4,
-        availableFrom: "2025-11-01",
-        availableTo: "2025-12-31",
-        isLiked: false,
-        timeOfDay: "evening",
-        listingDate: "2025-09-05",
-        relevanceScore: 0.88
-    },
-];
+// Helper function to transform API data to match filter expectations
+const transformExperienceData = (apiData, wishlistItems = []) => {
+    const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
+    
+    return apiData.map(exp => ({
+        id: exp.experienceId,
+        experienceId: exp.experienceId,
+        title: exp.title,
+        location: exp.location,
+        originalPrice: exp.price ? exp.price * 1.2 : 0, // Add 20% markup for "original" price
+        salePrice: exp.price || 0,
+        rating: exp.averageRating || 4.5,
+        reviewCount: exp.totalReviews || 0,
+        duration: exp.duration ? `${exp.duration} hours` : "Unknown",
+        durationHours: exp.duration || 0,
+        availableFrom: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
+        availableTo: exp.updatedAt ? exp.updatedAt.split('T')[0] : "2025-12-31",
+        isLiked: wishlistedIds.has(exp.experienceId),
+        timeOfDay: "morning", // Default since we don't have this in API
+        listingDate: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
+        relevanceScore: 0.8, // Default relevance score
+        coverPhotoUrl: exp.coverPhotoUrl,
+        shortDescription: exp.shortDescription,
+        category: exp.category,
+        status: exp.status,
+        // Add all the fields that ExperienceCard expects
+        experience: {
+            experienceId: exp.experienceId,
+            title: exp.title,
+            location: exp.location,
+            price: exp.price,
+            originalPrice: exp.price ? exp.price * 1.2 : 0,
+            rating: exp.averageRating || 4.5,
+            imageUrl: exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            shortDescription: exp.shortDescription,
+            duration: exp.duration,
+            category: exp.category,
+            status: exp.status,
+            totalReviews: exp.totalReviews
+        }
+    }));
+};
 
 const SearchResultsPage = () => {
     const [searchParams] = useSearchParams();
@@ -157,11 +57,27 @@ const SearchResultsPage = () => {
     const [filteredResults, setFilteredResults] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showMobileFilters, setShowMobileFilters] = useState(false);
+    const [allExperiences, setAllExperiences] = useState([]);
+    const [wishlistItems, setWishlistItems] = useState([]);
+    const [schedules, setSchedules] = useState({});
+    const [error, setError] = useState(null);
+    const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+
+    // Category options
+    const categoryOptions = [
+        { value: 'ALL', label: 'All Experiences' },
+        { value: 'GUIDED_TOUR', label: 'Guided Tour' },
+        { value: 'DAYTRIP', label: 'Day Trip' },
+        { value: 'ADVENTURE', label: 'Adventure' },
+        { value: 'WORKSHOP', label: 'Workshop' },
+        { value: 'WATER_ACTIVITY', label: 'Water Activity' },
+        { value: 'OTHERS', label: 'Others' }
+    ];
 
     // Filter states
     const [filters, setFilters] = useState({
         priceRange: { min: 0, max: 0, enabled: false }, // Start disabled
-        duration: '',
+        duration: [], // Changed to array to support multiple selections
         startDate: '',
         endDate: '',
         onlyLiked: false,
@@ -173,11 +89,43 @@ const SearchResultsPage = () => {
 
     const query = searchParams.get('q') || '';
 
-    const [popularExperiences, setPopularExperiences] = useState([]);
+    // Get popular experiences (first 4 from all experiences)
+    const popularExperiences = allExperiences.slice(0, 4);
+
+    // Helper function to check if duration matches any of the selected filters
+    const matchesDurationFilter = (durationHours, selectedDurations) => {
+        // If no duration filters are selected, show all
+        if (selectedDurations.length === 0) {
+            return true;
+        }
+        
+        // Check if the duration matches any of the selected filters
+        return selectedDurations.some(filterDuration => {
+            switch (filterDuration) {
+                case '1-3 hours':
+                    return durationHours >= 1 && durationHours <= 3;
+                case '4-8 hours':
+                    return durationHours >= 4 && durationHours <= 8;
+                case '8-12 hours':
+                    return durationHours >= 8 && durationHours <= 12;
+                case '12-24 hours':
+                    return durationHours >= 12 && durationHours <= 24;
+                case '24+ hours':
+                    return durationHours > 24;
+                default:
+                    return false;
+            }
+        });
+    };
 
     // Filter function
-    const applyFilters = (experiences) => {
+    const applyFilters = (experiences, schedulesData = {}) => {
         return experiences.filter(experience => {
+            // Category filter
+            if (selectedCategory !== 'ALL' && experience.experience.category !== selectedCategory) {
+                return false;
+            }
+
             // Price filter - only apply if enabled and values are set
             if (filters.priceRange.enabled) {
                 if (filters.priceRange.min > 0 && experience.price < filters.priceRange.min) {
@@ -188,17 +136,45 @@ const SearchResultsPage = () => {
                 }
             }
 
-            // Duration filter
-            if (filters.duration && experience.duration !== filters.duration) {
+            // Duration filter - now works with multiple selections and numeric hours
+            if (!matchesDurationFilter(experience.durationHours, filters.duration)) {
                 return false;
             }
 
-            // Date range filter
-            if (filters.startDate && experience.availableFrom < filters.startDate) {
-                return false;
-            }
-            if (filters.endDate && experience.availableTo > filters.endDate) {
-                return false;
+            // Date range filter - now uses schedule data
+            if (filters.startDate || filters.endDate) {
+                const experienceSchedules = schedulesData[experience.experienceId] || [];
+                
+                // If no schedules available, skip this experience
+                if (experienceSchedules.length === 0) {
+                    return false;
+                }
+                
+                // Check if any schedule matches the date range
+                const hasMatchingSchedule = experienceSchedules.some(schedule => {
+                    const scheduleStartDate = new Date(schedule.startDate);
+                    const scheduleEndDate = new Date(schedule.endDate);
+                    
+                    // Extract just the date part (ignore time)
+                    const scheduleStartDateOnly = scheduleStartDate.toISOString().split('T')[0];
+                    const scheduleEndDateOnly = scheduleEndDate.toISOString().split('T')[0];
+                    
+                    // Check start date filter
+                    if (filters.startDate && scheduleStartDateOnly < filters.startDate) {
+                        return false;
+                    }
+                    
+                    // Check end date filter
+                    if (filters.endDate && scheduleEndDateOnly > filters.endDate) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+                
+                if (!hasMatchingSchedule) {
+                    return false;
+                }
             }
 
             // Liked filter
@@ -264,62 +240,90 @@ const SearchResultsPage = () => {
         }
     };
 
+    // Fetch all experiences and wishlist data on component mount
     useEffect(() => {
-        const performSearch = async () => {
-            setLoading(true);
-            
+        const fetchData = async () => {
             try {
-                if (query.trim()) {
-                    // Fetch experiences from the backend API
-                    const response = await fetch(`http://localhost:8080/api/experiences`);
-                    
-                    if (response.ok) {
-                        const allExperiences = await response.json();
-                        console.log('Fetched experiences:', allExperiences);
-                        
-                        // Filter experiences based on query (client-side for now)
-                        const filtered = allExperiences.filter(experience =>
-                            experience.title.toLowerCase().includes(query.toLowerCase()) ||
-                            experience.location.toLowerCase().includes(query.toLowerCase())
-                        );
-                        
-                        // Transform backend data to match frontend format
-                        const transformedResults = filtered.map(exp => ({
-                            id: exp.experienceId,
-                            title: exp.title,
-                            location: exp.location,
-                            originalPrice: null, // No discount, so no original price
-                            price: exp.price ? parseFloat(exp.price) : 99, // Use 'price' field that ExperienceCard expects, default to $99 if no price
-                            rating: exp.averageRating ? parseFloat(exp.averageRating) : 4.5,
-                            reviewCount: exp.totalReviews || 0,
-                            duration: exp.duration ? `${exp.duration} hours` : "Multi-day",
-                            durationHours: exp.duration ? parseFloat(exp.duration) : 48,
-                            availableFrom: "2025-07-20",
-                            availableTo: "2025-12-20",
-                            isLiked: false,
-                            timeOfDay: "morning",
-                            listingDate: exp.createdAt || "2025-06-01",
-                            relevanceScore: 0.95
-                        }));
-                        
-                        setSearchResults(transformedResults);
-                    } else {
-                        console.error('Failed to fetch experiences');
-                        setSearchResults([]);
-                    }
-                } else {
-                    setSearchResults([]);
+            setLoading(true);
+                setError(null);
+
+                // Fetch experiences and wishlist items in parallel
+                const [experiencesResponse, wishlistResponse] = await Promise.all([
+                    fetch('http://localhost:8080/api/experiences'),
+                    fetch('http://localhost:8080/api/wishlist-items/user/1') // Using user ID 1 for now
+                ]);
+
+                if (!experiencesResponse.ok) {
+                    throw new Error(`Failed to fetch experiences: ${experiencesResponse.status}`);
                 }
-            } catch (error) {
-                console.error('Error fetching experiences:', error);
-                setSearchResults([]);
+
+                const experiencesData = await experiencesResponse.json();
+                
+                // Fetch schedule data for all experiences
+                const schedulePromises = experiencesData.map(exp => 
+                    fetch(`http://localhost:8080/api/experiences/${exp.experienceId}/schedules`)
+                        .then(response => response.ok ? response.json() : [])
+                        .catch(() => []) // If schedule fetch fails, use empty array
+                );
+                
+                const schedulesData = await Promise.all(schedulePromises);
+                
+                // Create schedules object with experience ID as key
+                const schedulesMap = {};
+                experiencesData.forEach((exp, index) => {
+                    schedulesMap[exp.experienceId] = schedulesData[index];
+                });
+                
+                setSchedules(schedulesMap);
+                
+                const transformedExperiences = transformExperienceData(experiencesData, []);
+                setAllExperiences(transformedExperiences);
+
+                // Handle wishlist response
+                if (wishlistResponse.ok) {
+                    const wishlistData = await wishlistResponse.json();
+                    const transformedWishlist = wishlistData.map(item => ({
+                        experienceId: item.experience.experienceId,
+                        wishlistItemId: item.wishlistItemId
+                    }));
+                    setWishlistItems(transformedWishlist);
+                    
+                    // Update experiences with wishlist status
+                    const updatedExperiences = transformExperienceData(experiencesData, transformedWishlist);
+                    setAllExperiences(updatedExperiences);
+                } else {
+                    // If wishlist fails, just set empty array
+                    setWishlistItems([]);
+                }
+
+            } catch (err) {
+                console.error("Failed to fetch data:", err);
+                setError(err);
+            } finally {
+                setLoading(false);
             }
-            
-            setLoading(false);
         };
 
-        performSearch();
-    }, [query]);
+        fetchData();
+    }, []);
+
+    // Perform search when query changes
+    useEffect(() => {
+            if (query.trim()) {
+                // Filter experiences based on query
+            const filtered = allExperiences.filter(experience =>
+                    experience.title.toLowerCase().includes(query.toLowerCase()) ||
+                experience.location.toLowerCase().includes(query.toLowerCase()) ||
+                (experience.shortDescription && experience.shortDescription.toLowerCase().includes(query.toLowerCase()))
+                );
+                console.log('Search query:', query);
+                console.log('All experiences:', allExperiences.map(exp => ({ title: exp.title, location: exp.location })));
+                console.log('Filtered results:', filtered.map(exp => ({ title: exp.title, location: exp.location })));
+                setSearchResults(filtered);
+            } else {
+                setSearchResults([]);
+            }
+    }, [query, allExperiences]);
 
     // Load popular experiences for fallback
     useEffect(() => {
@@ -365,10 +369,10 @@ const SearchResultsPage = () => {
 
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
-        const filtered = applyFilters(searchResults);
+        const filtered = applyFilters(searchResults, schedules);
         const sorted = applySorting(filtered);
         setFilteredResults(sorted);
-    }, [searchResults, filters, sortBy]);
+    }, [searchResults, filters, sortBy, selectedCategory, schedules]);
 
     const handleFiltersChange = (newFilters) => {
         setFilters(newFilters);
@@ -416,12 +420,50 @@ const SearchResultsPage = () => {
                                 )}
                             </div>
 
+                            {/* Filter */}
+                            <div className="flex items-center justify-center mb-10">
+                                <div className="flex items-center gap-2 flex-wrap justify-center">
+                                    {categoryOptions.map((category) => (
+                                        <button
+                                            key={category.value}
+                                            onClick={() => setSelectedCategory(category.value)}
+                                            className={`px-4 py-1.5 rounded-full transition-colors ${
+                                                selectedCategory === category.value
+                                                    ? 'bg-neutrals-1 text-white'
+                                                    : 'text-neutrals-4 hover:text-neutrals-1'
+                                            }`}
+                                        >
+                                            <span className="text-[14px] font-bold">{category.label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             {loading ? (
                                 /* Loading State */
                                 <div className="flex items-center justify-center py-20">
                                     <div className="text-center">
                                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
-                                        <p className="text-neutrals-4">Searching for experiences...</p>
+                                        <p className="text-neutrals-4">Loading experiences...</p>
+                                    </div>
+                                </div>
+                            ) : error ? (
+                                /* Error State */
+                                <div className="flex items-center justify-center py-20">
+                                    <div className="text-center">
+                                        <svg className="w-24 h-24 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <h3 className="text-[24px] font-bold text-neutrals-2 mb-2">Error loading experiences</h3>
+                                        <p className="text-[16px] text-neutrals-4 mb-6">
+                                            {error.message || 'Failed to load experiences. Please try again.'}
+                                        </p>
+                                        <button 
+                                            onClick={() => window.location.reload()} 
+                                            className="bg-primary-1 text-white px-6 py-2 rounded-lg hover:bg-primary-2 transition-colors"
+                                        >
+                                            Try Again
+                                        </button>
                                     </div>
                                 </div>
                             ) : filteredResults.length > 0 ? (
@@ -451,55 +493,29 @@ const SearchResultsPage = () => {
 
                                         {/* Desktop Grid */}
                                         <div className="hidden lg:flex lg:flex-wrap lg:justify-start lg:gap-6 mb-10">
-                                            {filteredResults.map((experience, index) => {
-                                                // Transform data for ExperienceCard
-                                                const transformedExperience = {
-                                                    id: experience.id,
-                                                    title: experience.title,
-                                                    location: experience.location,
-                                                    price: experience.price,
-                                                    originalPrice: experience.originalPrice,
-                                                    rating: experience.rating,
-                                                    imageUrl: experienceImage,
-                                                    dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                                };
-                                                
-                                                return (
-                                                    <ExperienceCard 
-                                                        key={experience.id || index} 
-                                                        experience={transformedExperience}
-                                                        showWishlistButton={true}
-                                                        variant="default"
-                                                    />
-                                                );
-                                            })}
+                                            {filteredResults.map((experience, index) => (
+                                                <ExperienceCard 
+                                                    key={experience.id || index} 
+                                                    experience={experience.experience}
+                                                    showWishlistButton={true}
+                                                    isInWishlist={experience.isLiked}
+                                                    schedules={schedules[experience.experienceId] || []}
+                                                />
+                                            ))}
                                         </div>
 
                                         {/* Mobile Horizontal Scroll */}
                                         <div className="lg:hidden mb-10 w-full">
                                             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
-                                                {filteredResults.map((experience, index) => {
-                                                    // Transform data for ExperienceCard
-                                                    const transformedExperience = {
-                                                        id: experience.id,
-                                                        title: experience.title,
-                                                        location: experience.location,
-                                                        price: experience.price,
-                                                        originalPrice: experience.originalPrice,
-                                                        rating: experience.rating,
-                                                        imageUrl: experienceImage,
-                                                        dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                                    };
-                                                    
-                                                    return (
-                                                        <ExperienceCard 
-                                                            key={experience.id || index} 
-                                                            experience={transformedExperience}
-                                                            showWishlistButton={true}
-                                                            variant="default"
-                                                        />
-                                                    );
-                                                })}
+                                                {filteredResults.map((experience, index) => (
+                                                    <ExperienceCard 
+                                                        key={experience.id || index} 
+                                                        experience={experience.experience}
+                                                        showWishlistButton={true}
+                                                        isInWishlist={experience.isLiked}
+                                                        schedules={schedules[experience.experienceId] || []}
+                                                    />
+                                                ))}
                                             </div>
                                         </div>
                                     </div>
@@ -549,55 +565,29 @@ const SearchResultsPage = () => {
                                             
                                             {/* Desktop Grid */}
                                             <div className="hidden lg:flex lg:justify-center lg:gap-6">
-                                                {popularExperiences.map((experience, index) => {
-                                                    // Transform data for ExperienceCard
-                                                    const transformedExperience = {
-                                                        id: experience.id,
-                                                        title: experience.title,
-                                                        location: experience.location,
-                                                        price: experience.price,
-                                                        originalPrice: experience.originalPrice,
-                                                        rating: experience.rating,
-                                                        imageUrl: experienceImage,
-                                                        dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                                    };
-                                                    
-                                                    return (
-                                                        <ExperienceCard 
-                                                            key={index} 
-                                                            experience={transformedExperience}
-                                                            showWishlistButton={true}
-                                                            variant="default"
-                                                        />
-                                                    );
-                                                })}
+                                                {popularExperiences.map((experience, index) => (
+                                                    <ExperienceCard 
+                                                        key={index} 
+                                                        experience={experience.experience}
+                                                        showWishlistButton={true}
+                                                        isInWishlist={experience.isLiked}
+                                                        schedules={schedules[experience.experienceId] || []}
+                                                    />
+                                                ))}
                                             </div>
 
                                             {/* Mobile Horizontal Scroll */}
                                             <div className="lg:hidden">
                                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
-                                                    {popularExperiences.map((experience, index) => {
-                                                        // Transform data for ExperienceCard
-                                                        const transformedExperience = {
-                                                            id: experience.id,
-                                                            title: experience.title,
-                                                            location: experience.location,
-                                                            price: experience.price,
-                                                            originalPrice: experience.originalPrice,
-                                                            rating: experience.rating,
-                                                            imageUrl: experienceImage,
-                                                            dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                                        };
-                                                        
-                                                        return (
-                                                            <ExperienceCard 
-                                                                key={index} 
-                                                                experience={transformedExperience}
-                                                                showWishlistButton={true}
-                                                                variant="default"
-                                                            />
-                                                        );
-                                                    })}
+                                                    {popularExperiences.map((experience, index) => (
+                                                        <ExperienceCard 
+                                                            key={index} 
+                                                            experience={experience.experience}
+                                                            showWishlistButton={true}
+                                                            isInWishlist={experience.isLiked}
+                                                            schedules={schedules[experience.experienceId] || []}
+                                                        />
+                                                    ))}
                                                 </div>
                                             </div>
                                         </div>
@@ -636,16 +626,20 @@ const SearchResultsPage = () => {
 
                         {/* Mobile Filter Button */}
                         <div className="flex items-center justify-between mb-6">
-                            <div className="flex overflow-x-auto gap-4 pb-2 flex-1">
-                                <div className="bg-neutrals-1 text-white px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">All Experiences</span>
-                                </div>
-                                <div className="text-neutrals-4 px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">Adventure</span>
-                                </div>
-                                <div className="text-neutrals-4 px-4 py-1.5 rounded-full shrink-0">
-                                    <span className="text-[14px] font-bold">Culture</span>
-                                </div>
+                            <div className="flex overflow-x-auto gap-2 pb-2 flex-1">
+                                {categoryOptions.map((category) => (
+                                    <button
+                                        key={category.value}
+                                        onClick={() => setSelectedCategory(category.value)}
+                                        className={`px-4 py-1.5 rounded-full shrink-0 transition-colors ${
+                                            selectedCategory === category.value
+                                                ? 'bg-neutrals-1 text-white'
+                                                : 'text-neutrals-4 hover:text-neutrals-1'
+                                        }`}
+                                    >
+                                        <span className="text-[14px] font-bold">{category.label}</span>
+                                    </button>
+                                ))}
                             </div>
                             <button
                                 onClick={() => setShowMobileFilters(true)}
@@ -672,7 +666,26 @@ const SearchResultsPage = () => {
                             <div className="flex items-center justify-center py-16">
                                 <div className="text-center">
                                     <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary-1 mx-auto mb-4"></div>
-                                    <p className="text-neutrals-4 text-sm">Searching for experiences...</p>
+                                    <p className="text-neutrals-4 text-sm">Loading experiences...</p>
+                                </div>
+                            </div>
+                        ) : error ? (
+                            /* Error State */
+                            <div className="flex items-center justify-center py-16">
+                                <div className="text-center">
+                                    <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                    <h3 className="text-[18px] font-bold text-neutrals-2 mb-2">Error loading experiences</h3>
+                                    <p className="text-[14px] text-neutrals-4 mb-4 px-4">
+                                        {error.message || 'Failed to load experiences. Please try again.'}
+                                    </p>
+                                    <button 
+                                        onClick={() => window.location.reload()} 
+                                        className="bg-primary-1 text-white px-4 py-2 rounded-lg hover:bg-primary-2 transition-colors text-sm"
+                                    >
+                                        Try Again
+                                    </button>
                                 </div>
                             </div>
                         ) : filteredResults.length > 0 ? (
@@ -689,28 +702,15 @@ const SearchResultsPage = () => {
 
                                 {/* Mobile Results */}
                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                                    {filteredResults.map((experience, index) => {
-                                        // Transform data for ExperienceCard
-                                        const transformedExperience = {
-                                            id: experience.id,
-                                            title: experience.title,
-                                            location: experience.location,
-                                            price: experience.price,
-                                            originalPrice: experience.originalPrice,
-                                            rating: experience.rating,
-                                            imageUrl: experienceImage,
-                                            dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                        };
-                                        
-                                        return (
-                                            <ExperienceCard 
-                                                key={experience.id || index} 
-                                                experience={transformedExperience}
-                                                showWishlistButton={true}
-                                                variant="default"
-                                            />
-                                        );
-                                    })}
+                                    {filteredResults.map((experience, index) => (
+                                        <ExperienceCard 
+                                            key={experience.id || index} 
+                                            experience={experience.experience}
+                                            showWishlistButton={true}
+                                            isInWishlist={experience.isLiked}
+                                            schedules={schedules[experience.experienceId] || []}
+                                        />
+                                    ))}
                                 </div>
                             </>
                         ) : searchResults.length > 0 && filteredResults.length === 0 ? (
@@ -746,28 +746,15 @@ const SearchResultsPage = () => {
                                             Popular Experiences
                                         </h4>
                                         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                                            {popularExperiences.map((experience, index) => {
-                                                // Transform data for ExperienceCard
-                                                const transformedExperience = {
-                                                    id: experience.id,
-                                                    title: experience.title,
-                                                    location: experience.location,
-                                                    price: experience.price,
-                                                    originalPrice: experience.originalPrice,
-                                                    rating: experience.rating,
-                                                    imageUrl: experienceImage,
-                                                    dateRange: `${new Date(experience.availableFrom || '2025-07-20').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })} - ${new Date(experience.availableTo || '2025-07-23').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}`
-                                                };
-                                                
-                                                return (
-                                                    <ExperienceCard 
-                                                        key={index} 
-                                                        experience={transformedExperience}
-                                                        showWishlistButton={true}
-                                                        variant="default"
-                                                    />
-                                                );
-                                            })}
+                                            {popularExperiences.map((experience, index) => (
+                                                <ExperienceCard 
+                                                    key={index} 
+                                                    experience={experience.experience}
+                                                    showWishlistButton={true}
+                                                    isInWishlist={experience.isLiked}
+                                                    schedules={schedules[experience.experienceId] || []}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
                                 )}

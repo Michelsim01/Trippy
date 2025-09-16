@@ -1,7 +1,9 @@
 package com.backend.controller;
 
 import com.backend.entity.Experience;
+import com.backend.entity.ExperienceSchedule;
 import com.backend.repository.ExperienceRepository;
+import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.dto.ExperienceResponseDTO;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,24 +11,96 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/experiences")
 public class ExperienceController {
     @Autowired
     private ExperienceRepository experienceRepository;
+    
+    @Autowired
+    private ExperienceScheduleRepository experienceScheduleRepository;
 
     @GetMapping
-    public List<ExperienceResponseDTO> getAllExperiences() {
+    public List<Map<String, Object>> getAllExperiences() {
         List<Experience> experiences = experienceRepository.findAll();
-        return experiences.stream()
-                .map(ExperienceResponseDTO::new)
-                .collect(Collectors.toList());
+        List<Map<String, Object>> result = new ArrayList<>();
+        
+        for (Experience exp : experiences) {
+            Map<String, Object> expMap = new HashMap<>();
+            expMap.put("experienceId", exp.getExperienceId());
+            expMap.put("title", exp.getTitle());
+            expMap.put("location", exp.getLocation());
+            expMap.put("price", exp.getPrice());
+            expMap.put("averageRating", exp.getAverageRating());
+            expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+            expMap.put("shortDescription", exp.getShortDescription());
+            expMap.put("duration", exp.getDuration());
+            expMap.put("category", exp.getCategory());
+            expMap.put("status", exp.getStatus());
+            expMap.put("totalReviews", exp.getTotalReviews());
+            expMap.put("createdAt", exp.getCreatedAt());
+            expMap.put("updatedAt", exp.getUpdatedAt());
+            
+            // Add guide info without lazy loading issues
+            if (exp.getGuide() != null) {
+                Map<String, Object> guideMap = new HashMap<>();
+                guideMap.put("userId", exp.getGuide().getId());
+                guideMap.put("firstName", exp.getGuide().getFirstName());
+                guideMap.put("lastName", exp.getGuide().getLastName());
+                guideMap.put("email", exp.getGuide().getEmail());
+                guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+                expMap.put("guide", guideMap);
+            }
+            
+            result.add(expMap);
+        }
+        
+        return result;
     }
 
     @GetMapping("/{id}")
-    public Experience getExperienceById(@PathVariable Long id) {
-        return experienceRepository.findById(id).orElse(null);
+    public Map<String, Object> getExperienceById(@PathVariable Long id) {
+        Experience exp = experienceRepository.findById(id).orElse(null);
+        if (exp == null) {
+            return null;
+        }
+        
+        Map<String, Object> expMap = new HashMap<>();
+        expMap.put("experienceId", exp.getExperienceId());
+        expMap.put("title", exp.getTitle());
+        expMap.put("location", exp.getLocation());
+        expMap.put("price", exp.getPrice());
+        expMap.put("averageRating", exp.getAverageRating());
+        expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+        expMap.put("shortDescription", exp.getShortDescription());
+        expMap.put("fullDescription", exp.getFullDescription());
+        expMap.put("duration", exp.getDuration());
+        expMap.put("category", exp.getCategory());
+        expMap.put("status", exp.getStatus());
+        expMap.put("totalReviews", exp.getTotalReviews());
+        expMap.put("highlights", exp.getHighlights());
+        expMap.put("whatIncluded", exp.getWhatIncluded());
+        expMap.put("importantInfo", exp.getImportantInfo());
+        expMap.put("cancellationPolicy", exp.getCancellationPolicy());
+        expMap.put("participantsAllowed", exp.getParticipantsAllowed());
+        expMap.put("createdAt", exp.getCreatedAt());
+        expMap.put("updatedAt", exp.getUpdatedAt());
+        
+        // Add guide info without lazy loading issues
+        if (exp.getGuide() != null) {
+            Map<String, Object> guideMap = new HashMap<>();
+            guideMap.put("userId", exp.getGuide().getId());
+            guideMap.put("firstName", exp.getGuide().getFirstName());
+            guideMap.put("lastName", exp.getGuide().getLastName());
+            guideMap.put("email", exp.getGuide().getEmail());
+            guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+            expMap.put("guide", guideMap);
+        }
+        
+        return expMap;
     }
 
     @PostMapping
@@ -72,5 +146,24 @@ public class ExperienceController {
         
         // Limit total suggestions to 5
         return suggestions.stream().limit(5).collect(Collectors.toList());
+    }
+
+    @GetMapping("/{id}/schedules")
+    public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long id) {
+        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(id);
+        
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (ExperienceSchedule schedule : schedules) {
+            Map<String, Object> scheduleMap = new HashMap<>();
+            scheduleMap.put("scheduleId", schedule.getScheduleId());
+            scheduleMap.put("startDate", schedule.getStartDate());
+            scheduleMap.put("endDate", schedule.getEndDate());
+            scheduleMap.put("availableSpots", schedule.getAvailableSpots());
+            scheduleMap.put("isAvailable", schedule.getIsAvailable());
+            scheduleMap.put("createdAt", schedule.getCreatedAt());
+            result.add(scheduleMap);
+        }
+        
+        return result;
     }
 }

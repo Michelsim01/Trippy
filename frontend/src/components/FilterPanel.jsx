@@ -32,7 +32,9 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
     const handleDurationChange = (duration) => {
         const newFilters = {
             ...localFilters,
-            duration: localFilters.duration === duration ? '' : duration
+            duration: localFilters.duration.includes(duration)
+                ? localFilters.duration.filter(d => d !== duration)
+                : [...localFilters.duration, duration]
         };
         setLocalFilters(newFilters);
         onFiltersChange(newFilters);
@@ -70,7 +72,7 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
     const clearAllFilters = () => {
         const newFilters = {
             priceRange: { min: 0, max: 0, enabled: false },
-            duration: '',
+            duration: [], // Changed to empty array for multiple selections
             startDate: '',
             endDate: '',
             onlyLiked: false,
@@ -82,9 +84,10 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
 
     const durationOptions = [
         "1-3 hours",
-        "Half day",
-        "Full day",
-        "Multi-day"
+        "4-8 hours", 
+        "8-12 hours",
+        "12-24 hours",
+        "24+ hours"
     ];
 
     if (variant === "mobile") {
@@ -170,7 +173,7 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
                                             <label key={duration} className="flex items-center">
                                                 <input
                                                     type="checkbox"
-                                                    checked={localFilters.duration === duration}
+                                                    checked={localFilters.duration.includes(duration)}
                                                     onChange={() => handleDurationChange(duration)}
                                                     className="mr-3 w-4 h-4 text-primary-1 border-neutrals-5 rounded focus:ring-primary-1"
                                                 />
@@ -342,7 +345,7 @@ const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "des
                             <label key={duration} className="flex items-center">
                                 <input
                                     type="checkbox"
-                                    checked={localFilters.duration === duration}
+                                    checked={localFilters.duration.includes(duration)}
                                     onChange={() => handleDurationChange(duration)}
                                     className="mr-3 w-4 h-4 text-primary-1 border-neutrals-5 rounded focus:ring-primary-1"
                                 />

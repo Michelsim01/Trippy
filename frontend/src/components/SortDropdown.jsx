@@ -7,7 +7,7 @@ const SortDropdown = ({ currentSort, onSortChange, variant = "desktop" }) => {
         { value: 'bestMatch', label: 'Best Match', description: 'Most relevant to your search' },
         { value: 'cheapest', label: 'Cheapest', description: 'Lowest price first' },
         { value: 'trustiest', label: 'Trustiest', description: 'Highest rated with most reviews' },
-        { value: 'quickest', label: 'Quickest', description: 'Shortest duration first' },
+        { value: 'quickest', label: 'Shortest', description: 'Shortest duration first' },
         { value: 'timeOfDay', label: 'Time of Day', description: 'Morning, afternoon, evening' },
         { value: 'newest', label: 'Newest', description: 'Most recently listed' }
     ];
@@ -52,13 +52,13 @@ const SortDropdown = ({ currentSort, onSortChange, variant = "desktop" }) => {
                                 key={option.value}
                                 onClick={() => handleSortSelect(option.value)}
                                 className={`w-full px-4 py-3 text-left hover:bg-neutrals-8 transition-colors ${
-                                    currentSort === option.value ? 'bg-primary-1 bg-opacity-10 border-l-4 border-primary-1' : ''
+                                    currentSort === option.value ? 'border-l-4 border-primary-1' : ''
                                 } first:rounded-t-lg last:rounded-b-lg`}
                             >
                                 <div className="flex items-center">
                                     <div>
                                         <span className={`text-[14px] font-medium ${
-                                            currentSort === option.value ? 'text-primary-1' : 'text-neutrals-1'
+                                            currentSort === option.value ? 'text-black !important' : 'text-neutrals-1'
                                         }`}>
                                             {option.label}
                                         </span>
@@ -104,29 +104,29 @@ const SortDropdown = ({ currentSort, onSortChange, variant = "desktop" }) => {
             {isOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-neutrals-6 rounded-lg shadow-lg z-50 min-w-[280px]">
                     {sortOptions.map((option) => (
-                        <button
-                            key={option.value}
-                            onClick={() => handleSortSelect(option.value)}
-                            className={`w-full px-4 py-3 text-left hover:bg-neutrals-8 transition-colors ${
-                                currentSort === option.value ? 'bg-primary-1 bg-opacity-10 border-l-4 border-primary-1' : ''
-                            } first:rounded-t-lg last:rounded-b-lg`}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <span className={`text-[14px] font-medium ${
-                                        currentSort === option.value ? 'text-primary-1' : 'text-neutrals-1'
-                                    }`}>
-                                        {option.label}
-                                    </span>
-                                    <p className="text-[12px] text-neutrals-4 mt-1">{option.description}</p>
+                            <button
+                                key={option.value}
+                                onClick={() => handleSortSelect(option.value)}
+                                className={`w-full px-4 py-3 text-left hover:bg-neutrals-8 transition-colors ${
+                                    currentSort === option.value ? 'border-l-4 border-primary-1' : ''
+                                } first:rounded-t-lg last:rounded-b-lg`}
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <span className={`text-[14px] font-medium ${
+                                            currentSort === option.value ? 'text-black !important' : 'text-neutrals-1'
+                                        }`}>
+                                            {option.label}
+                                        </span>
+                                        <p className="text-[12px] text-neutrals-4 mt-1">{option.description}</p>
+                                    </div>
+                                    {currentSort === option.value && (
+                                        <svg className="w-4 h-4 text-primary-1 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                        </svg>
+                                    )}
                                 </div>
-                                {currentSort === option.value && (
-                                    <svg className="w-4 h-4 text-primary-1 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                )}
-                            </div>
-                        </button>
+                            </button>
                     ))}
                 </div>
             )}
