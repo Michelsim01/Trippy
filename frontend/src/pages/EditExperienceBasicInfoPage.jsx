@@ -19,7 +19,8 @@ export default function EditExperienceBasicInfoPage() {
     toggleBookings,
     isFieldRestricted,
     loadExistingExperience,
-    saveCurrentChanges
+    saveCurrentChanges,
+    savePartialChanges
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -119,13 +120,10 @@ export default function EditExperienceBasicInfoPage() {
         additionalPhotos: formData.additionalPhotos
       };
 
-      // Save directly with current data (no state timing issues)
-      await saveCurrentChanges(currentData);
+      // Save only Basic Info data with partial save (preserves other page data)
+      await savePartialChanges(currentData);
 
-      // Update context after successful save
-      updateFormData(currentData);
-
-      alert('Changes saved successfully!');
+      alert('Basic info saved successfully!');
     } catch (error) {
       console.error('Error saving changes:', error);
       alert('Failed to save changes. Please try again.');

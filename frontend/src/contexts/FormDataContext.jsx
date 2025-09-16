@@ -219,6 +219,98 @@ export const FormDataProvider = ({ children }) => {
     return restrictedFields.includes(fieldName);
   };
 
+  // Save partial changes (for page-specific saves during edit flow)
+  const savePartialChanges = async (partialData) => {
+    if (!isEditMode || !experienceId) {
+      throw new Error('Not in edit mode or no experience ID');
+    }
+
+    try {
+      // Merge partial data with existing context data to avoid losing other fields
+      const completeData = {
+        ...formData,
+        ...partialData
+      };
+
+      // Create payload using the complete merged data
+      const payload = {
+        // Main Experience entity
+        experience: {
+          title: completeData.title,
+          shortDescription: completeData.shortDescription,
+          fullDescription: completeData.fullDescription,
+          highlights: Array.isArray(completeData.highlights) ? completeData.highlights.join(', ') : '',
+          category: categoryMapping[completeData.category],
+          tags: completeData.tags,
+          coverPhotoUrl: completeData.coverPhotoUrl,
+          whatIncluded: completeData.whatIncluded,
+          importantInfo: completeData.importantInfo + (completeData.languages?.length > 0 ? `\n\nLanguages: ${completeData.languages.join(', ')}` : ''),
+          price: parseFloat(completeData.price) || null,
+          participantsAllowed: parseInt(completeData.participantsAllowed) || null,
+          duration: parseFloat(completeData.duration) || null,
+          startDateTime: completeData.startDateTime || null,
+          endDateTime: completeData.endDateTime || null,
+          location: completeData.location,
+          country: completeData.country,
+          status: 'ACTIVE'
+        },
+
+        // ExperienceItinerary entities
+        itineraries: completeData.itinerary?.map((item, index) => ({
+          stopOrder: index,
+          stopType: item.type || 'stop',
+          locationName: item.location || item.locationName,
+          duration: item.time || item.duration
+        })) || [],
+
+        // ExperienceMedia entities
+        media: [
+          // Cover photo
+          ...(completeData.coverPhotoUrl ? [{
+            mediaUrl: completeData.coverPhotoUrl,
+            mediaType: 'IMAGE',
+            caption: 'Cover photo',
+            displayOrder: 0
+          }] : []),
+          // Additional photos
+          ...(completeData.additionalPhotos?.map((photo, index) => ({
+            mediaUrl: photo,
+            mediaType: 'IMAGE',
+            caption: '',
+            displayOrder: index + 1
+          })) || [])
+        ],
+
+        // ExperienceSchedule entities
+        schedules: completeData.schedules || []
+      };
+
+      const response = await fetch(`http://localhost:8080/api/experiences/${experienceId}/complete`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to save changes: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log('Successfully saved partial changes:', result);
+
+      // Update context with the saved data
+      updateFormData(partialData);
+
+      return result;
+    } catch (error) {
+      console.error('Error saving partial changes:', error);
+      throw error;
+    }
+  };
+
   // Save current changes (for incremental saves during edit flow)
   const saveCurrentChanges = async (currentFormData = null) => {
     if (!isEditMode || !experienceId) {
@@ -375,7 +467,8 @@ export const FormDataProvider = ({ children }) => {
       exitEditMode,
       toggleBookings,
       isFieldRestricted,
-      saveCurrentChanges
+      saveCurrentChanges,
+      savePartialChanges
     }}>
       {children}
     </FormDataContext.Provider>
