@@ -339,6 +339,8 @@ const HomePage = () => {
                         schedules={schedules}
                         loading={loading}
                         error={error}
+                        selectedCategory={selectedCategory}
+                        onCategoryChange={handleCategoryChange}
                     />
                     <div className="h-px bg-neutrals-6 w-full" />
                     <Footer />

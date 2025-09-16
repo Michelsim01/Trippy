@@ -99,11 +99,11 @@ const ExperienceCard = ({
 
     return (
         <div
-            className="flex flex-col h-[365px] w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
+            className="flex flex-col w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
             onClick={handleCardClick}
         >
             {/* Image Container */}
-            <div className="relative h-48 bg-neutrals-2 overflow-hidden">
+            <div className="relative w-full aspect-[4/3] bg-neutrals-2 overflow-hidden">
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{ 
@@ -173,13 +173,33 @@ const ExperienceCard = ({
                 {/* Divider */}
                 <div className="h-px bg-neutrals-6 rounded-[1px]" />
 
-                {/* Duration and Rating */}
+                {/* Duration, Participants and Rating */}
                 <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="#B1B5C3"/>
-                        </svg>
-                        <span>{cardData.duration || 3}h</span>
+                    <div className="flex items-center gap-3 text-[12px] text-neutrals-4 leading-[20px]">
+                        <div className="flex items-center gap-1">
+                            <span style={{ filter: 'grayscale(1)', opacity: 0.7 }}>🕐</span>
+                            <span>{cardData.duration || 3}h</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <span style={{ filter: 'grayscale(1)', opacity: 0.7 }}>👤</span>
+                            <span>
+                                {(() => {
+                                    // Show total participants from schedules if available
+                                    if (schedules && schedules.length > 0) {
+                                        const totalSpots = schedules.reduce((sum, schedule) => sum + (schedule.availableSpots || 0), 0);
+                                        return totalSpots;
+                                    }
+                                    // Show participantsAllowed if available
+                                    else if (cardData.participantsAllowed) {
+                                        return cardData.participantsAllowed;
+                                    }
+                                    // Default fallback
+                                    else {
+                                        return 40;
+                                    }
+                                })()}
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-1">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -189,30 +209,6 @@ const ExperienceCard = ({
                             {cardData.rating || cardData.averageRating || 4.9}
                         </span>
                     </div>
-                </div>
-
-                {/* Participants */}
-                <div className="flex items-center gap-1 text-[12px] text-neutrals-4 leading-[20px]">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M16 4c0-1.11.89-2 2-2s2 .89 2 2-.89 2-2 2-2-.89-2-2zm4 18v-6h2.5l-2.54-7.63A1.5 1.5 0 0 0 18.54 8H16c-.8 0-1.54.37-2.01.99L12 11l-1.99-2.01A2.5 2.5 0 0 0 8 8H5.46c-.8 0-1.54.37-2.01.99L1 12.5V22h2v-6h2.5l2.54 7.63A1.5 1.5 0 0 0 9.46 24H12c.8 0 1.54-.37 2.01-.99L16 21l1.99 2.01A2.5 2.5 0 0 0 20 24h2.54c.8 0 1.54-.37 2.01-.99L27 19.5V22h2z" fill="#B1B5C3"/>
-                    </svg>
-                    <span>
-                        {(() => {
-                            // Show total participants from schedules if available
-                            if (schedules && schedules.length > 0) {
-                                const totalSpots = schedules.reduce((sum, schedule) => sum + (schedule.availableSpots || 0), 0);
-                                return `${totalSpots} participants`;
-                            }
-                            // Show participantsAllowed if available
-                            else if (cardData.participantsAllowed) {
-                                return `${cardData.participantsAllowed} participants`;
-                            }
-                            // Default fallback
-                            else {
-                                return '10 participants';
-                            }
-                        })()}
-                    </span>
                 </div>
             </div>
         </div>
