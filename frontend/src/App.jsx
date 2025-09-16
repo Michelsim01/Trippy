@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { UserProvider } from './contexts/UserContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -25,8 +26,9 @@ const isAuthenticated = true
 
 export default function App() {
   return (
-    <Router>
-      <div className="App">
+    <UserProvider>
+      <Router>
+        <div className="App">
         <Routes>
           {/* Public routes */}
           <Route
@@ -111,6 +113,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-    </Router>
+      </Router>
+    </UserProvider>
   )
 }

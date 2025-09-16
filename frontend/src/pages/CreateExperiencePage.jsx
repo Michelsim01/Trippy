@@ -1,9 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useUser } from '../contexts/UserContext';
+import { kycService } from '../services/kycService';
 
 const CreateExperiencePage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [kycStatus, setKycStatus] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+    const { user } = useUser();
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -12,6 +19,54 @@ const CreateExperiencePage = () => {
     const closeSidebar = () => {
         setIsSidebarOpen(false);
     };
+
+    // Check KYC status when component mounts
+    useEffect(() => {
+        const checkKycStatus = async () => {
+            if (!user?.id) {
+                // User not authenticated, redirect to login
+                navigate('/signin');
+                return;
+            }
+
+            try {
+                const status = await kycService.getKycStatus(user.id);
+                setKycStatus(status);
+
+                if (status !== 'APPROVED') {
+                    // User is not KYC approved, redirect to KYC onboarding
+                    navigate('/kyc-onboarding');
+                    return;
+                }
+            } catch (error) {
+                console.error('Failed to check KYC status:', error);
+                // If we can't check KYC status, redirect to onboarding to be safe
+                navigate('/kyc-onboarding');
+                return;
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        checkKycStatus();
+    }, [user, navigate]);
+
+    // Show loading state while checking KYC status
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
+                    <p className="text-neutrals-4">Verifying your guide status...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Only show create experience form if KYC is approved
+    if (kycStatus !== 'APPROVED') {
+        return null; // Component will redirect, so return null
+    }
 
     return (
         <div className="min-h-screen bg-neutrals-8">

@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import { useUser } from '../contexts/UserContext';
+import { kycService } from '../services/kycService';
 
 const idTypes = [
     { value: "nric", label: "NRIC" },
@@ -9,15 +11,9 @@ const idTypes = [
     { value: "other", label: "Other" }
 ];
 
-const countryCodes = [
-    { value: "+65", label: "Singapore (+65)" },
-    { value: "+60", label: "Malaysia (+60)" },
-    { value: "+62", label: "Indonesia (+62)" },
-    { value: "+63", label: "Philippines (+63)" },
-];
-
 export default function KycVerificationPage() {
     const navigate = useNavigate();
+    const { user, updateKycStatus } = useUser();
 
     function handleKycClick() {
         navigate('/kyc-verification');
@@ -31,6 +27,7 @@ export default function KycVerificationPage() {
         dob: "",
         nationality: "",
         idType: "",
+        otherIdType: "",
         idNumber: "",
         email: "",
         mobileCountry: "",
@@ -101,7 +98,7 @@ export default function KycVerificationPage() {
         }
     }
 
-    function handleSubmit(e) {
+    async function handleSubmit(e) {
         e.preventDefault();
         if (!form.declaration || !form.consent) {
             alert(
@@ -109,13 +106,27 @@ export default function KycVerificationPage() {
             );
             return;
         }
+
+        if (!user?.id) {
+            alert("User not authenticated. Please log in first.");
+            return;
+        }
+
         setSubmitting(true);
-        // TODO: send data to backend
-        setTimeout(() => {
-            setSubmitting(false);
-            alert("Submitted! Your application is under review.");
+        setErrors({});
+
+        try {
+            await kycService.submitKyc(user.id, form);
+            updateKycStatus('PENDING');
+            alert("KYC submitted successfully! Your application is under review.");
             navigate("/kyc-submitted");
-        }, 1200);
+        } catch (error) {
+            console.error('KYC submission failed:', error);
+            setErrors({ submit: error.message });
+            alert(`Submission failed: ${error.message}`);
+        } finally {
+            setSubmitting(false);
+        }
     }
 
     const progressPercentage = (currentStep / 3) * 100;

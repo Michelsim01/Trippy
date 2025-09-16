@@ -1,5 +1,6 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
+import { useUser } from '../contexts/UserContext'
 
 const Sidebar = ({
     isOpen,
@@ -10,10 +11,19 @@ const Sidebar = ({
     // Mock authentication for testing (remove when real auth is implemented)
     isAuthenticated = true;
 
+    const { user } = useUser();
+
+    // Check if user can create experiences (must be KYC approved)
+    const canCreateExperiences = user?.kycStatus === 'APPROVED';
+
     const navItems = isAuthenticated
         ? [
             { id: 'blog', label: 'Blog' },
-            { id: 'create-experience', label: 'Create an Experience' },
+            // Only show "Create an Experience" if user is KYC approved
+            ...(canCreateExperiences
+                ? [{ id: 'create-experience', label: 'Create an Experience' }]
+                : [{ id: 'kyc-onboarding', label: 'Become a Guide', subtitle: 'Complete verification' }]
+            ),
             { id: 'calendar', label: 'Calendar' },
             { id: 'about', label: 'About' },
             { id: 'contact', label: 'Contact' },
@@ -100,7 +110,14 @@ const Sidebar = ({
                                         }}
                                         onClick={onClose}
                                     >
-                                        {item.label}
+                                        <div>
+                                            {item.label}
+                                            {item.subtitle && (
+                                                <div className="text-xs opacity-75 mt-1">
+                                                    {item.subtitle}
+                                                </div>
+                                            )}
+                                        </div>
                                     </Link>
                                 </li>
                             ))}
@@ -123,7 +140,14 @@ const Sidebar = ({
                                             }}
                                             onClick={onClose}
                                         >
-                                            {item.label}
+                                            <div>
+                                                {item.label}
+                                                {item.subtitle && (
+                                                    <div className="text-xs opacity-75 mt-1">
+                                                        {item.subtitle}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </Link>
                                     </li>
                                 ))}
