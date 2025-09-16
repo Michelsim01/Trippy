@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { userService } from '../services/userService'
 import LogoutModal from './LogoutModal'
 
 // Placeholder images - in a real app these would come from your asset pipeline
@@ -14,6 +15,7 @@ const Navbar = ({
     const { isAuthenticated, user, logout } = useAuth()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+    const [userProfile, setUserProfile] = useState(null)
     const dropdownRef = useRef(null)
     const timeoutRef = useRef(null)
 
@@ -34,6 +36,35 @@ const Navbar = ({
         }
     }, [])
 
+    // Fetch complete user profile when authenticated
+    useEffect(() => {
+        const fetchUserProfile = async () => {
+            if (isAuthenticated && user?.id) {
+                try {
+                    const response = await userService.getUserById(user.id)
+                    if (response.success) {
+                        setUserProfile(response.data)
+                    }
+                } catch (error) {
+                    console.error('Error fetching user profile:', error)
+                }
+            } else {
+                setUserProfile(null)
+            }
+        }
+
+        fetchUserProfile()
+    }, [isAuthenticated, user?.id])
+
+    const getProfilePictureUrl = () => {
+        if (userProfile?.profileImageUrl) {
+            return userProfile.profileImageUrl.startsWith('http') 
+                ? userProfile.profileImageUrl 
+                : `http://localhost:8080${userProfile.profileImageUrl}`
+        }
+        return `https://ui-avatars.com/api/?name=${userProfile?.firstName || user?.firstName || 'User'}+${userProfile?.lastName || user?.lastName || ''}&background=FFBC99&color=000000`
+    }
+
     const handleMouseEnter = () => {
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current)
@@ -44,7 +75,7 @@ const Navbar = ({
     const handleMouseLeave = () => {
         timeoutRef.current = setTimeout(() => {
             setIsDropdownOpen(false)
-        }, 300) // 300ms delay before closing
+        }, 300)
     }
 
     const handleSignIn = () => {
@@ -56,8 +87,8 @@ const Navbar = ({
     }
 
     const handleLogout = () => {
-        setIsDropdownOpen(false) // Close dropdown first
-        setIsLogoutModalOpen(true) // Open logout modal
+        setIsDropdownOpen(false) 
+        setIsLogoutModalOpen(true)
     }
     
     return (
@@ -177,10 +208,14 @@ const Navbar = ({
                                     >
                                         <button className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
                                             <img 
-                                                src={user?.profileImage || userAvatar} 
-                                                alt={user?.firstName || 'Profile'} 
+                                                src={getProfilePictureUrl()} 
+                                                alt={userProfile?.firstName || user?.firstName || 'Profile'} 
                                                 className="w-full h-full object-cover" 
                                                 style={{ objectPosition: 'center' }}
+                                                onError={(e) => {
+                                                    // Fallback to generated avatar if image fails to load
+                                                    e.target.src = `https://ui-avatars.com/api/?name=${userProfile?.firstName || user?.firstName || 'User'}+${userProfile?.lastName || user?.lastName || ''}&background=FFBC99&color=000000`
+                                                }}
                                             />
                                         </button>
                                         
@@ -190,15 +225,15 @@ const Navbar = ({
                                         }`}>
                                             <div className="p-3 border-b border-neutrals-6">
                                                 <p className="font-poppins font-medium text-sm text-neutrals-2">
-                                                    {user?.firstName} {user?.lastName}
+                                                    {userProfile?.firstName || user?.firstName} {userProfile?.lastName || user?.lastName}
                                                 </p>
                                                 <p className="font-poppins text-xs text-neutrals-4">
-                                                    {user?.email}
+                                                    {userProfile?.email || user?.email}
                                                 </p>
                                             </div>
                                             <div className="p-2">
                                                 <Link 
-                                                    to="/profile" 
+                                                    to={`/profile/${user.id}`} 
                                                     className="block w-full text-left px-3 py-2 text-sm text-neutrals-2 hover:bg-neutrals-7 rounded transition-colors"
                                                 >
                                                     Profile
@@ -305,10 +340,14 @@ const Navbar = ({
                                 {/* Profile - For mobile, we'll keep it simple without dropdown for better UX */}
                                 <Link to="/profile" className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
                                     <img 
-                                        src={user?.profileImage || userAvatar} 
-                                        alt={user?.firstName || 'Profile'} 
+                                        src={getProfilePictureUrl()} 
+                                        alt={userProfile?.firstName || user?.firstName || 'Profile'} 
                                         className="w-full h-full object-cover"
                                         style={{ objectPosition: 'center' }}
+                                        onError={(e) => {
+                                            // Fallback to generated avatar if image fails to load
+                                            e.target.src = `https://ui-avatars.com/api/?name=${userProfile?.firstName || user?.firstName || 'User'}+${userProfile?.lastName || user?.lastName || ''}&background=FFBC99&color=000000`
+                                        }}
                                     />
                                 </Link>
                             </>

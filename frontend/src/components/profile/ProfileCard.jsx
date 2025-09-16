@@ -10,17 +10,20 @@ const UserRole = {
 
 const ProfileCard = ({ 
     userId, 
-    userData: propUserData, 
-    isOwnProfile = false, 
+    userData: propUserData,
     className = "" 
 }) => {
-    const { isAuthenticated, token } = useAuth();
+    const { isAuthenticated, token, user: currentUser } = useAuth();
     const [userData, setUserData] = useState(propUserData || null);
     const [userStats, setUserStats] = useState(null);
     const [loading, setLoading] = useState(!propUserData);
     const [error, setError] = useState(null);
+    console.log('Current User:', currentUser.id);
+    console.log('Profile User ID:', userId);
+    const isCurrentUserProfile = (
+        currentUser && userId && String(currentUser.id) === String(userId)
+    );
 
-    // Update userData when prop changes
     useEffect(() => {
         if (propUserData) {
             setUserData(propUserData);
@@ -165,18 +168,6 @@ const ProfileCard = ({
                     <h2 className="text-3xl font-bold text-gray-900">
                         {userData.firstName} {userData.lastName}
                     </h2>
-                    {isOwnProfile && (
-                        <button 
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                            title="Edit Profile"
-                            onClick={() => {
-                                // TODO: Implement profile editing modal or navigation
-                                console.log('Edit profile clicked');
-                            }}
-                        >
-                            <Edit className="w-5 h-5" />
-                        </button>
-                    )}
                 </div>
 
                 {/* Rating or Member Status */}
@@ -195,7 +186,7 @@ const ProfileCard = ({
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-3 mb-6">
-                {isOwnProfile ? (
+                {isCurrentUserProfile ? (
                     <button 
                         className="btn btn-primary btn-md gap-2"
                         onClick={() => {
@@ -247,7 +238,7 @@ const ProfileCard = ({
             {/* Footer */}
             <div className="text-center">
                 <p className="text-gray-500 text-sm mb-2">Member since {memberSince}</p>
-                {!isOwnProfile && (
+                {!isCurrentUserProfile && (
                 <button className="flex items-center justify-center gap-2 text-gray-500 hover:text-red-500 transition-colors mx-auto text-sm">
                     <Flag className="w-4 h-4" />
                     <span>Report this user</span>

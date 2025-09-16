@@ -142,6 +142,30 @@ export const AuthProvider = ({ children }) => {
         // Only set authenticated if email is verified
         if (user.emailVerified) {
           setIsAuthenticated(true)
+          
+          // Create login notification
+          try {
+            const token = localStorage.getItem('token');
+            const notificationPayload = {
+              title: 'Welcome Back!',
+              message: 'You have successfully logged in to your account.',
+              userId: userId,
+              type: 'MESSAGE',
+            };
+            
+            await fetch(`http://localhost:8080/api/notifications`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            });
+          } catch (notificationError) {
+            console.error('Failed to create login notification:', notificationError);
+            // Don't fail the login process if notification creation fails
+          }
+          
           navigate('/home')
         } else {
           setIsAuthenticated(false)
