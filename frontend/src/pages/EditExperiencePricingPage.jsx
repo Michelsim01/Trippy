@@ -17,7 +17,8 @@ export default function EditExperiencePricingPage() {
     toggleBookings,
     isFieldRestricted,
     loadExistingExperience,
-    saveCurrentChanges
+    saveCurrentChanges,
+    savePartialChanges
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -76,23 +77,16 @@ export default function EditExperiencePricingPage() {
     try {
       setIsSaving(true);
 
-      // Prepare complete data by merging context data with current form data
-      const completeData = {
-        ...contextData, // Start with all existing context data
+      // Prepare only the Pricing page data for partial save
+      const pricingData = {
         price: formData.pricePerPerson,
         currency: formData.currency
       };
 
-      // Save directly with the complete merged data
-      await saveCurrentChanges(completeData);
+      // Save only Pricing data with partial save (preserves other page data)
+      await savePartialChanges(pricingData);
 
-      // Update context after successful save
-      updateFormData({
-        price: formData.pricePerPerson,
-        currency: formData.currency
-      });
-
-      alert('Changes saved successfully!');
+      alert('Pricing saved successfully!');
     } catch (error) {
       console.error('Error saving changes:', error);
       alert('Failed to save changes. Please try again.');
