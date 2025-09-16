@@ -165,9 +165,9 @@ public class ExperienceController {
 
         String query = q.trim();
 
-        // Get location suggestions (limit to 3)
-        List<String> locations = experienceRepository.findLocationSuggestions(query);
-        suggestions.addAll(locations.stream()
+        // Get country suggestions (limit to 3)
+        List<String> countries = experienceRepository.findLocationSuggestions(query);
+        suggestions.addAll(countries.stream()
                 .limit(3)
                 .map(SearchSuggestionDTO::location)
                 .collect(Collectors.toList()));
@@ -176,7 +176,7 @@ public class ExperienceController {
         List<Experience> experiences = experienceRepository.findExperienceSuggestions(query);
         suggestions.addAll(experiences.stream()
                 .limit(2)
-                .map(exp -> SearchSuggestionDTO.experience(exp.getTitle(), exp.getLocation(), exp.getExperienceId()))
+                .map(exp -> SearchSuggestionDTO.experience(exp.getTitle(), exp.getCountry(), exp.getExperienceId()))
                 .collect(Collectors.toList()));
 
         // Limit total suggestions to 5

@@ -17,11 +17,11 @@ public class SearchSuggestionDTO {
     
     // Static factory methods for easier creation
     public static SearchSuggestionDTO location(String locationName) {
-        return new SearchSuggestionDTO("location", locationName, "City in " + locationName, null);
+        return new SearchSuggestionDTO("location", locationName, "Country", null);
     }
     
-    public static SearchSuggestionDTO experience(String title, String location, Long experienceId) {
-        return new SearchSuggestionDTO("experience", title, "Attraction in " + location, experienceId);
+    public static SearchSuggestionDTO experience(String title, String country, Long experienceId) {
+        return new SearchSuggestionDTO("experience", title, "Experience in " + country, experienceId);
     }
     
     // Getters and setters
