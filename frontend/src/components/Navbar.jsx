@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import LogoutModal from './LogoutModal'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -11,6 +12,40 @@ const Navbar = ({
 }) => {
     const navigate = useNavigate()
     const { isAuthenticated, user, logout } = useAuth()
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+    const dropdownRef = useRef(null)
+    const timeoutRef = useRef(null)
+
+    // Handle clicking outside to close dropdown
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+                setIsDropdownOpen(false)
+            }
+        }
+
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside)
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current)
+            }
+        }
+    }, [])
+
+    const handleMouseEnter = () => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+        }
+        setIsDropdownOpen(true)
+    }
+
+    const handleMouseLeave = () => {
+        timeoutRef.current = setTimeout(() => {
+            setIsDropdownOpen(false)
+        }, 300) // 300ms delay before closing
+    }
 
     const handleSignIn = () => {
         navigate('/signin')
@@ -21,11 +56,14 @@ const Navbar = ({
     }
 
     const handleLogout = () => {
-        logout()
+        setIsDropdownOpen(false) // Close dropdown first
+        setIsLogoutModalOpen(true) // Open logout modal
     }
+    
     return (
+        <>
         <nav className="bg-neutrals-8 border-b border-neutrals-6 relative z-30 w-full">
-            {/* Desktop Navbar */}
+                {/* Desktop Navbar */}
             <div className="hidden lg:block w-full">
                 <div className="h-[88px] flex items-center w-full">
                     <div className="flex items-center justify-between w-full px-4">
@@ -131,17 +169,25 @@ const Navbar = ({
                                     </Link>
 
                                     {/* Profile Dropdown */}
-                                    <div className="relative group">
-                                        <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors">
+                                    <div 
+                                        className="relative"
+                                        ref={dropdownRef}
+                                        onMouseEnter={handleMouseEnter}
+                                        onMouseLeave={handleMouseLeave}
+                                    >
+                                        <button className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
                                             <img 
                                                 src={user?.profileImage || userAvatar} 
                                                 alt={user?.firstName || 'Profile'} 
                                                 className="w-full h-full object-cover" 
+                                                style={{ objectPosition: 'center' }}
                                             />
-                                        </Link>
+                                        </button>
                                         
                                         {/* Dropdown Menu */}
-                                        <div className="absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-neutrals-6 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                                        <div className={`absolute right-0 top-12 w-48 bg-white rounded-lg shadow-lg border border-neutrals-6 transition-all duration-200 z-[100] ${
+                                            isDropdownOpen ? 'opacity-100 visible pointer-events-auto' : 'opacity-0 invisible pointer-events-none'
+                                        }`}>
                                             <div className="p-3 border-b border-neutrals-6">
                                                 <p className="font-poppins font-medium text-sm text-neutrals-2">
                                                     {user?.firstName} {user?.lastName}
@@ -238,7 +284,7 @@ const Navbar = ({
                                 <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 2 0 0 1-3.46 0" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 0 0 1-3.46 0" />
                                     </svg>
                                 </Link>
 
@@ -256,12 +302,13 @@ const Navbar = ({
                                     </svg>
                                 </Link>
 
-                                {/* Profile */}
-                                <Link to="/profile" className="w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors">
+                                {/* Profile - For mobile, we'll keep it simple without dropdown for better UX */}
+                                <Link to="/profile" className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
                                     <img 
                                         src={user?.profileImage || userAvatar} 
                                         alt={user?.firstName || 'Profile'} 
-                                        className="w-full h-full object-cover" 
+                                        className="w-full h-full object-cover"
+                                        style={{ objectPosition: 'center' }}
                                     />
                                 </Link>
                             </>
@@ -270,6 +317,13 @@ const Navbar = ({
                 </div>
             </div>
         </nav>
+        
+        {/* Logout Modal */}
+        <LogoutModal 
+            isOpen={isLogoutModalOpen} 
+            onClose={() => setIsLogoutModalOpen(false)} 
+        />
+        </>
     )
 }
 

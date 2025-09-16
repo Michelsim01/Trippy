@@ -4,7 +4,9 @@ import com.backend.dto.request.LoginRequest;
 import com.backend.dto.request.RegisterRequest;
 import com.backend.dto.response.AuthResponse;
 import com.backend.entity.User;
+import com.backend.entity.PendingUser;
 import com.backend.repository.UserRepository;
+import com.backend.repository.PendingUserRepository;
 import com.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -28,13 +30,19 @@ import java.util.stream.Collectors;
 public class AuthService {
     
     @Autowired
-    private UserRepository userRepository; 
+    private UserRepository userRepository;  
+    
+    @Autowired
+    private PendingUserRepository pendingUserRepository;
     
     @Autowired
     private PasswordEncoder passwordEncoder;
     
     @Autowired
     private JwtUtil jwtUtil;
+    
+    @Autowired
+    private EmailVerificationService emailVerificationService;
     
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -78,16 +86,18 @@ public class AuthService {
                 "Bearer",
                 user.getFirstName() + " " + user.getLastName(),
                 user.getEmail(),
-                roles
+                roles,
+                user.getIsEmailVerified()
             );
             
         } catch (Exception e) {
-            throw new Exception("Invalid credentials: " + e.getMessage());
+            throw e; // Re-throw the original exception
         }
     }
     
     /**
-     * Register a new user and generate JWT token.
+     * Register a new user temporarily until email verification.
+     * Creates a pending user record and sends verification email.
      * 
      * @param registerRequest The registration data
      * @return AuthResponse containing JWT token and user information
@@ -95,50 +105,64 @@ public class AuthService {
      */
     public AuthResponse register(RegisterRequest registerRequest) throws Exception {
         try {
-            // Check if user already exists
+            // Check if user already exists in main user table
             if (userRepository.existsByEmail(registerRequest.getEmail())) {
                 throw new Exception("User with email " + registerRequest.getEmail() + " already exists");
             }
             
-            // Create new user
-            User user = new User();
-            user.setEmail(registerRequest.getEmail());
-            user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
-            user.setFirstName(registerRequest.getFirstName());
-            user.setLastName(registerRequest.getLastName());
-            user.setIsActive(true);
-            user.setIsEmailVerified(false);
-            user.setIsAdmin(false);
-            user.setCanCreateExperiences(false);
-            user.setCreatedAt(LocalDateTime.now());
+            // Check if there's already a pending registration for this email
+            if (pendingUserRepository.existsByEmail(registerRequest.getEmail())) {
+                // Remove the existing pending registration
+                pendingUserRepository.deleteByEmail(registerRequest.getEmail());
+            }
             
-            // Set default permissions (all users start as travelers)
-            // Users can be upgraded to guides/admins later through admin actions
+            // Generate verification token
+            String verificationToken = emailVerificationService.generateVerificationToken();
             
-            // Save user to database
-            User savedUser = userRepository.save(user);
+            // Create pending user (not saved to main user table yet)
+            PendingUser pendingUser = new PendingUser(
+                registerRequest.getEmail(),
+                passwordEncoder.encode(registerRequest.getPassword()),
+                registerRequest.getFirstName(),
+                registerRequest.getLastName(),
+                verificationToken
+            );
             
-            // Generate JWT token
+            // Save pending user to temporary storage
+            PendingUser savedPendingUser = pendingUserRepository.save(pendingUser);
+            
+            // Send email verification email with the token
+            try {
+                emailVerificationService.sendVerificationEmail(savedPendingUser.getEmail(), verificationToken);
+                System.out.println("Verification email sent to: " + savedPendingUser.getEmail());
+            } catch (Exception e) {
+                // If email sending fails, remove the pending user and fail registration
+                pendingUserRepository.delete(savedPendingUser);
+                throw new Exception("Failed to send verification email. Please try again.");
+            }
+            
+            // Generate JWT token for the pending user (with limited access)
             String token = jwtUtil.generateToken(org.springframework.security.core.userdetails.User.builder()
-                .username(savedUser.getEmail())
+                .username(savedPendingUser.getEmail())
                 .password("")
-                .authorities("ROLE_TRAVELER")
+                .authorities("ROLE_PENDING")
                 .build());
             
-            // Create roles list
-            List<String> roles = List.of("ROLE_TRAVELER");
+            // Create roles list for pending user
+            List<String> roles = List.of("ROLE_PENDING");
             
-            // Create and return response
+            // Create and return response (emailVerified = false since it's pending)
             return new AuthResponse(
                 token,
                 "Bearer",
-                savedUser.getFirstName() + " " + savedUser.getLastName(),
-                savedUser.getEmail(),
-                roles
+                savedPendingUser.getFirstName() + " " + savedPendingUser.getLastName(),
+                savedPendingUser.getEmail(),
+                roles,
+                false // Email is not verified yet
             );
             
         } catch (Exception e) {
-            throw new Exception("Registration failed: " + e.getMessage());
+            throw new Exception(e.getMessage());
         }
     }
 }

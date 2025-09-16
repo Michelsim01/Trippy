@@ -44,9 +44,8 @@ export const AuthProvider = ({ children }) => {
           const currentTime = Date.now() / 1000
           
           if (payload.exp && payload.exp > currentTime) {
-            // Token is valid, set authenticated state
+            // Token is valid, check if user email is verified
             setToken(storedToken)
-            setIsAuthenticated(true)
             
             // Try to get user data from localStorage
             const storedUser = localStorage.getItem('user')
@@ -54,11 +53,26 @@ export const AuthProvider = ({ children }) => {
               try {
                 const user = JSON.parse(storedUser)
                 setUser(user)
+                
+                // Only set authenticated if email is verified
+                if (user.emailVerified) {
+                  setIsAuthenticated(true)
+                } else {
+                  setIsAuthenticated(false)
+                }
               } catch (error) {
                 console.error('Error parsing stored user data:', error)
                 // Clear invalid user data
                 localStorage.removeItem('user')
+                localStorage.removeItem('token')
+                setIsAuthenticated(false)
+                setUser(null)
+                setToken(null)
               }
+            } else {
+              // No user data, not authenticated
+              setIsAuthenticated(false)
+              setUser(null)
             }
           } else {
             // Token is expired, clear everything
@@ -68,7 +82,7 @@ export const AuthProvider = ({ children }) => {
             setUser(null)
             setToken(null)
           }
-        } catch (tokenError) {
+        } catch (tokenError) { 
           // Token is malformed, clear everything
           localStorage.removeItem('token')
           localStorage.removeItem('user')
@@ -97,13 +111,13 @@ export const AuthProvider = ({ children }) => {
   // Login function
   const login = async (email, password) => {
     try {
-      setIsLoading(true)
-      
       // Call backend API
       const response = await authService.login(email, password)
       
+      // If login is successful, extract the data and check if email is verified
       if (response.success) {
-        const { token, username, email: userEmail, roles } = response.data
+        // Destructure the response data
+        const { token, username, email: userEmail, roles, emailVerified } = response.data
         
         // Store token in localStorage
         localStorage.setItem('token', token)
@@ -113,7 +127,8 @@ export const AuthProvider = ({ children }) => {
           firstName: username.split(' ')[0] || '',
           lastName: username.split(' ').slice(1).join(' ') || '',
           email: userEmail,
-          roles: roles
+          roles: roles,
+          emailVerified: emailVerified
         }
         
         // Store user data in localStorage
@@ -122,13 +137,19 @@ export const AuthProvider = ({ children }) => {
         // Update state
         setToken(token)
         setUser(user)
-        setIsAuthenticated(true)
         
-        // Navigate to home page
-        navigate('/home')
+        // Only set authenticated if email is verified
+        if (user.emailVerified) {
+          setIsAuthenticated(true)
+          navigate('/home')
+        } else {
+          setIsAuthenticated(false)
+          navigate('/email-verification')
+        }
         
         return { success: true }
       } else {
+        // Return error from authService
         return { 
           success: false, 
           error: response.error 
@@ -140,21 +161,17 @@ export const AuthProvider = ({ children }) => {
         success: false, 
         error: error.message || 'Login failed' 
       }
-    } finally {
-      setIsLoading(false)
     }
   }
 
   // Register function
   const register = async (userData) => {
     try {
-      setIsLoading(true)
-      
       // Call backend API
       const response = await authService.register(userData)
       
       if (response.success) {
-        const { token, username, email, roles } = response.data
+        const { token, username, email, roles, emailVerified } = response.data
         
         // Store token in localStorage
         localStorage.setItem('token', token)
@@ -164,7 +181,8 @@ export const AuthProvider = ({ children }) => {
           firstName: username.split(' ')[0] || '',
           lastName: username.split(' ').slice(1).join(' ') || '',
           email: email,
-          roles: roles
+          roles: roles,
+          emailVerified: emailVerified // Use the value from backend directly
         }
         
         // Store user data in localStorage
@@ -173,10 +191,15 @@ export const AuthProvider = ({ children }) => {
         // Update state
         setToken(token)
         setUser(user)
-        setIsAuthenticated(true)
         
-        // Navigate to home page
-        navigate('/home')
+        // Only set authenticated if email is verified
+        if (user.emailVerified) {
+          setIsAuthenticated(true)
+          navigate('/home')
+        } else {
+          setIsAuthenticated(false)
+          navigate('/email-verification')
+        }
         
         return { success: true }
       } else {
@@ -191,8 +214,6 @@ export const AuthProvider = ({ children }) => {
         success: false, 
         error: error.message || 'Registration failed' 
       }
-    } finally {
-      setIsLoading(false)
     }
   }
 

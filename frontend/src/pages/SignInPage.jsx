@@ -7,38 +7,98 @@ const backgroundImage = "https://images.unsplash.com/photo-1469474968028-56623f0
 
 const SignInPage = () => {
     const navigate = useNavigate()
-    const { login, isLoading } = useAuth()
+    const { login } = useAuth()
     const [formData, setFormData] = useState({
         email: '',
         password: ''
     })
     const [showPassword, setShowPassword] = useState(false)
-    const [error, setError] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState({
+        email: '',
+        password: ''
+    })
 
     const handleInputChange = (e) => {
+        const { name, value } = e.target
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value
+            [name]: value
         })
+        
+        // Clear field-specific error when user starts typing
+        if (fieldErrors[name] && value !== '') {
+            setFieldErrors({
+                ...fieldErrors,
+                [name]: ''
+            })
+        }
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
-        setError('')
+        e.stopPropagation()
+        
+        // Clear field errors
+        setFieldErrors({ email: '', password: '' })
         
         // Validate form
-        if (!formData.email || !formData.password) {
-            setError('Please fill in all fields')
-            return
+        let hasErrors = false
+        const newFieldErrors = {}
+        
+        if (!formData.email.trim()) {
+            newFieldErrors.email = 'Email is required'
+            hasErrors = true
+        } else {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            if (!emailRegex.test(formData.email)) {
+                newFieldErrors.email = 'Please enter a valid email address'
+                hasErrors = true
+            }
         }
         
-        // Call login function from auth context
-        const result = await login(formData.email, formData.password)
-        
-        if (!result.success) {
-            setError(result.error || 'Login failed')
+        if (!formData.password) {
+            newFieldErrors.password = 'Password is required'
+            hasErrors = true
         }
-        // If successful, the login function will handle navigation
+        
+        if (hasErrors) {
+            setFieldErrors(newFieldErrors)
+            return false
+        }
+        
+        // Set local loading state for button
+        setIsSubmitting(true)
+        
+        try {
+            // Call login function from auth context
+            const result = await login(formData.email, formData.password)
+            
+            if (!result.success) {
+                const errorMessage = result.error || 'Login failed'
+                
+                // Set field-specific errors based on the error message
+                const newFieldErrors = {}
+                if (errorMessage.toLowerCase().includes('email')) {
+                    newFieldErrors.email = errorMessage
+                } else if (errorMessage.toLowerCase().includes('password')) {
+                    newFieldErrors.password = errorMessage
+                } else {
+                    // For general errors, show on both fields
+                    newFieldErrors.email = errorMessage
+                }
+                setFieldErrors(newFieldErrors)
+            }
+            // If successful, the login function will handle navigation
+        } catch (error) {
+            const errorMessage = 'Login failed. Please try again.'
+            // Set field-specific error for general network/server errors
+            setFieldErrors({ email: errorMessage })
+        } finally {
+            setIsSubmitting(false)
+        }
+        
+        return false
     }
 
     return (
@@ -54,12 +114,12 @@ const SignInPage = () => {
 
                 {/* Logo on image */}
                 <div className="relative z-10 p-10">
-                    <div className="flex items-center gap-2">
+                    <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                         <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center">
                             <span className="text-neutrals-8 font-bold text-lg">T</span>
                         </div>
                         <span className="font-poppins font-semibold text-neutrals-8 text-[27px]">Trippy</span>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* Decorative elements */}
@@ -73,18 +133,22 @@ const SignInPage = () => {
             <div className="flex-1 flex items-center justify-center p-8 lg:p-0">
                 <div className="w-full max-w-[352px]">
                     {/* Mobile Logo */}
-                    <div className="lg:hidden flex items-center justify-center mb-8">
-                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
-                            <span className="text-neutrals-8 font-bold text-lg">T</span>
-                        </div>
-                        <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
+                    <div className="lg:hidden flex justify-center mb-8">
+                        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+                            <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
+                                <span className="text-neutrals-8 font-bold text-lg">T</span>
+                            </div>
+                            <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
+                        </Link>
                     </div>
 
                     {/* Logo Icon (Desktop) */}
                     <div className="hidden lg:flex justify-center mb-8">
-                        <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
-                            <span className="text-neutrals-8 font-bold text-3xl">T</span>
-                        </div>
+                        <Link to="/" className="hover:opacity-80 transition-opacity">
+                            <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
+                                <span className="text-neutrals-8 font-bold text-3xl">T</span>
+                            </div>
+                        </Link>
                     </div>
 
                     {/* Title */}
@@ -97,15 +161,9 @@ const SignInPage = () => {
                         </p>
                     </div>
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 font-poppins text-sm">{error}</p>
-                        </div>
-                    )}
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
                         {/* Email Input */}
                         <div className="relative">
                             <input
@@ -114,21 +172,33 @@ const SignInPage = () => {
                                 value={formData.email}
                                 onChange={handleInputChange}
                                 placeholder="Enter your email"
-                                className="w-full h-12 px-6 py-2 border-2 border-neutrals-6 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:border-primary-1 focus:outline-none transition-colors"
-                                required
+                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
+                                    fieldErrors.email 
+                                        ? 'border-red-500 focus:border-red-500' 
+                                        : 'border-neutrals-6 focus:border-primary-1'
+                                }`}
                             />
+                            <div className="h-5 mt-1">
+                                {fieldErrors.email && (
+                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.email}</p>
+                                )}
+                            </div>
                         </div>
 
                         {/* Password Input */}
-                        <div className="relative">
+                        <div>
+                            <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
                                 name="password"
                                 value={formData.password}
                                 onChange={handleInputChange}
                                 placeholder="Password"
-                                className="w-full h-12 px-6 py-2 pr-12 border-2 border-neutrals-6 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:border-primary-1 focus:outline-none transition-colors"
-                                required
+                                className={`w-full h-12 px-6 py-2 pr-12 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
+                                    fieldErrors.password 
+                                        ? 'border-red-500 focus:border-red-500' 
+                                        : 'border-neutrals-6 focus:border-primary-1'
+                                }`}
                             />
                             <button
                                 type="button"
@@ -145,26 +215,33 @@ const SignInPage = () => {
                                     )}
                                 </svg>
                             </button>
+                            </div>
+                            <div className="h-5 mt-1">
+                                {fieldErrors.password && (
+                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.password}</p>
+                                )}
+                            </div>
                         </div>
 
                         {/* Forgot Password Link */}
-                        <div className="text-right">
-                            <button
-                                type="button"
+                        <div className="text-center">
+                            <Link
+                                to="/forgot-password"
                                 className="font-poppins text-sm text-primary-1 hover:text-primary-1/80 transition-colors"
                             >
                                 Forgot Password?
-                            </button>
+                            </Link>
                         </div>
 
                         {/* Sign In Button */}
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                disabled={isLoading}
+                                disabled={isSubmitting}
+                                onClick={() => {}}
                                 className="w-[120px] bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors mx-auto block disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isLoading ? (
+                                {isSubmitting ? (
                                     <div className="flex items-center justify-center">
                                         <div className="w-4 h-4 border-2 border-neutrals-8 border-t-transparent rounded-full animate-spin mr-2"></div>
                                         Signing in...

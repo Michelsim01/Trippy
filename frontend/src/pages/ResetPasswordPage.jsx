@@ -1,45 +1,71 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import React, { useState, useEffect } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { authService } from '../services/authService'
 
 // Placeholder image for background
 const backgroundImage = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1074&q=80"
 
-const SignUpPage = () => {
+const ResetPasswordPage = () => {
     const navigate = useNavigate()
-    const { register } = useAuth()
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        confirmPassword: ''
-    })
+    const [searchParams] = useSearchParams()
+    const [password, setPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-    const [error, setError] = useState('')
-    const [showSuccessMessage, setShowSuccessMessage] = useState(false)
-    const [displayError, setDisplayError] = useState('')
-    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+    const [message, setMessage] = useState('')
+    const [isSuccess, setIsSuccess] = useState(false)
+    const [token, setToken] = useState('')
     const [fieldErrors, setFieldErrors] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        general: ''
     })
 
-    // Clear any previous signup errors when component mounts
+    // Get token from URL parameters
     useEffect(() => {
-        localStorage.removeItem('signupError')
-    }, [])
+        const tokenFromUrl = searchParams.get('token') 
+        if (tokenFromUrl) {
+            setToken(tokenFromUrl)
+            // Validate token on component mount
+            validateToken(tokenFromUrl)
+        } else {
+            setFieldErrors({
+                password: '',
+                confirmPassword: '',
+                general: 'Invalid reset link. Please request a new password reset.'
+            })
+        }
+    }, [searchParams])
+
+    const validateToken = async (tokenToValidate) => {
+        try {
+            const result = await authService.validateResetToken(tokenToValidate)
+            
+            if (!result.success) {
+                setFieldErrors({
+                    password: '',
+                    confirmPassword: '',
+                    general: 'Invalid or expired reset link. Please request a new password reset.'
+                })
+            }
+        } catch (error) {
+            setFieldErrors({
+                password: '',
+                confirmPassword: '',
+                general: 'Network error. Please try again.'
+            })
+        }
+    }
 
     const handleInputChange = (e) => {
         const { name, value } = e.target
-        setFormData({
-            ...formData,
-            [name]: value
-        })
+        
+        if (name === 'password') {
+            setPassword(value)
+        } else if (name === 'confirmPassword') {
+            setConfirmPassword(value)
+        }
         
         // Clear field-specific error when user starts typing
         if (fieldErrors[name] && value !== '') {
@@ -49,117 +75,76 @@ const SignUpPage = () => {
             })
         }
         
-        // Clear global error when user starts typing
-        if ((error || displayError) && value !== '') {
-            setError('')
-            setDisplayError('')
-            localStorage.removeItem('signupError')
+        // Clear general error and message when user starts typing
+        if (message || fieldErrors.general) {
+            setMessage('')
+            setFieldErrors({
+                ...fieldErrors,
+                general: ''
+            })
         }
     }
 
     const handleSubmit = async (e) => {
         e.preventDefault()
+        e.stopPropagation()
         
-        // Clear previous success message and errors
-        setShowSuccessMessage(false)
-        setError('')
-        setDisplayError('')
-        setFieldErrors({
-            firstName: '',
-            lastName: '',
-            email: '',
-            password: '',
-            confirmPassword: ''
-        })
+        // Clear field errors and messages
+        setFieldErrors({ password: '', confirmPassword: '', general: '' })
+        setMessage('')
         
+        // Validate form
         let hasErrors = false
         const newFieldErrors = {}
         
-        // Validate required fields
-        if (!formData.firstName.trim()) {
-            newFieldErrors.firstName = 'First name is required'
-            hasErrors = true
-        }
-        
-        if (!formData.lastName.trim()) {
-            newFieldErrors.lastName = 'Last name is required'
-            hasErrors = true
-        }
-        
-        if (!formData.email.trim()) {
-            newFieldErrors.email = 'Email is required'
-            hasErrors = true
-        } else {
-            // Basic email validation
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-            if (!emailRegex.test(formData.email)) {
-                newFieldErrors.email = 'Please enter a valid email address'
-                hasErrors = true
-            }
-        }
-        
-        if (!formData.password) {
+        if (!password) {
             newFieldErrors.password = 'Password is required'
             hasErrors = true
-        } else {
-            // Password length validation
-            if (formData.password.length < 8) {
-                newFieldErrors.password = 'Password must be at least 8 characters long'
-                hasErrors = true
-            } else {
-                // Password complexity validation
-                const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/
-                if (!passwordRegex.test(formData.password)) {
-                    newFieldErrors.password = 'Password must contain at least one lowercase letter, one uppercase letter, and one number'
-                    hasErrors = true
-                }
-            }
+        } else if (password.length < 8) {
+            newFieldErrors.password = 'Password must be at least 8 characters long'
+            hasErrors = true
         }
         
-        if (!formData.confirmPassword) {
+        if (!confirmPassword) {
             newFieldErrors.confirmPassword = 'Please confirm your password'
             hasErrors = true
-        } else if (formData.password !== formData.confirmPassword) {
+        } else if (password && confirmPassword && password !== confirmPassword) {
             newFieldErrors.confirmPassword = 'Passwords do not match'
             hasErrors = true
         }
         
-        // If there are validation errors, set them and return
+        if (!token) {
+            newFieldErrors.general = 'Invalid reset link. Please request a new password reset.'
+            hasErrors = true
+        }
+        
         if (hasErrors) {
             setFieldErrors(newFieldErrors)
             return
         }
         
-        // Set local loading state for button
-        setIsSubmitting(true)
+        setIsLoading(true)
         
         try {
-            // Call register function from auth context
-            const result = await register({
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                password: formData.password
-            })
+            const result = await authService.resetPassword(token, password)
             
             if (result.success) {
-                setError('') // Clear any previous errors
-                // Don't show success message since user will be navigated away immediately
-                // The register function will handle navigation to email verification page
+                setIsSuccess(true)
+                setMessage('Password has been reset successfully! You can now sign in with your new password.')
+                
+                // Redirect to sign in page after 3 seconds
+                setTimeout(() => {
+                    navigate('/signin')
+                }, 3000)
             } else {
-                const errorMessage = result.error || 'Registration failed'
-                setError(errorMessage)
-                setDisplayError(errorMessage)
-                // Also store in localStorage as backup
-                localStorage.setItem('signupError', errorMessage)
+                const errorMessage = result.error || 'Failed to reset password'
+                // Set general error for API errors
+                setFieldErrors({ password: '', confirmPassword: '', general: errorMessage })
             }
         } catch (error) {
-            const errorMessage = 'Registration failed. Please try again.'
-            setError(errorMessage)
-            setDisplayError(errorMessage)
-            localStorage.setItem('signupError', errorMessage)
+            setFieldErrors({ password: '', confirmPassword: '', general: 'Network error. Please try again.' })
         } finally {
-            setIsSubmitting(false)
+            setIsLoading(false)
         }
     }
 
@@ -176,12 +161,12 @@ const SignUpPage = () => {
 
                 {/* Logo on image */}
                 <div className="relative z-10 p-10">
-                    <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <div className="flex items-center gap-2">
                         <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center">
                             <span className="text-neutrals-8 font-bold text-lg">T</span>
                         </div>
                         <span className="font-poppins font-semibold text-neutrals-8 text-[27px]">Trippy</span>
-                    </Link>
+                    </div>
                 </div>
 
                 {/* Decorative elements */}
@@ -195,139 +180,61 @@ const SignUpPage = () => {
             <div className="flex-1 flex items-center justify-center p-8 lg:p-0">
                 <div className="w-full max-w-[352px]">
                     {/* Mobile Logo */}
-                    <div className="lg:hidden flex justify-center mb-8">
-                        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-                            <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
-                                <span className="text-neutrals-8 font-bold text-lg">T</span>
-                            </div>
-                            <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
-                        </Link>
+                    <div className="lg:hidden flex items-center justify-center mb-8">
+                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
+                            <span className="text-neutrals-8 font-bold text-lg">T</span>
+                        </div>
+                        <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
                     </div>
 
                     {/* Logo Icon (Desktop) */}
                     <div className="hidden lg:flex justify-center mb-8">
-                        <Link to="/" className="hover:opacity-80 transition-opacity">
-                            <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
-                                <span className="text-neutrals-8 font-bold text-3xl">T</span>
-                            </div>
-                        </Link>
+                        <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
+                            <span className="text-neutrals-8 font-bold text-3xl">T</span>
+                        </div>
                     </div>
 
                     {/* Title */}
                     <div className="text-center mb-8">
                         <h1 className="font-dm-sans font-bold text-[40px] leading-[48px] tracking-[-0.4px] text-neutrals-2 mb-3">
-                            Sign up
+                            Reset Password
                         </h1>
                         <p className="font-poppins text-base text-neutrals-4">
-                            Create your Trippy account now!
+                            Enter your new password below.
                         </p>
                     </div>
 
                     {/* Success Message */}
-                    {showSuccessMessage && (
+                    {isSuccess && message && (
                         <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center">
-                                <svg className="w-5 h-5 text-green-600 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                <div>
-                                    <p className="text-green-800 font-poppins text-sm font-medium">
-                                        Registration successful!
-                                    </p>
-                                    <p className="text-green-700 font-poppins text-xs mt-1">
-                                        Please check your email for verification instructions.
-                                    </p>
-                                </div>
-                            </div>
+                            <p className="text-green-600 font-poppins text-sm">{message}</p>
                         </div>
                     )}
 
-                    {/* Global Error Message (for backend errors only) */}
-                    {(displayError || localStorage.getItem('signupError')) && (
+                    {/* General Error Message */}
+                    {fieldErrors.general && (
                         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 font-poppins text-sm">{displayError || localStorage.getItem('signupError')}</p>
+                            <p className="text-red-600 font-poppins text-sm">{fieldErrors.general}</p>
                         </div>
                     )}
 
                     {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6" noValidate>
-                        {/* First Name Input */}
-                        <div className="relative">
-                            <input
-                                type="text"
-                                name="firstName"
-                                value={formData.firstName}
-                                onChange={handleInputChange}
-                                placeholder="First Name"
-                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
-                                    fieldErrors.firstName 
-                                        ? 'border-red-500 focus:border-red-500' 
-                                        : 'border-neutrals-6 focus:border-primary-1'
-                                }`}
-                            />
-                            <div className="h-5 mt-1">
-                                {fieldErrors.firstName && (
-                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.firstName}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Last Name Input */}
-                        <div className="relative">
-                            <input
-                                type="text"
-                                name="lastName"
-                                value={formData.lastName}
-                                onChange={handleInputChange}
-                                placeholder="Last Name"
-                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
-                                    fieldErrors.lastName 
-                                        ? 'border-red-500 focus:border-red-500' 
-                                        : 'border-neutrals-6 focus:border-primary-1'
-                                }`}
-                            />
-                            <div className="h-5 mt-1">
-                                {fieldErrors.lastName && (
-                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.lastName}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Email Input */}
-                        <div className="relative">
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                placeholder="Enter your email"
-                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
-                                    fieldErrors.email 
-                                        ? 'border-red-500 focus:border-red-500' 
-                                        : 'border-neutrals-6 focus:border-primary-1'
-                                }`}
-                            />
-                            <div className="h-5 mt-1">
-                                {fieldErrors.email && (
-                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.email}</p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Password Input */}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* New Password Input */}
                         <div>
                             <div className="relative">
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     name="password"
-                                    value={formData.password}
+                                    value={password}
                                     onChange={handleInputChange}
-                                    placeholder="Password"
+                                    placeholder="New password"
                                     className={`w-full h-12 px-6 py-2 pr-12 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
                                         fieldErrors.password 
                                             ? 'border-red-500 focus:border-red-500' 
                                             : 'border-neutrals-6 focus:border-primary-1'
                                     }`}
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -358,14 +265,15 @@ const SignUpPage = () => {
                                 <input
                                     type={showConfirmPassword ? "text" : "password"}
                                     name="confirmPassword"
-                                    value={formData.confirmPassword}
+                                    value={confirmPassword}
                                     onChange={handleInputChange}
-                                    placeholder="Confirm Password"
+                                    placeholder="Confirm new password"
                                     className={`w-full h-12 px-6 py-2 pr-12 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
                                         fieldErrors.confirmPassword 
                                             ? 'border-red-500 focus:border-red-500' 
                                             : 'border-neutrals-6 focus:border-primary-1'
                                     }`}
+                                    required
                                 />
                                 <button
                                     type="button"
@@ -390,33 +298,33 @@ const SignUpPage = () => {
                             </div>
                         </div>
 
-                        {/* Sign Up Button */}
+                        {/* Submit Button */}
                         <div className="pt-6">
                             <button
                                 type="submit"
-                                disabled={isSubmitting}
+                                disabled={isLoading || !token}
                                 className="w-full bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {isSubmitting ? (
+                                {isLoading ? (
                                     <div className="flex items-center justify-center">
                                         <div className="w-4 h-4 border-2 border-neutrals-8 border-t-transparent rounded-full animate-spin mr-2"></div>
-                                        Sending...
+                                        Resetting...
                                     </div>
                                 ) : (
-                                    'Sign up'
+                                    'Reset Password'
                                 )}
                             </button>
                         </div>
 
-                        {/* Login Link */}
+                        {/* Back to Sign In Link */}
                         <div className="text-center pt-4">
                             <p className="font-poppins text-xs text-neutrals-3">
-                                Already have an account?{' '}
+                                Remember your password?{' '}
                                 <Link
                                     to="/signin"
                                     className="font-poppins font-semibold text-primary-1 hover:text-primary-1/80 transition-colors"
                                 >
-                                    Login
+                                    Sign in
                                 </Link>
                             </p>
                         </div>
@@ -438,4 +346,4 @@ const SignUpPage = () => {
     )
 }
 
-export default SignUpPage
+export default ResetPasswordPage

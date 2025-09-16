@@ -61,7 +61,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @param isAdmin Whether the user is an admin
      * @return List of admin users
      */
-    List<User> findByIsAdmin(Boolean isAdmin);
+    List<User> findByIsAdmin(Boolean isAdmin); 
     
     /**
      * Find users by active status.
@@ -70,6 +70,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return List of users with the specified active status
      */
     List<User> findByIsActive(Boolean isActive);
+    
+    /**
+     * Find user by password reset token.
+     * 
+     * @param passwordResetToken The password reset token
+     * @return Optional containing the user if found, empty otherwise
+     */
+    Optional<User> findByPasswordResetToken(String passwordResetToken);
+    
+    /**
+     * Find users with expired password reset tokens.
+     * 
+     * @param expirationTime The expiration time to filter by
+     * @return List of users with expired password reset tokens
+     */
+    List<User> findByPasswordResetTokenExpiresAtBefore(LocalDateTime expirationTime);
     
     // 3. KYC status methods
     
@@ -194,7 +210,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByKycStatus(KycStatus kycStatus);
     
     /**
-     * Count active users.
+     * Count active users. 
      * 
      * @param isActive Whether the user is active
      * @return Number of active users
@@ -230,4 +246,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.isEmailVerified = :isEmailVerified AND u.createdAt < :createdAt")
     List<User> findUsersNeedingEmailVerification(@Param("isEmailVerified") Boolean isEmailVerified, 
                                                 @Param("createdAt") LocalDateTime createdAt);
+    
+    /**
+     * Find user by email verification token.
+     * 
+     * @param emailVerificationToken The email verification token
+     * @return Optional containing the user if found
+     */
+    Optional<User> findByEmailVerificationToken(String emailVerificationToken);
+    
+    /**
+     * Find users with expired email verification tokens.
+     * 
+     * @param expirationTime The expiration time to check against
+     * @return List of users with expired email verification tokens
+     */
+    List<User> findByEmailVerificationTokenExpiresAtBefore(LocalDateTime expirationTime);
 }
+ 

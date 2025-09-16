@@ -1,5 +1,6 @@
 package com.backend.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 /**
@@ -13,20 +14,23 @@ public class AuthResponse {
     private String username;
     private String email;
     private List<String> roles;
+    private boolean emailVerified;
     
     // Default constructor
     public AuthResponse() {}
     
     // Constructor with parameters
-    public AuthResponse(String token, String type, String username, String email, List<String> roles) {
+    public AuthResponse(String token, String type, String username, String email, List<String> roles, boolean emailVerified) {
         this.token = token;
         this.type = type;
         this.username = username;
         this.email = email;
         this.roles = roles;
+        this.emailVerified = emailVerified;
     }
     
     // Getters and setters
+    @JsonProperty("token")
     public String getToken() {
         return token;
     }
@@ -35,6 +39,7 @@ public class AuthResponse {
         this.token = token;
     }
     
+    @JsonProperty("type")
     public String getType() {
         return type;
     }
@@ -43,6 +48,7 @@ public class AuthResponse {
         this.type = type;
     }
     
+    @JsonProperty("username")
     public String getUsername() {
         return username;
     }
@@ -51,6 +57,7 @@ public class AuthResponse {
         this.username = username;
     }
     
+    @JsonProperty("email")
     public String getEmail() {
         return email;
     }
@@ -59,12 +66,22 @@ public class AuthResponse {
         this.email = email;
     }
     
+    @JsonProperty("roles")
     public List<String> getRoles() { 
         return roles;
     }
     
     public void setRoles(List<String> roles) {
         this.roles = roles;
+    }
+    
+    @JsonProperty("emailVerified")
+    public boolean isEmailVerified() {
+        return emailVerified;
+    }
+    
+    public void setEmailVerified(boolean emailVerified) {
+        this.emailVerified = emailVerified;
     }
     
     @Override
@@ -75,6 +92,7 @@ public class AuthResponse {
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
                 ", roles=" + roles +
+                ", emailVerified=" + emailVerified +
                 '}';
     }
 }

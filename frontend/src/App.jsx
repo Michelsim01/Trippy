@@ -4,6 +4,10 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import EmailVerificationPage from './pages/EmailVerificationPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import HomePage from './pages/HomePage'
 import NotificationsPage from './pages/NotificationsPage'
 import WishlistPage from './pages/WishlistPage'
@@ -15,12 +19,12 @@ import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import SettingsPage from './pages/SettingsPage'
-import LogoutPage from './pages/LogoutPage'
-import './App.css'
+import './App.css' 
 
 // AppRoutes component that uses authentication context
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth()
+
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -49,13 +53,31 @@ function AppRoutes() {
         path="/signin"
         element={isAuthenticated ? <Navigate to="/home" replace /> : <SignInPage />}
       />
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <ForgotPasswordPage />}
+      />
+      <Route
+        path="/reset-password"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <ResetPasswordPage />}
+      />
+
+      {/* Email verification routes - accessible when user has token but not verified */}
+      <Route
+        path="/email-verification"
+        element={<EmailVerificationPage />}
+      />
+      <Route
+        path="/verify-email"
+        element={<VerifyEmailPage />}
+      />
 
       {/* Protected routes */}
       <Route
         path="/home"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
       />
-      <Route
+      <Route 
         path="/notifications"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
       />
@@ -94,10 +116,6 @@ function AppRoutes() {
       <Route
         path="/settings"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
-      />
-      <Route
-        path="/logout"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
       />
 
       {/* Catch all route */}
