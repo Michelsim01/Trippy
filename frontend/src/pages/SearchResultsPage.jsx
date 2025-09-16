@@ -7,48 +7,43 @@ import FilterPanel from '../components/FilterPanel';
 import FilterBar from '../components/FilterBar';
 import ExperienceCard from '../components/ExperienceCard';
 import { useAuth } from '../contexts/AuthContext';
+import { experienceApi } from '../services/experienceApi';
 
-// Helper function to transform API data to match filter expectations
+// Helper function to transform API data to match ExperienceCard expectations (same as HomePage)
 const transformExperienceData = (apiData, wishlistItems = []) => {
     const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
     
-    return apiData.map(exp => ({
-        id: exp.experienceId,
-        experienceId: exp.experienceId,
-        title: exp.title,
-        location: exp.location,
-        originalPrice: exp.price ? exp.price * 1.2 : 0, // Add 20% markup for "original" price
-        salePrice: exp.price || 0,
-        rating: exp.averageRating || 4.5,
-        reviewCount: exp.totalReviews || 0,
-        duration: exp.duration ? `${exp.duration} hours` : "Unknown",
-        durationHours: exp.duration || 0,
-        availableFrom: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
-        availableTo: exp.updatedAt ? exp.updatedAt.split('T')[0] : "2025-12-31",
-        isLiked: wishlistedIds.has(exp.experienceId),
-        timeOfDay: "morning", // Default since we don't have this in API
-        listingDate: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01",
-        relevanceScore: 0.8, // Default relevance score
-        coverPhotoUrl: exp.coverPhotoUrl,
-        shortDescription: exp.shortDescription,
-        category: exp.category,
-        status: exp.status,
-        // Add all the fields that ExperienceCard expects
-        experience: {
+    return apiData.map(exp => {
+        // Fix broken image URLs (same logic as HomePage)
+        let imageUrl = exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80";
+        if (imageUrl && imageUrl.includes('localhost:3845')) {
+            const fallbackImages = [
+                "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+            ];
+            imageUrl = fallbackImages[exp.experienceId % fallbackImages.length];
+        }
+        
+        return {
             experienceId: exp.experienceId,
+            id: exp.experienceId,
             title: exp.title,
             location: exp.location,
-            price: exp.price,
-            originalPrice: exp.price ? exp.price * 1.2 : 0,
-            rating: exp.averageRating || 4.5,
-            imageUrl: exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            price: exp.price, // This is the key field that was missing!
+            rating: exp.averageRating || 4.9,
+            imageUrl: imageUrl,
             shortDescription: exp.shortDescription,
             duration: exp.duration,
             category: exp.category,
             status: exp.status,
-            totalReviews: exp.totalReviews
-        }
-    }));
+            totalReviews: exp.totalReviews,
+            participantsAllowed: exp.participantsAllowed || 20,
+            isLiked: wishlistedIds.has(exp.experienceId)
+        };
+    });
 };
 
 const SearchResultsPage = () => {
@@ -95,11 +90,14 @@ const SearchResultsPage = () => {
     const popularExperiences = allExperiences.slice(0, 4);
 
     // Helper function to check if duration matches any of the selected filters
-    const matchesDurationFilter = (durationHours, selectedDurations) => {
+    const matchesDurationFilter = (duration, selectedDurations) => {
         // If no duration filters are selected, show all
         if (selectedDurations.length === 0) {
             return true;
         }
+        
+        // Extract numeric hours from duration string (e.g., "24 hours" -> 24)
+        const durationHours = duration ? parseInt(duration.toString().split(' ')[0]) || 0 : 0;
         
         // Check if the duration matches any of the selected filters
         return selectedDurations.some(filterDuration => {
@@ -122,24 +120,49 @@ const SearchResultsPage = () => {
 
     // Filter function
     const applyFilters = (experiences, schedulesData = {}) => {
-        return experiences.filter(experience => {
+        console.log('SearchResultsPage - Applying filters:', {
+            filters,
+            selectedCategory,
+            totalExperiences: experiences.length,
+            schedulesDataKeys: Object.keys(schedulesData)
+        });
+        
+        const filtered = experiences.filter(experience => {
+            console.log('SearchResultsPage - Filtering experience:', {
+                id: experience.experienceId,
+                title: experience.title,
+                price: experience.price,
+                category: experience.category,
+                duration: experience.duration
+            });
             // Category filter
-            if (selectedCategory !== 'ALL' && experience.experience.category !== selectedCategory) {
+            if (selectedCategory !== 'ALL' && experience.category !== selectedCategory) {
                 return false;
             }
 
             // Price filter - only apply if enabled and values are set
             if (filters.priceRange.enabled) {
-                if (filters.priceRange.min > 0 && experience.price < filters.priceRange.min) {
+                const price = experience.price || 0;
+                console.log('SearchResultsPage - Price filter check:', {
+                    enabled: filters.priceRange.enabled,
+                    min: filters.priceRange.min,
+                    max: filters.priceRange.max,
+                    experiencePrice: price,
+                    passesMin: filters.priceRange.min <= 0 || price >= filters.priceRange.min,
+                    passesMax: filters.priceRange.max <= 0 || price <= filters.priceRange.max
+                });
+                if (filters.priceRange.min > 0 && price < filters.priceRange.min) {
+                    console.log('SearchResultsPage - Filtered out by min price');
                     return false;
                 }
-                if (filters.priceRange.max > 0 && experience.price > filters.priceRange.max) {
+                if (filters.priceRange.max > 0 && price > filters.priceRange.max) {
+                    console.log('SearchResultsPage - Filtered out by max price');
                     return false;
                 }
             }
 
             // Duration filter - now works with multiple selections and numeric hours
-            if (!matchesDurationFilter(experience.durationHours, filters.duration)) {
+            if (!matchesDurationFilter(experience.duration, filters.duration)) {
                 return false;
             }
 
@@ -154,8 +177,8 @@ const SearchResultsPage = () => {
                 
                 // Check if any schedule matches the date range
                 const hasMatchingSchedule = experienceSchedules.some(schedule => {
-                    const scheduleStartDate = new Date(schedule.startDate);
-                    const scheduleEndDate = new Date(schedule.endDate);
+                    const scheduleStartDate = new Date(schedule.startDateTime || schedule.startDate);
+                    const scheduleEndDate = new Date(schedule.endDateTime || schedule.endDate);
                     
                     // Extract just the date part (ignore time)
                     const scheduleStartDateOnly = scheduleStartDate.toISOString().split('T')[0];
@@ -194,6 +217,14 @@ const SearchResultsPage = () => {
 
             return true;
         });
+        
+        console.log('SearchResultsPage - Filter results:', {
+            originalCount: experiences.length,
+            filteredCount: filtered.length,
+            filteredTitles: filtered.map(exp => exp.title)
+        });
+        
+        return filtered;
     };
 
     // Sorting function
@@ -250,21 +281,19 @@ const SearchResultsPage = () => {
                 setError(null);
 
                 // Fetch experiences and wishlist items in parallel
-                const [experiencesResponse, wishlistResponse] = await Promise.all([
-                    fetch('http://localhost:8080/api/experiences'),
-                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`)
+                const [experiencesData, wishlistResponse] = await Promise.all([
+                    experienceApi.getAllExperiences(),
+                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.id || user?.userId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
                 ]);
-
-                if (!experiencesResponse.ok) {
-                    throw new Error(`Failed to fetch experiences: ${experiencesResponse.status}`);
-                }
-
-                const experiencesData = await experiencesResponse.json();
                 
                 // Fetch schedule data for all experiences
                 const schedulePromises = experiencesData.map(exp => 
-                    fetch(`http://localhost:8080/api/experiences/${exp.experienceId}/schedules`)
-                        .then(response => response.ok ? response.json() : [])
+                    experienceApi.getExperienceSchedules(exp.experienceId)
                         .catch(() => []) // If schedule fetch fails, use empty array
                 );
                 
@@ -306,10 +335,10 @@ const SearchResultsPage = () => {
             }
         };
 
-        if (user?.userId) {
+        if (user?.id || user?.userId) {
             fetchData();
         }
-    }, [user?.userId]);
+    }, [user?.id, user?.userId]);
 
     // Perform search when query changes
     useEffect(() => {
@@ -329,13 +358,12 @@ const SearchResultsPage = () => {
             }
     }, [query, allExperiences]);
 
-    // Load popular experiences for fallback
+    // Load popular experiences from API
     useEffect(() => {
         const loadPopularExperiences = async () => {
             try {
-                const response = await fetch(`http://localhost:8080/api/experiences`);
-                if (response.ok) {
-                    const allExperiences = await response.json();
+                const allExperiences = await experienceApi.getAllExperiences();
+                if (allExperiences && allExperiences.length > 0) {
                     
                     // Transform and take first 4 as popular experiences
                     const transformedPopular = allExperiences.slice(0, 4).map(exp => ({
@@ -356,15 +384,15 @@ const SearchResultsPage = () => {
                         relevanceScore: 0.95
                     }));
                     
-                    setPopularExperiences(transformedPopular);
+                    setAllExperiences(transformedPopular);
                 } else {
-                    // Fallback to mock data if API fails
-                    setPopularExperiences(mockExperiences.slice(0, 4));
+                    // API failed - no data available
+                    setAllExperiences([]);
                 }
             } catch (error) {
                 console.error('Error loading popular experiences:', error);
-                // Fallback to mock data if API fails
-                setPopularExperiences(mockExperiences.slice(0, 4));
+                // API error - no data available
+                setAllExperiences([]);
             }
         };
 
@@ -500,7 +528,7 @@ const SearchResultsPage = () => {
                                             {filteredResults.map((experience, index) => (
                                                 <ExperienceCard 
                                                     key={experience.id || index} 
-                                                    experience={experience.experience}
+                                                    experience={experience}
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
                                                     schedules={schedules[experience.experienceId] || []}
@@ -514,7 +542,7 @@ const SearchResultsPage = () => {
                                                 {filteredResults.map((experience, index) => (
                                                     <ExperienceCard 
                                                         key={experience.id || index} 
-                                                        experience={experience.experience}
+                                                        experience={experience}
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
                                                         schedules={schedules[experience.experienceId] || []}
@@ -572,7 +600,7 @@ const SearchResultsPage = () => {
                                                 {popularExperiences.map((experience, index) => (
                                                     <ExperienceCard 
                                                         key={index} 
-                                                        experience={experience.experience}
+                                                        experience={experience}
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
                                                         schedules={schedules[experience.experienceId] || []}
@@ -586,7 +614,7 @@ const SearchResultsPage = () => {
                                                     {popularExperiences.map((experience, index) => (
                                                         <ExperienceCard 
                                                             key={index} 
-                                                            experience={experience.experience}
+                                                            experience={experience}
                                                             showWishlistButton={true}
                                                             isInWishlist={experience.isLiked}
                                                             schedules={schedules[experience.experienceId] || []}
@@ -709,7 +737,7 @@ const SearchResultsPage = () => {
                                     {filteredResults.map((experience, index) => (
                                         <ExperienceCard 
                                             key={experience.id || index} 
-                                            experience={experience.experience}
+                                            experience={experience}
                                             showWishlistButton={true}
                                             isInWishlist={experience.isLiked}
                                             schedules={schedules[experience.experienceId] || []}
@@ -753,7 +781,7 @@ const SearchResultsPage = () => {
                                             {popularExperiences.map((experience, index) => (
                                                 <ExperienceCard 
                                                     key={index} 
-                                                    experience={experience.experience}
+                                                    experience={experience}
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
                                                     schedules={schedules[experience.experienceId] || []}

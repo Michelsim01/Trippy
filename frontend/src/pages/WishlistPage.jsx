@@ -45,14 +45,22 @@ const WishlistPage = () => {
         const fetchWishlist = async () => {
             try {
                 setLoading(true);
-                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`);
+                console.log('WishlistPage - Fetching wishlist for user:', user?.id || user?.userId);
+                
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.id || user?.userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 
                 const data = await response.json();
-                console.log('Fetched wishlist data:', data);
+                console.log('WishlistPage - Fetched wishlist data:', data);
+                console.log('WishlistPage - Wishlist items count:', data.length);
                 
                 // Transform the API data to match our component structure
                 const transformedData = data.map(item => ({
@@ -77,7 +85,12 @@ const WishlistPage = () => {
                 
                 // Fetch schedule data for all experiences in wishlist
                 const schedulePromises = data.map(item => 
-                    fetch(`http://localhost:8080/api/experiences/${item.experience.experienceId}/schedules`)
+                    fetch(`http://localhost:8080/api/experiences/${item.experience.experienceId}/schedules`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    })
                         .then(response => response.ok ? response.json() : [])
                         .catch(() => []) // If schedule fetch fails, use empty array
                 );
@@ -102,10 +115,10 @@ const WishlistPage = () => {
             }
         };
 
-        if (user?.userId) {
+        if (user?.id || user?.userId) {
             fetchWishlist();
         }
-    }, [user?.userId]);
+    }, [user?.id, user?.userId]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);

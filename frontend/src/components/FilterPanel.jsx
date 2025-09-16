@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const FilterPanel = ({ filters, onFiltersChange, isOpen, onClose, variant = "desktop" }) => {
     const [localFilters, setLocalFilters] = useState(filters);
+
+    // Sync local filters with parent filters when they change
+    useEffect(() => {
+        setLocalFilters(filters);
+    }, [filters]);
 
     const handlePriceChange = (field, value) => {
         // Handle empty string and convert to number

@@ -31,13 +31,28 @@ const ExperienceCard = ({
         
         try {
             const experienceId = experience?.experienceId || experience?.id;
+            const userId = user?.id || user?.userId;
+            
+            console.log('ExperienceCard - Wishlist toggle:', {
+                experienceId,
+                userId,
+                user,
+                newWishlistState
+            });
+            
+            if (!userId) {
+                console.error('ExperienceCard - No user ID available for wishlist operation');
+                setIsWishlisted(!newWishlistState); // Revert state
+                return;
+            }
             
             if (newWishlistState) {
                 // Add to wishlist
-                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}/experience/${experienceId}`, {
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${userId}/experience/${experienceId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
                     }
                 });
                 
@@ -48,8 +63,11 @@ const ExperienceCard = ({
                 }
             } else {
                 // Remove from wishlist
-                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}/experience/${experienceId}`, {
-                    method: 'DELETE'
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${userId}/experience/${experienceId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    }
                 });
                 
                 if (!response.ok) {

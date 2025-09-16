@@ -4,8 +4,9 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ExperienceCard from '../components/ExperienceCard';
 import { useAuth } from '../contexts/AuthContext';
+import { experienceApi } from '../services/experienceApi';
 
-// Mock images - in production these would come from your image assets
+// Static images for UI elements (hero banner, etc.)
 const heroImage = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80";
 const experienceImage = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80";
 
@@ -34,52 +35,14 @@ const WelcomeBanner = () => {
 };
 
 const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange }) => {
-    // Fallback dummy data in case API fails
-    const fallbackExperiences = [
-        { 
-            experienceId: 1,
-            title: "Venice, Rome & Msssilan", 
-            location: "Karineside", 
-            originalPrice: 699, 
-            price: 548, 
-            rating: 4.9,
-            imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-            category: "GUIDED_TOUR"
-        },
-        { 
-            experienceId: 2,
-            title: "Paris & Lyon Adventure", 
-            location: "Franceville", 
-            originalPrice: 799, 
-            price: 629, 
-            rating: 4.8,
-            imageUrl: "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-            category: "ADVENTURE"
-        },
-        { 
-            experienceId: 3,
-            title: "Tokyo City Explorer", 
-            location: "Shibuya", 
-            originalPrice: 899, 
-            price: 749, 
-            rating: 4.9,
-            imageUrl: "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-            category: "DAYTRIP"
-        },
-        { 
-            experienceId: 4,
-            title: "Barcelona Highlights", 
-            location: "Catalunya", 
-            originalPrice: 599, 
-            price: 459, 
-            rating: 4.7,
-            imageUrl: "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-            category: "WORKSHOP"
-        }
-    ];
-
-    // Use real data if available, otherwise fallback to dummy data
-    const allExperiences = experiences && experiences.length > 0 ? experiences : fallbackExperiences;
+    // Use only real data from database
+    const allExperiences = experiences || [];
+    
+    // Debug: Log what DiscoverWeekly receives
+    console.log('DiscoverWeekly - Received experiences:', experiences);
+    console.log('DiscoverWeekly - Experiences length:', experiences?.length);
+    console.log('DiscoverWeekly - Loading:', loading);
+    console.log('DiscoverWeekly - Error:', error);
 
     // Filter experiences by category
     const displayExperiences = selectedCategory === 'ALL' 
@@ -140,7 +103,15 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
                 {error && (
                     <div className="text-center py-10 text-red-600">
                         <p className="text-lg font-semibold">Error loading experiences: {error.message}</p>
-                        <p className="text-md text-gray-600">Displaying sample data as a fallback.</p>
+                        <p className="text-md text-gray-600">Please try refreshing the page.</p>
+                    </div>
+                )}
+
+                {/* No Data State */}
+                {!loading && !error && allExperiences.length === 0 && (
+                    <div className="text-center py-10 text-gray-600">
+                        <p className="text-lg">No experiences found.</p>
+                        <p className="text-md">Check back later for new experiences!</p>
                     </div>
                 )}
 
@@ -191,7 +162,7 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
 };
 
 const HomePage = () => {
-    const { user } = useAuth();
+    const { user, isAuthenticated, isLoading: authLoading } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [experiences, setExperiences] = useState([]);
     const [wishlistItems, setWishlistItems] = useState([]);
@@ -205,22 +176,34 @@ const HomePage = () => {
             try {
                 setLoading(true);
                 
-                // Fetch experiences and wishlist items in parallel
-                const [experiencesResponse, wishlistResponse] = await Promise.all([
-                    fetch('http://localhost:8080/api/experiences'),
-                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`)
+                // Debug: Log user authentication
+                console.log('HomePage - User:', user);
+                console.log('HomePage - User ID:', user?.userId);
+                console.log('HomePage - User ID (alt):', user?.id);
+                console.log('HomePage - Token:', localStorage.getItem('token'));
+                
+                // Fetch experiences and wishlist items in parallel with authentication
+                console.log('HomePage - Starting API calls...');
+                const [experiencesData, wishlistResponse] = await Promise.all([
+                    experienceApi.getAllExperiences(),
+                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId || user?.id}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        credentials: 'include',
+                    })
                 ]);
 
-                if (!experiencesResponse.ok) {
-                    throw new Error(`Failed to fetch experiences: ${experiencesResponse.status}`);
-                }
-
-                const experiencesData = await experiencesResponse.json();
+                console.log('HomePage - Raw experiences data:', experiencesData);
+                console.log('HomePage - Experiences data length:', experiencesData?.length);
+                console.log('HomePage - First experience:', experiencesData?.[0]);
                 
                 // Fetch schedule data for all experiences
                 const schedulePromises = experiencesData.map(exp => 
-                    fetch(`http://localhost:8080/api/experiences/${exp.experienceId}/schedules`)
-                        .then(response => response.ok ? response.json() : [])
+                    experienceApi.getExperienceSchedules(exp.experienceId)
                         .catch(() => []) // If schedule fetch fails, use empty array
                 );
                 
@@ -232,26 +215,46 @@ const HomePage = () => {
                     schedulesMap[exp.experienceId] = schedulesData[index];
                 });
                 
+                console.log('HomePage - Schedules map:', schedulesMap);
                 setSchedules(schedulesMap);
                 
                 // Transform experiences data to match our component structure
-                const transformedExperiences = experiencesData.map(exp => ({
-                    experienceId: exp.experienceId,
-                    id: exp.experienceId,
-                    title: exp.title,
-                    location: exp.location,
-                    price: exp.price,
-                    originalPrice: exp.price * 1.2, // Add some original price for demo
-                    rating: exp.averageRating || 4.9,
-                    imageUrl: exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-                    shortDescription: exp.shortDescription,
-                    duration: exp.duration,
-                    category: exp.category,
-                    status: exp.status,
-                    totalReviews: exp.totalReviews
-                }));
+                const transformedExperiences = experiencesData.map(exp => {
+                    // Fix broken image URLs
+                    let imageUrl = exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80";
+                    if (imageUrl && imageUrl.includes('localhost:3845')) {
+                        const fallbackImages = [
+                            "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                            "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                            "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                            "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+                            "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+                        ];
+                        imageUrl = fallbackImages[exp.experienceId % fallbackImages.length];
+                    }
+                    
+                    return {
+                        experienceId: exp.experienceId,
+                        id: exp.experienceId,
+                        title: exp.title,
+                        location: exp.location,
+                        price: exp.price,
+                        rating: exp.averageRating || 4.9,
+                        imageUrl: imageUrl,
+                        shortDescription: exp.shortDescription,
+                        duration: exp.duration,
+                        category: exp.category,
+                        status: exp.status,
+                        totalReviews: exp.totalReviews,
+                        participantsAllowed: exp.participantsAllowed || 20
+                    };
+                });
 
+                console.log('HomePage - Transformed experiences:', transformedExperiences);
+                console.log('HomePage - Transformed experiences length:', transformedExperiences?.length);
+                console.log('HomePage - Setting experiences state...');
                 setExperiences(transformedExperiences);
+                console.log('HomePage - Experiences state set');
 
                 // Handle wishlist response
                 if (wishlistResponse.ok) {
@@ -269,17 +272,25 @@ const HomePage = () => {
                 setError(null);
             } catch (err) {
                 console.error("Failed to fetch data:", err);
+                console.error("Error details:", {
+                    message: err.message,
+                    stack: err.stack,
+                    name: err.name
+                });
                 setError(err);
-                // Keep fallback data (empty arrays will trigger fallback in DiscoverWeekly)
+                setExperiences([]); // Set empty array instead of fallback data
             } finally {
                 setLoading(false);
             }
         };
 
-        if (user?.userId) {
+        if ((user?.userId || user?.id) && isAuthenticated) {
             fetchData();
+        } else if (!authLoading) {
+            // If not authenticated and auth is done loading, set loading to false
+            setLoading(false);
         }
-    }, [user?.userId]);
+    }, [user?.userId, user?.id, isAuthenticated, authLoading]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -292,6 +303,45 @@ const HomePage = () => {
     const handleCategoryChange = (category) => {
         setSelectedCategory(category);
     };
+
+    // Debug: Log authentication status
+    console.log('HomePage - Auth Debug:', {
+        authLoading,
+        isAuthenticated,
+        user,
+        token: localStorage.getItem('token'),
+        userFromStorage: localStorage.getItem('user')
+    });
+
+    // Show loading while authentication is being checked
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
+                    <p className="text-neutrals-4">Loading...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show login prompt if not authenticated
+    if (!isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto px-8">
+                    <h1 className="text-3xl font-bold text-neutrals-1 mb-4">Welcome to Trippy</h1>
+                    <p className="text-neutrals-4 mb-8">Please sign in to discover amazing experiences</p>
+                    <a 
+                        href="/signin" 
+                        className="bg-primary-1 text-white px-6 py-3 rounded-lg font-medium hover:bg-primary-1/90 transition-colors inline-block"
+                    >
+                        Sign In
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-neutrals-8">

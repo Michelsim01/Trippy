@@ -17,7 +17,18 @@ const useSearchSuggestions = () => {
         setIsOpen(true); // Show dropdown immediately when we start loading
         
         try {
-            const response = await fetch(`http://localhost:8080/api/experiences/search/suggestions?q=${encodeURIComponent(query.trim())}`);
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` })
+            };
+
+            const response = await fetch(`http://localhost:8080/api/experiences/search/suggestions?q=${encodeURIComponent(query.trim())}`, {
+                method: 'GET',
+                headers: headers,
+                credentials: 'include',
+            });
             
             if (response.ok) {
                 const data = await response.json();

@@ -46,9 +46,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -72,9 +70,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -98,9 +94,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/media`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -124,9 +118,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/itineraries`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -150,9 +142,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/schedules`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include',
       });
 
@@ -177,10 +167,7 @@ export const experienceApi = {
     try {
       const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
+        headers: getAuthHeaders(),
         credentials: 'include', // For CORS
         body: JSON.stringify(payload)
       });

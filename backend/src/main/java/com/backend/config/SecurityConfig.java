@@ -145,6 +145,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/users/profile-pictures/**").permitAll()
+                .requestMatchers("/api/experience-media/files/**").permitAll()
                 
                 // Admin-only endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
