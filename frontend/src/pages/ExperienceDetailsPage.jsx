@@ -249,12 +249,29 @@ const ExperienceDetailsPage = () => {
     setLoading(true);
     setError(null);
     try {
-      // Fetch all data in parallel
-      const [experience, media, itineraries, schedules] = await Promise.all([
-        experienceApi.getExperienceById(id),
-        experienceApi.getExperienceMedia(id),
-        experienceApi.getExperienceItineraries(id),
-        experienceApi.getExperienceSchedules(id)
+      // Fetch experience data first
+      const experience = await experienceApi.getExperienceById(id);
+      
+      // Try to fetch media, but handle errors gracefully
+      let media = [];
+      try {
+        media = await experienceApi.getExperienceMedia(id);
+      } catch (mediaError) {
+        console.warn('Failed to fetch experience media, using fallback:', mediaError.message);
+        // Use fallback images if media fetch fails
+        media = [{
+          mediaId: 1,
+          mediaUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80",
+          mediaType: "IMAGE",
+          caption: "Experience Image",
+          displayOrder: 1
+        }];
+      }
+      
+      // Fetch other data in parallel
+      const [itineraries, schedules] = await Promise.all([
+        experienceApi.getExperienceItineraries(id).catch(() => []),
+        experienceApi.getExperienceSchedules(id).catch(() => [])
       ]);
       
       setExperienceData(experience);

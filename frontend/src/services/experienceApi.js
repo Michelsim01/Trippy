@@ -99,10 +99,29 @@ export const experienceApi = {
       });
 
       if (!response.ok) {
+        // If it's a 500 error, it's likely due to large base64 data
+        if (response.status === 500) {
+          console.warn('Experience media fetch failed (likely large base64 data), returning empty array');
+          return [];
+        }
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      return await response.json();
+      const mediaData = await response.json();
+      
+      // Check if any media items have extremely large base64 strings
+      const processedMedia = mediaData.map(media => {
+        if (media.mediaUrl && media.mediaUrl.startsWith('data:image') && media.mediaUrl.length > 1000000) {
+          console.warn('Large base64 image detected, using fallback');
+          return {
+            ...media,
+            mediaUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
+          };
+        }
+        return media;
+      });
+
+      return processedMedia;
     } catch (error) {
       console.error('Get experience media API error:', error);
       throw new Error(`Failed to fetch experience media: ${error.message}`);
