@@ -87,7 +87,8 @@ public class AuthService {
                 user.getFirstName() + " " + user.getLastName(),
                 user.getEmail(),
                 roles,
-                user.getIsEmailVerified()
+                user.getIsEmailVerified(),
+                user.getId()
             );
             
         } catch (Exception e) {
@@ -158,7 +159,8 @@ public class AuthService {
                 savedPendingUser.getFirstName() + " " + savedPendingUser.getLastName(),
                 savedPendingUser.getEmail(),
                 roles,
-                false // Email is not verified yet
+                false, // Email is not verified yet
+                null   // No user ID yet for pending users
             );
             
         } catch (Exception e) {

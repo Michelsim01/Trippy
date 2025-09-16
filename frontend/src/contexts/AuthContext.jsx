@@ -31,7 +31,7 @@ export const AuthProvider = ({ children }) => {
 
   // Check authentication status
   const checkAuthStatus = async () => {
-    try {
+    try { 
       setIsLoading(true)
       const storedToken = localStorage.getItem('token')
       
@@ -117,13 +117,14 @@ export const AuthProvider = ({ children }) => {
       // If login is successful, extract the data and check if email is verified
       if (response.success) {
         // Destructure the response data
-        const { token, username, email: userEmail, roles, emailVerified } = response.data
+        const { token, username, email: userEmail, roles, emailVerified, userId } = response.data
         
         // Store token in localStorage
         localStorage.setItem('token', token)
         
         // Create user object from backend response
         const user = {
+          id: userId,
           firstName: username.split(' ')[0] || '',
           lastName: username.split(' ').slice(1).join(' ') || '',
           email: userEmail,
@@ -171,13 +172,14 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(userData)
       
       if (response.success) {
-        const { token, username, email, roles, emailVerified } = response.data
+        const { token, username, email, roles, emailVerified, userId } = response.data
         
         // Store token in localStorage
         localStorage.setItem('token', token)
         
         // Create user object from backend response
         const user = {
+          id: userId,
           firstName: username.split(' ')[0] || '',
           lastName: username.split(' ').slice(1).join(' ') || '',
           email: email,

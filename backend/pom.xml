@@ -150,6 +150,12 @@
             <scope>runtime</scope>
             <optional>true</optional>
         </dependency>
+    
+      <dependency>
+        <groupId>org.hawkular.commons</groupId>
+        <artifactId>hawkular-client-api</artifactId>
+        <version>0.9.8.Final</version>
+      </dependency>
     </dependencies>
 
 	<build>

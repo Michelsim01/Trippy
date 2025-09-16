@@ -159,6 +159,7 @@ public class SecurityConfig {
                 
                 // General authenticated endpoints
                 .requestMatchers("/api/user/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
+                .requestMatchers("/api/users/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 .requestMatchers("/api/experiences/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 
                 // All other requests require authentication

@@ -15,18 +15,20 @@ public class AuthResponse {
     private String email;
     private List<String> roles;
     private boolean emailVerified;
+    private Long userId;
     
     // Default constructor
     public AuthResponse() {}
     
     // Constructor with parameters
-    public AuthResponse(String token, String type, String username, String email, List<String> roles, boolean emailVerified) {
+    public AuthResponse(String token, String type, String username, String email, List<String> roles, boolean emailVerified, Long userId) {
         this.token = token;
         this.type = type;
         this.username = username;
         this.email = email;
         this.roles = roles;
         this.emailVerified = emailVerified;
+        this.userId = userId;
     }
     
     // Getters and setters
@@ -84,6 +86,15 @@ public class AuthResponse {
         this.emailVerified = emailVerified;
     }
     
+    @JsonProperty("userId")
+    public Long getUserId() {
+        return userId;
+    }
+    
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
+    
     @Override
     public String toString() {
         return "AuthResponse{" +
@@ -93,6 +104,7 @@ public class AuthResponse {
                 ", email='" + email + '\'' +
                 ", roles=" + roles +
                 ", emailVerified=" + emailVerified +
+                ", userId=" + userId +
                 '}';
     }
 }
