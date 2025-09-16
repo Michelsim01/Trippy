@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
+import { userService } from '../services/userService'
 
 // Create the AuthContext
 const AuthContext = createContext()
@@ -122,54 +123,97 @@ export const AuthProvider = ({ children }) => {
         // Store token in localStorage
         localStorage.setItem('token', token)
         
-        // Create user object from backend response
-        const user = {
-          id: userId,
-          firstName: username.split(' ')[0] || '',
-          lastName: username.split(' ').slice(1).join(' ') || '',
-          email: userEmail,
-          roles: roles,
-          emailVerified: emailVerified
-        }
-        
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(user))
-        
-        // Update state
-        setToken(token)
-        setUser(user)
-        
-        // Only set authenticated if email is verified
-        if (user.emailVerified) {
-          setIsAuthenticated(true)
+        // Fetch complete user data including canCreateExperiences and kycStatus
+        try {
+          const userResponse = await userService.getUserById(userId)
           
-          // Create login notification
-          try {
-            const token = localStorage.getItem('token');
-            const notificationPayload = {
-              title: 'Welcome Back!',
-              message: 'You have successfully logged in to your account.',
-              userId: userId,
-              type: 'MESSAGE',
-            };
+          if (userResponse.success) {
+            // Create user object with complete data from backend
+            const user = {
+              id: userId,
+              firstName: userResponse.data.firstName || username.split(' ')[0] || '',
+              lastName: userResponse.data.lastName || username.split(' ').slice(1).join(' ') || '',
+              email: userEmail,
+              roles: roles,
+              emailVerified: emailVerified,
+              canCreateExperiences: userResponse.data.canCreateExperiences || false,
+              kycStatus: userResponse.data.kycStatus || 'PENDING'
+            }
             
-            await fetch(`http://localhost:8080/api/notifications`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify(notificationPayload),
-            });
-          } catch (notificationError) {
-            console.error('Failed to create login notification:', notificationError);
-            // Don't fail the login process if notification creation fails
+            // Store user data in localStorage
+            localStorage.setItem('user', JSON.stringify(user))
+            
+            // Update state
+            setToken(token)
+            setUser(user)
+            
+            // Only set authenticated if email is verified
+            if (user.emailVerified) {
+              setIsAuthenticated(true)
+              navigate('/home')
+            } else {
+              setIsAuthenticated(false)
+              navigate('/email-verification')
+            }
+          } else {
+            // If fetching complete user data fails, fall back to basic user data
+            console.warn('Failed to fetch complete user data, using basic data')
+            const user = {
+              id: userId,
+              firstName: username.split(' ')[0] || '',
+              lastName: username.split(' ').slice(1).join(' ') || '',
+              email: userEmail,
+              roles: roles,
+              emailVerified: emailVerified,
+              canCreateExperiences: false, // Default to false if we can't fetch
+              kycStatus: 'PENDING' // Default to pending if we can't fetch
+            }
+            
+            // Store user data in localStorage
+            localStorage.setItem('user', JSON.stringify(user))
+            
+            // Update state
+            setToken(token)
+            setUser(user)
+            
+            // Only set authenticated if email is verified
+            if (user.emailVerified) {
+              setIsAuthenticated(true)
+              navigate('/home')
+            } else {
+              setIsAuthenticated(false)
+              navigate('/email-verification')
+            }
+          }
+        } catch (userError) {
+          console.error('Error fetching user data:', userError)
+          // Fall back to basic user data if userService fails
+          const user = {
+            id: userId,
+            firstName: username.split(' ')[0] || '',
+            lastName: username.split(' ').slice(1).join(' ') || '',
+            email: userEmail,
+            roles: roles,
+            emailVerified: emailVerified,
+            canCreateExperiences: false, // Default to false if we can't fetch
+            kycStatus: 'PENDING' // Default to pending if we can't fetch
           }
           
-          navigate('/home')
-        } else {
-          setIsAuthenticated(false)
-          navigate('/email-verification')
+          // Store user data in localStorage
+          localStorage.setItem('user', JSON.stringify(user))
+          
+          // Update state
+          setToken(token)
+          setUser(user)
+          
+          // Only set authenticated if email is verified
+          if (user.emailVerified) {
+            setIsAuthenticated(true)
+            navigate('/home')
+          } else {
+            setIsAuthenticated(false)
+            navigate('/email-verification')
+          }
         }
         
         return { success: true }
@@ -196,36 +240,14 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(userData)
       
       if (response.success) {
-        const { token, username, email, roles, emailVerified, userId } = response.data
-        
-        // Store token in localStorage
-        localStorage.setItem('token', token)
-        
-        // Create user object from backend response
-        const user = {
-          id: userId,
-          firstName: username.split(' ')[0] || '',
-          lastName: username.split(' ').slice(1).join(' ') || '',
-          email: email,
-          roles: roles,
-          emailVerified: emailVerified // Use the value from backend directly
-        }
-        
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(user))
-        
-        // Update state
-        setToken(token)
-        setUser(user)
-        
-        // Only set authenticated if email is verified
-        if (user.emailVerified) {
-          setIsAuthenticated(true)
-          navigate('/home')
-        } else {
-          setIsAuthenticated(false)
-          navigate('/email-verification')
-        }
+        // No token or user data to store - just navigate to verification page
+        // Pass email through navigation state for the verification page
+        navigate('/email-verification', { 
+          state: { 
+            email: response.data.email,
+            message: response.data.message 
+          }
+        })
         
         return { success: true }
       } else {

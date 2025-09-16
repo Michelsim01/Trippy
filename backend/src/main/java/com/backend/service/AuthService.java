@@ -3,6 +3,7 @@ package com.backend.service;
 import com.backend.dto.request.LoginRequest;
 import com.backend.dto.request.RegisterRequest;
 import com.backend.dto.response.AuthResponse;
+import com.backend.dto.response.RegistrationResponse;
 import com.backend.entity.User;
 import com.backend.entity.PendingUser;
 import com.backend.repository.UserRepository;
@@ -101,10 +102,10 @@ public class AuthService {
      * Creates a pending user record and sends verification email.
      * 
      * @param registerRequest The registration data
-     * @return AuthResponse containing JWT token and user information
+     * @return RegistrationResponse containing success status and message
      * @throws Exception if registration fails
      */
-    public AuthResponse register(RegisterRequest registerRequest) throws Exception {
+    public RegistrationResponse register(RegisterRequest registerRequest) throws Exception {
         try {
             // Check if user already exists in main user table
             if (userRepository.existsByEmail(registerRequest.getEmail())) {
@@ -142,25 +143,11 @@ public class AuthService {
                 throw new Exception("Failed to send verification email. Please try again.");
             }
             
-            // Generate JWT token for the pending user (with limited access)
-            String token = jwtUtil.generateToken(org.springframework.security.core.userdetails.User.builder()
-                .username(savedPendingUser.getEmail())
-                .password("")
-                .authorities("ROLE_PENDING")
-                .build());
-            
-            // Create roles list for pending user
-            List<String> roles = List.of("ROLE_PENDING");
-            
-            // Create and return response (emailVerified = false since it's pending)
-            return new AuthResponse(
-                token,
-                "Bearer",
-                savedPendingUser.getFirstName() + " " + savedPendingUser.getLastName(),
-                savedPendingUser.getEmail(),
-                roles,
-                false, // Email is not verified yet
-                null   // No user ID yet for pending users
+            // Return simple success response without JWT token
+            return new RegistrationResponse(
+                true,
+                "Registration successful! Please check your email to verify your account.",
+                savedPendingUser.getEmail()
             );
             
         } catch (Exception e) {

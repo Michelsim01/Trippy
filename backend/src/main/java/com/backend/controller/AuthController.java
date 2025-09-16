@@ -3,6 +3,7 @@ package com.backend.controller;
 import com.backend.dto.request.LoginRequest;
 import com.backend.dto.request.RegisterRequest;
 import com.backend.dto.response.AuthResponse;
+import com.backend.dto.response.RegistrationResponse;
 import com.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,16 +46,16 @@ public class AuthController {
     
     /**
      * Endpoint for user registration.
-     * Creates a new user account and returns JWT token if successful.
+     * Creates a pending user account and sends verification email.
      * 
      * @param registerRequest The registration data (username, email, password, role)
-     * @return ResponseEntity containing AuthResponse with JWT token and user info
+     * @return ResponseEntity containing RegistrationResponse with success status and message
      */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest registerRequest) {
         try {
-            AuthResponse authResponse = authService.register(registerRequest);
-            return ResponseEntity.status(HttpStatus.CREATED).body(authResponse);
+            RegistrationResponse registrationResponse = authService.register(registerRequest);
+            return ResponseEntity.status(HttpStatus.CREATED).body(registrationResponse);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Registration failed: " + e.getMessage());
