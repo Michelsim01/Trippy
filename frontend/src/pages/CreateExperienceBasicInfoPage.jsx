@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, X, Camera, Upload, Plus, AlertCircle } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
+import { useExperienceAuth } from '../hooks/useExperienceAuth';
 import { isMultiDayTour } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -10,6 +11,7 @@ import Footer from '../components/Footer';
 export default function CreateExperienceBasicInfoPage() {
   const navigate = useNavigate();
   const { formData: contextData, updateFormData, categoryMapping } = useFormData();
+  const { user, isAuthenticated, isLoading, authError } = useExperienceAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const [currentStep] = useState(1);
@@ -38,6 +40,31 @@ export default function CreateExperienceBasicInfoPage() {
   const [newHighlightItem, setNewHighlightItem] = useState("");
 
   const categories = Object.keys(categoryMapping);
+
+  // Show loading or error state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-neutrals-4 font-poppins">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-neutrals-1 mb-2">Access Denied</h2>
+          <p className="text-neutrals-4 mb-4">{authError}</p>
+          <p className="text-sm text-neutrals-3">Redirecting you shortly...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleNext = () => {
     if (!formData.title.trim()) {

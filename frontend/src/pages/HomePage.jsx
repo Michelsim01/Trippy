@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ExperienceCard from '../components/ExperienceCard';
+import { useAuth } from '../contexts/AuthContext';
 
 // Mock images - in production these would come from your image assets
 const heroImage = "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80";
@@ -190,6 +191,7 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
 };
 
 const HomePage = () => {
+    const { user } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [experiences, setExperiences] = useState([]);
     const [wishlistItems, setWishlistItems] = useState([]);
@@ -206,7 +208,7 @@ const HomePage = () => {
                 // Fetch experiences and wishlist items in parallel
                 const [experiencesResponse, wishlistResponse] = await Promise.all([
                     fetch('http://localhost:8080/api/experiences'),
-                    fetch('http://localhost:8080/api/wishlist-items/user/1') // Using user ID 1 for now
+                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`)
                 ]);
 
                 if (!experiencesResponse.ok) {
@@ -274,8 +276,10 @@ const HomePage = () => {
             }
         };
 
-        fetchData();
-    }, []);
+        if (user?.userId) {
+            fetchData();
+        }
+    }, [user?.userId]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);

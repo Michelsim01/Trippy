@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Edit } from 'lucide-react'
+import { useAuth } from '../contexts/AuthContext';
 
 const ExperienceCard = ({ 
     experience,
@@ -7,9 +9,11 @@ const ExperienceCard = ({
     onWishlistToggle = null,
     variant = 'default',
     showExplore = false,
+    showEditButton = false ,
     isInWishlist = false, // New prop to indicate if this item is in the user's wishlist
     schedules = [] // New prop for schedule data
 }) => {
+    const { user } = useAuth();
     const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
     const navigate = useNavigate();
 
@@ -30,7 +34,7 @@ const ExperienceCard = ({
             
             if (newWishlistState) {
                 // Add to wishlist
-                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/1/experience/${experienceId}`, {
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}/experience/${experienceId}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -44,7 +48,7 @@ const ExperienceCard = ({
                 }
             } else {
                 // Remove from wishlist
-                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/1/experience/${experienceId}`, {
+                const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}/experience/${experienceId}`, {
                     method: 'DELETE'
                 });
                 
@@ -112,6 +116,19 @@ const ExperienceCard = ({
                         backgroundPosition: 'center'
                     }}
                 />
+                {/* Edit Button (only if showEditButton) */}
+                {showEditButton && (
+                    <Edit
+                        size={20}
+                        className="absolute top-4 left-4 z-20 bg-white hover:bg-white rounded-full p-1 shadow"
+                        onClick={e => {
+                            e.stopPropagation();
+                            // link to edit experience - darryl
+                        }}
+                        title="Edit Experience"
+                    >
+                    </Edit>
+                )}
                 
                 {/* Explore Button - shows on some cards */}
                 {showExplore && (

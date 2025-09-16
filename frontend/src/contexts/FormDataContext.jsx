@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
+import { useAuth } from './AuthContext';
 
 const FormDataContext = createContext();
 
@@ -11,6 +12,7 @@ export const useFormData = () => {
 };
 
 export const FormDataProvider = ({ children }) => {
+  const { user } = useAuth();
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
   const [experienceId, setExperienceId] = useState(null);
@@ -307,7 +309,8 @@ export const FormDataProvider = ({ children }) => {
         endDateTime: formData.endDateTime || null,
         location: formData.location,
         country: formData.country,
-        status: 'ACTIVE' // Default status
+        status: 'ACTIVE', // Default status
+        userId: user?.id || user?.userId // Add user ID for experience ownership
       },
 
       // ExperienceItinerary entities (separate records)

@@ -1,8 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import LogoutModal from './LogoutModal'
 import { useFormData } from '../contexts/FormDataContext'
 
 const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
     const navigate = useNavigate();
     const { clearFormData } = useFormData();
     
@@ -20,10 +22,10 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         onClose(); // Close the sidebar
     };
 
-    const bottomItems = [
-        { id: 'settings', label: 'Settings' },
-        { id: 'logout', label: 'Log Out' },
-    ]
+    const handleLogout = () => {
+        onClose() // Close sidebar first
+        setIsLogoutModalOpen(true) // Open logout modal
+    }
 
     return (
         <>
@@ -102,16 +104,19 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
                     <div className="flex flex-col gap-[13px]">
                         {/* Settings and Log Out */}
                         <div className="space-y-[13px]">
-                            {bottomItems.map((item) => (
-                                <Link
-                                    key={item.id}
-                                    to={`/${item.id}`}
-                                    className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
-                                    onClick={onClose}
-                                >
-                                    {item.label}
-                                </Link>
-                            ))}
+                            <Link
+                                to="/settings"
+                                className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                                onClick={onClose}
+                            >
+                                Settings
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="block w-full text-left font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                            >
+                                Log Out
+                            </button>
                         </div>
 
                         {/* Language Button */}
@@ -126,6 +131,12 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
                     </div>
                 </div>
             </div>
+            
+            {/* Logout Modal */}
+            <LogoutModal 
+                isOpen={isLogoutModalOpen} 
+                onClose={() => setIsLogoutModalOpen(false)} 
+            />
         </>
     )
 }

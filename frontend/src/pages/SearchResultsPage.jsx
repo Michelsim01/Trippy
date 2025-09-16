@@ -6,6 +6,7 @@ import Footer from '../components/Footer';
 import FilterPanel from '../components/FilterPanel';
 import FilterBar from '../components/FilterBar';
 import ExperienceCard from '../components/ExperienceCard';
+import { useAuth } from '../contexts/AuthContext';
 
 // Helper function to transform API data to match filter expectations
 const transformExperienceData = (apiData, wishlistItems = []) => {
@@ -51,6 +52,7 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
 };
 
 const SearchResultsPage = () => {
+    const { user } = useAuth();
     const [searchParams] = useSearchParams();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [searchResults, setSearchResults] = useState([]);
@@ -250,7 +252,7 @@ const SearchResultsPage = () => {
                 // Fetch experiences and wishlist items in parallel
                 const [experiencesResponse, wishlistResponse] = await Promise.all([
                     fetch('http://localhost:8080/api/experiences'),
-                    fetch('http://localhost:8080/api/wishlist-items/user/1') // Using user ID 1 for now
+                    fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId}`)
                 ]);
 
                 if (!experiencesResponse.ok) {
@@ -304,8 +306,10 @@ const SearchResultsPage = () => {
             }
         };
 
-        fetchData();
-    }, []);
+        if (user?.userId) {
+            fetchData();
+        }
+    }, [user?.userId]);
 
     // Perform search when query changes
     useEffect(() => {

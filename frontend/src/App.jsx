@@ -1,9 +1,14 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import EmailVerificationPage from './pages/EmailVerificationPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import HomePage from './pages/HomePage'
 import NotificationsPage from './pages/NotificationsPage'
 import WishlistPage from './pages/WishlistPage'
@@ -25,33 +30,59 @@ import CalendarPage from './pages/CalendarPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import SettingsPage from './pages/SettingsPage'
-import LogoutPage from './pages/LogoutPage'
 import SearchResultsPage from './pages/SearchResultsPage'
-import './App.css'
+import './App.css' 
 
-// Mock authentication state - in real app this would come from context/redux
-const isAuthenticated = true
+// AppRoutes component that uses authentication context
+function AppRoutes() {
+  const { isAuthenticated, isLoading } = useAuth()
 
 
-export default function App() {
+  // Show loading spinner while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-neutrals-4 font-poppins">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <FormDataProvider>
-      <Router>
-        <div className="App">
-          <Routes>
-            {/* Public routes */}
-            <Route
-              path="/"
-              element={isAuthenticated ? <Navigate to="/home" replace /> : <WelcomePage />}
-            />
-            <Route
-              path="/signup"
-              element={isAuthenticated ? <Navigate to="/home" replace /> : <SignUpPage />}
-            />
-            <Route
-              path="/signin"
-              element={isAuthenticated ? <Navigate to="/home" replace /> : <SignInPage />}
-            />
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="/"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <WelcomePage />}
+      />
+      <Route
+        path="/signup"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <SignUpPage />}
+      />
+      <Route
+        path="/signin"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <SignInPage />}
+      />
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <ForgotPasswordPage />}
+      />
+      <Route
+        path="/reset-password"
+        element={isAuthenticated ? <Navigate to="/home" replace /> : <ResetPasswordPage />}
+      />
+
+      {/* Email verification routes - accessible when user has token but not verified */}
+      <Route
+        path="/email-verification"
+        element={<EmailVerificationPage />}
+      />
+      <Route
+        path="/verify-email"
+        element={<VerifyEmailPage />}
+      />
 
             {/* Protected routes */}
             <Route
@@ -75,7 +106,7 @@ export default function App() {
               element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
             />
             <Route
-              path="/profile"
+              path="/profile/:id"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
             />
             <Route
@@ -158,16 +189,24 @@ export default function App() {
               path="/settings"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
             />
-            <Route
-              path="/logout"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
-            />
 
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </Router>
-    </FormDataProvider>
+
+      {/* Catch all route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
+}
+
+export default function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <FormDataProvider>
+          <div className="App">
+            <AppRoutes />
+          </div>
+        </FormDataProvider>
+      </AuthProvider>
+    </Router>
   )
 }

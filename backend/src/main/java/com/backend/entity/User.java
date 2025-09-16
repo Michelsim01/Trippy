@@ -114,7 +114,21 @@ public class User {
     private LocalDateTime updatedAt;
     
     @Column(name = "last_login_at")
-    private LocalDateTime lastLoginAt;
+    private LocalDateTime lastLoginAt; 
+    
+    // Password reset fields
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+    
+    @Column(name = "password_reset_token_expires_at")
+    private LocalDateTime passwordResetTokenExpiresAt;
+    
+    // Email verification fields
+    @Column(name = "email_verification_token")
+    private String emailVerificationToken;
+    
+    @Column(name = "email_verification_token_expires_at")
+    private LocalDateTime emailVerificationTokenExpiresAt;
     
     // Constructors
     public User() {}
@@ -269,6 +283,38 @@ public class User {
     
     public void setLastLoginAt(LocalDateTime lastLoginAt) {
         this.lastLoginAt = lastLoginAt;
+    }
+    
+    public String getPasswordResetToken() {
+        return passwordResetToken;
+    }
+    
+    public void setPasswordResetToken(String passwordResetToken) {
+        this.passwordResetToken = passwordResetToken;
+    }
+    
+    public LocalDateTime getPasswordResetTokenExpiresAt() {
+        return passwordResetTokenExpiresAt;
+    }
+    
+    public void setPasswordResetTokenExpiresAt(LocalDateTime passwordResetTokenExpiresAt) {
+        this.passwordResetTokenExpiresAt = passwordResetTokenExpiresAt;
+    }
+    
+    public String getEmailVerificationToken() {
+        return emailVerificationToken;
+    }
+    
+    public void setEmailVerificationToken(String emailVerificationToken) {
+        this.emailVerificationToken = emailVerificationToken;
+    }
+    
+    public LocalDateTime getEmailVerificationTokenExpiresAt() {
+        return emailVerificationTokenExpiresAt;
+    }
+    
+    public void setEmailVerificationTokenExpiresAt(LocalDateTime emailVerificationTokenExpiresAt) {
+        this.emailVerificationTokenExpiresAt = emailVerificationTokenExpiresAt;
     }
     
     // Helper methods
