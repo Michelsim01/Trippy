@@ -100,7 +100,12 @@ export const FormDataProvider = ({ children }) => {
       setExperienceId(id);
 
       // Fetch experience data from API
-      const response = await fetch(`http://localhost:8080/api/experiences/${id}`);
+      const response = await fetch(`http://localhost:8080/api/experiences/${id}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch experience data');
       }
@@ -140,7 +145,12 @@ export const FormDataProvider = ({ children }) => {
 
       // Load additional photos from media API
       try {
-        const mediaResponse = await fetch(`http://localhost:8080/api/experiences/${id}/media`);
+        const mediaResponse = await fetch(`http://localhost:8080/api/experiences/${id}/media`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
         if (mediaResponse.ok) {
           const mediaData = await mediaResponse.json();
           const additionalPhotos = mediaData
@@ -159,7 +169,12 @@ export const FormDataProvider = ({ children }) => {
 
       // Load itinerary data from API
       try {
-        const itineraryResponse = await fetch(`http://localhost:8080/api/experiences/${id}/itineraries`);
+        const itineraryResponse = await fetch(`http://localhost:8080/api/experiences/${id}/itineraries`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
         if (itineraryResponse.ok) {
           const itineraryData = await itineraryResponse.json();
           // Convert backend itinerary format to frontend format
@@ -270,6 +285,7 @@ export const FormDataProvider = ({ children }) => {
       const response = await fetch(`http://localhost:8080/api/experiences/${experienceId}/complete`, {
         method: 'PUT',
         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
