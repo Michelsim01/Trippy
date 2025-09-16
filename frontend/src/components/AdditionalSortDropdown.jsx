@@ -5,7 +5,6 @@ const AdditionalSortDropdown = ({ currentSort, onSortChange, className = "" }) =
     
     const additionalSortOptions = [
         { value: 'bestMatch', label: 'Best Match', description: 'Most relevant to your search' },
-        { value: 'timeOfDay', label: 'Time of Day', description: 'Morning, afternoon, evening' },
         { value: 'newest', label: 'Recency of Listing', description: 'Newest first' }
     ];
 

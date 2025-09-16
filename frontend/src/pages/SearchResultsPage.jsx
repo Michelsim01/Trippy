@@ -45,7 +45,6 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
             // Add fields needed for sorting
             reviewCount: exp.totalReviews || 0,
             durationHours: exp.duration ? parseInt(exp.duration.toString().split(' ')[0]) || 0 : 0,
-            timeOfDay: "morning", // Default since we don't have this in API
             relevanceScore: 0.8, // Default relevance score
             listingDate: exp.createdAt ? exp.createdAt.split('T')[0] : "2025-01-01"
         };
@@ -269,19 +268,6 @@ const SearchResultsPage = () => {
             case 'shortest':
                 return sorted.sort((a, b) => (a.durationHours || 0) - (b.durationHours || 0));
             
-            case 'timeOfDay':
-                // Sort by time of day: morning, afternoon, evening
-                const timeOrder = { morning: 0, afternoon: 1, evening: 2 };
-                return sorted.sort((a, b) => {
-                    const orderA = timeOrder[a.timeOfDay] ?? 3;
-                    const orderB = timeOrder[b.timeOfDay] ?? 3;
-                    if (orderA === orderB) {
-                        // Secondary sort by relevance if same time of day
-                        return (b.relevanceScore || 0) - (a.relevanceScore || 0);
-                    }
-                    return orderA - orderB;
-                });
-            
             case 'newest':
                 return sorted.sort((a, b) => new Date(b.listingDate || '2025-01-01') - new Date(a.listingDate || '2025-01-01'));
             
@@ -397,7 +383,6 @@ const SearchResultsPage = () => {
                         availableFrom: "2025-07-20",
                         availableTo: "2025-12-20",
                         isLiked: false,
-                        timeOfDay: "morning",
                         listingDate: exp.createdAt || "2025-06-01",
                         relevanceScore: 0.95
                     }));
