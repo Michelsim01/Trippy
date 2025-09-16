@@ -15,6 +15,9 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import SettingsPage from './pages/SettingsPage'
 import LogoutPage from './pages/LogoutPage'
+import KycOnboardingPage from './pages/KycOnboardingPage'
+import KycVerificationPage from './pages/KycVerificationPage'
+import KycSubmittedPage from './pages/KycSubmittedPage'
 import './App.css'
 
 // Mock authentication state - in real app this would come from context/redux
@@ -87,6 +90,21 @@ export default function App() {
           <Route
             path="/logout"
             element={!isAuthenticated ? <Navigate to="/" replace /> : <LogoutPage />}
+          />
+
+          <Route
+            path="/kyc-onboarding"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycOnboardingPage />}
+          />
+
+          <Route
+            path="/kyc-verification"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycVerificationPage />}
+          />
+
+          <Route
+            path="/kyc-submitted"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
           />
 
           {/* Catch all route */}
