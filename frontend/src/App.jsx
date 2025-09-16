@@ -74,7 +74,7 @@ function AppRoutes() {
         element={isAuthenticated ? <Navigate to="/home" replace /> : <ResetPasswordPage />}
       />
 
-      {/* Email verification routes - accessible when user has token but not verified */}
+      {/* Email verification routes */}
       <Route
         path="/email-verification"
         element={<EmailVerificationPage />}

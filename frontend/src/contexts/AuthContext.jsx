@@ -196,36 +196,14 @@ export const AuthProvider = ({ children }) => {
       const response = await authService.register(userData)
       
       if (response.success) {
-        const { token, username, email, roles, emailVerified, userId } = response.data
-        
-        // Store token in localStorage
-        localStorage.setItem('token', token)
-        
-        // Create user object from backend response
-        const user = {
-          id: userId,
-          firstName: username.split(' ')[0] || '',
-          lastName: username.split(' ').slice(1).join(' ') || '',
-          email: email,
-          roles: roles,
-          emailVerified: emailVerified // Use the value from backend directly
-        }
-        
-        // Store user data in localStorage
-        localStorage.setItem('user', JSON.stringify(user))
-        
-        // Update state
-        setToken(token)
-        setUser(user)
-        
-        // Only set authenticated if email is verified
-        if (user.emailVerified) {
-          setIsAuthenticated(true)
-          navigate('/home')
-        } else {
-          setIsAuthenticated(false)
-          navigate('/email-verification')
-        }
+        // No token or user data to store - just navigate to verification page
+        // Pass email through navigation state for the verification page
+        navigate('/email-verification', { 
+          state: { 
+            email: response.data.email,
+            message: response.data.message 
+          }
+        })
         
         return { success: true }
       } else {
