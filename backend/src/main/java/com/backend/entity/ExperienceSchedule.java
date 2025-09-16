@@ -1,9 +1,8 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDate;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.List;
 
 @Entity
@@ -15,11 +14,15 @@ public class ExperienceSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "experience_id", nullable = false)
+    @JsonIgnoreProperties({"mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems"})
     private Experience experience;
 
-    private LocalDate date;
-    private LocalTime startTime;
-    private LocalTime endTime;
+    @Column(name = "start_date_time")
+    private LocalDateTime startDateTime;
+    
+    @Column(name = "end_date_time")
+    private LocalDateTime endDateTime;
+    
     private Integer availableSpots;
     private Boolean isAvailable;
     private LocalDateTime createdAt;
@@ -30,6 +33,7 @@ public class ExperienceSchedule {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private List<Booking> bookings;
 
     @OneToMany(
@@ -38,6 +42,7 @@ public class ExperienceSchedule {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private List<PersonalChat> personalChats;
 
     @OneToOne(
@@ -46,18 +51,17 @@ public class ExperienceSchedule {
         fetch = FetchType.LAZY,
         orphanRemoval = true
     )
+    @JsonIgnoreProperties("experienceSchedule")
     private TripCohort tripCohort;
 
     public Long getScheduleId() { return scheduleId; }
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }
     public Experience getExperience() { return experience; }
     public void setExperience(Experience experience) { this.experience = experience; }
-    public LocalDate getDate() { return date; }
-    public void setDate(LocalDate date) { this.date = date; }
-    public LocalTime getStartTime() { return startTime; }
-    public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
-    public LocalTime getEndTime() { return endTime; }
-    public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    public LocalDateTime getStartDateTime() { return startDateTime; }
+    public void setStartDateTime(LocalDateTime startDateTime) { this.startDateTime = startDateTime; }
+    public LocalDateTime getEndDateTime() { return endDateTime; }
+    public void setEndDateTime(LocalDateTime endDateTime) { this.endDateTime = endDateTime; }
     public Integer getAvailableSpots() { return availableSpots; }
     public void setAvailableSpots(Integer availableSpots) { this.availableSpots = availableSpots; }
     public Boolean getIsAvailable() { return isAvailable; }

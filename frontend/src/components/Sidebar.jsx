@@ -1,40 +1,32 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useUser } from '../contexts/UserContext'
+import LogoutModal from './LogoutModal'
+import { useFormData } from '../contexts/FormDataContext'
 
-const Sidebar = ({
-    isOpen,
-    onClose,
-    variant = 'desktop',
-    isAuthenticated,
-}) => {
-    // Mock authentication for testing (remove when real auth is implemented)
-    isAuthenticated = true;
+const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+    const navigate = useNavigate();
+    const { clearFormData } = useFormData();
+    
+    const navItems = [
+        { id: 'blog', label: 'Blog' },
+        { id: 'create-experience', label: 'Create an Experience' },
+        { id: 'calendar', label: 'Calendar' },
+        { id: 'about', label: 'About' },
+        { id: 'contact', label: 'Contact' },
+    ]
+    
+    const handleCreateExperienceClick = () => {
+        clearFormData(); // Clear any existing form data
+        navigate('/create-experience');
+        onClose(); // Close the sidebar
+    };
 
-    const { user } = useUser();
-
-    // Check if user can create experiences (must be KYC approved)
-    const canCreateExperiences = user?.kycStatus === 'APPROVED';
-
-    const navItems = isAuthenticated
-        ? [
-            { id: 'blog', label: 'Blog' },
-            // Only show "Create an Experience" if user is KYC approved
-            ...(canCreateExperiences
-                ? [{ id: 'create-experience', label: 'Create an Experience' }]
-                : [{ id: 'kyc-onboarding', label: 'Become a Guide', subtitle: 'Complete verification' }]
-            ),
-            { id: 'calendar', label: 'Calendar' },
-            { id: 'about', label: 'About' },
-            { id: 'contact', label: 'Contact' },
-            { id: 'settings', label: 'Settings' },
-            { id: 'logout', label: 'Log Out' },
-        ]
-        : [
-            { id: 'blog', label: 'Blog' },
-            { id: 'about', label: 'About' },
-            { id: 'contact', label: 'Contact' },
-        ];
+    const handleLogout = () => {
+        onClose() // Close sidebar first
+        setIsLogoutModalOpen(true) // Open logout modal
+    }
 
     return (
         <>
@@ -101,84 +93,55 @@ const Sidebar = ({
                         <ul className="space-y-6">
                             {navItems.slice(0, 5).map(item => (
                                 <li key={item.id}>
-                                    <Link
-                                        to={`/${item.id}`}
-                                        className="block text-white font-medium text-base leading-tight px-4 py-5 rounded-lg transition-all duration-200 hover:text-[color:#4AC63F] hover:bg-white"
-                                        style={{
-                                            fontFamily: 'var(--font-family-dm-sans)',
-                                            letterSpacing: '0.02em'
-                                        }}
-                                        onClick={onClose}
-                                    >
-                                        <div>
+                                    {item.id === 'create-experience' ? (
+                                        <button
+                                            onClick={handleCreateExperienceClick}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left"
+                                        >
                                             {item.label}
-                                            {item.subtitle && (
-                                                <div className="text-xs opacity-75 mt-1">
-                                                    {item.subtitle}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </Link>
+                                        </button>
+                                    ) : (
+                                        <Link
+                                            to={`/${item.id}`}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                                            onClick={onClose}
+                                        >
+                                            {item.label}
+                                        </Link>
+                                    )}
                                 </li>
                             ))}
                         </ul>
                     </nav>
 
-                    {/* Bottom Section with Settings, Logout, and Language */}
-                    <div className="pb-8">
-                        {/* Settings and Logout */}
-                        <nav className="mb-8">
-                            <ul className="space-y-6">
-                                {navItems.slice(5).map(item => (
-                                    <li key={item.id}>
-                                        <Link
-                                            to={`/${item.id}`}
-                                            className="block text-white font-medium text-base leading-tight px-4 py-5 rounded-lg transition-all duration-200 hover:text-[color:#4AC63F] hover:bg-white hover:px-4"
-                                            style={{
-                                                fontFamily: 'var(--font-family-dm-sans)',
-                                                letterSpacing: '0.02em'
-                                            }}
-                                            onClick={onClose}
-                                        >
-                                            <div>
-                                                {item.label}
-                                                {item.subtitle && (
-                                                    <div className="text-xs opacity-75 mt-1">
-                                                        {item.subtitle}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </nav>
-
-                        {/* Language Selector */}
-                        <div className="flex justify-center">
-                            <button
-                                className="bg-primary-1 border border-white border-opacity-30 flex items-center justify-center gap-2 px-5 py-3 rounded-full w-full max-w-[160px] hover:bg-white hover:bg-opacity-10 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-30"
-                                aria-label="Change Language"
+                    {/* Bottom Section */}
+                    <div className="flex flex-col gap-[13px]">
+                        {/* Settings and Log Out */}
+                        <div className="space-y-[13px]">
+                            <Link
+                                to="/settings"
+                                className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                                onClick={onClose}
                             >
-                                <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="12" r="10" strokeWidth="2" />
-                                    <line x1="2" y1="12" x2="22" y2="12" strokeWidth="2" />
-                                    <path d="m8 12c0 3.31 1.79 6 4 6s4-2.69 4-6-1.79-6-4-6-4 2.69-4 6z" strokeWidth="2" />
-                                </svg>
-                                <span
-                                    className="text-white font-medium text-sm leading-tight"
-                                    style={{
-                                        fontFamily: 'var(--font-family-dm-sans)',
-                                        letterSpacing: '0.03em'
-                                    }}
-                                >
-                                    English
-                                </span>
+                                Settings
+                            </Link>
+                            <button
+                                onClick={handleLogout}
+                                className="block w-full text-left font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors"
+                            >
+                                Log Out
                             </button>
                         </div>
                     </div>
                 </div>
             </aside>
+            
+            {/* Logout Modal */}
+            <LogoutModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onLogout={handleLogout}
+            />
         </>
     );
 };
