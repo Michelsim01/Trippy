@@ -6,6 +6,7 @@ import LogoutModal from './LogoutModal'
 import SearchSuggestions from './SearchSuggestions'
 import SearchModal from './SearchModal'
 import useSearchSuggestions from '../hooks/useSearchSuggestions'
+import { useNotifications } from '../hooks/useNotifications'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -21,6 +22,7 @@ const Navbar = ({
     const [userProfile, setUserProfile] = useState(null)
     const dropdownRef = useRef(null)
     const timeoutRef = useRef(null)
+    const { unreadCount } = useNotifications()
 
     // Handle clicking outside to close dropdown
     useEffect(() => {
@@ -240,12 +242,19 @@ const Navbar = ({
                             ) : (
                                 /* Authenticated state */
                                 <>
-                                    {/* Notifications */}
-                                    <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
+                                    <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors relative">
                                         <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 2 0 0 1-3.46 0" />
                                         </svg>
+                                        {/* Notification Count Badge */}
+                                        {unreadCount > 0 && (
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-1)' }}>
+                                                <span className="text-white text-xs font-medium">
+                                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                                </span>
+                                            </div>
+                                        )}
                                     </Link>
 
                                     {/* Wishlist */}
@@ -382,11 +391,19 @@ const Navbar = ({
                                 </button>
 
                                 {/* Notifications */}
-                                <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors">
+                                <Link to="/notifications" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors relative">
                                     <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 2 0 0 1-3.46 0" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.73 21a2 0 0 1 0 -3.46" />
                                     </svg>
+                                    {/* Notification Count Badge */}
+                                    {unreadCount > 0 && (
+                                        <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-1)' }}>
+                                            <span className="text-white text-xs font-medium">
+                                                {unreadCount > 99 ? '99+' : unreadCount}
+                                            </span>
+                                        </div>
+                                    )}
                                 </Link>
 
                                 {/* Wishlist */}

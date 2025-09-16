@@ -197,7 +197,7 @@ public class EmailVerificationService {
                     // This is a profile update verification - mark email as verified in cache
                     String email = pendingUser.getEmail();
                     verifiedProfileEmails.put(email, LocalDateTime.now().plusHours(1)); // Cache for 1 hour
-                    pendingUserRepository.delete(pendingUser);
+                    cleanupPendingUserAsync(pendingUser); // Use async cleanup to avoid transaction conflicts
                     return new EmailVerificationResponse(true, "Email verified successfully for profile update!", true);
                 }
                 
@@ -272,8 +272,8 @@ public class EmailVerificationService {
             // Save the actual user
             userRepository.save(user);
             
-            // Remove pending user from temporary storage
-            pendingUserRepository.delete(pendingUser);
+            // Remove pending user from temporary storage using async cleanup to avoid transaction conflicts
+            cleanupPendingUserAsync(pendingUser);
             
             return new EmailVerificationResponse(true, "Email verified successfully! Your account has been created.", true);
             
@@ -299,7 +299,15 @@ public class EmailVerificationService {
     @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     private void cleanupPendingUser(PendingUser pendingUser) {
         try {
-            pendingUserRepository.delete(pendingUser);
+            // Refresh entity to get the latest state and avoid stale object deletion
+            Optional<PendingUser> freshPendingUser = pendingUserRepository.findById(pendingUser.getId());
+            if (freshPendingUser.isPresent()) {
+                pendingUserRepository.delete(freshPendingUser.get());
+            }
+            // If the entity doesn't exist, it was already deleted - no action needed
+        } catch (org.springframework.dao.OptimisticLockingFailureException e) {
+            // Entity was already modified/deleted by another transaction - this is expected in concurrent scenarios
+            System.out.println("Pending user already processed by another transaction, skipping cleanup");
         } catch (Exception e) {
             // Log error but don't fail the main operation
             System.err.println("Failed to cleanup pending user: " + e.getMessage());

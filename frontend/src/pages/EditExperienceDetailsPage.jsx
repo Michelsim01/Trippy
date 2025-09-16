@@ -17,7 +17,8 @@ export default function EditExperienceDetailsPage() {
     toggleBookings,
     isFieldRestricted,
     loadExistingExperience,
-    saveCurrentChanges
+    saveCurrentChanges,
+    savePartialChanges
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -77,27 +78,18 @@ export default function EditExperienceDetailsPage() {
     try {
       setIsSaving(true);
 
-      // Prepare complete data by merging context data with current form data
-      const completeData = {
-        ...contextData, // Start with all existing context data
+      // Prepare only the Details page data for partial save
+      const detailsData = {
         fullDescription: formData.fullDescription.trim(),
         whatIncluded: formData.whatIsIncluded.join(', '),
         importantInfo: formData.importantInfo.trim(),
         itinerary: formData.itinerary
       };
 
-      // Save directly with the complete merged data
-      await saveCurrentChanges(completeData);
+      // Save only Details data with partial save (preserves other page data)
+      await savePartialChanges(detailsData);
 
-      // Update context after successful save
-      updateFormData({
-        fullDescription: formData.fullDescription.trim(),
-        whatIncluded: formData.whatIsIncluded.join(', '),
-        importantInfo: formData.importantInfo.trim(),
-        itinerary: formData.itinerary
-      });
-
-      alert('Changes saved successfully!');
+      alert('Details saved successfully!');
     } catch (error) {
       console.error('Error saving changes:', error);
       alert('Failed to save changes. Please try again.');

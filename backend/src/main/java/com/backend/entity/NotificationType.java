@@ -8,4 +8,5 @@ public enum NotificationType {
     REVIEW_REQUEST,
     PASSWORD_RESET,
     UPDATE_INFO,
+    EMAIL_UPDATE,
 }
