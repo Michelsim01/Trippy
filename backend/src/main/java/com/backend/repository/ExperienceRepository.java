@@ -23,4 +23,7 @@ public interface ExperienceRepository extends JpaRepository<Experience, Long> {
            "     WHEN LOWER(e.location) LIKE LOWER(CONCAT(:query, '%')) THEN 3 " +
            "     ELSE 4 END")
     List<Experience> findExperienceSuggestions(@Param("query") String query);
+    
+    // Find experiences by guide ID
+    List<Experience> findByGuide_Id(Long guideId);
 }

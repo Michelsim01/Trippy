@@ -177,6 +177,30 @@ export const experienceApi = {
   },
 
   /**
+   * Gets experiences by guide ID
+   * @param {number} guideId - The guide/user ID
+   * @returns {Promise<Array>} List of experiences created by the guide
+   */
+  getExperiencesByGuideId: async (guideId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiences/guide/${guideId}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get experiences by guide API error:', error);
+      throw new Error(`Failed to fetch guide experiences: ${error.message}`);
+    }
+  },
+
+  /**
    * Updates an existing experience with all related data (itinerary, media, schedules)
    * @param {number} experienceId - The experience ID to update
    * @param {Object} payload - Complete experience payload from getBackendPayload()

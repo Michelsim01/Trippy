@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
+import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ProfileCard, { UserRole } from '../components/profile/ProfileCard';
@@ -19,6 +20,8 @@ const ProfilePage = () => {
     const [activeTab, setActiveTab] = useState('Introduction');
     const [currentRole, setCurrentRole] = useState(UserRole.TOURIST);
     const [userData, setUserData] = useState(null);
+    const [userExperiences, setUserExperiences] = useState([]);
+    const [experiencesLoading, setExperiencesLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
@@ -78,12 +81,29 @@ const ProfilePage = () => {
         }
     };
 
+    const fetchUserExperiences = async (userId) => {
+        try {
+            setExperiencesLoading(true);
+            const experiences = await experienceApi.getExperiencesByGuideId(userId);
+            setUserExperiences(experiences);
+        } catch (err) {
+            console.error('Error fetching user experiences:', err);
+            // Don't set the main error state, just log it
+            setUserExperiences([]);
+        } finally {
+            setExperiencesLoading(false);
+        }
+    };
+
     // Check if this is the user's own profile
     useEffect(() => {
         if (user && id) {
             // Check if the current user's ID matches the profile ID
             const currentUserId = id?.toString();
-            setIsOwnProfile(currentUserId === id);
+            const profileId = user?.id?.toString();
+            setIsOwnProfile(currentUserId === profileId);
+            console.log(currentUserId);
+            console.log(profileId);
         }
     }, [user, id]);
 
@@ -114,6 +134,13 @@ const ProfilePage = () => {
             }
         }
     }, [id, isAuthenticated, authLoading, user]);
+
+    // Fetch user experiences when userData is loaded and user is a tour guide
+    useEffect(() => {
+        if (userData && currentRole === UserRole.TOUR_GUIDE && id) {
+            fetchUserExperiences(id);
+        }
+    }, [userData, currentRole, id]);
 
     const isTourGuide = currentRole === UserRole.TOUR_GUIDE;
     const userName = userData?.firstName || (isTourGuide ? 'Farley' : 'Sarah');
@@ -245,7 +272,11 @@ const ProfilePage = () => {
                     onUserDataUpdate={setUserData}
                 />;
             case 'Tour list':
-                return <TourListTab tourData={tourData} />;
+                return <TourListTab 
+                    tourData={userExperiences} 
+                    loading={experiencesLoading}
+                    isOwnProfile={isOwnProfile}
+                />;
             case 'Reviews':
                 return <ReviewsTab reviews={reviews} />;
             case 'My reviews':

@@ -1,15 +1,60 @@
 import React from 'react';
 import ExperienceCard from '../ExperienceCard';
+import { Link } from 'react-router-dom';
 
-const TourListTab = ({ tourData }) => {
+const TourListTab = ({ tourData, loading = false, isOwnProfile }) => {
+    console.log('TourListTab props:', { tourData, loading, isOwnProfile });
+    if (loading) {
+        return (
+            <div>
+                <h3 className="text-xl font-semibold text-neutrals-1 mb-6">
+                    Tour list
+                </h3>
+                <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-1 mx-auto mb-4"></div>
+                        <p className="text-neutrals-3">Loading experiences...</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!tourData || tourData.length === 0) {
+        return (
+            <div>
+                <h3 className="text-xl font-semibold text-neutrals-1 mb-6">
+                    Tour list
+                </h3>
+                <div className="text-center py-8">
+                    <p className="text-neutrals-3 mb-4">
+                        {isOwnProfile 
+                            ? "You haven't created any experiences yet." 
+                            : "This user hasn't created any experiences yet."
+                        }
+                    </p>
+                    {isOwnProfile && (
+                        <Link to="/create-experience/basic-info" className="btn btn-primary">
+                            Create Your First Experience
+                        </Link>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div>
             <h3 className="text-xl font-semibold text-neutrals-1 mb-6">
-                Tour list
+                Tour list ({tourData.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {tourData.map((tour) => (
-                    <ExperienceCard key={tour.id || tour.experienceId} experience={tour} showEditButton={true} />
+                    <ExperienceCard 
+                        key={tour.id || tour.experienceId} 
+                        experience={tour} 
+                        showEditButton={isOwnProfile} 
+                    />
                 ))}
             </div>
         </div>

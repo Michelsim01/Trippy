@@ -231,4 +231,47 @@ public class ExperienceController {
         }
     }
 
+    @GetMapping("/guide/{guideId}")
+    public ResponseEntity<List<Map<String, Object>>> getExperiencesByGuideId(@PathVariable Long guideId) {
+        try {
+            List<Experience> experiences = experienceRepository.findByGuide_Id(guideId);
+            List<Map<String, Object>> result = new ArrayList<>();
+
+            for (Experience exp : experiences) {
+                Map<String, Object> expMap = new HashMap<>();
+                expMap.put("experienceId", exp.getExperienceId());
+                expMap.put("title", exp.getTitle());
+                expMap.put("location", exp.getLocation());
+                expMap.put("country", exp.getCountry());
+                expMap.put("price", exp.getPrice());
+                expMap.put("averageRating", exp.getAverageRating());
+                expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+                expMap.put("shortDescription", exp.getShortDescription());
+                expMap.put("duration", exp.getDuration());
+                expMap.put("category", exp.getCategory());
+                expMap.put("status", exp.getStatus());
+                expMap.put("totalReviews", exp.getTotalReviews());
+                expMap.put("createdAt", exp.getCreatedAt());
+                expMap.put("updatedAt", exp.getUpdatedAt());
+
+                // Add guide info without lazy loading issues
+                if (exp.getGuide() != null) {
+                    Map<String, Object> guideMap = new HashMap<>();
+                    guideMap.put("userId", exp.getGuide().getId());
+                    guideMap.put("firstName", exp.getGuide().getFirstName());
+                    guideMap.put("lastName", exp.getGuide().getLastName());
+                    guideMap.put("email", exp.getGuide().getEmail());
+                    guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+                    expMap.put("guide", guideMap);
+                }
+
+                result.add(expMap);
+            }
+
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
 }
