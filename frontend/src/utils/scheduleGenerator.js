@@ -248,21 +248,25 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
         for (const startTime of timeSlots) {
           const key = `${dateStr}_${convertTo24Hr(startTime)}`;
           console.log(`  - Creating schedule: ${key}`);
-          
-          // Calculate endTime based on experience endDateTime or fallback to duration calculation
-          let endTime;
+
+          // Create full datetime objects for startDateTime and endDateTime
+          const scheduleDate = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
+          let scheduleEndDateTime;
+
           if (experienceInfo.endDateTime) {
-            // Use the end time from experience endDateTime (works for both single-day and multi-day)
-            endTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5); // Format: "HH:MM"
+            // For single-day tours: use same date with experience end time
+            // For multi-day tours: this should not be used (handled in manual dates section)
+            const experienceEndTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5);
+            scheduleEndDateTime = new Date(dateStr + 'T' + experienceEndTime + ':00');
           } else {
-            // Fallback: calculate based on duration (for legacy/incomplete data)
-            endTime = calculateEndTime(startTime, experienceDuration);
+            // Fallback: calculate based on duration
+            const endTime24 = calculateEndTime(startTime, experienceDuration);
+            scheduleEndDateTime = new Date(dateStr + 'T' + endTime24 + ':00');
           }
 
           scheduleMap.set(key, {
-            date: dateStr,
-            startTime: convertTo24Hr(startTime),
-            endTime: endTime,
+            startDateTime: scheduleDate.toISOString(),
+            endDateTime: scheduleEndDateTime.toISOString(),
             availableSpots: maxGroupSize,
             isAvailable: true
           });
@@ -328,22 +332,36 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
       for (const startTime of timeSlots) {
         const key = `${dateStr}_${convertTo24Hr(startTime)}`;
         console.log(`  - Creating manual schedule: ${key}`);
-        
-        // Calculate endTime based on experience endDateTime or fallback to duration calculation
-        let endTime;
-        if (experienceInfo.endDateTime) {
-          // Use the end time from experience endDateTime (works for both single-day and multi-day)
-          endTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5); // Format: "HH:MM"
+
+        // Create full datetime objects for startDateTime and endDateTime
+        const scheduleStartDateTime = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
+        let scheduleEndDateTime;
+
+        if (isMultiDay && experienceInfo.endDateTime) {
+          // For multi-day tours: calculate end date based on tour duration from this start date
+          const startDate = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
+          const experienceStart = new Date(experienceInfo.startDateTime);
+          const experienceEnd = new Date(experienceInfo.endDateTime);
+
+          // Calculate the duration of the original experience in milliseconds
+          const tourDurationMs = experienceEnd.getTime() - experienceStart.getTime();
+
+          // Add the same duration to this schedule's start date
+          scheduleEndDateTime = new Date(startDate.getTime() + tourDurationMs);
+        } else if (experienceInfo.endDateTime) {
+          // For single-day tours: use same date with experience end time
+          const experienceEndTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5);
+          scheduleEndDateTime = new Date(dateStr + 'T' + experienceEndTime + ':00');
         } else {
-          // Fallback: calculate based on duration (for legacy/incomplete data)
-          endTime = calculateEndTime(startTime, experienceDuration);
+          // Fallback: calculate based on duration
+          const endTime24 = calculateEndTime(startTime, experienceDuration);
+          scheduleEndDateTime = new Date(dateStr + 'T' + endTime24 + ':00');
         }
 
         // This will override recurring schedule if duplicate, or add new if unique
         scheduleMap.set(key, {
-          date: dateStr, // For multi-day: start date only, For single-day: the tour date
-          startTime: convertTo24Hr(startTime),
-          endTime: endTime,
+          startDateTime: scheduleStartDateTime.toISOString(),
+          endDateTime: scheduleEndDateTime.toISOString(),
           availableSpots: maxGroupSize,
           isAvailable: true,
           isMultiDay: isMultiDay,
@@ -356,15 +374,17 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
     console.log(`Manual date processing complete: ${manualSchedulesCreated} schedules created`);
   }
   
-  // Step 3: Convert to array and sort by date and time
+  // Step 3: Convert to array and sort by startDateTime
   const schedules = Array.from(scheduleMap.values()).sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) return dateCompare;
-    return a.startTime.localeCompare(b.startTime);
+    return new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime();
   });
-  
+
   console.log(`Final schedule generation complete: ${schedules.length} total schedules created`);
-  console.log('Generated schedules:', schedules.map(s => `${s.date} ${s.startTime}-${s.endTime}`));
+  console.log('Generated schedules:', schedules.map(s => {
+    const start = new Date(s.startDateTime);
+    const end = new Date(s.endDateTime);
+    return `${start.toLocaleDateString()} ${start.toLocaleTimeString()} - ${end.toLocaleDateString()} ${end.toLocaleTimeString()}`;
+  }));
   
   if (schedules.length === 0) {
     console.error('❌ NO SCHEDULES GENERATED! Check the conditions above.');
@@ -441,13 +461,11 @@ export const validateManualDateSelection = (selectedDate, experienceInfo, existi
 /**
  * Check if a schedule already exists (for duplicate prevention)
  * @param {Array} schedules - Existing schedules
- * @param {string} date - Date to check
- * @param {string} startTime - Start time to check
+ * @param {string} startDateTime - Start datetime to check (ISO string)
  * @returns {boolean} True if schedule exists
  */
-export const scheduleExists = (schedules, date, startTime) => {
-  const time24 = convertTo24Hr(startTime);
-  return schedules.some(s => s.date === date && s.startTime === time24);
+export const scheduleExists = (schedules, startDateTime) => {
+  return schedules.some(s => s.startDateTime === startDateTime);
 };
 
 /**
@@ -456,27 +474,32 @@ export const scheduleExists = (schedules, date, startTime) => {
  * @returns {boolean} True if valid
  */
 export const validateSchedule = (schedule) => {
-  if (!schedule.date || !schedule.startTime || !schedule.endTime) {
+  if (!schedule.startDateTime || !schedule.endDateTime) {
     return false;
   }
-  
-  // Validate date format (YYYY-MM-DD)
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(schedule.date)) {
+
+  // Validate startDateTime and endDateTime are valid ISO strings
+  try {
+    const startDate = new Date(schedule.startDateTime);
+    const endDate = new Date(schedule.endDateTime);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return false;
+    }
+
+    // Validate that endDateTime is after startDateTime
+    if (endDate <= startDate) {
+      return false;
+    }
+  } catch (error) {
     return false;
   }
-  
-  // Validate time format (HH:MM)
-  const timeRegex = /^\d{2}:\d{2}$/;
-  if (!timeRegex.test(schedule.startTime) || !timeRegex.test(schedule.endTime)) {
-    return false;
-  }
-  
+
   // Validate availableSpots is positive integer
   if (!Number.isInteger(schedule.availableSpots) || schedule.availableSpots <= 0) {
     return false;
   }
-  
+
   return true;
 };
 

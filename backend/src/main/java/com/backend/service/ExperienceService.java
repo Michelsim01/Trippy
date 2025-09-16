@@ -125,17 +125,36 @@ public class ExperienceService {
         // Create and save schedule items
         List<Map<String, Object>> schedules = (List<Map<String, Object>>) payload.get("schedules");
         System.out.println("Processing schedules. Count: " + (schedules != null ? schedules.size() : "null"));
-        
+
         if (schedules != null && !schedules.isEmpty()) {
             for (Map<String, Object> scheduleData : schedules) {
                 try {
                     ExperienceSchedule schedule = new ExperienceSchedule();
                     schedule.setExperience(savedExperience);
-                    LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
-                    LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
-                    LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
-                    schedule.setStartDateTime(LocalDateTime.of(date, startTime));
-                    schedule.setEndDateTime(LocalDateTime.of(date, endTime));
+
+                    // Support both new format (startDateTime/endDateTime) and old format (date/startTime/endTime)
+                    if (scheduleData.containsKey("startDateTime") && scheduleData.containsKey("endDateTime")) {
+                        // New format: Parse ISO datetime strings
+                        String startDateTimeStr = (String) scheduleData.get("startDateTime");
+                        String endDateTimeStr = (String) scheduleData.get("endDateTime");
+
+                        LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+                        LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+
+                        schedule.setStartDateTime(startDateTime);
+                        schedule.setEndDateTime(endDateTime);
+                        System.out.println("Using new format - Start: " + startDateTime + ", End: " + endDateTime);
+                    } else {
+                        // Old format: Parse separate date, startTime, endTime fields
+                        LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
+                        LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
+                        LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
+
+                        schedule.setStartDateTime(LocalDateTime.of(date, startTime));
+                        schedule.setEndDateTime(LocalDateTime.of(date, endTime));
+                        System.out.println("Using old format - Date: " + date + ", Start: " + startTime + ", End: " + endTime);
+                    }
+
                     schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
                     schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
                     ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);
@@ -258,11 +277,30 @@ public class ExperienceService {
                 try {
                     ExperienceSchedule schedule = new ExperienceSchedule();
                     schedule.setExperience(updatedExperience);
-                    LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
-                    LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
-                    LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
-                    schedule.setStartDateTime(LocalDateTime.of(date, startTime));
-                    schedule.setEndDateTime(LocalDateTime.of(date, endTime));
+
+                    // Support both new format (startDateTime/endDateTime) and old format (date/startTime/endTime)
+                    if (scheduleData.containsKey("startDateTime") && scheduleData.containsKey("endDateTime")) {
+                        // New format: Parse ISO datetime strings
+                        String startDateTimeStr = (String) scheduleData.get("startDateTime");
+                        String endDateTimeStr = (String) scheduleData.get("endDateTime");
+
+                        LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+                        LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+
+                        schedule.setStartDateTime(startDateTime);
+                        schedule.setEndDateTime(endDateTime);
+                        System.out.println("Using new format for update - Start: " + startDateTime + ", End: " + endDateTime);
+                    } else {
+                        // Old format: Parse separate date, startTime, endTime fields
+                        LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
+                        LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
+                        LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
+
+                        schedule.setStartDateTime(LocalDateTime.of(date, startTime));
+                        schedule.setEndDateTime(LocalDateTime.of(date, endTime));
+                        System.out.println("Using old format for update - Date: " + date + ", Start: " + startTime + ", End: " + endTime);
+                    }
+
                     schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
                     schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
                     ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);

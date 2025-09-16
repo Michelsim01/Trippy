@@ -64,6 +64,10 @@ touch backend/src/main/resources/application.properties
 # application.properties (DEV)
 spring.application.name=spring-boot
 
+# Server configuration - bind to all interfaces to allow external access
+server.port=8080
+server.address=0.0.0.0
+
 # JDBC points to the HOST port you mapped in docker-compose 
 spring.datasource.url=jdbc:postgresql://localhost:5332/appdb
 spring.datasource.username=app
@@ -72,7 +76,26 @@ spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
 spring.jpa.properties.hibernate.format_sql=true
+
+# JWT Configuration
+jwt.secret=trippy-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
+jwt.expiration=86400000
+jwt.prefix=Bearer 
+
+# Email Configuration (Gmail SMTP)
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=Michelsim2002@gmail.com
+spring.mail.password=orroajxbyuaxjodl
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.starttls.required=true
+spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
+
+# Email Templates
+spring.mail.templates.path=classpath:/templates/email/
 ```
 
 ### 2. Start the Database
@@ -88,6 +111,12 @@ This will start PostgreSQL on port 5332 with:
 - Password: secret
 
 ### 3. Run the Backend
+Seed the data:
+```bash
+cd backend
+./seed-database.sh
+```
+
 Stay in the backend directory and run:
 ```bash
 # On macOS/Linux
@@ -113,3 +142,5 @@ The frontend will start on http://localhost:3000
 - Database is running: docker ps should show postgres-spring container
 - Backend is running: http://localhost:8080/api/hello returns a message
 - Frontend is running: http://localhost:3000 loads React app
+
+
