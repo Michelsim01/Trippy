@@ -3,6 +3,9 @@ package com.backend.service;
 import com.backend.entity.*;
 import com.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,9 @@ public class ExperienceService {
     @Autowired
     private ExperienceScheduleRepository experienceScheduleRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     @Transactional
     public Experience createCompleteExperience(Map<String, Object> payload) {
         try {
@@ -40,9 +46,14 @@ public class ExperienceService {
         // Create Experience entity
         Experience experience = new Experience();
         
-        // TODO: Set guide from authenticated user when auth is implemented
-        // For now, guide is nullable in the database
-        // experience.setGuide(currentUser);
+        // Set guide from authenticated user
+        User currentUser = getCurrentAuthenticatedUser();
+        if (currentUser != null) {
+            experience.setGuide(currentUser);
+            System.out.println("Setting guide: " + currentUser.getFirstName() + " " + currentUser.getLastName() + " (ID: " + currentUser.getId() + ")");
+        } else {
+            System.out.println("No authenticated user found - experience will have no guide");
+        }
         
         experience.setTitle((String) experienceData.get("title"));
         experience.setShortDescription((String) experienceData.get("shortDescription"));
@@ -190,7 +201,8 @@ public class ExperienceService {
         // Extract main experience data
         Map<String, Object> experienceData = (Map<String, Object>) payload.get("experience");
 
-        // Update Experience entity with new data
+        // Update Experience entity with new data (but keep the original guide)
+        // Note: We don't update the guide during experience updates to preserve ownership
         existingExperience.setTitle((String) experienceData.get("title"));
         existingExperience.setShortDescription((String) experienceData.get("shortDescription"));
         existingExperience.setFullDescription((String) experienceData.get("fullDescription"));
@@ -315,5 +327,26 @@ public class ExperienceService {
         }
 
         return updatedExperience;
+    }
+
+    /**
+     * Helper method to get the currently authenticated user
+     * @return User entity if authenticated, null otherwise
+     */
+    private User getCurrentAuthenticatedUser() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication != null && authentication.isAuthenticated() && 
+                authentication.getPrincipal() instanceof UserDetails) {
+                
+                UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                String email = userDetails.getUsername();
+                
+                return userRepository.findByEmailAndIsActive(email, true).orElse(null);
+            }
+        } catch (Exception e) {
+            System.err.println("Error getting authenticated user: " + e.getMessage());
+        }
+        return null;
     }
 }
