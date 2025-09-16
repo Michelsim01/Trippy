@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
+import { authService } from '../../services/authService';
 import swal from 'sweetalert2';
 
 const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
@@ -16,6 +17,10 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
     const [stagedImageFile, setStagedImageFile] = useState(null);
     const [stagedImageUrl, setStagedImageUrl] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+    const [newEmailVerified, setNewEmailVerified] = useState(true); // Start as true since original email is verified
+    const [pendingVerificationEmail, setPendingVerificationEmail] = useState('');
+    const [sendingVerification, setSendingVerification] = useState(false);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
@@ -119,6 +124,9 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
         setStagedImageUrl(null);
         setError(null);
         setAreaCodeError('');
+        setNewEmailVerified(true); // Reset to verified since we're loading original data
+        setEmailVerificationSent(false);
+        setPendingVerificationEmail('');
     };
 
     const fetchUserData = async () => {
@@ -159,6 +167,17 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setEmailError('Please enter a valid email address');
             } else {
                 setEmailError('');
+            }
+            
+            // Check if email has changed from original to determine verification status
+            if (value !== originalData.email) {
+                setNewEmailVerified(false);
+                setEmailVerificationSent(false);
+                setPendingVerificationEmail(value);
+            } else {
+                setNewEmailVerified(true);
+                setEmailVerificationSent(false);
+                setPendingVerificationEmail('');
             }
         }
         
@@ -277,6 +296,9 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setAreaCodeError('');
                 setError(null);
                 setHasChanges(false);
+                setNewEmailVerified(true);
+                setEmailVerificationSent(false);
+                setPendingVerificationEmail('');
                 swal.fire({
                     icon: 'success',
                     title: 'Changes Cancelled',
@@ -286,6 +308,86 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 });
             }
         });
+    };
+
+    const handleVerifyEmail = async () => {
+        if (!formData.email || !validateEmail(formData.email)) {
+            setEmailError('Please enter a valid email address');
+            return;
+        }
+
+        if (formData.email === originalData.email) {
+            setNewEmailVerified(true);
+            setEmailVerificationSent(false);
+            return;
+        }
+
+        setSendingVerification(true);
+        try {
+            const result = await authService.sendVerificationEmail(formData.email);
+            
+            if (result.success) {
+                setEmailVerificationSent(true);
+                setPendingVerificationEmail(formData.email);
+                swal.fire({
+                    icon: 'success',
+                    title: 'Verification Email Sent',
+                    text: `A verification email has been sent to ${formData.email}. Please check your inbox and click the verification link.`,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            } else {
+                setEmailError(result.error || 'Failed to send verification email');
+                swal.fire({
+                    icon: 'error',
+                    title: 'Verification Failed',
+                    text: result.error || 'Failed to send verification email. Please try again.',
+                });
+            }
+        } catch (error) {
+            console.error('Error sending verification email:', error);
+            setEmailError('Network error. Please try again.');
+            swal.fire({
+                icon: 'error',
+                title: 'Network Error',
+                text: 'Network error. Please try again.',
+            });
+        } finally {
+            setSendingVerification(false);
+        }
+    };
+
+    const handleCheckEmailVerification = async () => {
+        if (!pendingVerificationEmail) return;
+
+        try {
+            const result = await authService.checkEmailVerification(pendingVerificationEmail);
+            
+            if (result.success && result.data.emailVerified) {
+                setNewEmailVerified(true);
+                setEmailVerificationSent(false);
+                swal.fire({
+                    icon: 'success',
+                    title: 'Email Verified!',
+                    text: 'Your new email address has been verified. You can now save your changes.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                swal.fire({
+                    icon: 'info',
+                    title: 'Not Yet Verified',
+                    text: 'Your email is not yet verified. Please check your inbox for the verification email.',
+                });
+            }
+        } catch (error) {
+            console.error('Error checking email verification:', error);
+            swal.fire({
+                icon: 'error',
+                title: 'Check Failed',
+                text: 'Failed to check verification status. Please try again.',
+            });
+        }
     };    const handleSubmit = async (e) => {
         e.preventDefault();
         
@@ -363,6 +465,9 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 setHasChanges(false);
                 setStagedImageFile(null);
                 setStagedImageUrl(null);
+                setNewEmailVerified(true); // Reset email verification state
+                setEmailVerificationSent(false);
+                setPendingVerificationEmail('');
                 
                 // Update parent component with new user data
                 if (onUserDataUpdate) {
@@ -522,15 +627,63 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     <label className="field-label" htmlFor="email">
                         Email
                     </label>
-                    <input
-                        id="email"
-                        name="email"
-                        type="email"
-                        className={`input-field white ${emailError ? 'error' : ''}`}
-                        value={formData.email}
-                        onChange={handleInputChange}
-                        required
-                    />
+                    <div className="space-y-2">
+                        <div className="flex gap-2">
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                className={`input-field white flex-1 ${emailError ? 'error' : ''}`}
+                                value={formData.email}
+                                onChange={handleInputChange}
+                                required
+                            />
+                            {formData.email !== originalData.email && formData.email && validateEmail(formData.email) && (
+                                <div className="flex gap-2">
+                                    {!newEmailVerified && (
+                                        <button
+                                            type="button"
+                                            onClick={handleVerifyEmail}
+                                            disabled={sendingVerification}
+                                            className="px-4 py-2 bg-primary-1 text-white rounded-lg text-sm font-medium hover:bg-primary-1/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                        >
+                                            {sendingVerification ? 'Sending...' : 'Verify Email'}
+                                        </button>
+                                    )}
+                                    {emailVerificationSent && !newEmailVerified && (
+                                        <button
+                                            type="button"
+                                            onClick={handleCheckEmailVerification}
+                                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+                                        >
+                                            Check Status
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* Email verification status messages */}
+                        {formData.email !== originalData.email && formData.email && validateEmail(formData.email) && (
+                            <div className="space-y-1">
+                                {!emailVerificationSent && !newEmailVerified && (
+                                    <p className="text-orange-600 text-sm">
+                                        ⚠️ Please verify your new email address before saving changes.
+                                    </p>
+                                )}
+                                {emailVerificationSent && !newEmailVerified && (
+                                    <p className="text-blue-600 text-sm">
+                                        📧 Verification email sent to {pendingVerificationEmail}. Please check your inbox.
+                                    </p>
+                                )}
+                                {newEmailVerified && formData.email !== originalData.email && (
+                                    <p className="text-green-600 text-sm">
+                                        ✅ Email address verified! You can now save your changes.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
                     {emailError && <div className="error-message">{emailError}</div>}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -578,17 +731,20 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         </button>
                     )}
                     <button
-                        className={`btn btn-md ${hasChanges && !emailError && !areaCodeError ? 'btn-primary' : 'btn-outline-primary'}`}
+                        className={`btn btn-md ${hasChanges && !emailError && !areaCodeError && newEmailVerified ? 'btn-primary' : 'btn-outline-primary'}`}
                         type="submit"
-                        disabled={saving || uploadingImage || refreshing || !hasChanges || emailError || areaCodeError}
+                        disabled={saving || uploadingImage || refreshing || !hasChanges || emailError || areaCodeError || !newEmailVerified}
                         style={{ position: 'relative' }}
+                        title={!newEmailVerified && formData.email !== originalData.email ? 'Please verify your new email address before saving' : ''}
                     >
                         {refreshing ? (
                             <span className="flex items-center justify-center">
                                 <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
                                 Refreshing...
                             </span>
-                        ) : saving ? (uploadingImage ? 'Uploading Image...' : 'Saving...') : hasChanges ? 'Save Changes' : 'No Changes'}
+                        ) : saving ? (uploadingImage ? 'Uploading Image...' : 'Saving...') : hasChanges ? (
+                            !newEmailVerified && formData.email !== originalData.email ? 'Verify Email First' : 'Save Changes'
+                        ) : 'No Changes'}
                     </button>
                 </div>
             </form>
