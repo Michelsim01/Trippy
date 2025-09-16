@@ -81,15 +81,8 @@ export const notificationService = {
   // Mark notification as read
   async markAsRead(notificationId) {
     try {
-      // First get the notification to preserve its data
-      const getResponse = await api.get(`/api/notifications/${notificationId}`)
-      const notification = getResponse.data
-      
-      // Update with isRead: true
-      const response = await api.put(`/api/notifications/${notificationId}`, {
-        ...notification,
-        isRead: true
-      })
+      // Use the dedicated PATCH endpoint for marking as read
+      const response = await api.patch(`/api/notifications/${notificationId}/read`)
       
       return {
         success: true,

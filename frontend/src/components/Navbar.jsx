@@ -421,7 +421,7 @@ const Navbar = ({
                                 </Link>
 
                                 {/* Profile - For mobile, we'll keep it simple without dropdown for better UX */}
-                                <Link to="/profile" className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
+                                <Link to={`/profile/${user.id}`} className="relative w-10 h-10 rounded-full overflow-hidden bg-[#FFBC99] border-2 border-transparent hover:border-primary-1 transition-colors flex-shrink-0 block">
                                     <img 
                                         src={getProfilePictureUrl()} 
                                         alt={userProfile?.firstName || user?.firstName || 'Profile'} 

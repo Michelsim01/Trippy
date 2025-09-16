@@ -120,42 +120,37 @@ const NotificationsPage = () => {
                 {currentNotifications.map((notification) => (
                     <div
                         key={notification.notificationId}
-                        className={`flex items-start gap-3 p-4 bg-white rounded-lg hover:bg-neutrals-7 transition-colors cursor-pointer ${!notification.isRead ? 'border-l-4 border-primary-1' : ''
+                        className={`p-4 bg-white rounded-lg hover:bg-neutrals-7 transition-colors cursor-pointer ${!notification.isRead ? 'border-l-4 border-primary-1' : ''
                             }`}
                         onClick={async () => {
                             if (!notification.isRead) {
                                 await markAsRead(notification.notificationId);
                             }
-                            window.location.reload();
                         }}
                     >
-                        <div className="flex items-center gap-3 flex-1">
-                            <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <p className="text-neutrals-2 font-medium">
-                                        {notification.title || getTypeLabel(notification.type)}
-                                    </p>
-                                    {/* Green dot for unread notification */}
-                                    {!notification.isRead && (
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    )}
-                                </div>
-                                <p className="text-neutrals-2 mb-2">{notification.message}</p>
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="text-neutrals-4 text-sm">
-                                        {formatDateTime(notification.createdAt)}
-                                    </p>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteNotification(notification.notificationId);
-                                        }}
-                                        className="text-red-500 hover:text-red-700 text-sm"
-                                    >
-                                        <Trash size={16} color='var(--color-primary-3)' />
-                                    </button>
-                                </div>
-                            </div>
+                        <div className="flex items-center gap-2 mb-1">
+                            <p className="text-neutrals-2 font-medium">
+                                {notification.title || getTypeLabel(notification.type)}
+                            </p>
+                            {/* Green dot for unread notification */}
+                            {!notification.isRead && (
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            )}
+                        </div>
+                        <p className="text-neutrals-2 mb-2">{notification.message}</p>
+                        <div className="flex items-center justify-between gap-2">
+                            <p className="text-neutrals-4 text-sm">
+                                {formatDateTime(notification.createdAt)}
+                            </p>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotification(notification.notificationId);
+                                }}
+                                className="text-red-500 hover:text-red-700 text-sm p-1 hover:bg-red-50 rounded"
+                            >
+                                <Trash size={16} color='var(--color-primary-3)' />
+                            </button>
                         </div>
                     </div>
                 ))}
@@ -246,12 +241,13 @@ const NotificationsPage = () => {
                                     }`}
                             >
                                 <span>{tab.label}</span>
-                                {hasUnread(tab.id) && (
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                {getUnreadCountByCategory(tab.id) > 0 && (
+                                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-xs font-medium">
+                                            {getUnreadCountByCategory(tab.id)}
+                                        </span>
+                                    </div>
                                 )}
-                                <span className="text-white text-xs font-medium">
-                                    {getUnreadCountByCategory(tab.id)}
-                                </span>
                             </button>
                         ))}
                     </div>

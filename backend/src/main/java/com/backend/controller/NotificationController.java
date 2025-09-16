@@ -89,6 +89,24 @@ public class NotificationController {
         return notificationRepository.save(notification);
     }
 
+    @PatchMapping("/{id}/read")
+    public ResponseEntity<?> markAsRead(@PathVariable Long id) {
+        try {
+            Notification notification = notificationRepository.findById(id).orElse(null);
+            if (notification == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            notification.setIsRead(true);
+            Notification updatedNotification = notificationRepository.save(notification);
+            
+            return ResponseEntity.ok(updatedNotification);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error marking notification as read: " + e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     public void deleteNotification(@PathVariable Long id) {
         notificationRepository.deleteById(id);
