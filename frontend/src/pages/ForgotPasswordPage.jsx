@@ -10,23 +10,32 @@ const ForgotPasswordPage = () => {
     const [email, setEmail] = useState('')
     const [isLoading, setIsLoading] = useState(false)
     const [message, setMessage] = useState('')
-    const [error, setError] = useState('')
     const [isSuccess, setIsSuccess] = useState(false)
+    const [fieldErrors, setFieldErrors] = useState({
+        email: ''
+    })
 
     // Clear messages when component mounts
     useEffect(() => {
         setMessage('')
-        setError('')
+        setFieldErrors({ email: '' })
         setIsSuccess(false)
     }, [])
 
     const handleInputChange = (e) => {
         setEmail(e.target.value)
         
-        // Clear messages when user starts typing
-        if (message || error) {
+        // Clear field-specific error when user starts typing
+        if (fieldErrors.email && e.target.value !== '') {
+            setFieldErrors({
+                ...fieldErrors,
+                email: ''
+            })
+        }
+        
+        // Clear message when user starts typing
+        if (message) {
             setMessage('')
-            setError('')
         }
     }
 
@@ -34,17 +43,24 @@ const ForgotPasswordPage = () => {
         e.preventDefault()
         e.stopPropagation()
         
-        setError('')
+        // Clear field errors and messages
+        setFieldErrors({ email: '' })
         setMessage('')
         
-        // Validate email
+        // Validate form
+        let hasErrors = false
+        const newFieldErrors = {}
+        
         if (!email) {
-            setError('Please enter your email address')
-            return
+            newFieldErrors.email = 'Please enter your email address'
+            hasErrors = true
+        } else if (!/\S+@\S+\.\S+/.test(email)) {
+            newFieldErrors.email = 'Please enter a valid email address'
+            hasErrors = true
         }
         
-        if (!/\S+@\S+\.\S+/.test(email)) {
-            setError('Please enter a valid email address')
+        if (hasErrors) {
+            setFieldErrors(newFieldErrors)
             return
         }
         
@@ -57,10 +73,12 @@ const ForgotPasswordPage = () => {
                 setIsSuccess(true)
                 setMessage('Password reset instructions have been sent to your email address.')
             } else {
-                setError(result.error || 'Failed to send reset instructions')
+                const errorMessage = result.error || 'Failed to send reset instructions'
+                // Set email field error for API errors
+                setFieldErrors({ email: errorMessage })
             }
         } catch (error) {
-            setError('Network error. Please try again.')
+            setFieldErrors({ email: 'Network error. Please try again.' })
         } finally {
             setIsLoading(false)
         }
@@ -129,25 +147,30 @@ const ForgotPasswordPage = () => {
                         </div>
                     )}
 
-                    {/* Error Message */}
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                            <p className="text-red-600 font-poppins text-sm">{error}</p>
-                        </div>
-                    )}
-
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Form with autocomplete disabled */}
+                    <form onSubmit={handleSubmit} className="space-y-6" autoComplete="off">
                         {/* Email Input */}
-                        <div className="relative">
+                        <div className="relative z-10">
                             <input
                                 type="email"
+                                name="email"
+                                id="email"
                                 value={email}
                                 onChange={handleInputChange}
                                 placeholder="Enter your email"
-                                className="w-full h-12 px-6 py-2 border-2 border-neutrals-6 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:border-primary-1 focus:outline-none transition-colors"
+                                autoComplete="off"
+                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
+                                    fieldErrors.email 
+                                        ? 'border-red-500 focus:border-red-500' 
+                                        : 'border-neutrals-6 focus:border-primary-1'
+                                }`}
                                 required
                             />
+                            <div className="h-5 mt-1">
+                                {fieldErrors.email && (
+                                    <p className="text-red-500 text-xs font-poppins">{fieldErrors.email}</p>
+                                )}
+                            </div>
                         </div>
 
                         {/* Submit Button */}
