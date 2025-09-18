@@ -254,6 +254,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         icon: 'error',
                         title: 'File Too Large',
                         text: 'File size too large. Maximum 5MB allowed.',
+                        confirmButtonColor: '#4AC63F'
                     });
                     return;
                 }
@@ -264,6 +265,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         icon: 'error',
                         title: 'Invalid File Type',
                         text: 'Only image files are allowed.',
+                        confirmButtonColor: '#4AC63F'
                     });
                     return;
                 }
@@ -293,8 +295,8 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
             text: 'Are you sure you want to remove your profile picture?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: '#FD7FE9',
+            cancelButtonColor: '#777E90',
             confirmButtonText: 'Yes, remove it!'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -321,8 +323,8 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
             text: 'Are you sure you want to cancel all changes? This will reset the form to its original state.',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
+            confirmButtonColor: '#FD7FE9',
+            cancelButtonColor: '#777E90',
             confirmButtonText: 'Yes, cancel changes'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -369,9 +371,17 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 swal.fire({
                     icon: 'success',
                     title: 'Verification Email Sent',
-                    text: `A verification email has been sent to ${formData.email}. Please check your inbox and click the verification link.`,
-                    timer: 3000,
-                    showConfirmButton: false
+                    html: `
+                        <p>A verification email has been sent to <strong>${formData.email}</strong>.</p>
+                        <p style="margin-top: 12px;">Please:</p>
+                        <ol style="text-align: left; margin: 12px 0; padding-left: 20px;">
+                            <li>Check your inbox for the verification email</li>
+                            <li>Click the verification link in the email</li>
+                            <li>Return here and click the <strong>"Check Status"</strong> button</li>
+                        </ol>
+                    `,
+                    confirmButtonText: 'Got it!',
+                    confirmButtonColor: '#4AC63F'
                 });
             } else {
                 setEmailError(result.error || 'Failed to send verification email');
@@ -379,6 +389,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     icon: 'error',
                     title: 'Verification Failed',
                     text: result.error || 'Failed to send verification email. Please try again.',
+                    confirmButtonColor: '#4AC63F'
                 });
             }
         } catch (error) {
@@ -388,6 +399,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 icon: 'error',
                 title: 'Network Error',
                 text: 'Network error. Please try again.',
+                confirmButtonColor: '#4AC63F'
             });
         } finally {
             setSendingVerification(false);
@@ -414,7 +426,8 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 swal.fire({
                     icon: 'info',
                     title: 'Not Yet Verified',
-                    text: 'Your email is not yet verified. Please check your inbox for the verification email.',
+                    text: 'Your email is not yet verified. Please check your inbox for the verification email and click the verification link.',
+                    confirmButtonColor: '#4AC63F'
                 });
             }
         } catch (error) {
@@ -423,149 +436,151 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 icon: 'error',
                 title: 'Check Failed',
                 text: 'Failed to check verification status. Please try again.',
+                confirmButtonColor: '#4AC63F'
             });
         }
-    }; const handleSubmit = async (e) => {
-        e.preventDefault();
+    }; 
 
-        if (!formData.firstName) {
-            setError('First name is required');
-            return;
+    const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.firstName) {
+        setError('First name is required');
+        return;
+    }
+    if (!formData.lastName) {
+        setError('Last name is required');
+        return;
+    }
+    if (!formData.email) {
+        setEmailError('Email is required');
+        return;
+    }
+    if (!validateEmail(formData.email)) {
+        setEmailError('Please enter a valid email address');
+        return;
+    }
+    if (!formData.areaCode) {
+        setAreaCodeError('Area code is required');
+        return;
+    }
+    if (!validateAreaCode(formData.areaCode)) {
+        setAreaCodeError('Area code must start with + followed by numbers (e.g., +65)');
+        return;
+    }
+    setSaving(true);
+    try {
+        let profileImageUrl = formData.profilePicture;
+        const emailChanged = formData.email !== originalData.email;
+
+        if (hasChanges) {
+            await successfulUpdateNotification();
         }
-        if (!formData.lastName) {
-            setError('Last name is required');
-            return;
-        }
-        if (!formData.email) {
-            setEmailError('Email is required');
-            return;
-        }
-        if (!validateEmail(formData.email)) {
-            setEmailError('Please enter a valid email address');
-            return;
-        }
-        if (!formData.areaCode) {
-            setAreaCodeError('Area code is required');
-            return;
-        }
-        if (!validateAreaCode(formData.areaCode)) {
-            setAreaCodeError('Area code must start with + followed by numbers (e.g., +65)');
-            return;
-        }
-        setSaving(true);
-        try {
-            let profileImageUrl = formData.profilePicture;
 
-            if (stagedImageFile) {
-                setUploadingImage(true);
-                const imageResponse = await userService.uploadProfilePicture(userId, stagedImageFile);
+        if (stagedImageFile) {
+            setUploadingImage(true);
+            const imageResponse = await userService.uploadProfilePicture(userId, stagedImageFile);
 
-                if (imageResponse.success) {
-                    profileImageUrl = `http://localhost:8080${imageResponse.data.imageUrl}`;
-                } else {
-                    throw new Error(imageResponse.error || 'Failed to upload profile picture');
-                }
-                setUploadingImage(false);
-            } else if (stagedImageUrl === '') {
-                profileImageUrl = '';
-            }
-
-            const profileData = {
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                email: formData.email,
-                phoneNumber: combinePhoneNumber(formData.areaCode, formData.phoneNumber)
-            };
-
-            // Include profile image URL if it has changed
-            if (profileImageUrl !== originalData.profilePicture) {
-                profileData.profileImageUrl = profileImageUrl;
-            }
-
-            const response = await userService.updateUserDetails(userId, profileData);
-
-            if (response.success) {
-                const updatedData = response.data.user;
-                const { areaCode, phoneNumber } = parsePhoneNumber(updatedData.phoneNumber);
-                const emailChanged = formData.email !== originalData.email;
-
-                const newFormData = {
-                    firstName: updatedData.firstName || '',
-                    lastName: updatedData.lastName || '',
-                    email: updatedData.email || '',
-                    areaCode: areaCode,
-                    phoneNumber: phoneNumber,
-                    profilePicture: updatedData.profileImageUrl ?
-                        (updatedData.profileImageUrl.startsWith('http') ? updatedData.profileImageUrl : `http://localhost:8080${updatedData.profileImageUrl}`)
-                        : formData.profilePicture
-                };
-                setFormData(newFormData);
-                setOriginalData(newFormData);
-                setHasChanges(false);
-                setStagedImageFile(null);
-                setStagedImageUrl(null);
-                setNewEmailVerified(true); // Reset email verification state
-                setEmailVerificationSent(false);
-                setPendingVerificationEmail('');
-
-                // Update parent component with new user data
-                if (onUserDataUpdate && !emailChanged) {
-                    onUserDataUpdate(updatedData);
-                }
-
-                setEmailError('');
-                setAreaCodeError('');
-                setRefreshing(true);
-                setError(null);
-
-                if (emailChanged) {
-                    // Send email update notification
-                    await successfulEmailUpdateNotification();
-
-                    // Email was changed - log out user for security
-                    await swal.fire({
-                        icon: 'success',
-                        title: 'Email Updated Successfully',
-                        text: 'Your email has been updated. For security purposes, you will be logged out and need to sign in again with your new email address.',
-                        showConfirmButton: true,
-                        confirmButtonText: 'Understand',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false
-                    });
-
-                    logout();
-                } else {
-                    // Send regular profile update notification
-                    await successfulUpdateNotification();
-
-                    // Show success message instead of reloading
-                    swal.fire({
-                        icon: 'success',
-                        title: 'Profile Updated',
-                        text: 'Your profile has been updated successfully!',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
-                }
-
-                setRefreshing(false);
+            if (imageResponse.success) {
+                profileImageUrl = `http://localhost:8080${imageResponse.data.imageUrl}`;
             } else {
-                throw new Error(response.error || 'Failed to update profile');
+                throw new Error(imageResponse.error || 'Failed to upload profile picture');
             }
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            setError('Failed to update profile. Please try again.');
-            swal.fire({
-                icon: 'error',
-                title: 'Update Failed',
-                text: 'Failed to update profile. Please try again.',
-            });
-        } finally {
-            setSaving(false);
             setUploadingImage(false);
+        } else if (stagedImageUrl === '') {
+            profileImageUrl = '';
         }
-    };
 
+        const profileData = {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: combinePhoneNumber(formData.areaCode, formData.phoneNumber)
+        };
+
+        // Include profile image URL if it has changed
+        if (profileImageUrl !== originalData.profilePicture) {
+            profileData.profileImageUrl = profileImageUrl;
+        }
+
+        const response = await userService.updateUserDetails(userId, profileData);
+
+        if (response.success) {
+            const updatedData = response.data.user;
+            const { areaCode, phoneNumber } = parsePhoneNumber(updatedData.phoneNumber);
+
+            const newFormData = {
+                firstName: updatedData.firstName || '',
+                lastName: updatedData.lastName || '',
+                email: updatedData.email || '',
+                areaCode: areaCode,
+                phoneNumber: phoneNumber,
+                profilePicture: updatedData.profileImageUrl ?
+                    (updatedData.profileImageUrl.startsWith('http') ? updatedData.profileImageUrl : `http://localhost:8080${updatedData.profileImageUrl}`)
+                    : formData.profilePicture
+            };
+            setFormData(newFormData);
+            setOriginalData(newFormData);
+            setHasChanges(false);
+            setStagedImageFile(null);
+            setStagedImageUrl(null);
+            setNewEmailVerified(true); // Reset email verification state
+            setEmailVerificationSent(false);
+            setPendingVerificationEmail('');
+
+            // Update parent component with new user data
+            if (onUserDataUpdate && !emailChanged) {
+                onUserDataUpdate(updatedData);
+            }
+
+            setEmailError('');
+            setAreaCodeError('');
+            setRefreshing(true);
+            setError(null);
+
+            if (emailChanged) {
+                // Email was changed - log out user for security
+                await swal.fire({
+                    icon: 'success',
+                    title: 'Email Updated Successfully',
+                    text: 'Your email has been updated. For security purposes, you will be logged out and need to sign in again with your new email address.',
+                    showConfirmButton: true,
+                    confirmButtonText: 'Understand',
+                    confirmButtonColor: '#4AC63F',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false
+                });
+
+                logout();
+            } else {
+                // Show success message for non-email changes
+                swal.fire({
+                    icon: 'success',
+                    title: 'Profile Updated',
+                    text: 'Your profile has been updated successfully!',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+
+            setRefreshing(false);
+        } else {
+            throw new Error(response.error || 'Failed to update profile');
+        }
+    } catch (error) {
+        console.error('Error updating profile:', error);
+        setError('Failed to update profile. Please try again.');
+        swal.fire({
+            icon: 'error',
+            title: 'Update Failed',
+            text: 'Failed to update profile. Please try again.',
+            confirmButtonColor: '#4AC63F'
+        });
+    } finally {
+        setSaving(false);
+        setUploadingImage(false);
+    }
+};
     // Initialize with prop data if available
     useEffect(() => {
         if (propUserData) {
@@ -636,7 +651,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                             type="button"
                             onClick={handleProfilePictureChange}
                             disabled={saving || uploadingImage}
-                            className="px-4 py-2 border border-neutrals-6 rounded-lg text-sm font-medium hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn btn-sm btn-outline-primary"
                         >
                             {uploadingImage ? 'Uploading...' : 'Change'}
                         </button>
@@ -645,7 +660,7 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                                 type="button"
                                 onClick={handleRemoveProfilePicture}
                                 disabled={saving || uploadingImage}
-                                className="px-4 py-2 border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="btn btn-sm btn-outline-accent"
                             >
                                 Remove
                             </button>
@@ -686,8 +701,8 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                     <label className="field-label" htmlFor="email">
                         Email
                     </label>
-                    <div className="space-y-2">
-                        <div className="flex gap-2">
+                    <div className="space-y-3">
+                        <div className="flex gap-3">
                             <input
                                 id="email"
                                 name="email"
@@ -704,16 +719,16 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
                                             type="button"
                                             onClick={handleVerifyEmail}
                                             disabled={sendingVerification}
-                                            className="px-4 py-2 bg-primary-1 text-white rounded-lg text-sm font-medium hover:bg-primary-1/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                                            className="btn btn-sm btn-primary whitespace-nowrap"
                                         >
-                                            {sendingVerification ? 'Sending...' : 'Verify Email'}
+                                            {sendingVerification ? 'Sending...' : (emailVerificationSent ? 'Resend Verification' : 'Verify Email')}
                                         </button>
                                     )}
                                     {emailVerificationSent && !newEmailVerified && (
                                         <button
                                             type="button"
                                             onClick={handleCheckEmailVerification}
-                                            className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors whitespace-nowrap"
+                                            className="btn btn-sm btn-info whitespace-nowrap"
                                         >
                                             Check Status
                                         </button>
@@ -724,21 +739,55 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
 
                         {/* Email verification status messages */}
                         {formData.email !== originalData.email && formData.email && validateEmail(formData.email) && (
-                            <div className="space-y-1">
+                            <div className="space-y-2">
                                 {!emailVerificationSent && !newEmailVerified && (
-                                    <p className="text-orange-600 text-sm">
-                                        ⚠️ Please verify your new email address before saving changes.
-                                    </p>
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3">
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-5 h-5 text-yellow-600 mt-0.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-yellow-800 text-sm font-medium">Email verification required</p>
+                                                <p className="text-yellow-700 text-sm">Please verify your new email address before saving changes.</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                                 {emailVerificationSent && !newEmailVerified && (
-                                    <p className="text-blue-600 text-sm">
-                                        📧 Verification email sent to {pendingVerificationEmail}. Please check your inbox.
-                                    </p>
+                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-5 h-5 text-blue-600 mt-0.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M3 4a2 2 0 00-2 2v1.161l8.441 4.221a1.25 1.25 0 001.118 0L19 7.162V6a2 2 0 00-2-2H3z" />
+                                                    <path d="M19 8.839l-7.77 3.885a2.75 2.75 0 01-2.46 0L1 8.839V14a2 2 0 002 2h14a2 2 0 002-2V8.839z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-blue-800 text-sm font-medium">Verification email sent</p>
+                                                <p className="text-blue-700 text-sm">
+                                                    Verification email sent to <span className="font-medium">{pendingVerificationEmail}</span>. 
+                                                    Please check your inbox and click the verification link, then click "Check Status" to continue.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                                 {newEmailVerified && formData.email !== originalData.email && (
-                                    <p className="text-green-600 text-sm">
-                                        ✅ Email address verified! You can now save your changes.
-                                    </p>
+                                    <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                                        <div className="flex items-start gap-2">
+                                            <div className="w-5 h-5 text-green-600 mt-0.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.236 4.53L8.53 10.53a.75.75 0 00-1.06 1.061l2.03 2.03a.75.75 0 001.137-.089l3.857-5.401z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-green-800 text-sm font-medium">Email verified successfully!</p>
+                                                <p className="text-green-700 text-sm">Your new email address has been verified. You can now save your changes.</p>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         )}
