@@ -2,8 +2,14 @@ import React from 'react';
 import ExperienceCard from '../ExperienceCard';
 import { Link } from 'react-router-dom';
 
-const TourListTab = ({ tourData, loading = false, isOwnProfile }) => {
-    console.log('TourListTab props:', { tourData, loading, isOwnProfile });
+const TourListTab = ({ tourData, loading = false, isOwnProfile, wishlistExperienceIds = [] }) => {
+    console.log('TourListTab props:', { 
+        tourData: tourData?.length || 0, 
+        loading, 
+        isOwnProfile, 
+        wishlistExperienceIds: wishlistExperienceIds?.length || 0,
+        wishlistIds: wishlistExperienceIds 
+    });
     if (loading) {
         return (
             <div>
@@ -49,13 +55,24 @@ const TourListTab = ({ tourData, loading = false, isOwnProfile }) => {
                 Tour list ({tourData.length})
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {tourData.map((tour) => (
-                    <ExperienceCard 
-                        key={tour.id || tour.experienceId} 
-                        experience={tour} 
-                        showEditButton={isOwnProfile} 
-                    />
-                ))}
+                {tourData.map((tour) => {
+                    const experienceId = tour.experienceId || tour.id;
+                    // Convert both to strings for comparison to handle number vs string mismatch
+                    const isInWishlist = wishlistExperienceIds.some(wishlistId => 
+                        String(wishlistId) === String(experienceId)
+                    );
+                    console.log(`TourListTab - Tour ${experienceId} (type: ${typeof experienceId}): isInWishlist=${isInWishlist}`);
+                    console.log(`TourListTab - Wishlist contains: ${JSON.stringify(wishlistExperienceIds)} (types: ${wishlistExperienceIds.map(id => typeof id).join(', ')})`);
+                    return (
+                        <ExperienceCard 
+                            key={experienceId}
+                            experience={tour} 
+                            showEditButton={isOwnProfile}
+                            showWishlistButton={true}
+                            isInWishlist={isInWishlist}
+                        />
+                    );
+                })}
             </div>
         </div>
     );

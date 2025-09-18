@@ -92,9 +92,6 @@ const VerifyEmailPage = () => {
                             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                                 <p className="text-green-700">{message}</p>
                             </div>
-                            <p className="text-neutrals-4 mb-4">
-                                Please sign in with your verified account to access all features.
-                            </p>
                         </div>
                     )}
 
@@ -113,12 +110,9 @@ const VerifyEmailPage = () => {
                     {!isLoading && (
                         <div className="space-y-3">
                             {isSuccess ? (
-                                <button
-                                    onClick={() => navigate('/signin')}
-                                    className="w-full bg-primary-1 text-white py-2 px-4 rounded-lg font-medium hover:bg-primary-1/90 transition-colors"
-                                >
-                                    Sign In to Your Account
-                                </button>
+                                <p className="text-center text-neutrals-4">
+                                    You can now close this window or go back to the previous page.
+                                </p>
                             ) : (
                                 <>
                                     <button

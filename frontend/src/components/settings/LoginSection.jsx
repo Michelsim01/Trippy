@@ -15,6 +15,9 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
     });
     const [updating, setUpdating] = useState(false);
     const [currentPasswordError, setCurrentPasswordError] = useState('');
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const userId = user?.id;
 
@@ -151,6 +154,9 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                 confirmPassword: ''
             });
             setCurrentPasswordError('');
+            setShowCurrentPassword(false);
+            setShowNewPassword(false);
+            setShowConfirmPassword(false);
         } catch (err) {
             console.error('Error updating password:', err);
             swal.fire({
@@ -255,15 +261,32 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         <label className="field-label" htmlFor="currentPassword">
                             Current Password
                         </label>
-                        <input
-                            id="currentPassword"
-                            name="currentPassword"
-                            type="password"
-                            className={`input-field white ${(currentPasswordError == 'Current password is required' ||  currentPasswordError == 'Current password is incorrect') ? 'error' : ''}`}
-                            value={passwordData.currentPassword}
-                            onChange={handlePasswordInputChange}
-                            required
-                        />
+                        <div className="input-container relative">
+                            <input
+                                id="currentPassword"
+                                name="currentPassword"
+                                type={showCurrentPassword ? "text" : "password"}
+                                className={`input-field white pr-12 ${(currentPasswordError == 'Current password is required' ||  currentPasswordError == 'Current password is incorrect') ? 'error' : ''}`}
+                                value={passwordData.currentPassword}
+                                onChange={handlePasswordInputChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-neutrals-7 transition-colors"
+                            >
+                                <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {showCurrentPassword ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    ) : (
+                                        <>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
+                        </div>
                         {(currentPasswordError == 'Current password is required' ||  currentPasswordError == 'Current password is incorrect') && (
                             <div className="error-message">{currentPasswordError}</div>
                         )}
@@ -272,16 +295,33 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         <label className="field-label" htmlFor="newPassword">
                             New Password
                         </label>
-                        <input
-                            id="newPassword"
-                            name="newPassword"
-                            type="password"
-                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
-                            value={passwordData.newPassword}
-                            onChange={handlePasswordInputChange}
-                            minLength="8"
-                            required
-                        />
+                        <div className="input-container relative">
+                            <input
+                                id="newPassword"
+                                name="newPassword"
+                                type={showNewPassword ? "text" : "password"}
+                                className={`input-field white pr-12 ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
+                                value={passwordData.newPassword}
+                                onChange={handlePasswordInputChange}
+                                minLength="8"
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowNewPassword(!showNewPassword)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-neutrals-7 transition-colors"
+                            >
+                                <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {showNewPassword ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    ) : (
+                                        <>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
+                        </div>
                         <p className="text-sm text-neutrals-4 mt-1">
                             Password must be at least 8 characters, contain 1 uppercase, 1 lowercase, and 1 number
                         </p>
@@ -290,15 +330,32 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                         <label className="field-label" htmlFor="confirmPassword">
                             Confirm New Password
                         </label>
-                        <input
-                            id="confirmPassword"
-                            name="confirmPassword"
-                            type="password"
-                            className={`input-field white ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
-                            value={passwordData.confirmPassword}
-                            onChange={handlePasswordInputChange}
-                            required
-                        />
+                        <div className="input-container relative">
+                            <input
+                                id="confirmPassword"
+                                name="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                className={`input-field white pr-12 ${currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must') ? 'error' : ''}`}
+                                value={passwordData.confirmPassword}
+                                onChange={handlePasswordInputChange}
+                                required
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-1/2 transform -translate-y-1/2 p-1 rounded-full hover:bg-neutrals-7 transition-colors"
+                            >
+                                <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    {showConfirmPassword ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    ) : (
+                                        <>
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                                        </>
+                                    )}
+                                </svg>
+                            </button>
+                        </div>
                         {(currentPasswordError == 'New passwords do not match' || currentPasswordError.startsWith('New password must')) && (
                             <div className="error-message">{currentPasswordError}</div>
                         )}
@@ -315,6 +372,9 @@ const LoginSection = ({ userData: propUserData, onUserDataUpdate }) => {
                                     confirmPassword: ''
                                 });
                                 setCurrentPasswordError('');
+                                setShowCurrentPassword(false);
+                                setShowNewPassword(false);
+                                setShowConfirmPassword(false);
                             }}
                         >
                             Cancel

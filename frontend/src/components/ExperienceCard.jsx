@@ -17,8 +17,12 @@ const ExperienceCard = ({
     const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
     const navigate = useNavigate();
 
+    // Debug logging
+    console.log(`ExperienceCard - ${experience?.title || experience?.experienceId}: isInWishlist prop=${isInWishlist}, local state=${isWishlisted}`);
+
     // Sync local state with prop changes
     useEffect(() => {
+        console.log(`ExperienceCard - ${experience?.title || experience?.experienceId}: Updating local state from ${isWishlisted} to ${isInWishlist}`);
         setIsWishlisted(isInWishlist);
     }, [isInWishlist]);
 
@@ -136,19 +140,23 @@ const ExperienceCard = ({
                     />
                 {/* Edit Button (only if showEditButton) */}
                 {showEditButton && (
-                    <Edit
-                        size={20}
-                        className="absolute top-4 left-4 z-20 bg-white hover:bg-white rounded-full p-1 shadow"
+                    <button
+                        className="absolute top-4 left-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group"
                         onClick={e => {
                             e.stopPropagation();
                             const experienceId = experience?.experienceId || experience?.id;
                             navigate(`/edit-experience/${experienceId}`);
                         }}
                         title="Edit Experience"
+                        style={{ position: 'relative' }}
                     >
-                    </Edit>
+                        <Edit size={20} className="text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" />
+                        {/* Tooltip on hover */}
+                        <span className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                            Edit
+                        </span>
+                    </button>
                 )}
-                
                 {/* Explore Button - shows on some cards */}
                 {showExplore && (
                     <div className="absolute inset-0 flex items-center justify-center">
