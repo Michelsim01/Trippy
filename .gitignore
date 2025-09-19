@@ -45,3 +45,9 @@ Thumbs.db
 # ========= Secrets / env =========
 backend/src/main/resources/application.properties
 frontend/.env
+
+# ========= Personal docs =========
+docs/changelog.md
+docs/claude.md
+docs/folder-structure.txt
+docs/personaldocs.md
