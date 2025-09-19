@@ -226,6 +226,34 @@ export const experienceApi = {
       console.error('Update experience API error:', error);
       throw new Error(`Failed to update experience: ${error.message}`);
     }
+  },
+
+  /**
+   * Updates a complete experience with all related data using the /complete endpoint
+   * @param {number} experienceId - The experience ID to update
+   * @param {Object} payload - Complete experience payload from getBackendPayload()
+   * @returns {Promise<Object>} Response containing updated experience data
+   */
+  updateCompleteExperience: async (experienceId, payload) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/complete`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Update complete experience API error:', error);
+      throw new Error(`Failed to update complete experience: ${error.message}`);
+    }
   }
 };
 

@@ -94,6 +94,7 @@ public class ExperienceController {
         expMap.put("importantInfo", exp.getImportantInfo());
         expMap.put("cancellationPolicy", exp.getCancellationPolicy());
         expMap.put("participantsAllowed", exp.getParticipantsAllowed());
+        expMap.put("tags", exp.getTags());
         expMap.put("createdAt", exp.getCreatedAt());
         expMap.put("updatedAt", exp.getUpdatedAt());
 

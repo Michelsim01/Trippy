@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 import { useAuth } from './AuthContext';
+import { experienceApi } from '../services/experienceApi';
 
 const FormDataContext = createContext();
 
@@ -99,18 +100,8 @@ export const FormDataProvider = ({ children }) => {
       setIsEditMode(true);
       setExperienceId(id);
 
-      // Fetch experience data from API
-      const response = await fetch(`http://localhost:8080/api/experiences/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch experience data');
-      }
-
-      const experienceData = await response.json();
+      // Fetch experience data from API using experienceApi
+      const experienceData = await experienceApi.getExperienceById(id);
 
       // Convert backend data to frontend format
       setFormData({
@@ -145,50 +136,34 @@ export const FormDataProvider = ({ children }) => {
 
       // Load additional photos from media API
       try {
-        const mediaResponse = await fetch(`http://localhost:8080/api/experiences/${id}/media`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (mediaResponse.ok) {
-          const mediaData = await mediaResponse.json();
-          const additionalPhotos = mediaData
-            .filter(media => media.mediaType === 'IMAGE' && media.displayOrder > 0)
-            .sort((a, b) => a.displayOrder - b.displayOrder)
-            .map(media => media.mediaUrl);
+        const mediaData = await experienceApi.getExperienceMedia(id);
+        const additionalPhotos = mediaData
+          .filter(media => media.mediaType === 'IMAGE' && media.displayOrder > 0)
+          .sort((a, b) => a.displayOrder - b.displayOrder)
+          .map(media => media.mediaUrl);
 
-          setFormData(prev => ({
-            ...prev,
-            additionalPhotos: additionalPhotos
-          }));
-        }
+        setFormData(prev => ({
+          ...prev,
+          additionalPhotos: additionalPhotos
+        }));
       } catch (error) {
         console.error('Error loading media data:', error);
       }
 
       // Load itinerary data from API
       try {
-        const itineraryResponse = await fetch(`http://localhost:8080/api/experiences/${id}/itineraries`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        if (itineraryResponse.ok) {
-          const itineraryData = await itineraryResponse.json();
-          // Convert backend itinerary format to frontend format
-          const formattedItinerary = itineraryData.map(item => ({
-            location: item.locationName || '',
-            time: item.duration || '',
-            type: item.stopType || 'stop'
-          }));
+        const itineraryData = await experienceApi.getExperienceItineraries(id);
+        // Convert backend itinerary format to frontend format
+        const formattedItinerary = itineraryData.map(item => ({
+          location: item.locationName || '',
+          time: item.duration || '',
+          type: item.stopType || 'stop'
+        }));
 
-          setFormData(prev => ({
-            ...prev,
-            itinerary: formattedItinerary
-          }));
-        }
+        setFormData(prev => ({
+          ...prev,
+          itinerary: formattedItinerary
+        }));
       } catch (error) {
         console.error('Error loading itinerary data:', error);
       }
@@ -285,20 +260,7 @@ export const FormDataProvider = ({ children }) => {
         schedules: completeData.schedules || []
       };
 
-      const response = await fetch(`http://localhost:8080/api/experiences/${experienceId}/complete`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save changes: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await experienceApi.updateCompleteExperience(experienceId, payload);
       console.log('Successfully saved partial changes:', result);
 
       // Update context with the saved data
@@ -374,20 +336,7 @@ export const FormDataProvider = ({ children }) => {
         schedules: dataToSave.schedules || []
       };
 
-      const response = await fetch(`http://localhost:8080/api/experiences/${experienceId}/complete`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to save changes: ${response.status}`);
-      }
-
-      const result = await response.json();
+      const result = await experienceApi.updateCompleteExperience(experienceId, payload);
       console.log('Successfully saved changes:', result);
       return result;
     } catch (error) {
