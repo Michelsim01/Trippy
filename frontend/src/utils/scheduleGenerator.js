@@ -250,18 +250,25 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
           console.log(`  - Creating schedule: ${key}`);
 
           // Create full datetime objects for startDateTime and endDateTime
-          const scheduleDate = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
+          // Use UTC to preserve the intended local time when converting to ISO
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const startTime24 = convertTo24Hr(startTime);
+          const [startHour, startMinute] = startTime24.split(':').map(Number);
+
+          const scheduleDate = new Date(Date.UTC(year, month - 1, day, startHour, startMinute));
           let scheduleEndDateTime;
 
           if (experienceInfo.endDateTime) {
             // For single-day tours: use same date with experience end time
             // For multi-day tours: this should not be used (handled in manual dates section)
             const experienceEndTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5);
-            scheduleEndDateTime = new Date(dateStr + 'T' + experienceEndTime + ':00');
+            const [endHour, endMinute] = experienceEndTime.split(':').map(Number);
+            scheduleEndDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute));
           } else {
             // Fallback: calculate based on duration
             const endTime24 = calculateEndTime(startTime, experienceDuration);
-            scheduleEndDateTime = new Date(dateStr + 'T' + endTime24 + ':00');
+            const [endHour, endMinute] = endTime24.split(':').map(Number);
+            scheduleEndDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute));
           }
 
           scheduleMap.set(key, {
@@ -334,12 +341,16 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
         console.log(`  - Creating manual schedule: ${key}`);
 
         // Create full datetime objects for startDateTime and endDateTime
-        const scheduleStartDateTime = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
+        // Use UTC to preserve the intended local time when converting to ISO
+        const [year, month, day] = dateStr.split('-').map(Number);
+        const startTime24 = convertTo24Hr(startTime);
+        const [startHour, startMinute] = startTime24.split(':').map(Number);
+
+        const scheduleStartDateTime = new Date(Date.UTC(year, month - 1, day, startHour, startMinute));
         let scheduleEndDateTime;
 
         if (isMultiDay && experienceInfo.endDateTime) {
           // For multi-day tours: calculate end date based on tour duration from this start date
-          const startDate = new Date(dateStr + 'T' + convertTo24Hr(startTime) + ':00');
           const experienceStart = new Date(experienceInfo.startDateTime);
           const experienceEnd = new Date(experienceInfo.endDateTime);
 
@@ -347,15 +358,17 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
           const tourDurationMs = experienceEnd.getTime() - experienceStart.getTime();
 
           // Add the same duration to this schedule's start date
-          scheduleEndDateTime = new Date(startDate.getTime() + tourDurationMs);
+          scheduleEndDateTime = new Date(scheduleStartDateTime.getTime() + tourDurationMs);
         } else if (experienceInfo.endDateTime) {
           // For single-day tours: use same date with experience end time
           const experienceEndTime = new Date(experienceInfo.endDateTime).toTimeString().slice(0, 5);
-          scheduleEndDateTime = new Date(dateStr + 'T' + experienceEndTime + ':00');
+          const [endHour, endMinute] = experienceEndTime.split(':').map(Number);
+          scheduleEndDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute));
         } else {
           // Fallback: calculate based on duration
           const endTime24 = calculateEndTime(startTime, experienceDuration);
-          scheduleEndDateTime = new Date(dateStr + 'T' + endTime24 + ':00');
+          const [endHour, endMinute] = endTime24.split(':').map(Number);
+          scheduleEndDateTime = new Date(Date.UTC(year, month - 1, day, endHour, endMinute));
         }
 
         // This will override recurring schedule if duplicate, or add new if unique

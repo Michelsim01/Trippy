@@ -22,6 +22,7 @@ import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
 import CreateExperienceAvailabilityPage from './pages/CreateExperienceAvailabilityPage'
 import CreateExperienceSuccessPage from './pages/CreateExperienceSuccessPage'
 import ExperienceDetailsPage from './pages/ExperienceDetailsPage'
+import ExperienceDetailsPageV2 from './pages/ExperienceDetailsPageV2'
 import ExperienceDetailsPageTest from './pages/ExperienceDetailsPageTest'
 import EditExperienceBasicInfoPage from './pages/EditExperienceBasicInfoPage'
 import EditExperienceDetailsPage from './pages/EditExperienceDetailsPage'
@@ -149,7 +150,7 @@ function AppRoutes() {
             />
             <Route
               path="/experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageV2 />}
             />
             <Route
               path="/experience-details-test"
