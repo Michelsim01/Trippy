@@ -348,12 +348,9 @@ const Navbar = ({
 
                             {/* Logo */}
                             <Link to={isAuthenticated ? "/home" : "/"} className="flex items-center gap-2">
-                                <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center">
-                                    <span className="text-neutrals-8 font-bold text-lg">T</span>
+                                <div className="w-32 h-32 flex items-center justify-center">
+                                    <img src="/Logo.png" alt="Logo" className="w-32 h-32 object-contain" />
                                 </div>
-                                {!isAuthenticated && (
-                                    <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
-                                )}
                             </Link>
                         </div>
 

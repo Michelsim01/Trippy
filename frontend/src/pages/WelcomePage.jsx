@@ -285,14 +285,8 @@ const WelcomePage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 mb-12">
                         <div className="lg:col-span-1">
                             <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 bg-primary-1 rounded-full flex items-center justify-center">
-                                    <span className="text-neutrals-8 font-bold">T</span>
-                                </div>
-                                <span className="font-poppins font-semibold text-neutrals-2 text-2xl">Trippy</span>
+                                <img src="/Logo.png" alt="Logo" className="w-40 h-40 object-contain" />
                             </div>
-                            <p className="font-poppins text-sm text-neutrals-4 hidden lg:block">
-                                There are many variations of passages of available but it is the majority of suffered that a alteration in that some dummy text.
-                            </p>
                         </div>
 
                         <div className="lg:col-span-1">
