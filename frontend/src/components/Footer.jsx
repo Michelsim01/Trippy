@@ -6,14 +6,9 @@ const Footer = () => {
             <div className="w-full mx-auto max-w-[1200px]">
                 <div className="flex flex-col lg:flex-row lg:justify-between gap-12 mb-12 w-full">
                     {/* Logo */}
-                    <div className="flex flex-col gap-2.5 lg:w-64">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-primary-1 rounded-full flex items-center justify-center">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                                </svg>
-                            </div>
-                            <span className="text-[24px] font-semibold text-neutrals-1">Trippy</span>
+                    <div className="flex items-center gap-2">
+                        <div className="w-40 h-40 flex items-center justify-center">
+                            <img src="/Logo.png" alt="Logo" className="w-40 h-40 object-contain" />
                         </div>
                     </div>
 
