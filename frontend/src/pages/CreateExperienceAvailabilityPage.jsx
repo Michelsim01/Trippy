@@ -7,6 +7,7 @@ import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import ProgressSteps from '../components/create-experience/ProgressSteps';
 
 export default function CreateExperienceAvailabilityPage() {
   const navigate = useNavigate();
@@ -345,37 +346,7 @@ export default function CreateExperienceAvailabilityPage() {
           <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
             <div className="mb-16">
               <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Create New Experience</h1>
-              <div className="flex items-start gap-16" style={{marginBottom: '30px'}}>
-                {[
-                  { step: 1, label: "Basic Info", active: false },
-                  { step: 2, label: "Details", active: false },
-                  { step: 3, label: "Pricing", active: false },
-                  { step: 4, label: "Availability", active: true }
-                ].map((item) => (
-                  <div key={item.step} className="flex flex-col">
-                    <div className="flex items-center gap-4 mb-2">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg ${
-                        item.active ? 'bg-neutrals-1' : 'bg-neutrals-5'
-                      }`}>
-                        {item.step}
-                      </div>
-                      <span className={`text-lg font-semibold ${
-                        item.active ? 'text-neutrals-1' : 'text-neutrals-5'
-                      }`}>
-                        {item.label}
-                      </span>
-                    </div>
-                    <div 
-                      style={{
-                        backgroundColor: item.active ? '#000' : '#d1d5db',
-                        width: '240px',
-                        height: item.active ? '4px' : '2px',
-                        marginTop: '4px'
-                      }} 
-                    />
-                  </div>
-                ))}
-              </div>
+              <ProgressSteps currentStep={4} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-20">
               <div className="lg:col-span-3">
@@ -668,15 +639,7 @@ export default function CreateExperienceAvailabilityPage() {
           <div className="py-10" style={{paddingLeft: '20px', paddingRight: '20px'}}>
             <div className="mb-10">
               <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Create New Experience</h1>
-              
-              <div className="flex gap-4 items-center" style={{marginBottom: '20px'}}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-neutrals-2">
-                  4
-                </div>
-                <span className="text-base font-medium text-neutrals-1">
-                  Availability
-                </span>
-              </div>
+              <ProgressSteps currentStep={4} isMobile={true} />
             </div>
 
             <div className="space-y-6">
