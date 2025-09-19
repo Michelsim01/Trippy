@@ -40,7 +40,6 @@ const ProfilePage = () => {
             setLoading(true);
             setError(null);
             
-            // Check if user is authenticated
             if (!isAuthenticated || !token) {
                 setError('You must be logged in to view profiles');
                 setLoading(false);
@@ -48,11 +47,11 @@ const ProfilePage = () => {
             }
             
             const response = await userService.getUserById(userId);
+            console.log('Fetched user data:', response);
             
             if (response.success) {
                 setUserData(response.data);
                 
-                // Set user role based on KYC verification status
                 if (response.data.canCreateExperiences && response.data.kycStatus === 'APPROVED') {
                     setCurrentRole(UserRole.TOUR_GUIDE);
                 } else {
@@ -61,15 +60,14 @@ const ProfilePage = () => {
                 
                 setError(null);
             } else {
-                // Handle different error types
                 if (response.status === 401) {
                     setError('Authentication required. Please log in again.');
-                    // Redirect to login after a delay
                     setTimeout(() => {
                         navigate('/signin');
                     }, 2000);
                 } else if (response.status === 404) {
-                    setError('User profile not found');
+                    navigate('/404');
+                    return;
                 } else {
                     setError(response.error || 'Failed to load user profile');
                 }
@@ -89,7 +87,6 @@ const ProfilePage = () => {
             setUserExperiences(experiences);
         } catch (err) {
             console.error('Error fetching user experiences:', err);
-            // Don't set the main error state, just log it
             setUserExperiences([]);
         } finally {
             setExperiencesLoading(false);
@@ -145,37 +142,33 @@ const ProfilePage = () => {
         }
     };
 
-    // Check if this is the user's own profile
     useEffect(() => {
         if (user && id) {
-            // Check if the current user's ID matches the profile ID
             const currentUserId = id?.toString();
             const profileId = user?.id?.toString();
             setIsOwnProfile(currentUserId === profileId);
-            console.log(currentUserId);
-            console.log(profileId);
         }
     }, [user, id]);
 
-    // Wait for auth to load, then fetch user data
     useEffect(() => {
-        // Don't fetch data if auth is still loading
         if (authLoading) {
             return;
         }
         
-        // If user is not authenticated, show error
         if (!isAuthenticated) {
             setError('You must be logged in to view profiles');
             setLoading(false);
             return;
         }
-        
-        // If we have an ID, fetch the user data
         if (id) {
+            const numericId = parseInt(id, 10);
+            if (isNaN(numericId) || numericId <= 0 || id !== numericId.toString()) {
+                navigate('/404');
+                return;
+            }
+            
             fetchUserData(id);
         } else {
-            // If no ID provided, redirect to current user's profile
             if (user?.id) {
                 navigate(`/profile/${user.id}`);
             } else {
@@ -185,14 +178,12 @@ const ProfilePage = () => {
         }
     }, [id, isAuthenticated, authLoading, user]);
 
-    // Fetch user experiences when userData is loaded and user is a tour guide
     useEffect(() => {
         if (userData && currentRole === UserRole.TOUR_GUIDE && id) {
             fetchUserExperiences(id);
         }
     }, [userData, currentRole, id]);
 
-    // Fetch current user's wishlist to highlight hearts on tour cards
     useEffect(() => {
         if (userData && user?.id) {
             console.log('ProfilePage - Triggering wishlist fetch, userData:', !!userData, 'user.id:', user.id, 'isOwnProfile:', isOwnProfile);

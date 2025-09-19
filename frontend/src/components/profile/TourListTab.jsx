@@ -68,7 +68,7 @@ const TourListTab = ({ tourData, loading = false, isOwnProfile, wishlistExperien
                             key={experienceId}
                             experience={tour} 
                             showEditButton={isOwnProfile}
-                            showWishlistButton={true}
+                            showWishlistButton={!isOwnProfile}
                             isInWishlist={isInWishlist}
                         />
                     );

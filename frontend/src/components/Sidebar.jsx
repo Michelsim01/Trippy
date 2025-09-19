@@ -11,12 +11,13 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const { user } = useAuth();
     console.log('Sidebar - User Object:', user);
     const isKycApproved = user?.kycStatus === 'APPROVED';
-    
-    // Debug logging
-    console.log('Sidebar - User KYC Status:', user?.kycStatus, 'Is Approved:', isKycApproved);
-    
     const navItems = [
         { id: 'blog', label: 'Blog' },
+        { id: 'my-bookings', label: 'My Bookings' },
+        ...(user?.canCreateExperiences && isKycApproved 
+            ? [{ id: 'my-tours', label: 'My Tours' }]
+            : []
+        ),
         // Conditionally include create-experience or kyc based on KYC status
         ...(isKycApproved 
             ? [{ id: 'create-experience', label: 'Create an Experience' }]
