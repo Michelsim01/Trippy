@@ -14,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.HashMap;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,14 +25,14 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "http://localhost:5173") 
+@CrossOrigin(origins = "http://localhost:5173")
 public class UserController {
     @Autowired
     private UserRepository userRepository;
-    
+
     @Autowired
     private PasswordEncoder passwordEncoder;
-    
+
     private final String UPLOAD_DIR = "uploads/profilepicture/";
 
     @GetMapping
@@ -40,8 +41,13 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public User getUserById(@PathVariable Long id) {
-        return userRepository.findById(id).orElse(null);
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        Optional<User> user = userRepository.findById(id);
+        if (user.isPresent()) {
+            return ResponseEntity.ok(user.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 
     @PostMapping

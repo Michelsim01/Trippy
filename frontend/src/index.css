@@ -893,3 +893,42 @@ body {
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(74, 198, 63, 0.3);
 }
+
+/* Additional Button Styles */
+.btn-outline-red {
+  background-color: transparent;
+  color: #ef4444;
+  border: 2px solid #ef4444;
+}
+
+.btn-outline-red:hover {
+  background-color: #ef4444;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Line Clamp Utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
