@@ -6,6 +6,10 @@ import { isMultiDayTour } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import ProgressSteps from '../components/create-experience/ProgressSteps';
+import FormField from '../components/create-experience/FormField';
+import ListManager from '../components/create-experience/ListManager';
+import PhotoUpload from '../components/create-experience/PhotoUpload';
 
 export default function EditExperienceBasicInfoPage() {
   const navigate = useNavigate();
@@ -231,6 +235,23 @@ export default function EditExperienceBasicInfoPage() {
     }
   };
 
+  // Handler for PhotoUpload component
+  const handlePhotoChange = (data, isMain = true, isBulkUpdate = false) => {
+    if (isMain) {
+      handleInputChange('coverPhotoUrl', data);
+    } else {
+      if (isBulkUpdate) {
+        // For bulk updates (like removing photos)
+        handleInputChange('additionalPhotos', data);
+      } else {
+        // For adding new photos
+        if (formData.additionalPhotos.length < 8) {
+          handleInputChange('additionalPhotos', [...formData.additionalPhotos, data]);
+        }
+      }
+    }
+  };
+
   // Helper function to check if tour spans multiple days
   const isMultiDay = (startDateTime, endDateTime) => {
     if (!startDateTime || !endDateTime) return false;
@@ -327,144 +348,55 @@ export default function EditExperienceBasicInfoPage() {
               )}
             </div>
 
-            {/* Progress Steps */}
-            <div className="flex items-start gap-16" style={{marginBottom: '30px'}}>
-              {[
-                { step: 1, label: "Basic Info", active: true },
-                { step: 2, label: "Details", active: false },
-                { step: 3, label: "Pricing", active: false },
-                { step: 4, label: "Availability", active: false }
-              ].map((item) => (
-                <div key={item.step} className="flex flex-col">
-                  <div className="flex items-center gap-4 mb-2">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg ${
-                      item.active ? 'bg-neutrals-1' : 'bg-neutrals-5'
-                    }`}>
-                      {item.step}
-                    </div>
-                    <span className={`text-lg font-semibold ${
-                      item.active ? 'text-neutrals-1' : 'text-neutrals-5'
-                    }`}>
-                      {item.label}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      backgroundColor: item.active ? '#000' : '#d1d5db',
-                      width: '240px',
-                      height: item.active ? '4px' : '2px',
-                      marginTop: '4px'
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
+            <ProgressSteps currentStep={1} />
 
             {/* Two Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-20">
               {/* Left Column - Form Fields */}
               <div className="lg:col-span-3">
 
-                  {/* Title Field */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Title</label>
-                    <input
-                      style={{padding: '6px'}}
-                      type="text"
-                      value={formData.title}
-                      onChange={(e) => handleInputChange('title', e.target.value)}
-                      className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                      placeholder="Enter your experience title"
-                    />
-                  </div>
+                  <FormField
+                    label="Title"
+                    type="text"
+                    value={formData.title}
+                    onChange={(value) => handleInputChange('title', value)}
+                    placeholder="Enter your experience title"
+                    isMobile={false}
+                  />
 
-                  {/* Short Description Field */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Short Description</label>
-                    <textarea
-                      style={{padding: '6px'}}
-                      value={formData.shortDescription}
-                      onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                      className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 h-36 resize-none text-lg font-medium text-neutrals-2 transition-colors"
-                      placeholder="Brief description of your experience"
-                    />
-                  </div>
+                  <FormField
+                    label="Short Description"
+                    type="textarea"
+                    value={formData.shortDescription}
+                    onChange={(value) => handleInputChange('shortDescription', value)}
+                    placeholder="Brief description of your experience"
+                    style={{height: '144px'}}
+                    isMobile={false}
+                  />
 
-                  {/* Highlights */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
-                    <div className="border-2 border-neutrals-5 rounded-xl p-6 bg-white">
-                      {formData.highlights.length > 0 && (
-                        <ul className="mb-4" style={{padding: '6px'}}>
-                          {formData.highlights.map((item, index) => (
-                            <li key={index} className="group flex items-start justify-between mb-3">
-                              <div className="flex items-start flex-1 gap-3">
-                                <span className="text-primary-1 font-bold text-lg">•</span>
-                                <span className="text-lg font-medium text-neutrals-2">{item}</span>
-                              </div>
-                              <button
-                                onClick={() => removeHighlightItem(index)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                              >
-                                <X className="w-4 h-4 text-red-500" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <div className="flex gap-3 items-center" style={{padding: '4px 8px'}}>
-                        <input style={{padding: '6px'}}
-                          type="text"
-                          value={newHighlightItem}
-                          onChange={(e) => setNewHighlightItem(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addHighlightItem();
-                            }
-                          }}
-                          placeholder="Add highlight..."
-                          className="flex-1 px-4 py-3 text-lg font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
-                        />
-                        <button
-                          onClick={addHighlightItem}
-                          className="w-8 h-8 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
-                        >
-                          <Plus className="w-4 h-4 text-white" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  <ListManager
+                    label="Highlights"
+                    items={formData.highlights}
+                    onItemsChange={(newItems) => handleInputChange('highlights', newItems)}
+                    placeholder="Add highlight..."
+                    isMobile={false}
+                  />
 
-                  {/* Category */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
-                    <div className="relative">
-                      <button style={{padding: '6px'}}
-                        onClick={() => setDropdownOpen(prev => ({ ...prev, category: !prev.category }))}
-                        className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-lg font-medium text-neutrals-2 transition-colors hover:border-neutrals-4"
-                      >
-                        <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
-                        <ChevronDown className="w-6 h-6 text-neutrals-4" />
-                      </button>
-                      {dropdownOpen.category && (
-                        <div className="absolute top-full mt-2 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                          {categories.map(cat => (
-                            <button
-                              key={cat}
-                              onClick={() => {
-                                handleInputChange('category', cat);
-                                setDropdownOpen(prev => ({ ...prev, category: false }));
-                              }}
-                              className="w-full px-6 py-4 text-left hover:bg-neutrals-7 text-lg font-medium first:rounded-t-xl last:rounded-b-xl transition-colors"
-                            >
-                              {cat}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <FormField
+                    label="Category"
+                    type="dropdown"
+                    value={formData.category}
+                    onChange={(value) => handleInputChange('category', value)}
+                    placeholder="Select category"
+                    options={categories}
+                    isOpen={dropdownOpen.category}
+                    onToggle={() => setDropdownOpen(prev => ({ ...prev, category: !prev.category }))}
+                    onSelect={(value) => {
+                      handleInputChange('category', value);
+                      setDropdownOpen(prev => ({ ...prev, category: false }));
+                    }}
+                    isMobile={false}
+                  />
 
                   {/* Start and End Date/Time */}
                   <div className="grid grid-cols-2 gap-12" style={{marginBottom: '15px'}}>
@@ -562,17 +494,14 @@ export default function EditExperienceBasicInfoPage() {
                     />
                   </div>
 
-                  {/* Location */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Location/Meeting Point</label>
-                    <input style={{padding: '6px'}}
-                      type="text"
-                      value={formData.location}
-                      onChange={(e) => handleInputChange('location', e.target.value)}
-                      className="w-full px-6 py-5 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors"
-                      placeholder="Enter meeting point or location"
-                    />
-                  </div>
+                  <FormField
+                    label="Location/Meeting Point"
+                    type="text"
+                    value={formData.location}
+                    onChange={(value) => handleInputChange('location', value)}
+                    placeholder="Enter meeting point or location"
+                    isMobile={false}
+                  />
 
                   {/* Max Participants */}
                   <div style={{marginBottom: '15px'}}>
@@ -656,87 +585,19 @@ export default function EditExperienceBasicInfoPage() {
 
                 {/* Right Column - Photo Upload (2/5 width) */}
                 <div className="lg:col-span-2 space-y-12">
-                  {/* Cover Photo */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Cover Photo</label>
-                    <div className="relative" style={{marginBottom: '30px'}}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(e, true)}
-                        className="hidden"
-                        id="cover-photo-desktop"
-                      />
-                      <label
-                        htmlFor="cover-photo-desktop"
-                        className="block w-full h-[500px] border-2 border-dashed border-neutrals-4 rounded-2xl cursor-pointer hover:border-primary-1 transition-all duration-300 hover:shadow-lg"
-                      >
-                        {formData.coverPhotoUrl ? (
-                          <img src={formData.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover rounded-2xl" />
-                        ) : (
-                          <div className="flex flex-col items-center justify-center h-full text-center p-12">
-                            <Camera className="w-24 h-24 text-neutrals-4 mb-8" />
-                            <p className="text-xl font-semibold mb-4">Click to upload your main experience photo</p>
-                            <p className="text-lg text-neutrals-4 mb-2">JPG, PNG up to 5MB</p>
-                            <p className="text-base text-neutrals-5">Recommended: 1200x800px</p>
-                          </div>
-                        )}
-                      </label>
-                    </div>
-                  </div>
+                  <PhotoUpload
+                    type="cover"
+                    coverPhoto={formData.coverPhotoUrl}
+                    onPhotoChange={handlePhotoChange}
+                    isMobile={false}
+                  />
 
-                  {/* Additional Photos */}
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Additional Photos (Optional)</label>
-
-                    {/* Display uploaded photos */}
-                    {formData.additionalPhotos.length > 0 && (
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        {formData.additionalPhotos.map((photo, index) => (
-                          <div key={index} className="relative">
-                            <img
-                              src={photo}
-                              alt={`Additional photo ${index + 1}`}
-                              className="w-full h-32 object-cover rounded-xl"
-                            />
-                            <button
-                              onClick={() => {
-                                handleInputChange('additionalPhotos', formData.additionalPhotos.filter((_, i) => i !== index));
-                              }}
-                              className="absolute top-2 right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Upload area */}
-                    <div className="relative" style={{marginBottom: '30px'}}>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handlePhotoUpload(e, false)}
-                        className="hidden"
-                        id="additional-photos-desktop"
-                        multiple
-                      />
-                      <label
-                        htmlFor="additional-photos-desktop"
-                        className="block w-full h-80 border-2 border-dashed border-neutrals-4 rounded-2xl cursor-pointer hover:border-primary-1 transition-all duration-300 hover:shadow-lg"
-                      >
-                        <div className="flex flex-col items-center justify-center h-full text-center p-10">
-                          <Upload className="w-20 h-20 text-neutrals-4 mb-6" />
-                          <p className="text-xl font-semibold mb-4">Upload additional photos (up to 8)</p>
-                          <p className="text-lg text-neutrals-4">Show different aspects of your experience</p>
-                          {formData.additionalPhotos.length > 0 && (
-                            <p className="text-sm text-primary-1 mt-2">{formData.additionalPhotos.length} photo(s) uploaded</p>
-                          )}
-                        </div>
-                      </label>
-                    </div>
-                  </div>
+                  <PhotoUpload
+                    type="additional"
+                    additionalPhotos={formData.additionalPhotos}
+                    onPhotoChange={handlePhotoChange}
+                    isMobile={false}
+                  />
                 </div>
               </div>
             </div>
@@ -804,118 +665,53 @@ export default function EditExperienceBasicInfoPage() {
             {/* Title and Progress */}
             <div className="mb-10">
               <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Edit Experience - Basic Information</h1>
-
-              {/* Mobile Progress Steps - Current Step Only */}
-              <div className="flex gap-4 items-center" style={{marginBottom: '20px'}}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-medium bg-neutrals-2">
-                  1
-                </div>
-                <span className="text-base font-medium text-neutrals-1">
-                  Basic Info
-                </span>
-              </div>
+              <ProgressSteps currentStep={1} isMobile={true} />
             </div>
 
             {/* Mobile Form Fields - Full Width */}
             <div>
-              {/* Title */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Title</label>
-                <input style={{padding: '6px'}}
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange('title', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
-                  placeholder="Enter your experience title"
-                />
-              </div>
+              <FormField
+                label="Title"
+                type="text"
+                value={formData.title}
+                onChange={(value) => handleInputChange('title', value)}
+                placeholder="Enter your experience title"
+                isMobile={true}
+              />
 
-              {/* Short Description */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Short Description</label>
-                <textarea style={{padding: '6px'}}
-                  value={formData.shortDescription}
-                  onChange={(e) => handleInputChange('shortDescription', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors h-32 resize-none"
-                  placeholder="Brief description of your experience"
-                />
-              </div>
+              <FormField
+                label="Short Description"
+                type="textarea"
+                value={formData.shortDescription}
+                onChange={(value) => handleInputChange('shortDescription', value)}
+                placeholder="Brief description of your experience"
+                style={{height: '128px'}}
+                isMobile={true}
+              />
 
-              {/* Highlights */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Highlights</label>
-                <div className="border-2 border-neutrals-5 rounded-xl p-4 bg-white">
-                  {formData.highlights.length > 0 && (
-                    <ul className="mb-3" style={{padding: '3px'}}>
-                      {formData.highlights.map((item, index) => (
-                        <li key={index} className="group flex items-start justify-between mb-2">
-                          <div className="flex items-start flex-1 gap-2">
-                            <span className="text-primary-1 font-bold text-sm">•</span>
-                            <span className="text-sm font-medium text-neutrals-2">{item}</span>
-                          </div>
-                          <button
-                            onClick={() => removeHighlightItem(index)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1"
-                          >
-                            <X className="w-3 h-3 text-red-500" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <div className="flex gap-2 items-center" style={{padding: '2px 4px'}}>
-                    <input style={{padding: '4px'}}
-                      type="text"
-                      value={newHighlightItem}
-                      onChange={(e) => setNewHighlightItem(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addHighlightItem();
-                        }
-                      }}
-                      placeholder="Add highlight..."
-                      className="flex-1 px-3 py-2 text-sm font-medium text-neutrals-2 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all"
-                    />
-                    <button
-                      onClick={addHighlightItem}
-                      className="w-6 h-6 rounded-full bg-primary-1 flex items-center justify-center hover:opacity-90 transition-colors"
-                    >
-                      <Plus className="w-3 h-3 text-white" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <ListManager
+                label="Highlights"
+                items={formData.highlights}
+                onItemsChange={(newItems) => handleInputChange('highlights', newItems)}
+                placeholder="Add highlight..."
+                isMobile={true}
+              />
 
-              {/* Category */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Category</label>
-                <div className="relative">
-                  <button style={{padding: '6px'}}
-                    onClick={() => setDropdownOpen(prev => ({ ...prev, category: !prev.category }))}
-                    className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl flex items-center justify-between text-left text-sm font-medium text-neutrals-2 transition-colors"
-                  >
-                    <span className={formData.category ? "" : "text-neutrals-5"}>{formData.category || "Select category"}</span>
-                    <ChevronDown className="w-4 h-4 text-neutrals-4" />
-                  </button>
-                  {dropdownOpen.category && (
-                    <div className="absolute top-full mt-1 w-full bg-white border-2 border-neutrals-5 rounded-xl shadow-lg z-10">
-                      {categories.map(cat => (
-                        <button
-                          key={cat}
-                          onClick={() => {
-                            handleInputChange('category', cat);
-                            setDropdownOpen(prev => ({ ...prev, category: false }));
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-neutrals-7 text-sm first:rounded-t-xl last:rounded-b-xl"
-                        >
-                          {cat}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+              <FormField
+                label="Category"
+                type="dropdown"
+                value={formData.category}
+                onChange={(value) => handleInputChange('category', value)}
+                placeholder="Select category"
+                options={categories}
+                isOpen={dropdownOpen.category}
+                onToggle={() => setDropdownOpen(prev => ({ ...prev, category: !prev.category }))}
+                onSelect={(value) => {
+                  handleInputChange('category', value);
+                  setDropdownOpen(prev => ({ ...prev, category: false }));
+                }}
+                isMobile={true}
+              />
 
               {/* Start and End Date/Time */}
               <div className="grid grid-cols-2 gap-4" style={{marginBottom: '10px'}}>
@@ -1013,17 +809,14 @@ export default function EditExperienceBasicInfoPage() {
                 />
               </div>
 
-              {/* Location */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Location/Meeting Point</label>
-                <input style={{padding: '6px'}}
-                  type="text"
-                  value={formData.location}
-                  onChange={(e) => handleInputChange('location', e.target.value)}
-                  className="w-full px-4 py-4 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
-                  placeholder="Enter meeting point or location"
-                />
-              </div>
+              <FormField
+                label="Location/Meeting Point"
+                type="text"
+                value={formData.location}
+                onChange={(value) => handleInputChange('location', value)}
+                placeholder="Enter meeting point or location"
+                isMobile={true}
+              />
 
               {/* Max Participants */}
               <div style={{marginBottom: '10px'}}>
@@ -1086,86 +879,19 @@ export default function EditExperienceBasicInfoPage() {
                 </div>
               </div>
 
-              {/* Cover Photo */}
-              <div>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Cover Photo</label>
-                <div className="relative" style={{marginBottom: '15px'}}>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handlePhotoUpload(e, true)}
-                    className="hidden"
-                    id="cover-photo-mobile"
-                  />
-                  <label
-                    htmlFor="cover-photo-mobile"
-                    className="block w-full h-64 border-2 border-dashed border-neutrals-4 rounded-xl cursor-pointer hover:border-primary-1 transition-colors"
-                  >
-                    {formData.coverPhotoUrl ? (
-                      <img src={formData.coverPhotoUrl} alt="Cover" className="w-full h-full object-cover rounded-xl" />
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                        <Camera className="w-16 h-16 text-neutrals-4 mb-4" />
-                        <p className="text-sm font-bold mb-2">Click to upload your main experience photo</p>
-                        <p className="text-xs text-neutrals-4">JPG, PNG up to 5MB</p>
-                      </div>
-                    )}
-                  </label>
-                </div>
-              </div>
+              <PhotoUpload
+                type="cover"
+                coverPhoto={formData.coverPhotoUrl}
+                onPhotoChange={handlePhotoChange}
+                isMobile={true}
+              />
 
-              {/* Additional Photos */}
-              <div style={{marginBottom: '20px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Additional Photos (Optional)</label>
-
-                {/* Display uploaded photos */}
-                {formData.additionalPhotos.length > 0 && (
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    {formData.additionalPhotos.map((photo, index) => (
-                      <div key={index} className="relative">
-                        <img
-                          src={photo}
-                          alt={`Additional photo ${index + 1}`}
-                          className="w-full h-24 object-cover rounded-lg"
-                        />
-                        <button
-                          onClick={() => {
-                            handleInputChange('additionalPhotos', formData.additionalPhotos.filter((_, i) => i !== index));
-                          }}
-                          className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Upload area */}
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handlePhotoUpload(e, false)}
-                    className="hidden"
-                    id="additional-photos-mobile"
-                    multiple
-                  />
-                  <label
-                    htmlFor="additional-photos-mobile"
-                    className="block w-full h-64 border-2 border-dashed border-neutrals-4 rounded-xl cursor-pointer hover:border-primary-1 transition-colors"
-                  >
-                    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                      <Camera className="w-16 h-16 text-neutrals-4 mb-4" />
-                      <p className="text-sm font-bold mb-2">Upload additional photos (up to 8)</p>
-                      <p className="text-xs text-neutrals-4">Show different aspects of your experience</p>
-                      {formData.additionalPhotos.length > 0 && (
-                        <p className="text-xs text-primary-1 mt-2">{formData.additionalPhotos.length} photo(s) uploaded</p>
-                      )}
-                    </div>
-                  </label>
-                </div>
-              </div>
+              <PhotoUpload
+                type="additional"
+                additionalPhotos={formData.additionalPhotos}
+                onPhotoChange={handlePhotoChange}
+                isMobile={true}
+              />
 
               {/* Action Buttons */}
               <div style={{marginBottom: '20px'}}>
