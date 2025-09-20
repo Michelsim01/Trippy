@@ -25,6 +25,7 @@ const ProfilePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
+    const [wishlistExperienceIds, setWishlistExperienceIds] = useState([]);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -39,7 +40,6 @@ const ProfilePage = () => {
             setLoading(true);
             setError(null);
             
-            // Check if user is authenticated
             if (!isAuthenticated || !token) {
                 setError('You must be logged in to view profiles');
                 setLoading(false);
@@ -47,11 +47,11 @@ const ProfilePage = () => {
             }
             
             const response = await userService.getUserById(userId);
+            console.log('Fetched user data:', response);
             
             if (response.success) {
                 setUserData(response.data);
                 
-                // Set user role based on KYC verification status
                 if (response.data.canCreateExperiences && response.data.kycStatus === 'APPROVED') {
                     setCurrentRole(UserRole.TOUR_GUIDE);
                 } else {
@@ -60,15 +60,14 @@ const ProfilePage = () => {
                 
                 setError(null);
             } else {
-                // Handle different error types
                 if (response.status === 401) {
                     setError('Authentication required. Please log in again.');
-                    // Redirect to login after a delay
                     setTimeout(() => {
                         navigate('/signin');
                     }, 2000);
                 } else if (response.status === 404) {
-                    setError('User profile not found');
+                    navigate('/404');
+                    return;
                 } else {
                     setError(response.error || 'Failed to load user profile');
                 }
@@ -88,44 +87,88 @@ const ProfilePage = () => {
             setUserExperiences(experiences);
         } catch (err) {
             console.error('Error fetching user experiences:', err);
-            // Don't set the main error state, just log it
             setUserExperiences([]);
         } finally {
             setExperiencesLoading(false);
         }
     };
 
-    // Check if this is the user's own profile
+    const fetchCurrentUserWishlist = async () => {
+        // Fetch current user's wishlist to show heart highlights
+        if (!user?.id) {
+            console.log('ProfilePage - No user ID available for wishlist fetch');
+            return;
+        }
+        
+        try {
+            console.log('ProfilePage - Fetching wishlist for user:', user.id);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.log('ProfilePage - No auth token available');
+                return;
+            }
+            
+            const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            console.log('ProfilePage - Wishlist API response status:', response.status);
+            
+            if (response.ok) {
+                const wishlistData = await response.json();
+                console.log('ProfilePage - Raw wishlist data received:', wishlistData);
+                
+                if (Array.isArray(wishlistData)) {
+                    const experienceIds = wishlistData.map(item => {
+                        const id = item.experience?.experienceId || item.experienceId || item.id;
+                        console.log('ProfilePage - Extracting experience ID:', id, 'from item:', item);
+                        return id;
+                    }).filter(id => id !== undefined);
+                    
+                    console.log('ProfilePage - Final extracted experience IDs:', experienceIds);
+                    setWishlistExperienceIds(experienceIds);
+                } else {
+                    console.error('ProfilePage - Wishlist data is not an array:', wishlistData);
+                }
+            } else {
+                const errorText = await response.text();
+                console.error('ProfilePage - Failed to fetch wishlist, status:', response.status, 'error:', errorText);
+            }
+        } catch (error) {
+            console.error('ProfilePage - Error fetching wishlist:', error);
+        }
+    };
+
     useEffect(() => {
         if (user && id) {
-            // Check if the current user's ID matches the profile ID
             const currentUserId = id?.toString();
             const profileId = user?.id?.toString();
             setIsOwnProfile(currentUserId === profileId);
-            console.log(currentUserId);
-            console.log(profileId);
         }
     }, [user, id]);
 
-    // Wait for auth to load, then fetch user data
     useEffect(() => {
-        // Don't fetch data if auth is still loading
         if (authLoading) {
             return;
         }
         
-        // If user is not authenticated, show error
         if (!isAuthenticated) {
             setError('You must be logged in to view profiles');
             setLoading(false);
             return;
         }
-        
-        // If we have an ID, fetch the user data
         if (id) {
+            const numericId = parseInt(id, 10);
+            if (isNaN(numericId) || numericId <= 0 || id !== numericId.toString()) {
+                navigate('/404');
+                return;
+            }
+            
             fetchUserData(id);
         } else {
-            // If no ID provided, redirect to current user's profile
             if (user?.id) {
                 navigate(`/profile/${user.id}`);
             } else {
@@ -135,12 +178,18 @@ const ProfilePage = () => {
         }
     }, [id, isAuthenticated, authLoading, user]);
 
-    // Fetch user experiences when userData is loaded and user is a tour guide
     useEffect(() => {
         if (userData && currentRole === UserRole.TOUR_GUIDE && id) {
             fetchUserExperiences(id);
         }
     }, [userData, currentRole, id]);
+
+    useEffect(() => {
+        if (userData && user?.id) {
+            console.log('ProfilePage - Triggering wishlist fetch, userData:', !!userData, 'user.id:', user.id, 'isOwnProfile:', isOwnProfile);
+            fetchCurrentUserWishlist();
+        }
+    }, [userData, user?.id]);
 
     const isTourGuide = currentRole === UserRole.TOUR_GUIDE;
     const userName = userData?.firstName || (isTourGuide ? 'Farley' : 'Sarah');
@@ -276,6 +325,7 @@ const ProfilePage = () => {
                     tourData={userExperiences} 
                     loading={experiencesLoading}
                     isOwnProfile={isOwnProfile}
+                    wishlistExperienceIds={wishlistExperienceIds}
                 />;
             case 'Reviews':
                 return <ReviewsTab reviews={reviews} />;

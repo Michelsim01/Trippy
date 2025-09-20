@@ -21,7 +21,6 @@ const NotificationsPage = () => {
     
     // Use the notifications hook
     const { 
-        notifications, 
         loading, 
         error, 
         categorizedNotifications, 
@@ -117,43 +116,57 @@ const NotificationsPage = () => {
 
         return (
             <div className="space-y-4">
-                {currentNotifications.map((notification) => (
-                    <div
-                        key={notification.notificationId}
-                        className={`p-4 bg-white rounded-lg hover:bg-neutrals-7 transition-colors cursor-pointer ${!notification.isRead ? 'border-l-4 border-primary-1' : ''
-                            }`}
-                        onClick={async () => {
-                            if (!notification.isRead) {
-                                await markAsRead(notification.notificationId);
-                            }
-                        }}
+            {currentNotifications.map((notification) => (
+                <div
+                key={notification.notificationId}
+                className={`p-4 bg-white rounded-lg hover:bg-neutrals-7 transition-colors cursor-pointer ${!notification.isRead ? 'border-l-4 border-primary-1' : ''
+                    }`}
+                onClick={async () => {
+                    if (!notification.isRead) {
+                    await markAsRead(notification.notificationId);
+                    window.location.reload();
+                    }
+                }}
+                >
+                <div className="flex items-center gap-2 mb-1">
+                    <p className="text-neutrals-2 font-medium">
+                    {notification.title || getTypeLabel(notification.type)}
+                    </p>
+                    {/* Green dot for unread notification */}
+                    {!notification.isRead && (
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    )}
+                </div>
+                <p className="text-neutrals-2 mb-2">{notification.message}</p>
+                <div className="flex items-center justify-between gap-2">
+                    <p className="text-neutrals-4 text-sm">
+                    {formatDateTime(notification.createdAt)}
+                    </p>
+                    <button
+                    onClick={async (e) => {
+                        e.stopPropagation();
+                        const swal = await import('sweetalert2');
+                        swal.default.fire({
+                        title: 'Delete Notification?',
+                        text: 'Are you sure you want to delete this notification?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Yes, delete it'
+                        }).then((result) => {
+                        if (result.isConfirmed) {
+                            deleteNotification(notification.notificationId);
+                        }
+                        });
+                    }}
+                    className="text-red-500 hover:text-red-700 text-sm p-1 hover:bg-red-50 rounded"
                     >
-                        <div className="flex items-center gap-2 mb-1">
-                            <p className="text-neutrals-2 font-medium">
-                                {notification.title || getTypeLabel(notification.type)}
-                            </p>
-                            {/* Green dot for unread notification */}
-                            {!notification.isRead && (
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            )}
-                        </div>
-                        <p className="text-neutrals-2 mb-2">{notification.message}</p>
-                        <div className="flex items-center justify-between gap-2">
-                            <p className="text-neutrals-4 text-sm">
-                                {formatDateTime(notification.createdAt)}
-                            </p>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteNotification(notification.notificationId);
-                                }}
-                                className="text-red-500 hover:text-red-700 text-sm p-1 hover:bg-red-50 rounded"
-                            >
-                                <Trash size={16} color='var(--color-primary-3)' />
-                            </button>
-                        </div>
-                    </div>
-                ))}
+                    <Trash size={16} color='var(--color-primary-3)' />
+                    </button>
+                </div>
+                </div>
+            ))}
             </div>
         );
     };

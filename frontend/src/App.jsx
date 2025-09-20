@@ -14,6 +14,8 @@ import HomePage from './pages/HomePage'
 import NotificationsPage from './pages/NotificationsPage'
 import WishlistPage from './pages/WishlistPage'
 import MessagesPage from './pages/MessagesPage'
+import MyBookingsPage from './pages/MyBookingsPage'
+import MyToursPage from './pages/MyToursPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
 import CreateExperienceBasicInfoPage from './pages/CreateExperienceBasicInfoPage'
@@ -36,6 +38,9 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
+import NotFoundPage from './pages/NotFoundPage'
+import ServerErrorPage from './pages/ServerErrorPage'
+import ErrorBoundary from './components/ErrorBoundary'
 import './App.css' 
 
 // AppRoutes component that uses authentication context
@@ -109,6 +114,14 @@ function AppRoutes() {
             <Route
               path="/messages"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
+            />
+            <Route
+              path="/my-bookings"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
+            />
+            <Route
+              path="/my-tours"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
             />
             <Route
               path="/profile/:id"
@@ -211,8 +224,19 @@ function AppRoutes() {
             element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
           />
 
-      {/* Catch all route */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Error Pages */}
+          <Route
+            path="/404"
+            element={<NotFoundPage />}
+          />
+          
+          <Route
+            path="/500"
+            element={<ServerErrorPage />}
+          />
+
+      {/* Catch all route - redirect to 404 */}
+      <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   )
 }
@@ -220,15 +244,17 @@ function AppRoutes() {
 export default function App() {
   return (
     <Router>
-      <AuthProvider>
-        <UserProvider>
-          <FormDataProvider>
-          <div className="App">
-            <AppRoutes />
-          </div>
-        </FormDataProvider>
-        </UserProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <UserProvider>
+            <FormDataProvider>
+            <div className="App">
+              <AppRoutes />
+            </div>
+          </FormDataProvider>
+          </UserProvider>
+        </AuthProvider>
+      </ErrorBoundary>
       </Router>
   )
 }

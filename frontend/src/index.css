@@ -164,6 +164,56 @@ body {
   /* Safari and Chrome */
 }
 
+/* Custom scrollbar for experience carousel */
+.experience-carousel {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  transition: scrollbar-color 0.3s ease;
+}
+
+/* Show scrollbar on hover and during scroll */
+.experience-carousel:hover,
+.experience-carousel:focus,
+.experience-carousel.scrolling {
+  scrollbar-color: var(--color-neutrals-5) var(--color-neutrals-7);
+}
+
+/* Webkit scrollbar styling */
+.experience-carousel::-webkit-scrollbar {
+  height: 8px;
+}
+
+.experience-carousel::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+.experience-carousel::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+}
+
+/* Show webkit scrollbar on hover and during scroll */
+.experience-carousel:hover::-webkit-scrollbar-track,
+.experience-carousel:focus::-webkit-scrollbar-track,
+.experience-carousel.scrolling::-webkit-scrollbar-track {
+  background: var(--color-neutrals-7);
+}
+
+.experience-carousel:hover::-webkit-scrollbar-thumb,
+.experience-carousel:focus::-webkit-scrollbar-thumb,
+.experience-carousel.scrolling::-webkit-scrollbar-thumb {
+  background: var(--color-neutrals-5);
+}
+
+.experience-carousel:hover::-webkit-scrollbar-thumb:hover,
+.experience-carousel:focus::-webkit-scrollbar-thumb:hover,
+.experience-carousel.scrolling::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutrals-4);
+}
+
 /* Input Field Styles */
 .input-field {
   width: 100%;
@@ -892,4 +942,43 @@ body {
   font-weight: 500;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(74, 198, 63, 0.3);
+}
+
+/* Additional Button Styles */
+.btn-outline-red {
+  background-color: transparent;
+  color: #ef4444;
+  border: 2px solid #ef4444;
+}
+
+.btn-outline-red:hover {
+  background-color: #ef4444;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Line Clamp Utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
 }
