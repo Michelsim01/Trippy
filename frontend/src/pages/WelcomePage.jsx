@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import Button from '../components/Button'
@@ -187,6 +187,18 @@ const transformMockDataForCard = (mockExp) => ({
 const WelcomePage = () => {
     const navigate = useNavigate()
     const scrollContainerRef = useRef(null)
+    
+    // Refs for sections
+    const discoverWeeklyRef = useRef(null)
+    const ctaRef = useRef(null)
+    const travelBlogsRef = useRef(null)
+    
+    // State for section visibility - once visible, stays visible
+    const [sectionVisibility, setSectionVisibility] = useState({
+        discoverWeekly: false,
+        cta: false,
+        travelBlogs: false
+    })
 
     const handleSignUp = () => {
         navigate('/signup')
@@ -196,6 +208,43 @@ const WelcomePage = () => {
         navigate('/signup')
     }
 
+    // Simple Intersection Observer - once visible, stays visible
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const sectionName = entry.target.getAttribute('data-section')
+                    
+                    // If section becomes visible and isn't already visible, fade it in
+                    if (entry.isIntersecting && !sectionVisibility[sectionName]) {
+                        setSectionVisibility(prev => ({
+                            ...prev,
+                            [sectionName]: true
+                        }))
+                    }
+                })
+            },
+            {
+                threshold: 0.2, // Trigger when 20% of the section is visible
+                rootMargin: '-50px 0px -50px 0px' // Add some margin for better UX
+            }
+        )
+
+        const sections = [discoverWeeklyRef, ctaRef, travelBlogsRef]
+        sections.forEach(ref => {
+            if (ref.current) {
+                observer.observe(ref.current)
+            }
+        })
+
+        return () => {
+            sections.forEach(ref => {
+                if (ref.current) {
+                    observer.unobserve(ref.current)
+                }
+            })
+        }
+    }, [sectionVisibility])
 
     return (
         <div className="min-h-screen bg-neutrals-8">
@@ -232,7 +281,15 @@ const WelcomePage = () => {
             </section>
 
             {/* Discover Weekly Section */}
-            <section className="py-20 px-8 lg:px-40 bg-neutrals-8">
+            <section 
+                ref={discoverWeeklyRef}
+                data-section="discoverWeekly"
+                className={`py-20 px-8 lg:px-40 bg-neutrals-8 transition-all duration-1000 transform ${
+                    sectionVisibility.discoverWeekly 
+                        ? 'opacity-100 translate-y-0' 
+                        : 'opacity-0 translate-y-8'
+                }`}
+            >
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16">
                         <h2 className="font-dm-sans font-bold text-[32px] lg:text-[48px] leading-[40px] lg:leading-[56px] tracking-[-0.32px] lg:tracking-[-0.96px] text-neutrals-2 mb-3">
@@ -249,7 +306,7 @@ const WelcomePage = () => {
                         {/* Scrollable container */}
                         <div 
                             ref={scrollContainerRef}
-                            className="flex overflow-x-auto experience-carousel gap-6 pb-4"
+                            className="flex overflow-x-auto experience-carousel gap-6 p-4 mt-8"
                         >
                             {mockExperiences.map((experience, index) => (
                                 <WelcomeExperienceCard
@@ -264,7 +321,15 @@ const WelcomePage = () => {
             </section>
 
             {/* CTA Section */}
-            <section className="py-20 px-6 lg:px-20 bg-neutrals-7">
+            <section 
+                ref={ctaRef}
+                data-section="cta"
+                className={`py-20 px-6 lg:px-20 bg-neutrals-7 transition-all duration-1000 transform ${
+                    sectionVisibility.cta 
+                        ? 'opacity-100 translate-y-0' 
+                        : 'opacity-0 translate-y-8'
+                }`}
+            >
                 <div className="max-w-7xl mx-auto">
                     <div className="lg:flex lg:items-end lg:justify-between mb-20">
                         <div className="mb-8 lg:mb-0">
@@ -292,19 +357,20 @@ const WelcomePage = () => {
                             alt="Video placeholder"
                             className="w-full h-full object-cover"
                         />
-                        <button className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-20 h-20 bg-neutrals-8 rounded-full flex items-center justify-center shadow-lg">
-                                <svg className="w-6 h-6 text-neutrals-2 ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                            </div>
-                        </button>
                     </div>
                 </div>
             </section>
 
             {/* Travel Blogs Section */}
-            <section className="py-20 px-8 lg:px-40 bg-neutrals-8">
+            <section 
+                ref={travelBlogsRef}
+                data-section="travelBlogs"
+                className={`py-20 px-8 lg:px-40 bg-neutrals-8 transition-all duration-1000 transform ${
+                    sectionVisibility.travelBlogs 
+                        ? 'opacity-100 translate-y-0' 
+                        : 'opacity-0 translate-y-8'
+                }`}
+            >
                 <div className="max-w-7xl mx-auto">
                     <div className="flex items-end justify-between mb-20">
                         <div>
@@ -315,43 +381,51 @@ const WelcomePage = () => {
                                 Collective wisdom from all over the world
                             </p>
                         </div>
-                        <div className="hidden lg:flex gap-2">
-                            <button className="p-2 rounded-full">
-                                <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                            <button className="p-2 rounded-full border-2 border-neutrals-6">
-                                <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
                     </div>
 
-                    {/* Blog Cards */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-                        {[
-                            {
-                                image: "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=983&q=80",
-                                title: "Pack wisely before traveling",
-                                excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
-                                date: "25 May, 2021"
-                            },
-                            {
-                                image: "https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-                                title: "Introducing this amazing city",
-                                excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
-                                date: "25 May, 2021"
-                            },
-                            {
-                                image: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?ixlib=rb-4.0.3&auto=format&fit=crop&w=986&q=80",
-                                title: "How to travel with paper map",
-                                excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
-                                date: "25 May, 2021"
-                            }
-                        ].slice(0, window.innerWidth >= 1024 ? 3 : 1).map((blog, index) => (
-                            <div key={index} className="bg-white rounded-2xl overflow-hidden">
+                    {/* Blog Cards Carousel */}
+                    <div className="relative">
+                        {/* Scrollable container */}
+                        <div className="flex overflow-x-auto experience-carousel gap-6 p-4">
+                            {[
+                                {
+                                    image: "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=983&q=80",
+                                    title: "Pack wisely before traveling",
+                                    excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
+                                    date: "25 May, 2021"
+                                },
+                                {
+                                    image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?q=80&w=1352&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                                    title: "Introducing this amazing city",
+                                    excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
+                                    date: "25 May, 2021"
+                                },
+                                {
+                                    image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+                                    title: "How to travel with paper map",
+                                    excerpt: "It is almost impossible to read the news without coming across a lead story elections through fake social media accounts...",
+                                    date: "25 May, 2021"
+                                },
+                                {
+                                    image: "https://images.unsplash.com/photo-1564507004663-b6dfb3c824d5?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                                    title: "Hidden gems in Morocco",
+                                    excerpt: "Discover the most beautiful and lesser-known places in Morocco that will take your breath away...",
+                                    date: "15 Jun, 2021"
+                                },
+                                {
+                                    image: "https://images.unsplash.com/photo-1504858700536-882c978a3464?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                                    title: "Northern adventures await",
+                                    excerpt: "From the Northern Lights to glacier hiking, Iceland offers unforgettable experiences for every traveler...",
+                                    date: "8 Aug, 2021"
+                                },
+                                {
+                                    image: "https://images.unsplash.com/photo-1575580340982-abc0f350accb?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+                                    title: "Alpine skiing essentials",
+                                    excerpt: "Everything you need to know before hitting the slopes in the Swiss Alps for an amazing winter vacation...",
+                                    date: "12 Dec, 2021"
+                                }
+                            ].map((blog, index) => (
+                                <div key={index} className="flex-none w-80 bg-white rounded-2xl overflow-hidden cursor-pointer hover:shadow-lg transition-all duration-300 transform hover:scale-105 group" onClick={handleSignUp}>
                                 <div className="relative h-80 bg-neutrals-2">
                                     <img
                                         src={blog.image}
@@ -363,7 +437,7 @@ const WelcomePage = () => {
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                         </svg>
                                     </button>
-                                    <button className="absolute inset-0 flex items-center justify-center">
+                                    <button className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                         <div className="bg-neutrals-8 text-neutrals-2 font-dm-sans font-bold text-base px-6 py-4 rounded-[90px] hover:bg-neutrals-7 transition-colors">
                                             Read More
                                         </div>
@@ -381,20 +455,7 @@ const WelcomePage = () => {
                                 </div>
                             </div>
                         ))}
-                    </div>
-
-                    {/* Mobile arrows */}
-                    <div className="lg:hidden flex justify-center gap-2">
-                        <button className="p-2 rounded-full">
-                            <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
-                        </button>
-                        <button className="p-2 rounded-full border-2 border-neutrals-6">
-                            <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
+                        </div>
                     </div>
                 </div>
             </section>
