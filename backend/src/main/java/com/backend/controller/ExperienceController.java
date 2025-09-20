@@ -2,8 +2,12 @@ package com.backend.controller;
 
 import com.backend.entity.Experience;
 import com.backend.entity.ExperienceSchedule;
+import com.backend.entity.ExperienceMedia;
+import com.backend.entity.ExperienceItinerary;
 import com.backend.repository.ExperienceRepository;
 import com.backend.repository.ExperienceScheduleRepository;
+import com.backend.repository.ExperienceMediaRepository;
+import com.backend.repository.ExperienceItineraryRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.dto.ExperienceResponseDTO;
 import com.backend.service.ExperienceService;
@@ -25,6 +29,12 @@ public class ExperienceController {
 
     @Autowired
     private ExperienceScheduleRepository experienceScheduleRepository;
+
+    @Autowired
+    private ExperienceMediaRepository experienceMediaRepository;
+
+    @Autowired
+    private ExperienceItineraryRepository experienceItineraryRepository;
 
     @Autowired
     private ExperienceService experienceService;
@@ -207,11 +217,26 @@ public class ExperienceController {
     @GetMapping("/{id}/media")
     public ResponseEntity<?> getExperienceMedia(@PathVariable Long id) {
         try {
-            Experience experience = experienceRepository.findById(id).orElse(null);
-            if (experience == null) {
+            // Check if experience exists first
+            if (!experienceRepository.existsById(id)) {
                 return ResponseEntity.notFound().build();
             }
-            return ResponseEntity.ok(experience.getMediaList());
+            
+            // Use repository to avoid lazy loading issues
+            List<ExperienceMedia> mediaList = experienceMediaRepository.findByExperienceId(id);
+            
+            // Create safe response objects to avoid circular references
+            List<Map<String, Object>> safeMediaList = mediaList.stream().map(media -> {
+                Map<String, Object> mediaMap = new HashMap<>();
+                mediaMap.put("mediaId", media.getMediaId());
+                mediaMap.put("mediaUrl", media.getMediaUrl());
+                mediaMap.put("mediaType", media.getMediaType());
+                mediaMap.put("caption", media.getCaption());
+                mediaMap.put("displayOrder", media.getDisplayOrder());
+                return mediaMap;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(safeMediaList);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "error", "Failed to fetch media: " + e.getMessage()));
@@ -221,11 +246,26 @@ public class ExperienceController {
     @GetMapping("/{id}/itineraries")
     public ResponseEntity<?> getExperienceItineraries(@PathVariable Long id) {
         try {
-            Experience experience = experienceRepository.findById(id).orElse(null);
-            if (experience == null) {
+            // Check if experience exists first
+            if (!experienceRepository.existsById(id)) {
                 return ResponseEntity.notFound().build();
             }
-            return ResponseEntity.ok(experience.getItineraries());
+            
+            // Use repository to avoid lazy loading issues
+            List<ExperienceItinerary> itineraryList = experienceItineraryRepository.findByExperienceId(id);
+            
+            // Create safe response objects to avoid circular references
+            List<Map<String, Object>> safeItineraryList = itineraryList.stream().map(itinerary -> {
+                Map<String, Object> itineraryMap = new HashMap<>();
+                itineraryMap.put("itineraryId", itinerary.getItineraryId());
+                itineraryMap.put("stopOrder", itinerary.getStopOrder());
+                itineraryMap.put("stopType", itinerary.getStopType());
+                itineraryMap.put("locationName", itinerary.getLocationName());
+                itineraryMap.put("duration", itinerary.getDuration());
+                return itineraryMap;
+            }).collect(Collectors.toList());
+            
+            return ResponseEntity.ok(safeItineraryList);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "error", "Failed to fetch itineraries: " + e.getMessage()));

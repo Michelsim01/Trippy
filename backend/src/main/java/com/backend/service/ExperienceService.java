@@ -248,7 +248,6 @@ public class ExperienceService {
         existingExperience
                 .setStatus(ExperienceStatus.valueOf((String) experienceData.getOrDefault("status", "ACTIVE")));
         existingExperience.setUpdatedAt(LocalDateTime.now());
-        existingExperience.setGuide(null);
 
         // Save updated experience
         Experience updatedExperience = experienceRepository.save(existingExperience);
