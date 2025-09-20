@@ -1,6 +1,8 @@
 import React, { useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import Button from '../components/Button'
+import ExperienceCard from '../components/ExperienceCard'
 
 // Images - these would normally be imported from assets
 const heroImage = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2074&q=80"
@@ -8,7 +10,7 @@ const heroImage = "https://images.unsplash.com/photo-1469474968028-56623f02e42e?
 // 16 realistic mock experiences
 const mockExperiences = [
     {
-        image: "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=983&q=80",
+        image: "https://images.unsplash.com/photo-1557410069-8da84c0523d9?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Tokyo Street Food Tour",
         location: "Shibuya",
         originalPrice: 85,
@@ -17,7 +19,7 @@ const mockExperiences = [
         rating: 4.8
     },
     {
-        image: "https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+        image: "https://images.unsplash.com/photo-1723992483876-0e6015fda324?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Bali Sunrise Volcano Hike",
         location: "Mount Batur",
         originalPrice: 120,
@@ -26,7 +28,7 @@ const mockExperiences = [
         rating: 4.9
     },
     {
-        image: "https://images.unsplash.com/photo-1516483638261-f4dbaf036963?ixlib=rb-4.0.3&auto=format&fit=crop&w=986&q=80",
+        image: "https://images.unsplash.com/photo-1580502304784-8985b7eb7260?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Santorini Wine Tasting",
         location: "Oia Village",
         originalPrice: 150,
@@ -35,7 +37,7 @@ const mockExperiences = [
         rating: 4.7
     },
     {
-        image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1507272931001-fc06c17e4f43?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Northern Lights Photography",
         location: "Reykjavik",
         originalPrice: 200,
@@ -44,7 +46,7 @@ const mockExperiences = [
         rating: 4.6
     },
     {
-        image: "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1596985825719-53fd3315e25c?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Moroccan Desert Safari",
         location: "Sahara Desert",
         originalPrice: 300,
@@ -53,7 +55,7 @@ const mockExperiences = [
         rating: 4.9
     },
     {
-        image: "https://images.unsplash.com/photo-1518684079-3c830dcef090?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1605940169839-aedc047b0b06?q=80&w=765&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Amazon Rainforest Trek",
         location: "Manaus",
         originalPrice: 180,
@@ -62,7 +64,7 @@ const mockExperiences = [
         rating: 4.8
     },
     {
-        image: "https://images.unsplash.com/photo-1549144511-f099e773c147?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1546180043-e1475c173021?q=80&w=1631&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Swiss Alps Skiing",
         location: "Zermatt",
         originalPrice: 250,
@@ -71,7 +73,7 @@ const mockExperiences = [
         rating: 4.7
     },
     {
-        image: "https://images.unsplash.com/photo-1504893524553-b855bce32c67?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1630362137311-ca837e790e47?q=80&w=1472&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Parisian Cooking Class",
         location: "Montmartre",
         originalPrice: 90,
@@ -80,7 +82,7 @@ const mockExperiences = [
         rating: 4.5
     },
     {
-        image: "https://images.unsplash.com/photo-1571115764595-644a1f56a55c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1594902294032-b00d798485e8?q=80&w=1374&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Machu Picchu Expedition",
         location: "Cusco",
         originalPrice: 350,
@@ -89,7 +91,7 @@ const mockExperiences = [
         rating: 4.9
     },
     {
-        image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1619382590986-e2ac189b0658?q=80&w=713&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Maldives Snorkeling",
         location: "Malé Atoll",
         originalPrice: 220,
@@ -98,7 +100,7 @@ const mockExperiences = [
         rating: 4.8
     },
     {
-        image: "https://images.unsplash.com/photo-1571406252267-79ddb6adda4c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1633954935960-60dbe143edbd?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Thai Temple Discovery",
         location: "Chiang Mai",
         originalPrice: 75,
@@ -107,7 +109,7 @@ const mockExperiences = [
         rating: 4.6
     },
     {
-        image: "https://images.unsplash.com/photo-1525874684015-58379d421a52?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://plus.unsplash.com/premium_photo-1693579944297-c503697f4f73?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "NYC Street Art Tour",
         location: "Brooklyn",
         originalPrice: 65,
@@ -116,7 +118,7 @@ const mockExperiences = [
         rating: 4.4
     },
     {
-        image: "https://images.unsplash.com/photo-1570197788417-0e82375c9371?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1707477553761-693ad22457c5?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Australian Outback Safari",
         location: "Uluru",
         originalPrice: 400,
@@ -125,7 +127,7 @@ const mockExperiences = [
         rating: 4.7
     },
     {
-        image: "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://plus.unsplash.com/premium_photo-1697729600773-5b039ef17f3b?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Kerala Backwater Cruise",
         location: "Alleppey",
         originalPrice: 130,
@@ -134,7 +136,7 @@ const mockExperiences = [
         rating: 4.8
     },
     {
-        image: "https://images.unsplash.com/photo-1512100356356-de1b84283e18?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1641391282758-7eae20bcb631?q=80&w=2010&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Scottish Highlands Tour",
         location: "Isle of Skye",
         originalPrice: 180,
@@ -143,7 +145,7 @@ const mockExperiences = [
         rating: 4.6
     },
     {
-        image: "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+        image: "https://images.unsplash.com/photo-1702036394924-9c079b10c4e4?q=80&w=688&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
         title: "Egyptian Pyramid Exploration",
         location: "Giza",
         originalPrice: 280,
@@ -153,15 +155,44 @@ const mockExperiences = [
     }
 ]
 
+// Wrapper component for ExperienceCard that overrides click behavior
+const WelcomeExperienceCard = ({ experience, onClick }) => {
+    return (
+        <div onClick={onClick} className="cursor-pointer">
+            <ExperienceCard 
+                experience={experience}
+                showWishlistButton={false} // Hide wishlist for non-authenticated users
+                variant="welcome"
+            />
+        </div>
+    )
+}
+
+// Transform mock data to match ExperienceCard format
+const transformMockDataForCard = (mockExp) => ({
+    id: mockExp.title.replace(/\s+/g, '-').toLowerCase(),
+    experienceId: mockExp.title.replace(/\s+/g, '-').toLowerCase(),
+    title: mockExp.title,
+    location: mockExp.location,
+    price: mockExp.salePrice,
+    originalPrice: mockExp.originalPrice,
+    duration: Math.floor(Math.random() * 4) + 2, // Random duration 2-5 hours
+    category: "GUIDED_TOUR",
+    participantsAllowed: Math.floor(Math.random() * 20) + 5, // Random 5-25 participants
+    rating: mockExp.rating,
+    imageUrl: mockExp.image,
+    coverPhotoUrl: mockExp.image
+})
+
 const WelcomePage = () => {
     const navigate = useNavigate()
     const scrollContainerRef = useRef(null)
 
-    const handleSignIn = () => {
-        navigate('/signin')
+    const handleSignUp = () => {
+        navigate('/signup')
     }
 
-    const handleSignUp = () => {
+    const handleCardClick = () => {
         navigate('/signup')
     }
 
@@ -189,12 +220,13 @@ const WelcomePage = () => {
                             <span className="lg:hidden">Less planning 45,000 trips are ready for you</span>
                             <span className="hidden lg:inline">No more boring holidays. No more tourist traps.</span>
                         </p>
-                        <Link
-                            to="/signup"
-                            className="inline-flex items-center justify-center bg-primary-1 text-neutrals-8 font-poppins font-medium text-base px-6 py-3 rounded-[90px] border-[6px] border-white/50 hover:bg-primary-1/90 transition-colors"
+                        <Button
+                            onClick={handleSignUp}
+                            variant="primary"
+                            size="lg"
                         >
                             Start Now
-                        </Link>
+                        </Button>
                     </div>
                 </div>
             </section>
@@ -220,39 +252,11 @@ const WelcomePage = () => {
                             className="flex overflow-x-auto experience-carousel gap-6 pb-4"
                         >
                             {mockExperiences.map((experience, index) => (
-                                <div key={index} className="flex-none w-80 bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow">
-                                    <div className="relative h-48 bg-neutrals-2">
-                                        <img
-                                            src={experience.image}
-                                            alt={experience.title}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <button className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-                                            <svg className="w-5 h-5 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                                            </svg>
-                                        </button>
-                                    </div>
-                                    <div className="p-4">
-                                        <h3 className="font-poppins font-medium text-base text-neutrals-1 mb-2">{experience.title}</h3>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="font-poppins text-xs text-neutrals-3">{experience.location}</span>
-                                            <div className="flex items-center gap-1.5">
-                                                <span className="font-poppins font-bold text-xs text-neutrals-5 line-through">${experience.originalPrice}</span>
-                                                <span className="font-poppins font-bold text-xs text-primary-1">${experience.salePrice}</span>
-                                            </div>
-                                        </div>
-                                        <div className="border-t border-neutrals-6 pt-4 flex justify-between items-center">
-                                            <span className="font-poppins text-xs text-neutrals-4">{experience.dates}</span>
-                                            <div className="flex items-center gap-1">
-                                                <svg className="w-3 h-3 text-primary-2 fill-current" viewBox="0 0 20 20">
-                                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                                </svg>
-                                                <span className="font-poppins font-semibold text-xs text-neutrals-2">{experience.rating}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <WelcomeExperienceCard
+                                    key={index}
+                                    experience={transformMockDataForCard(experience)}
+                                    onClick={handleCardClick}
+                                />
                             ))}
                         </div>
                     </div>
@@ -272,12 +276,13 @@ const WelcomePage = () => {
                                 Find your Guide.<br />Be a Guide.
                             </h2>
                         </div>
-                        <Link
-                            to="/signup"
-                            className="inline-flex lg:inline-flex items-center justify-center bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-base px-6 py-4 rounded-[90px] hover:bg-primary-1/90 transition-colors"
+                        <Button
+                            onClick={handleSignUp}
+                            variant="primary"
+                            size="lg"
                         >
                             Book now
-                        </Link>
+                        </Button>
                     </div>
 
                     {/* Video/Image placeholder */}

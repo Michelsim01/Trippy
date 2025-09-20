@@ -7,6 +7,7 @@ import SearchSuggestions from './SearchSuggestions'
 import SearchModal from './SearchModal'
 import useSearchSuggestions from '../hooks/useSearchSuggestions'
 import { useNotifications } from '../hooks/useNotifications'
+import Button from './Button'
 
 // Placeholder images - in a real app these would come from your asset pipeline
 const userAvatar = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1170&q=80"
@@ -225,18 +226,20 @@ const Navbar = ({
                                 {!isAuthenticated ? (
                                     /* Unauthenticated state */
                                     <>
-                                        <button
+                                        <Button
                                             onClick={handleSignIn}
-                                            className="border-2 border-neutrals-6 text-neutrals-2 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-neutrals-7 transition-colors"
+                                            variant="secondary"
+                                            size="md"
                                         >
                                             Login
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
                                             onClick={handleSignUp}
-                                            className="bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors"
+                                            variant="primary"
+                                            size="md"
                                         >
                                             Sign up
-                                        </button>
+                                        </Button>
                                     </>
                                 ) : (
                                     /* Authenticated state */
@@ -359,18 +362,20 @@ const Navbar = ({
                             {!isAuthenticated ? (
                                 /* Unauthenticated state */
                                 <>
-                                    <button
+                                    <Button
                                         onClick={handleSignIn}
-                                        className="border-2 border-neutrals-6 text-neutrals-2 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-neutrals-7 transition-colors"
+                                        variant="secondary"
+                                        size="md"
                                     >
                                         Login
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         onClick={handleSignUp}
-                                        className="bg-primary-1 text-neutrals-8 font-dm-sans font-bold text-sm leading-4 px-4 py-3 rounded-[90px] hover:bg-primary-1/90 transition-colors"
+                                        variant="primary"
+                                        size="md"
                                     >
                                         Sign up
-                                    </button>
+                                    </Button>
                                 </>
                             ) : (
                                 /* Authenticated state */
