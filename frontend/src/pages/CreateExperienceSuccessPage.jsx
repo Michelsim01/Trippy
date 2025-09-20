@@ -90,7 +90,7 @@ export default function CreateExperienceSuccessPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutrals-3">Duration:</span>
-                  <span className="text-neutrals-1 font-medium">{formData.duration ? `${formData.duration} hours` : 'Not specified'}</span>
+                  <span className="text-neutrals-1 font-medium">{formData.duration ? `${formData.duration}` : 'Not specified'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutrals-3">Price:</span>

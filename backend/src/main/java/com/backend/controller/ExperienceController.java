@@ -151,8 +151,7 @@ public class ExperienceController {
             return ResponseEntity.ok().body(Map.of(
                     "success", true,
                     "experienceId", updatedExperience.getExperienceId(),
-                    "message", "Experience updated successfully",
-                    "experience", updatedExperience));
+                    "message", "Experience updated successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
