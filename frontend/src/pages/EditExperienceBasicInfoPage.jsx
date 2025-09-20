@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, X, Camera, Upload, Plus, AlertCircle } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
+import { useExperienceAuth } from '../hooks/useExperienceAuth';
 import { isMultiDayTour } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -19,6 +20,7 @@ export default function EditExperienceBasicInfoPage() {
     updateFormData,
     categoryMapping,
     isEditMode,
+    experienceId: contextExperienceId,
     hasBookings,
     toggleBookings,
     isFieldRestricted,
@@ -29,6 +31,7 @@ export default function EditExperienceBasicInfoPage() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { isLoading: authLoading, authError } = useExperienceAuth();
   const [isSaving, setIsSaving] = useState(false);
 
   const [currentStep] = useState(1);
@@ -61,13 +64,27 @@ export default function EditExperienceBasicInfoPage() {
   // Load existing experience data on component mount
   useEffect(() => {
     const loadData = async () => {
-      if (id && !isEditMode) {
-        await loadExistingExperience(id);
+      // Wait for authentication to be ready before loading experience data
+      if (authLoading) {
+        return; // Don't load data while auth is still loading
+      }
+      
+      if (authError) {
+        setIsLoading(false);
+        return; // Don't load data if there's an auth error
+      }
+      
+      if (id && (!isEditMode || contextExperienceId !== parseInt(id))) {
+        try {
+          await loadExistingExperience(id);
+        } catch (error) {
+          console.error('Failed to load experience data:', error);
+        }
       }
       setIsLoading(false);
     };
     loadData();
-  }, [id, isEditMode, loadExistingExperience]);
+  }, [id, isEditMode, contextExperienceId, authLoading, authError]);
 
   // Update form data when context data changes
   useEffect(() => {
@@ -282,6 +299,37 @@ export default function EditExperienceBasicInfoPage() {
     }
     return null;
   };
+
+  // Show loading while authentication is being checked
+  if (authLoading || isLoading) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-1 mx-auto mb-4"></div>
+          <p className="text-neutrals-3">Loading experience data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if authentication failed
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-neutrals-1 mb-2">Authentication Error</h2>
+          <p className="text-neutrals-3 mb-4">{authError}</p>
+          <button 
+            onClick={() => navigate('/signin')}
+            className="bg-primary-1 text-white px-6 py-2 rounded-full hover:opacity-90 transition-colors"
+          >
+            Go to Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutrals-8">

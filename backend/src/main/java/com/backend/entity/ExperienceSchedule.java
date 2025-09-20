@@ -9,7 +9,7 @@ import java.util.List;
 @Table(name = "experience_schedule")
 public class ExperienceSchedule {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) 
     private Long scheduleId;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -53,6 +53,11 @@ public class ExperienceSchedule {
     )
     @JsonIgnoreProperties("experienceSchedule")
     private TripCohort tripCohort;
+
+    @PrePersist
+    protected void onCreate() {
+        this.createdAt = LocalDateTime.now();
+    }
 
     public Long getScheduleId() { return scheduleId; }
     public void setScheduleId(Long scheduleId) { this.scheduleId = scheduleId; }

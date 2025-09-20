@@ -106,6 +106,7 @@ export default function CreateExperienceBasicInfoPage() {
       alert('Please enter the maximum number of participants');
       return;
     }
+
     if (!formData.coverPhotoUrl) {
       alert('Please upload a cover photo for your experience');
       return;
