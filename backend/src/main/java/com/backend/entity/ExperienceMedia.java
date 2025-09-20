@@ -1,5 +1,6 @@
 package com.backend.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -12,6 +13,7 @@ public class ExperienceMedia {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "experience_id", nullable = false)
+    @JsonIgnore
     private Experience experience;
 
     @Column(name = "media_url", columnDefinition = "TEXT")

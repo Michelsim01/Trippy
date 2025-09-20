@@ -10,7 +10,12 @@ const ExperienceGallery = ({
 
   // Build images array from media data (includes cover photo) or fallback to form data
   const images = mediaData && mediaData.length > 0
-    ? mediaData.map(media => media.mediaUrl)
+    ? mediaData.map(media => {
+        const url = media.mediaUrl;
+        return url.startsWith('/api/')
+          ? `http://localhost:8080${url}`
+          : url;
+      })
     : [
         displayData.coverPhotoUrl,
         ...(displayData.additionalPhotos || [])

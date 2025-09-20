@@ -75,7 +75,6 @@ public class Experience {
 
     // Relationships
     @OneToMany(mappedBy = "experience", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonIgnore
     private List<ExperienceMedia> mediaList;
 
     @OneToMany(mappedBy = "experience", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
