@@ -24,8 +24,6 @@ import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
 import CreateExperienceAvailabilityPage from './pages/CreateExperienceAvailabilityPage'
 import CreateExperienceSuccessPage from './pages/CreateExperienceSuccessPage'
 import ExperienceDetailsPage from './pages/ExperienceDetailsPage'
-import ExperienceDetailsPageV2 from './pages/ExperienceDetailsPageV2'
-import ExperienceDetailsPageTest from './pages/ExperienceDetailsPageTest'
 import EditExperienceBasicInfoPage from './pages/EditExperienceBasicInfoPage'
 import EditExperienceDetailsPage from './pages/EditExperienceDetailsPage'
 import EditExperiencePricingPage from './pages/EditExperiencePricingPage'
@@ -132,7 +130,7 @@ function AppRoutes() {
               element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
             />
             
-            {/* Create Experience Multi-Step Flow - Only BasicInfo for testing */}
+            {/*create experience*/}
             <Route
               path="/create-experience"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/create-experience/basic-info" replace />}
@@ -158,16 +156,8 @@ function AppRoutes() {
               element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
             />
             <Route
-              path="/experience-details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
-            />
-            <Route
               path="/experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageV2 />}
-            />
-            <Route
-              path="/experience-details-test"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPageTest />}
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
             />
             
             {/* Edit Experience Flow */}

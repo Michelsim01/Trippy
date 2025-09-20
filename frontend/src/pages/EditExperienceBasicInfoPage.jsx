@@ -4,6 +4,7 @@ import { ChevronDown, X, Camera, Upload, Plus, AlertCircle } from 'lucide-react'
 import { useFormData } from '../contexts/FormDataContext';
 import { useExperienceAuth } from '../hooks/useExperienceAuth';
 import { isMultiDayTour } from '../utils/scheduleGenerator';
+import { calculateDuration, formatDurationForDisplay } from '../utils/experienceHelpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -107,6 +108,19 @@ export default function EditExperienceBasicInfoPage() {
       });
     }
   }, [contextData, isEditMode]);
+
+  // Auto-calculate duration when start/end dates change
+  useEffect(() => {
+    if (formData.startDateTime && formData.endDateTime) {
+      const calculatedDuration = calculateDuration(formData.startDateTime, formData.endDateTime);
+      if (calculatedDuration !== null && calculatedDuration !== parseFloat(formData.duration)) {
+        setFormData(prev => ({
+          ...prev,
+          duration: calculatedDuration.toString()
+        }));
+      }
+    }
+  }, [formData.startDateTime, formData.endDateTime]);
 
   if (isLoading) {
     return (
@@ -505,7 +519,9 @@ export default function EditExperienceBasicInfoPage() {
                       <div className="flex items-center gap-4 bg-neutrals-7 px-6 py-4 rounded-xl">
                         <div className="flex items-center gap-3">
                           <span className="text-sm font-bold uppercase text-neutrals-5">Duration:</span>
-                          <span className="text-lg font-semibold text-neutrals-1">{formData.duration}</span>
+                          <span className="text-lg font-semibold text-neutrals-1">
+                            {formatDurationForDisplay(parseFloat(formData.duration))}
+                          </span>
                         </div>
                         {isMultiDay(formData.startDateTime, formData.endDateTime) && (
                           <div className="flex items-center gap-2 ml-auto">
@@ -820,7 +836,7 @@ export default function EditExperienceBasicInfoPage() {
                   <div className="flex items-center gap-3 bg-neutrals-7 px-4 py-3 rounded-xl">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase text-neutrals-5">Duration:</span>
-                      <span className="text-sm font-semibold text-neutrals-1">{formData.duration}</span>
+                      <span className="text-sm font-semibold text-neutrals-1">{formatDurationForDisplay(parseFloat(formData.duration))}</span>
                     </div>
                     {isMultiDay(formData.startDateTime, formData.endDateTime) && (
                       <div className="flex items-center gap-1 ml-auto">

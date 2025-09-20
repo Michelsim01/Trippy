@@ -103,6 +103,22 @@ export const FormDataProvider = ({ children }) => {
       // Fetch experience data from API using experienceApi
       const experienceData = await experienceApi.getExperienceById(id);
 
+      // Load schedules to get start/end dates and availability data
+      let schedulesData = [];
+      let earliestSchedule = null;
+
+      try {
+        schedulesData = await experienceApi.getExperienceSchedules(id);
+        // Find earliest schedule for start/end dates
+        if (schedulesData.length > 0) {
+          earliestSchedule = schedulesData.reduce((earliest, current) => {
+            return new Date(current.startDateTime) < new Date(earliest.startDateTime) ? current : earliest;
+          });
+        }
+      } catch (error) {
+        console.error('Error loading schedules:', error);
+      }
+
       // Convert backend data to frontend format
       setFormData({
         // Basic Info
@@ -111,8 +127,8 @@ export const FormDataProvider = ({ children }) => {
         highlights: experienceData.highlights && typeof experienceData.highlights === 'string' ? experienceData.highlights.split(', ') : [],
         category: Object.keys(categoryMapping).find(key => categoryMapping[key] === experienceData.category) || '',
         duration: experienceData.duration || '',
-        startDateTime: experienceData.startDateTime || '',
-        endDateTime: experienceData.endDateTime || '',
+        startDateTime: earliestSchedule?.startDateTime || '',
+        endDateTime: earliestSchedule?.endDateTime || '',
         location: experienceData.location || '',
         country: experienceData.country || '',
         tags: experienceData.tags || [],
@@ -131,7 +147,7 @@ export const FormDataProvider = ({ children }) => {
         price: experienceData.price || '',
 
         // Availability
-        schedules: [] // TODO: Load from schedules API
+        schedules: schedulesData || []
       });
 
       // Load additional photos from media API

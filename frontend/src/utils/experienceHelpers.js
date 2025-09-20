@@ -109,6 +109,55 @@ export const getGuideFullName = (guide) => {
   return `${firstName} ${lastName}`.trim() || 'Guide';
 };
 
+/**
+ * Calculate duration between two date-time strings (always returns hours)
+ * @param {string} startDateTime - Start date-time in ISO format
+ * @param {string} endDateTime - End date-time in ISO format
+ * @returns {number} Duration in hours
+ */
+export const calculateDuration = (startDateTime, endDateTime) => {
+  if (!startDateTime || !endDateTime) {
+    return null;
+  }
+
+  const start = new Date(startDateTime);
+  const end = new Date(endDateTime);
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+    return null;
+  }
+
+  // Calculate total hours between exact start and end times
+  const durationMs = end.getTime() - start.getTime();
+  const totalHours = durationMs / (1000 * 60 * 60);
+
+  // Don't round - keep precise decimal hours for accurate minute calculation
+  return totalHours;
+};
+
+/**
+ * Format duration hours for display (like CreateExperienceBasicInfoPage)
+ * @param {number} totalHours - Duration in hours
+ * @returns {string} Formatted duration string
+ */
+export const formatDurationForDisplay = (totalHours) => {
+  if (!totalHours || totalHours <= 0) {
+    return '';
+  }
+
+  const hours = Math.floor(totalHours);
+  const minutes = Math.round((totalHours - hours) * 60);
+
+  // Always show duration precisely
+  if (hours === 0) {
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  } else if (minutes === 0) {
+    return `${hours} hour${hours !== 1 ? 's' : ''}`;
+  } else {
+    return `${hours} hour${hours !== 1 ? 's' : ''} ${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  }
+};
+
 export const formatDuration = (experienceData, schedulesData) => {
   // First try to use the experience duration field if available
   if (experienceData && experienceData.duration) {

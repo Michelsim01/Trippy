@@ -182,16 +182,23 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
   // Use experience start date as the earliest date, or today if no experience start date
   const experienceStartDate = experienceInfo.startDateTime ? new Date(experienceInfo.startDateTime) : new Date();
   const startDate = new Date(Math.max(experienceStartDate.getTime(), new Date().getTime()));
-  
+
+  // Calculate start date for recurring schedules (day after primary schedule)
+  const recurringStartDate = new Date(experienceStartDate);
+  recurringStartDate.setDate(recurringStartDate.getDate() + 1);
+  // Ensure recurring schedules don't start before today
+  const recurringStartDateFinal = new Date(Math.max(recurringStartDate.getTime(), new Date().getTime()));
+
   // Extract the experience's actual start time for single-day tours
-  const experienceStartTime = experienceInfo.startDateTime 
+  const experienceStartTime = experienceInfo.startDateTime
     ? new Date(experienceInfo.startDateTime).toTimeString().slice(0, 5) // Format: "HH:MM"
     : '10:00';
-  
+
   const endDate = new Date(startDate);
   endDate.setMonth(endDate.getMonth() + monthsAhead);
-  
+
   console.log('Schedule generation range:', startDate.toDateString(), 'to', endDate.toDateString());
+  console.log('Recurring schedule start date:', recurringStartDateFinal.toDateString());
   
   // Check if this is a multi-day tour
   const isMultiDay = isMultiDayTour(experienceInfo.startDateTime, experienceInfo.endDateTime);
@@ -225,8 +232,8 @@ export const generateScheduleRecords = (availability, experienceDuration = 3, mo
     let daysProcessed = 0;
     let schedulesCreated = 0;
     
-    // Iterate through each day in the range
-    for (let currentDate = new Date(startDate); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
+    // Iterate through each day in the range (starting from day after primary schedule)
+    for (let currentDate = new Date(recurringStartDateFinal); currentDate <= endDate; currentDate.setDate(currentDate.getDate() + 1)) {
       const dayOfWeek = currentDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
       const dayName = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dayOfWeek];
       daysProcessed++;
