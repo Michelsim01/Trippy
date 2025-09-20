@@ -500,14 +500,180 @@ const ExperienceDetailsPageV2 = () => {
         </div>
       </div>
 
-      {/* Mobile Layout - TODO: Implement when needed */}
+      {/* Mobile Layout */}
       <div className="lg:hidden w-full">
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-xl font-semibold text-neutrals-2">Mobile layout coming soon</div>
-            <p className="text-neutrals-3 mt-2">Please use desktop for now</p>
+        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
+        <Navbar
+          isAuthenticated={true}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={toggleSidebar}
+        />
+
+        <div className="pt-16 pb-8">
+          <div className="px-4">
+            <ExperienceHeader
+              displayData={displayData}
+              isWishlisted={isWishlisted}
+              handleWishlistToggle={handleWishlistToggle}
+              isMobile={true}
+            />
+
+            <ExperienceGallery
+              mediaData={mediaData}
+              displayData={displayData}
+              isMobile={true}
+            />
+
+            {displayData.shortDescription && (
+              <div className="mb-6 px-2">
+                <p className="text-neutrals-3 text-base leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
+                  {displayData.shortDescription}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-6">
+              <ExperienceContent
+                displayData={displayData}
+                itinerariesData={itinerariesData}
+                highlightsArray={highlightsArray}
+                isMobile={true}
+              />
+            </div>
+
+            {/* Mobile Booking Card */}
+            <div className="mt-6">
+              <BookingCard
+                displayData={displayData}
+                schedulesData={schedulesData}
+                formatScheduleDisplay={formatScheduleDisplay}
+                formatDuration={formatDuration}
+                guests={guests}
+                setGuests={setGuests}
+                selectedSchedule={selectedSchedule}
+                setSelectedSchedule={setSelectedSchedule}
+                setShowAllSchedules={setShowAllSchedules}
+                reviews={reviews}
+                isMobile={true}
+              />
+            </div>
+          </div>
+
+          {/* Mobile Reviews Section */}
+          <div className="px-4 mt-8">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-neutrals-2 mb-2" style={{ fontFamily: 'Poppins' }}>
+                Reviews
+              </h2>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <svg key={i} className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                </div>
+                <span className="text-neutrals-4 text-sm">Based on {displayData.totalReviews || 256} reviews</span>
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {reviews.map((review) => (
+                <div key={review.id} className="border-b border-neutrals-6 pb-4">
+                  <div className="flex gap-3">
+                    <img
+                      src={review.avatar}
+                      alt={review.name}
+                      className="w-10 h-10 rounded-full object-cover"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-1">
+                        <h4 className="font-medium text-neutrals-2 text-sm">{review.name}</h4>
+                        <div className="flex">
+                          {[...Array(review.rating)].map((_, i) => (
+                            <svg key={i} className="w-3 h-3 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-neutrals-3 mb-2 text-sm leading-relaxed">
+                        {review.comment}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-neutrals-4">
+                        <span>{review.timeAgo}</span>
+                        <button className="font-semibold text-neutrals-2 hover:text-primary-1">Like</button>
+                        <button className="font-semibold text-neutrals-2 hover:text-primary-1">Reply</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile Host Profile */}
+          <HostProfile
+            displayData={displayData}
+            onGuideProfileClick={handleGuideProfileClick}
+            isMobile={true}
+          />
+
+          {/* Mobile Related Tours */}
+          <div className="px-4 mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-neutrals-4 text-xs uppercase font-bold mb-1" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
+                <h2 className="text-2xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
+                  You may be interested in
+                </h2>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-4" style={{ width: 'max-content' }}>
+                {relatedTours.map((tour) => (
+                  <div key={tour.id} className="bg-neutrals-8 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow" style={{ width: '280px', flexShrink: 0 }}>
+                    <div className="relative h-40">
+                      <img src={tour.image} alt={tour.title} className="w-full h-full object-cover" />
+                      <button className="absolute top-3 right-3 p-2 bg-neutrals-8 rounded-full shadow-lg">
+                        <svg className="w-4 h-4 text-primary-1" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                        </svg>
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-neutrals-2 mb-2 text-sm">{tour.title}</h3>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-neutrals-3">{tour.location}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs text-neutrals-5 line-through">${tour.originalPrice}</span>
+                          <span className="text-xs text-primary-1 font-bold">${tour.price}</span>
+                        </div>
+                      </div>
+                      <div className="border-t border-neutrals-6 pt-2 mt-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-neutrals-4">{tour.dates}</span>
+                          <div className="flex items-center gap-1">
+                            <svg className="w-3 h-3 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                            <span className="text-xs font-semibold text-neutrals-2">{tour.rating}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+
+        <Footer />
       </div>
 
       {/* Show All Schedules Modal */}
