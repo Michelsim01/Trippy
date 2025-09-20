@@ -175,7 +175,7 @@ const ExperienceGallery = ({
   return (
     <>
       {/* Desktop Image Gallery */}
-      <div className="grid gap-4 mb-5 max-w-full" style={{ height: '450px', maxHeight: '450px' }}>
+      <div className="grid gap-4 mb-5 max-w-full">
         {displayImages.length === 1 && (
           <div className="rounded-2xl overflow-hidden h-full">
             <img

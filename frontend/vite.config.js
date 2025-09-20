@@ -4,7 +4,19 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [
-    react(), 
+    react({
+      babel: {
+        plugins: [
+          // other Babel plugins
+          [
+            "@locator/babel-jsx/dist",
+            {
+              env: "development",
+            },
+          ],
+        ],
+      },
+    }),
     tailwindcss(),
   ],
   server: {

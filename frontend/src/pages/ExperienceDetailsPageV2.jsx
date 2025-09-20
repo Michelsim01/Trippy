@@ -455,7 +455,7 @@ const ExperienceDetailsPageV2 = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                </div>
+                </div>z``
               </div>
 
               <div className="grid grid-cols-3 gap-8">
