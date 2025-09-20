@@ -430,99 +430,18 @@ const ExperienceDetailsPageV2 = () => {
             </div>
 
             {/* About your host */}
-            <div className="max-w-7xl mx-auto px-10 mt-16">
-              <h2 className="text-2xl font-semibold text-neutrals-2 mb-8" style={{ fontFamily: 'Poppins' }}>
-                About your host
-              </h2>
-              <div className="bg-white border border-neutrals-6 rounded-2xl p-8">
-                <div className="flex items-start gap-6">
-                  {/* Host Profile Photo */}
-                  <div
-                    className="cursor-pointer group"
-                    onClick={handleGuideProfileClick}
-                    title="View guide profile"
-                  >
-                    <div className="w-20 h-20 rounded-full overflow-hidden bg-neutrals-6 group-hover:opacity-90 group-hover:scale-105 transition-all duration-200 shadow-md group-hover:shadow-lg">
-                      {displayData.guide && displayData.guide.profileImageUrl ? (
-                        <img
-                          src={displayData.guide.profileImageUrl}
-                          alt={displayData.guide ? `${displayData.guide.firstName || ''} ${displayData.guide.lastName || ''}`.trim() || 'Guide' : 'Guide'}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary-1 to-primary-2 flex items-center justify-center">
-                          <span className="text-white font-bold text-2xl">
-                            {displayData.guide && displayData.guide.firstName ?
-                              (displayData.guide.firstName.charAt(0) + (displayData.guide.lastName?.charAt(0) || '')).toUpperCase() : 'G'}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Host Info and Content */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-6">
-                      <h3 className="text-2xl font-bold text-neutrals-1" style={{ fontFamily: 'DM Sans' }}>
-                        {displayData.guide ? `${displayData.guide.firstName || ''} ${displayData.guide.lastName || ''}`.trim() || 'Guide' : 'Guide'}
-                      </h3>
-                      {/* Verification Badge */}
-                      <div className="w-7 h-7 bg-primary-1 rounded-full flex items-center justify-center">
-                        <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Stats Grid */}
-                    <div className="grid grid-cols-3 gap-8 mb-6">
-                      <div>
-                        <div className="text-2xl font-bold text-neutrals-1">{displayData.totalReviews || 223}</div>
-                        <div className="text-neutrals-4 text-sm">Reviews</div>
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-2xl font-bold text-neutrals-1">
-                            {displayData.averageRating ? Number(displayData.averageRating).toFixed(2) : '4.87'}
-                          </span>
-                          <svg className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                        </div>
-                        <div className="text-neutrals-4 text-sm">Rating</div>
-                      </div>
-                      <div>
-                        <div className="text-2xl font-bold text-neutrals-1">1</div>
-                        <div className="text-neutrals-4 text-sm">Year hosting</div>
-                      </div>
-                    </div>
-
-                    {/* Languages */}
-                    <div>
-                      <div className="text-neutrals-3 text-sm font-medium mb-2">Languages</div>
-                      <div className="flex flex-wrap gap-2">
-                        {['English', 'Mandarin', 'Malay'].map((language) => (
-                          <span
-                            key={language}
-                            className="px-3 py-1 bg-neutrals-7 text-neutrals-2 text-sm rounded-full"
-                          >
-                            {language}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Related Tours */}
+            <HostProfile
+              displayData={displayData}
+              onGuideProfileClick={handleGuideProfileClick}
+            />
+                        
+            {/* Related Tours (hard coded now) */} 
             <div className="max-w-7xl mx-auto px-10 mt-16">
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <p className="text-neutrals-4 text-xs uppercase font-bold mb-2" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
                   <h2 className="text-5xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
-                    You may interested in
+                    You may be interested in
                   </h2>
                 </div>
                 <div className="flex gap-2">
