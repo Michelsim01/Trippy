@@ -113,6 +113,11 @@ const ExperienceDetailsPage = () => {
         })
       ]);
 
+      if (experienceResponse.status === 404) {
+        navigate('/404');
+        return;
+      }
+
       const [experience, media, itineraries, schedules] = await Promise.all([
         experienceResponse.ok ? experienceResponse.json() : null,
         mediaResponse.ok ? mediaResponse.json() : [],
@@ -194,11 +199,17 @@ const ExperienceDetailsPage = () => {
   const closeSidebar = () => setIsSidebarOpen(false);
 
   // Use experienceData if available (from API), otherwise use formData (from context)
-  const displayData = experienceData || formData;
+  const displayData = experienceData;
+
+  // If no experience data and we have an ID, this means it wasn't found - redirect to 404
+  if (id && !loading && !displayData) {
+    navigate('/404');
+    return null;
+  }
 
   // Process highlights array
   let highlightsArray;
-  if (Array.isArray(displayData.highlights)) {
+  if (displayData && Array.isArray(displayData.highlights)) {
     highlightsArray = displayData.highlights.length > 0 ? displayData.highlights : [
       'Explore local eateries and street food culture',
       'Try 15 different dishes across 4 authentic venues',
@@ -206,7 +217,7 @@ const ExperienceDetailsPage = () => {
       'Small group experience (max 8 people)',
       'Vegetarian and dietary restrictions accommodated'
     ];
-  } else if (typeof displayData.highlights === 'string' && displayData.highlights.trim()) {
+  } else if (displayData && typeof displayData.highlights === 'string' && displayData.highlights.trim()) {
     highlightsArray = displayData.highlights.split(',').filter(h => h.trim());
   } else {
     highlightsArray = [
@@ -337,7 +348,7 @@ const ExperienceDetailsPage = () => {
                 isMobile={false}
               />
 
-              {displayData.shortDescription && (
+              {displayData && displayData.shortDescription && (
                 <div className="mb-8">
                   <p className="text-neutrals-3 text-lg leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                     {displayData.shortDescription}
@@ -381,7 +392,7 @@ const ExperienceDetailsPage = () => {
                 </h2>
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-4xl font-bold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
+                    <span className="text-4xl font-bold text-neutrals-2">{displayData && displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
                     <div className="flex">
                       {[...Array(5)].map((_, i) => (
                         <svg key={i} className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
@@ -390,7 +401,7 @@ const ExperienceDetailsPage = () => {
                       ))}
                     </div>
                   </div>
-                  <span className="text-neutrals-4">Based on {displayData.totalReviews || 256} reviews</span>
+                  <span className="text-neutrals-4">Based on {displayData && displayData.totalReviews || 256} reviews</span>
                 </div>
               </div>
 
@@ -434,8 +445,8 @@ const ExperienceDetailsPage = () => {
               displayData={displayData}
               onGuideProfileClick={handleGuideProfileClick}
             />
-                        
-            {/* Related Tours (hard coded now) */} 
+
+            {/* Related Tours (hard coded now) */}
             <div className="max-w-7xl mx-auto px-10 mt-16">
               <div className="flex items-center justify-between mb-8">
                 <div>
@@ -524,7 +535,7 @@ const ExperienceDetailsPage = () => {
               isMobile={true}
             />
 
-            {displayData.shortDescription && (
+            {displayData && displayData.shortDescription && (
               <div className="mb-6 px-2">
                 <p className="text-neutrals-3 text-base leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'break-word' }}>
                   {displayData.shortDescription}
@@ -567,7 +578,7 @@ const ExperienceDetailsPage = () => {
               </h2>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-neutrals-2">{displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
+                  <span className="text-2xl font-bold text-neutrals-2">{displayData && displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <svg key={i} className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
@@ -576,7 +587,7 @@ const ExperienceDetailsPage = () => {
                     ))}
                   </div>
                 </div>
-                <span className="text-neutrals-4 text-sm">Based on {displayData.totalReviews || 256} reviews</span>
+                <span className="text-neutrals-4 text-sm">Based on {displayData && displayData.totalReviews || 256} reviews</span>
               </div>
             </div>
 
@@ -700,11 +711,10 @@ const ExperienceDetailsPage = () => {
                   schedulesData.map((schedule, index) => (
                     <div
                       key={index}
-                      className={`border rounded-lg p-4 transition-colors cursor-pointer ${
-                        selectedSchedule === index
+                      className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedSchedule === index
                           ? 'border-primary-1 bg-primary-1 bg-opacity-10'
                           : 'border-neutrals-6 hover:border-primary-1'
-                      }`}
+                        }`}
                       onClick={() => {
                         setSelectedSchedule(index);
                         setShowAllSchedules(false);
@@ -738,11 +748,10 @@ const ExperienceDetailsPage = () => {
                     {['Sunday, 5 October', 'Monday, 6 October', 'Tuesday, 7 October', 'Wednesday, 8 October', 'Thursday, 9 October', 'Friday, 10 October', 'Saturday, 11 October'].map((date, index) => (
                       <div
                         key={index}
-                        className={`border rounded-lg p-4 transition-colors cursor-pointer ${
-                          selectedSchedule === `demo-${index}`
+                        className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedSchedule === `demo-${index}`
                             ? 'border-primary-1 bg-primary-1 bg-opacity-10'
                             : 'border-neutrals-6 hover:border-primary-1'
-                        }`}
+                          }`}
                         onClick={() => {
                           setSelectedSchedule(`demo-${index}`);
                           setShowAllSchedules(false);

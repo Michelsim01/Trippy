@@ -36,29 +36,94 @@ public class UserController {
     private final String UPLOAD_DIR = "uploads/profilepicture/";
 
     @GetMapping
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public ResponseEntity<List<User>> getAllUsers() {
+        try {
+            List<User> users = userRepository.findAll();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            // Log the error for debugging while returning a generic message to client
+            System.err.println("Error retrieving all users: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<User> getUserById(@PathVariable Long id) {
-        Optional<User> user = userRepository.findById(id);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            // Validate ID parameter
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            Optional<User> user = userRepository.findById(id);
+            if (user.isPresent()) {
+                return ResponseEntity.ok(user.get());
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            // Log the error for debugging while returning a generic message to client
+            System.err.println("Error retrieving user with ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @PostMapping
-    public User createUser(@RequestBody User user) {
-        return userRepository.save(user);
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        try {
+            // Basic validation - check for required fields
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Check if email is already taken (prevent DataIntegrityViolationException)
+            if (user.getEmail() != null && userRepository.existsByEmail(user.getEmail())) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            }
+            
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
+        } catch (Exception e) {
+            // Log the error for debugging while returning a generic message to client
+            System.err.println("Error creating user: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @RequestBody User user) {
-        user.setId(id);
-        return userRepository.save(user);
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+        try {
+            // Validate ID parameter
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Validate request body
+            if (user == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            // Check if user exists before updating
+            if (!userRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            // Check if email is already taken by another user (prevent conflicts)
+            if (user.getEmail() != null && userRepository.existsByEmail(user.getEmail())) {
+                Optional<User> existingUserWithEmail = userRepository.findByEmail(user.getEmail());
+                if (existingUserWithEmail.isPresent() && !existingUserWithEmail.get().getId().equals(id)) {
+                    return ResponseEntity.status(HttpStatus.CONFLICT).build();
+                }
+            }
+            
+            user.setId(id);
+            User savedUser = userRepository.save(user);
+            return ResponseEntity.ok(savedUser);
+        } catch (Exception e) {
+            // Log the error for debugging while returning a generic message to client
+            System.err.println("Error updating user with ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     @PutMapping("/{id}/details")
