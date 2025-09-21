@@ -165,8 +165,8 @@ public class KycController {
     // Get current KYC status
     @GetMapping("/status")
     public ResponseEntity<?> getKycStatus(@RequestParam Long userId) {
-        KycStatus status = kycService.getKycStatus(userId);
-        return ResponseEntity.ok(status);
+        Map<String, Object> response = kycService.getKycStatusDetails(userId);
+        return ResponseEntity.ok(response);
     }
 
     // Approve KYC (manual)
