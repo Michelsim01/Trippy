@@ -6,17 +6,6 @@ import ExperienceCard from '../components/ExperienceCard';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-// Mock images for experiences
-const experienceImages = [
-    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1539650116574-75c0c6d73f6e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-    "https://images.unsplash.com/photo-1506197603052-3cc9c3a201bd?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-];
 
 const WishlistPage = () => {
     const { user } = useAuth();
@@ -26,26 +15,11 @@ const WishlistPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fallback dummy data in case API fails
-    const fallbackWishlistItems = [
-        { 
-            id: 1,
-            experienceId: 1,
-            title: "Venice, Rome & Milan", 
-            location: "Karineside", 
-            originalPrice: 699, 
-            price: 548, 
-            rating: 4.9,
-            imageUrl: experienceImages[0],
-            showExplore: false
-        }
-    ];
 
     useEffect(() => {
         const fetchWishlist = async () => {
             try {
                 setLoading(true);
-                console.log('WishlistPage - Fetching wishlist for user:', user?.id || user?.userId);
                 
                 const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user?.id || user?.userId}`, {
                     headers: {
@@ -59,8 +33,6 @@ const WishlistPage = () => {
                 }
                 
                 const data = await response.json();
-                console.log('WishlistPage - Fetched wishlist data:', data);
-                console.log('WishlistPage - Wishlist items count:', data.length);
                 
                 // Transform the API data to match our component structure
                 const transformedData = data.map(item => ({
@@ -69,10 +41,9 @@ const WishlistPage = () => {
                     title: item.experience.title,
                     location: item.experience.location,
                     price: item.experience.price,
-                    originalPrice: item.experience.price * 1.2, // Add some original price for demo
-                    rating: item.experience.averageRating || 4.9,
-                    imageUrl: item.experience.coverPhotoUrl || experienceImages[0],
-                    showExplore: false,
+                    originalPrice: item.experience.price,
+                    rating: item.experience.averageRating,
+                    imageUrl: item.experience.coverPhotoUrl,
                     addedAt: item.addedAt,
                     shortDescription: item.experience.shortDescription,
                     duration: item.experience.duration,
@@ -108,8 +79,6 @@ const WishlistPage = () => {
             } catch (err) {
                 console.error("Failed to fetch wishlist:", err);
                 setError(err.message);
-                // Fallback to dummy data
-                setWishlistItems(fallbackWishlistItems);
             } finally {
                 setLoading(false);
             }
@@ -128,9 +97,6 @@ const WishlistPage = () => {
         setIsSidebarOpen(false);
     };
 
-    const removeFromWishlist = (itemId) => {
-        setWishlistItems(prevItems => prevItems.filter(item => item.id !== itemId));
-    };
 
     return (
         <div className="min-h-screen bg-neutrals-8">
@@ -157,7 +123,6 @@ const WishlistPage = () => {
                             ) : error ? (
                                 <div className="bg-white rounded-lg p-8 shadow-sm text-center">
                                     <p className="text-red-500 text-lg mb-2">Error loading wishlist: {error}</p>
-                                    <p className="text-neutrals-3 text-sm">Showing fallback data</p>
                                 </div>
                             ) : wishlistItems.length === 0 ? (
                                 <div className="bg-white rounded-lg p-8 shadow-sm text-center">
@@ -173,11 +138,8 @@ const WishlistPage = () => {
                                             isInWishlist={true} // All items on wishlist page are in wishlist
                                             schedules={schedules[item.experienceId] || []}
                                             onWishlistToggle={(experienceId, wasAdded) => {
-                                                // Note: We don't remove from local state immediately
-                                                // The card stays visible until page refresh
                                                 console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                             }}
-                                            showExplore={item.showExplore}
                                         />
                                     ))}
                                 </div>
@@ -208,7 +170,6 @@ const WishlistPage = () => {
                     ) : error ? (
                         <div className="bg-white rounded-lg p-6 shadow-sm text-center">
                             <p className="text-red-500 mb-2">Error loading wishlist: {error}</p>
-                            <p className="text-neutrals-3 text-sm">Showing fallback data</p>
                         </div>
                     ) : wishlistItems.length === 0 ? (
                         <div className="bg-white rounded-lg p-6 shadow-sm text-center">
@@ -224,11 +185,8 @@ const WishlistPage = () => {
                                     isInWishlist={true} // All items on wishlist page are in wishlist
                                     schedules={schedules[item.experienceId] || []}
                                     onWishlistToggle={(experienceId, wasAdded) => {
-                                        // Note: We don't remove from local state immediately
-                                        // The card stays visible until page refresh
                                         console.log(`Experience ${experienceId} ${wasAdded ? 'added to' : 'removed from'} wishlist`);
                                     }}
-                                    showExplore={item.showExplore}
                                 />
                             ))}
                         </div>

@@ -107,8 +107,8 @@ const SearchResultsPage = () => {
         // Check if the duration matches any of the selected filters
         return selectedDurations.some(filterDuration => {
             switch (filterDuration) {
-                case '1-3 hours':
-                    return durationHours >= 1 && durationHours <= 3;
+                case '1-4 hours':
+                    return durationHours >= 1 && durationHours <= 4;
                 case '4-8 hours':
                     return durationHours >= 4 && durationHours <= 8;
                 case '8-12 hours':

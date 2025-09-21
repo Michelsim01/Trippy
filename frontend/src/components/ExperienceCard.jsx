@@ -17,12 +17,9 @@ const ExperienceCard = ({
     const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
     const navigate = useNavigate();
 
-    // Debug logging
-    console.log(`ExperienceCard - ${experience?.title || experience?.experienceId}: isInWishlist prop=${isInWishlist}, local state=${isWishlisted}`);
 
     // Sync local state with prop changes
     useEffect(() => {
-        console.log(`ExperienceCard - ${experience?.title || experience?.experienceId}: Updating local state from ${isWishlisted} to ${isInWishlist}`);
         setIsWishlisted(isInWishlist);
     }, [isInWishlist]);
 
@@ -40,7 +37,6 @@ const ExperienceCard = ({
             console.log('ExperienceCard - Wishlist toggle:', {
                 experienceId,
                 userId,
-                user,
                 newWishlistState
             });
             
@@ -98,19 +94,8 @@ const ExperienceCard = ({
         navigate(`/experience/${experienceId}`);
     };
 
-    // Use experience data if provided, otherwise use dummy data
-    const cardData = experience || {
-        id: 1,
-        experienceId: 1,
-        title: "Venice, Rome & Milan",
-        location: "Karineside",
-        price: 548,
-        duration: 3,
-        category: "GUIDED_TOUR",
-        participantsAllowed: 12,
-        rating: 4.9,
-        imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-    };
+    // Use experience data directly
+    const cardData = experience;
 
     // Format price to show as currency
     const formatPrice = (price) => {
@@ -120,7 +105,7 @@ const ExperienceCard = ({
         if (typeof price === 'string' && !isNaN(parseFloat(price))) {
             return Math.round(parseFloat(price));
         }
-        return '99'; // Default fallback price
+        return '0';
     };
 
     return (
@@ -133,7 +118,7 @@ const ExperienceCard = ({
                     <div
                         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                         style={{ 
-                            backgroundImage: `url(${cardData.coverPhotoUrl || cardData.imageUrl || cardData.image})`,
+                            backgroundImage: `url(${cardData.coverPhotoUrl || cardData.imageUrl})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center'
                         }}
