@@ -79,47 +79,55 @@ public class ExperienceController {
     }
 
     @GetMapping("/{id}")
-    public Map<String, Object> getExperienceById(@PathVariable Long id) {
-        Experience exp = experienceRepository.findById(id).orElse(null);
-        if (exp == null) {
-            return null;
+    public ResponseEntity<Map<String, Object>> getExperienceById(@PathVariable Long id) {
+        try {
+            Experience exp = experienceRepository.findById(id).orElse(null);
+            if (exp == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                        "error", "Experience not found"
+                ));
+            }
+
+            Map<String, Object> expMap = new HashMap<>();
+            expMap.put("experienceId", exp.getExperienceId());
+            expMap.put("title", exp.getTitle());
+            expMap.put("location", exp.getLocation());
+            expMap.put("country", exp.getCountry());
+            expMap.put("price", exp.getPrice());
+            expMap.put("averageRating", exp.getAverageRating());
+            expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
+            expMap.put("shortDescription", exp.getShortDescription());
+            expMap.put("fullDescription", exp.getFullDescription());
+            expMap.put("duration", exp.getDuration());
+            expMap.put("category", exp.getCategory());
+            expMap.put("status", exp.getStatus());
+            expMap.put("totalReviews", exp.getTotalReviews());
+            expMap.put("highlights", exp.getHighlights());
+            expMap.put("whatIncluded", exp.getWhatIncluded());
+            expMap.put("importantInfo", exp.getImportantInfo());
+            expMap.put("cancellationPolicy", exp.getCancellationPolicy());
+            expMap.put("participantsAllowed", exp.getParticipantsAllowed());
+            expMap.put("tags", exp.getTags());
+            expMap.put("createdAt", exp.getCreatedAt());
+            expMap.put("updatedAt", exp.getUpdatedAt());
+
+            // Add guide info without lazy loading issues
+            if (exp.getGuide() != null) {
+                Map<String, Object> guideMap = new HashMap<>();
+                guideMap.put("userId", exp.getGuide().getId());
+                guideMap.put("firstName", exp.getGuide().getFirstName());
+                guideMap.put("lastName", exp.getGuide().getLastName());
+                guideMap.put("email", exp.getGuide().getEmail());
+                guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
+                expMap.put("guide", guideMap);
+            }
+
+            return ResponseEntity.ok(expMap);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to fetch experience: " + e.getMessage()
+            ));
         }
-
-        Map<String, Object> expMap = new HashMap<>();
-        expMap.put("experienceId", exp.getExperienceId());
-        expMap.put("title", exp.getTitle());
-        expMap.put("location", exp.getLocation());
-        expMap.put("country", exp.getCountry());
-        expMap.put("price", exp.getPrice());
-        expMap.put("averageRating", exp.getAverageRating());
-        expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
-        expMap.put("shortDescription", exp.getShortDescription());
-        expMap.put("fullDescription", exp.getFullDescription());
-        expMap.put("duration", exp.getDuration());
-        expMap.put("category", exp.getCategory());
-        expMap.put("status", exp.getStatus());
-        expMap.put("totalReviews", exp.getTotalReviews());
-        expMap.put("highlights", exp.getHighlights());
-        expMap.put("whatIncluded", exp.getWhatIncluded());
-        expMap.put("importantInfo", exp.getImportantInfo());
-        expMap.put("cancellationPolicy", exp.getCancellationPolicy());
-        expMap.put("participantsAllowed", exp.getParticipantsAllowed());
-        expMap.put("tags", exp.getTags());
-        expMap.put("createdAt", exp.getCreatedAt());
-        expMap.put("updatedAt", exp.getUpdatedAt());
-
-        // Add guide info without lazy loading issues
-        if (exp.getGuide() != null) {
-            Map<String, Object> guideMap = new HashMap<>();
-            guideMap.put("userId", exp.getGuide().getId());
-            guideMap.put("firstName", exp.getGuide().getFirstName());
-            guideMap.put("lastName", exp.getGuide().getLastName());
-            guideMap.put("email", exp.getGuide().getEmail());
-            guideMap.put("profileImageUrl", exp.getGuide().getProfileImageUrl());
-            expMap.put("guide", guideMap);
-        }
-
-        return expMap;
     }
 
     @PostMapping

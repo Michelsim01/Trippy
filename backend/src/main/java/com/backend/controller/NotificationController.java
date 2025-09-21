@@ -34,12 +34,19 @@ public class NotificationController {
     }
 
     @GetMapping("/users/{userId}")
-    public List<Notification> getNotificationsByUserId(@PathVariable Long userId) {
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            return List.of();
+    public ResponseEntity<?> getNotificationsByUserId(@PathVariable Long userId) {
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("User not found with ID: " + userId);
+            }
+            List<Notification> notifications = notificationRepository.findByUser(user);
+            return ResponseEntity.ok(notifications);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error retrieving notifications: " + e.getMessage());
         }
-        return notificationRepository.findByUser(user);
     }
 
     @PostMapping

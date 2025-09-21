@@ -37,6 +37,13 @@ const NotFoundPage = () => {
                                     <h1 className="text-[120px] lg:text-[160px] font-bold text-neutrals-6 leading-none select-none">
                                         404
                                     </h1>
+                                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                        <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -130,6 +137,13 @@ const NotFoundPage = () => {
                                 <h1 className="text-[80px] font-bold text-neutrals-6 leading-none select-none">
                                     404
                                 </h1>
+                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                                        <svg width="32" height="32" viewBox="0 0 24 24" fill="white">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
