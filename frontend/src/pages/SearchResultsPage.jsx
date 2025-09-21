@@ -64,6 +64,7 @@ const SearchResultsPage = () => {
     const [schedules, setSchedules] = useState({});
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+    const [wishlistHasChanged, setWishlistHasChanged] = useState(false); // Track if wishlist changed since last filter
 
     // Category options
     const categoryOptions = [
@@ -402,37 +403,35 @@ const SearchResultsPage = () => {
         loadPopularExperiences();
     }, []);
 
-    // Update experience data when wishlist changes
-    useEffect(() => {
-        if (allExperiences.length > 0 && wishlistItems.length >= 0) {
+    // Sync wishlist data when filters change (only if wishlist has changed)
+    const syncWishlistData = () => {
+        if (wishlistHasChanged && allExperiences.length > 0) {
             const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
-            const updatedExperiences = allExperiences.map(exp => ({
+            
+            // Update allExperiences
+            setAllExperiences(prev => prev.map(exp => ({
                 ...exp,
                 isLiked: wishlistedIds.has(exp.experienceId)
-            }));
+            })));
             
-            // Only update if there's actually a change to prevent infinite loops
-            const hasChanged = updatedExperiences.some((exp, index) => 
-                exp.isLiked !== allExperiences[index].isLiked
-            );
-            
-            if (hasChanged) {
-                setAllExperiences(updatedExperiences);
-                
-                // Also update search results if they exist
-                if (searchResults.length > 0) {
-                    const updatedSearchResults = searchResults.map(exp => ({
-                        ...exp,
-                        isLiked: wishlistedIds.has(exp.experienceId)
-                    }));
-                    setSearchResults(updatedSearchResults);
-                }
+            // Update searchResults if they exist
+            if (searchResults.length > 0) {
+                setSearchResults(prev => prev.map(exp => ({
+                    ...exp,
+                    isLiked: wishlistedIds.has(exp.experienceId)
+                })));
             }
+            
+            // Reset the flag
+            setWishlistHasChanged(false);
         }
-    }, [wishlistItems]);
+    };
 
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
+        // Sync wishlist data if it has changed since last filter
+        syncWishlistData();
+        
         const filtered = applyFilters(searchResults, schedules);
         const sorted = applySorting(filtered);
         console.log('SearchResultsPage - Final sorted results:', {
@@ -462,31 +461,15 @@ const SearchResultsPage = () => {
     const handleWishlistToggle = (experienceId, isLiked) => {
         console.log('SearchResultsPage - Wishlist toggle:', { experienceId, isLiked });
         
+        // Update wishlist state
         if (isLiked) {
-            // Add to wishlist state
             setWishlistItems(prev => [...prev, { experienceId, wishlistItemId: `temp_${experienceId}` }]);
         } else {
-            // Remove from wishlist state
             setWishlistItems(prev => prev.filter(item => item.experienceId !== experienceId));
         }
         
-        // Update allExperiences to reflect the change
-        setAllExperiences(prev => 
-            prev.map(exp => 
-                exp.experienceId === experienceId 
-                    ? { ...exp, isLiked } 
-                    : exp
-            )
-        );
-        
-        // Update searchResults to reflect the change
-        setSearchResults(prev => 
-            prev.map(exp => 
-                exp.experienceId === experienceId 
-                    ? { ...exp, isLiked } 
-                    : exp
-            )
-        );
+        // Mark that wishlist has changed since last filter
+        setWishlistHasChanged(true);
     };
 
     const toggleSidebar = () => {
