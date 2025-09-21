@@ -1,11 +1,37 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Sidebar from "../components/Sidebar";
+import { useAuth } from "../contexts/AuthContext";
+import { kycService } from "../services/kycService";
 
 export default function GuideOnboardingPage() {
     const [isSidebarOpen, setSidebarOpen] = React.useState(false);
     const navigate = useNavigate();
+    const { user: authUser, isAuthenticated } = useAuth();
+
+    // Check KYC status to prevent resubmission
+    useEffect(() => {
+        const checkKycStatus = async () => {
+            if (!authUser?.id) return;
+
+            try {
+                const kycDetails = await kycService.getKycStatus(authUser.id);
+
+                // If KYC has been submitted (not NOT_STARTED), redirect to submitted page
+                if (kycDetails.kycStatus !== 'NOT_STARTED') {
+                    navigate('/kyc-submitted');
+                }
+            } catch (error) {
+                console.error('Error checking KYC status:', error);
+                // Continue to allow access if there's an error checking status
+            }
+        };
+
+        if (isAuthenticated && authUser?.id) {
+            checkKycStatus();
+        }
+    }, [isAuthenticated, authUser?.id, navigate]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex flex-col">

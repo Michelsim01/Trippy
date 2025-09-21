@@ -53,7 +53,7 @@ export default function KycVerificationPage() {
         if (authLoading) {
             return;
         }
-        
+
         // If user is not authenticated, redirect to signin
         if (!isAuthenticated) {
             setError('You must be logged in to access KYC verification');
@@ -62,12 +62,35 @@ export default function KycVerificationPage() {
             }, 2000);
             return;
         }
-        
+
         // Clear any previous errors if authenticated
         if (isAuthenticated && currentUserId) {
             setError(null);
         }
     }, [isAuthenticated, authLoading, currentUserId, navigate]);
+
+    // Check KYC status to prevent resubmission
+    useEffect(() => {
+        const checkKycStatus = async () => {
+            if (!currentUserId) return;
+
+            try {
+                const kycDetails = await kycService.getKycStatus(currentUserId);
+
+                // If KYC has been submitted (not NOT_STARTED), redirect to submitted page
+                if (kycDetails.kycStatus !== 'NOT_STARTED') {
+                    navigate('/kyc-submitted');
+                }
+            } catch (error) {
+                console.error('Error checking KYC status:', error);
+                // Continue to allow access if there's an error checking status
+            }
+        };
+
+        if (isAuthenticated && currentUserId) {
+            checkKycStatus();
+        }
+    }, [isAuthenticated, currentUserId, navigate]);
 
     function handleChange(e) {
         const { name, value, type, checked } = e.target;

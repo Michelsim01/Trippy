@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import LogoutModal from './LogoutModal'
 import { useFormData } from '../contexts/FormDataContext'
 import { useAuth } from '../contexts/AuthContext'
+import { kycService } from '../services/kycService'
 
 const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
@@ -34,8 +35,23 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         onClose(); // Close the sidebar
     };
 
-    const handleKycClick = () => {
-        navigate('/kyc-onboarding');
+    const handleKycClick = async () => {
+        try {
+            // Check current KYC status before navigating
+            const kycDetails = await kycService.getKycStatus(user?.id);
+
+            // If KYC has been submitted (PENDING, APPROVED, or REJECTED), go to submitted page
+            if (kycDetails.kycStatus === 'PENDING' || kycDetails.kycStatus === 'APPROVED' || kycDetails.kycStatus === 'REJECTED') {
+                navigate('/kyc-submitted');
+            } else {
+                // If KYC not started, go to onboarding
+                navigate('/kyc-onboarding');
+            }
+        } catch (error) {
+            console.error('Error checking KYC status:', error);
+            // If there's an error, default to onboarding
+            navigate('/kyc-onboarding');
+        }
         onClose(); // Close the sidebar
     };
 

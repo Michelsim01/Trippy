@@ -1,6 +1,8 @@
 package com.backend.service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,29 @@ public class KycService {
     public KycStatus getKycStatus(Long userId) {
         Optional<User> userOpt = userRepository.findById(userId);
         return userOpt.map(User::getKycStatus).orElse(KycStatus.NOT_STARTED);
+    }
+
+    public Map<String, Object> getKycStatusDetails(Long userId) {
+        Map<String, Object> response = new HashMap<>();
+
+        Optional<User> userOpt = userRepository.findById(userId);
+        if (userOpt.isEmpty()) {
+            response.put("kycStatus", "NOT_STARTED");
+            return response;
+        }
+
+        User user = userOpt.get();
+        response.put("kycStatus", user.getKycStatus().name());
+
+        // Get the latest KYC document for additional details
+        KycDocument latestDoc = kycDocumentRepository.findTopByUserOrderBySubmittedAtDesc(user);
+        if (latestDoc != null) {
+            response.put("submittedAt", latestDoc.getSubmittedAt());
+            response.put("reviewedAt", latestDoc.getReviewedAt());
+            response.put("rejectionReason", latestDoc.getRejectionReason());
+        }
+
+        return response;
     }
 
     // Approve user's KYC
