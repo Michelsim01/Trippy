@@ -15,6 +15,7 @@ import NotificationsPage from './pages/NotificationsPage'
 import WishlistPage from './pages/WishlistPage'
 import MessagesPage from './pages/MessagesPage'
 import MyBookingsPage from './pages/MyBookingsPage'
+import BookingDetailPage from './pages/BookingDetailPage'
 import MyToursPage from './pages/MyToursPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
@@ -116,6 +117,10 @@ function AppRoutes() {
             <Route
               path="/my-bookings"
               element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
+            />
+            <Route
+              path="/booking/:bookingId"
+              element={!isAuthenticated ? <Navigate to="/" replace /> : <BookingDetailPage />}
             />
             <Route
               path="/my-tours"
