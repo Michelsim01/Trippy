@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -9,89 +10,125 @@ import Button from '../components/Button';
 const BookingDetailPage = () => {
     const { bookingId } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [booking, setBooking] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [showCancellationForm, setShowCancellationForm] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
     const [cancellationDetails, setCancellationDetails] = useState('');
 
-    // Mock booking data - in Phase 3 this will be fetched from API
-    const mockBookings = {
-        1: {
-            bookingId: 1,
-            confirmationCode: 'TRV001',
-            status: 'CONFIRMED',
-            numberOfParticipants: 2,
-            totalAmount: 178,
-            bookingDate: '2024-03-15T10:00:00',
-            experience: {
-                experienceId: 101,
-                title: 'Amazing City Food Tour',
-                country: 'Singapore',
-                coverPhotoUrl: '/api/placeholder/400/300',
-                shortDescription: 'Discover Singapore\'s vibrant food scene through hidden gems and local favorites in this guided culinary adventure.',
-                importantInfo: 'Please wear comfortable walking shoes and bring an appetite! Vegetarian options available upon request. Tour operates rain or shine.',
-                location: 'Marina Bay Sands Lobby, Level 1 (near the information counter)'
-            },
-            experienceSchedule: {
-                startDateTime: '2024-03-25T10:00:00',
-                endDateTime: '2024-03-25T15:30:00'
-            }
-        },
-        2: {
-            bookingId: 2,
-            confirmationCode: 'TRV002',
-            status: 'PENDING',
-            numberOfParticipants: 4,
-            totalAmount: 356,
-            bookingDate: '2024-03-10T14:30:00',
-            experience: {
-                experienceId: 102,
-                title: 'Cultural Heritage Walking Tour',
-                country: 'Singapore',
-                coverPhotoUrl: '/api/placeholder/400/300',
-                shortDescription: 'Explore Singapore\'s rich cultural heritage through historic neighborhoods and traditional architecture.',
-                importantInfo: 'This is a walking tour covering approximately 3km. Please wear comfortable shoes and sun protection. Some sites may have dress codes for temple visits.',
-                location: 'Chinatown Heritage Centre, 48 Pagoda Street (near Chinatown MRT Station Exit A)'
-            },
-            experienceSchedule: {
-                startDateTime: '2024-03-28T09:00:00',
-                endDateTime: '2024-03-28T12:00:00'
-            }
-        },
-        5: {
-            bookingId: 5,
-            confirmationCode: 'TRV005',
-            status: 'CONFIRMED',
-            numberOfParticipants: 2,
-            totalAmount: 1250,
-            bookingDate: '2024-03-12T13:45:00',
-            experience: {
-                experienceId: 105,
-                title: '3-Day Southeast Asia Cultural Adventure',
-                country: 'Malaysia & Indonesia',
-                coverPhotoUrl: '/api/placeholder/400/300',
-                shortDescription: 'An immersive multi-country journey exploring the diverse cultures, traditions, and cuisines of Southeast Asia.',
-                importantInfo: 'Valid passport required for border crossings. Accommodation and meals included. Pack light - luggage storage provided. Travel insurance recommended.',
-                location: 'Changi Airport Terminal 1, Level 2 Departure Hall (near Gate A5 area)'
-            },
-            experienceSchedule: {
-                startDateTime: '2024-04-15T09:00:00',
-                endDateTime: '2024-04-17T18:00:00'
-            }
-        }
-    };
-
     useEffect(() => {
-        // Mock data fetch - in Phase 3 this will be an API call
-        const bookingData = mockBookings[bookingId];
-        if (bookingData) {
-            setBooking(bookingData);
-        } else {
-            // Handle booking not found
-            navigate('/my-bookings');
+        const fetchBooking = async () => {
+            try {
+                setLoading(true);
+                console.log('BookingDetailPage - Fetching booking:', bookingId);
+
+                const response = await fetch(`http://localhost:8080/api/bookings/${bookingId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setError('Booking not found');
+                        return;
+                    }
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log('BookingDetailPage - Fetched booking data:', data);
+
+                // Transform API data to match component structure
+                const transformedData = {
+                    bookingId: data.bookingId,
+                    confirmationCode: data.confirmationCode,
+                    status: data.status,
+                    numberOfParticipants: data.numberOfParticipants,
+                    totalAmount: data.totalAmount,
+                    bookingDate: data.bookingDate,
+                    cancellationReason: data.cancellationReason,
+                    cancelledAt: data.cancelledAt,
+                    experience: {
+                        experienceId: data.experienceSchedule?.experience?.experienceId,
+                        title: data.experienceSchedule?.experience?.title,
+                        country: data.experienceSchedule?.experience?.country,
+                        coverPhotoUrl: data.experienceSchedule?.experience?.coverPhotoUrl,
+                        shortDescription: data.experienceSchedule?.experience?.shortDescription,
+                        importantInfo: data.experienceSchedule?.experience?.importantInfo,
+                        location: data.experienceSchedule?.experience?.location
+                    },
+                    experienceSchedule: {
+                        startDateTime: data.experienceSchedule?.startDateTime,
+                        endDateTime: data.experienceSchedule?.endDateTime
+                    }
+                };
+
+                setBooking(transformedData);
+                setError(null);
+            } catch (err) {
+                console.error("Failed to fetch booking:", err);
+                setError(err.message);
+                setBooking(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (bookingId && user?.id) {
+            fetchBooking();
+        } else if (!user?.id) {
+            setError('Authentication required');
+            setLoading(false);
         }
-    }, [bookingId, navigate]);
+    }, [bookingId, user?.id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-8 h-8 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-neutrals-4">Loading booking details...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 text-red-500">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.464 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-lg font-medium text-neutrals-2 mb-2">{error}</h3>
+                    <p className="text-neutrals-4 mb-6">We couldn't load this booking. Please try again or go back to your bookings.</p>
+                    <div className="space-x-4">
+                        <Button
+                            variant="outline"
+                            size="md"
+                            onClick={() => window.location.reload()}
+                        >
+                            Try Again
+                        </Button>
+                        <Button
+                            variant="primary"
+                            size="md"
+                            onClick={() => navigate('/my-bookings')}
+                        >
+                            Back to My Bookings
+                        </Button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!booking) {
         return (
@@ -198,6 +235,7 @@ const BookingDetailPage = () => {
     return (
         <div className="min-h-screen bg-neutrals-8 flex flex-col">
             <Navbar
+                isAuthenticated={true}
                 isSidebarOpen={isSidebarOpen}
                 onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             />
