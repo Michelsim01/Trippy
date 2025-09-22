@@ -3,6 +3,7 @@ package com.backend.controller;
 import com.backend.entity.TripPoints;
 import com.backend.service.TripPointsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,8 +24,13 @@ public class TripPointsController {
      */
     @GetMapping
     public ResponseEntity<List<TripPoints>> getAllTripPoints() {
-        List<TripPoints> tripPoints = tripPointsService.getAllTripPoints();
-        return ResponseEntity.ok(tripPoints);
+        try {
+            List<TripPoints> tripPoints = tripPointsService.getAllTripPoints();
+            return ResponseEntity.ok(tripPoints);
+        } catch (Exception e) {
+            System.err.println("Error retrieving all trip points: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     /**
@@ -32,9 +38,21 @@ public class TripPointsController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<TripPoints> getTripPointsById(@PathVariable Long id) {
-        Optional<TripPoints> tripPoints = tripPointsService.getTripPointsById(id);
-        return tripPoints.map(ResponseEntity::ok)
-                        .orElse(ResponseEntity.notFound().build());
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            Optional<TripPoints> tripPoints = tripPointsService.getTripPointsById(id);
+            if (tripPoints.isPresent()) {
+                return ResponseEntity.ok(tripPoints.get());
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            System.err.println("Error retrieving trip points with ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     /**
@@ -187,8 +205,17 @@ public class TripPointsController {
      */
     @PostMapping
     public ResponseEntity<TripPoints> createTripPoints(@RequestBody TripPoints tripPoints) {
-        TripPoints savedTripPoints = tripPointsService.updateTripPoints(tripPoints);
-        return ResponseEntity.ok(savedTripPoints);
+        try {
+            if (tripPoints == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            TripPoints savedTripPoints = tripPointsService.updateTripPoints(tripPoints);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedTripPoints);
+        } catch (Exception e) {
+            System.err.println("Error creating trip points: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     /**
@@ -196,9 +223,22 @@ public class TripPointsController {
      */
     @PutMapping("/{id}")
     public ResponseEntity<TripPoints> updateTripPoints(@PathVariable Long id, @RequestBody TripPoints tripPoints) {
-        tripPoints.setPointsId(id);
-        TripPoints updatedTripPoints = tripPointsService.updateTripPoints(tripPoints);
-        return ResponseEntity.ok(updatedTripPoints);
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            if (tripPoints == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            tripPoints.setPointsId(id);
+            TripPoints updatedTripPoints = tripPointsService.updateTripPoints(tripPoints);
+            return ResponseEntity.ok(updatedTripPoints);
+        } catch (Exception e) {
+            System.err.println("Error updating trip points with ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
     /**
@@ -206,7 +246,16 @@ public class TripPointsController {
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteTripPoints(@PathVariable Long id) {
-        tripPointsService.deleteTripPoints(id);
-        return ResponseEntity.noContent().build();
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            tripPointsService.deleteTripPoints(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            System.err.println("Error deleting trip points with ID " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }

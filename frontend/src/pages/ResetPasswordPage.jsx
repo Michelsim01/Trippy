@@ -162,10 +162,9 @@ const ResetPasswordPage = () => {
                 {/* Logo on image */}
                 <div className="relative z-10 p-10">
                     <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center">
-                            <span className="text-neutrals-8 font-bold text-lg">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center bg-white rounded-lg shadow-lg">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
-                        <span className="font-poppins font-semibold text-neutrals-8 text-[27px]">Trippy</span>
                     </div>
                 </div>
 
@@ -181,16 +180,15 @@ const ResetPasswordPage = () => {
                 <div className="w-full max-w-[352px]">
                     {/* Mobile Logo */}
                     <div className="lg:hidden flex items-center justify-center mb-8">
-                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
-                            <span className="text-neutrals-8 font-bold text-lg">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
-                        <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
                     </div>
 
                     {/* Logo Icon (Desktop) */}
                     <div className="hidden lg:flex justify-center mb-8">
-                        <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
-                            <span className="text-neutrals-8 font-bold text-3xl">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
                     </div>
 

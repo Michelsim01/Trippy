@@ -64,6 +64,7 @@ const SearchResultsPage = () => {
     const [schedules, setSchedules] = useState({});
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+    const [wishlistHasChanged, setWishlistHasChanged] = useState(false); // Track if wishlist changed since last filter
 
     // Category options
     const categoryOptions = [
@@ -402,8 +403,35 @@ const SearchResultsPage = () => {
         loadPopularExperiences();
     }, []);
 
+    // Sync wishlist data when filters change (only if wishlist has changed)
+    const syncWishlistData = () => {
+        if (wishlistHasChanged && allExperiences.length > 0) {
+            const wishlistedIds = new Set(wishlistItems.map(item => item.experienceId));
+            
+            // Update allExperiences
+            setAllExperiences(prev => prev.map(exp => ({
+                ...exp,
+                isLiked: wishlistedIds.has(exp.experienceId)
+            })));
+            
+            // Update searchResults if they exist
+            if (searchResults.length > 0) {
+                setSearchResults(prev => prev.map(exp => ({
+                    ...exp,
+                    isLiked: wishlistedIds.has(exp.experienceId)
+                })));
+            }
+            
+            // Reset the flag
+            setWishlistHasChanged(false);
+        }
+    };
+
     // Apply filters and sorting whenever filters, sorting, or search results change
     useEffect(() => {
+        // Sync wishlist data if it has changed since last filter
+        syncWishlistData();
+        
         const filtered = applyFilters(searchResults, schedules);
         const sorted = applySorting(filtered);
         console.log('SearchResultsPage - Final sorted results:', {
@@ -427,6 +455,21 @@ const SearchResultsPage = () => {
             to: newSort
         });
         setSortBy(newSort);
+    };
+
+    // Handle wishlist toggle from ExperienceCard
+    const handleWishlistToggle = (experienceId, isLiked) => {
+        console.log('SearchResultsPage - Wishlist toggle:', { experienceId, isLiked });
+        
+        // Update wishlist state
+        if (isLiked) {
+            setWishlistItems(prev => [...prev, { experienceId, wishlistItemId: `temp_${experienceId}` }]);
+        } else {
+            setWishlistItems(prev => prev.filter(item => item.experienceId !== experienceId));
+        }
+        
+        // Mark that wishlist has changed since last filter
+        setWishlistHasChanged(true);
     };
 
     const toggleSidebar = () => {
@@ -467,7 +510,7 @@ const SearchResultsPage = () => {
                                 )}
                             </div>
 
-                            {/* Filter */}
+                            {/* Filter Categories */}
                             <div className="flex items-center justify-center mb-10">
                                 <div className="flex items-center gap-2 flex-wrap justify-center">
                                     {categoryOptions.map((category) => (
@@ -547,6 +590,7 @@ const SearchResultsPage = () => {
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
                                                     schedules={schedules[experience.experienceId] || []}
+                                                    onWishlistToggle={handleWishlistToggle}
                                                 />
                                             ))}
                                         </div>
@@ -561,6 +605,7 @@ const SearchResultsPage = () => {
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
                                                         schedules={schedules[experience.experienceId] || []}
+                                                        onWishlistToggle={handleWishlistToggle}
                                                     />
                                                 ))}
                                             </div>
@@ -619,6 +664,7 @@ const SearchResultsPage = () => {
                                                         showWishlistButton={true}
                                                         isInWishlist={experience.isLiked}
                                                         schedules={schedules[experience.experienceId] || []}
+                                                        onWishlistToggle={handleWishlistToggle}
                                                     />
                                                 ))}
                                             </div>
@@ -633,6 +679,7 @@ const SearchResultsPage = () => {
                                                             showWishlistButton={true}
                                                             isInWishlist={experience.isLiked}
                                                             schedules={schedules[experience.experienceId] || []}
+                                                            onWishlistToggle={handleWishlistToggle}
                                                         />
                                                     ))}
                                                 </div>
@@ -756,6 +803,7 @@ const SearchResultsPage = () => {
                                             showWishlistButton={true}
                                             isInWishlist={experience.isLiked}
                                             schedules={schedules[experience.experienceId] || []}
+                                            onWishlistToggle={handleWishlistToggle}
                                         />
                                     ))}
                                 </div>
@@ -800,6 +848,7 @@ const SearchResultsPage = () => {
                                                     showWishlistButton={true}
                                                     isInWishlist={experience.isLiked}
                                                     schedules={schedules[experience.experienceId] || []}
+                                                    onWishlistToggle={handleWishlistToggle}
                                                 />
                                             ))}
                                         </div>

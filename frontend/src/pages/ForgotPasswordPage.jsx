@@ -24,7 +24,7 @@ const ForgotPasswordPage = () => {
 
     const handleInputChange = (e) => {
         setEmail(e.target.value)
-        
+
         // Clear field-specific error when user starts typing
         if (fieldErrors.email && e.target.value !== '') {
             setFieldErrors({
@@ -32,7 +32,7 @@ const ForgotPasswordPage = () => {
                 email: ''
             })
         }
-        
+
         // Clear message when user starts typing
         if (message) {
             setMessage('')
@@ -42,15 +42,15 @@ const ForgotPasswordPage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        
+
         // Clear field errors and messages
         setFieldErrors({ email: '' })
         setMessage('')
-        
+
         // Validate form
         let hasErrors = false
         const newFieldErrors = {}
-        
+
         if (!email) {
             newFieldErrors.email = 'Please enter your email address'
             hasErrors = true
@@ -58,17 +58,17 @@ const ForgotPasswordPage = () => {
             newFieldErrors.email = 'Please enter a valid email address'
             hasErrors = true
         }
-        
+
         if (hasErrors) {
             setFieldErrors(newFieldErrors)
             return
         }
-        
+
         setIsLoading(true)
-        
+
         try {
             const result = await authService.forgotPassword(email)
-            
+
             if (result.success) {
                 setIsSuccess(true)
                 setMessage('Password reset instructions have been sent to your email address.')
@@ -98,10 +98,9 @@ const ForgotPasswordPage = () => {
                 {/* Logo on image */}
                 <div className="relative z-10 p-10">
                     <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center">
-                            <span className="text-neutrals-8 font-bold text-lg">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center bg-white rounded-lg shadow-lg">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
-                        <span className="font-poppins font-semibold text-neutrals-8 text-[27px]">Trippy</span>
                     </div>
                 </div>
 
@@ -117,16 +116,15 @@ const ForgotPasswordPage = () => {
                 <div className="w-full max-w-[352px]">
                     {/* Mobile Logo */}
                     <div className="lg:hidden flex items-center justify-center mb-8">
-                        <div className="w-9 h-9 bg-primary-1 rounded-full flex items-center justify-center mr-2">
-                            <span className="text-neutrals-8 font-bold text-lg">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
-                        <span className="font-poppins font-semibold text-neutrals-2 text-[27px]">Trippy</span>
                     </div>
 
                     {/* Logo Icon (Desktop) */}
                     <div className="hidden lg:flex justify-center mb-8">
-                        <div className="w-20 h-20 bg-primary-1 rounded-full flex items-center justify-center">
-                            <span className="text-neutrals-8 font-bold text-3xl">T</span>
+                        <div className="w-40 h-15 flex items-center justify-center">
+                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
                         </div>
                     </div>
 
@@ -159,11 +157,10 @@ const ForgotPasswordPage = () => {
                                 onChange={handleInputChange}
                                 placeholder="Enter your email"
                                 autoComplete="off"
-                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${
-                                    fieldErrors.email 
-                                        ? 'border-red-500 focus:border-red-500' 
+                                className={`w-full h-12 px-6 py-2 border-2 rounded-[40px] font-poppins font-medium text-sm text-neutrals-2 placeholder-neutrals-4 focus:outline-none transition-colors ${fieldErrors.email
+                                        ? 'border-red-500 focus:border-red-500'
                                         : 'border-neutrals-6 focus:border-primary-1'
-                                }`}
+                                    }`}
                                 required
                             />
                             <div className="h-5 mt-1">
