@@ -2,7 +2,6 @@ package com.backend.entity;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.time.LocalDateTime;
 
@@ -14,36 +13,36 @@ public class TripPoints {
     @Column(name = "points_id")
     private Long pointsId;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnore
     private User user;
 
-    @Column(name = "points_balance")
-    private Integer pointsBalance = 0;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "transaction_type", nullable = false)
+    private TripPointsTransaction transactionType;
 
-    @Column(name = "total_earned")
-    private Integer totalEarned = 0;
+    @Column(name = "points_change", nullable = false)
+    private Integer pointsChange; // Can be positive (earned) or negative (redeemed)
 
-    @Column(name = "total_redeemed")
-    private Integer totalRedeemed = 0;
+    @Column(name = "points_balance_after", nullable = false)
+    private Integer pointsBalanceAfter; // Balance after this transaction
+
+    @Column(name = "reference_id")
+    private Long referenceId; // Optional reference to booking, review, etc.
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
     // Constructors
     public TripPoints() {}
 
-    public TripPoints(User user) {
+    public TripPoints(User user, TripPointsTransaction transactionType, Integer pointsChange, Integer pointsBalanceAfter) {
         this.user = user;
-        this.pointsBalance = 0;
-        this.totalEarned = 0;
-        this.totalRedeemed = 0;
+        this.transactionType = transactionType;
+        this.pointsChange = pointsChange;
+        this.pointsBalanceAfter = pointsBalanceAfter;
     }
 
     // Getters and Setters
@@ -63,28 +62,36 @@ public class TripPoints {
         this.user = user; 
     }
     
-    public Integer getPointsBalance() { 
-        return pointsBalance; 
+    public TripPointsTransaction getTransactionType() {
+        return transactionType;
     }
     
-    public void setPointsBalance(Integer pointsBalance) { 
-        this.pointsBalance = pointsBalance; 
+    public void setTransactionType(TripPointsTransaction transactionType) {
+        this.transactionType = transactionType;
     }
     
-    public Integer getTotalEarned() { 
-        return totalEarned; 
+    public Integer getPointsChange() {
+        return pointsChange;
     }
     
-    public void setTotalEarned(Integer totalEarned) { 
-        this.totalEarned = totalEarned; 
+    public void setPointsChange(Integer pointsChange) {
+        this.pointsChange = pointsChange;
     }
     
-    public Integer getTotalRedeemed() { 
-        return totalRedeemed; 
+    public Integer getPointsBalanceAfter() {
+        return pointsBalanceAfter;
     }
     
-    public void setTotalRedeemed(Integer totalRedeemed) { 
-        this.totalRedeemed = totalRedeemed; 
+    public void setPointsBalanceAfter(Integer pointsBalanceAfter) {
+        this.pointsBalanceAfter = pointsBalanceAfter;
+    }
+    
+    public Long getReferenceId() {
+        return referenceId;
+    }
+    
+    public void setReferenceId(Long referenceId) {
+        this.referenceId = referenceId;
     }
     
     public LocalDateTime getCreatedAt() { 
@@ -93,30 +100,5 @@ public class TripPoints {
     
     public void setCreatedAt(LocalDateTime createdAt) { 
         this.createdAt = createdAt; 
-    }
-    
-    public LocalDateTime getUpdatedAt() { 
-        return updatedAt; 
-    }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) { 
-        this.updatedAt = updatedAt; 
-    }
-
-    // Business logic methods
-    public void addPoints(Integer points) {
-        if (points != null && points > 0) {
-            this.pointsBalance = (this.pointsBalance != null ? this.pointsBalance : 0) + points;
-            this.totalEarned = (this.totalEarned != null ? this.totalEarned : 0) + points;
-        }
-    }
-
-    public boolean redeemPoints(Integer points) {
-        if (points != null && points > 0 && this.pointsBalance != null && this.pointsBalance >= points) {
-            this.pointsBalance -= points;
-            this.totalRedeemed = (this.totalRedeemed != null ? this.totalRedeemed : 0) + points;
-            return true;
-        }
-        return false;
     }
 }

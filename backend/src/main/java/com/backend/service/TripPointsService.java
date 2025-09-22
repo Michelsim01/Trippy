@@ -2,6 +2,7 @@ package com.backend.service;
 
 import com.backend.entity.TripPoints;
 import com.backend.entity.User;
+import com.backend.entity.TripPointsTransaction;
 import com.backend.repository.TripPointsRepository;
 import com.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +14,7 @@ import java.util.Optional;
 
 /**
  * Service class for handling TripPoints operations.
- * Manages points earning, redemption, and balance tracking.
+ * Manages points earning, redemption, and balance tracking using transaction-based approach.
  */
 @Service
 @Transactional
@@ -30,89 +31,87 @@ public class TripPointsService {
     private static final int POINTS_PER_EXPERIENCE_COMPLETION = 25;
 
     /**
-     * Get or create TripPoints for a user
-     */
-    public TripPoints getOrCreateTripPoints(Long userId) {
-        Optional<TripPoints> existingPoints = tripPointsRepository.findByUserId(userId);
-        
-        if (existingPoints.isPresent()) {
-            return existingPoints.get();
-        }
-        
-        // Create new TripPoints record for user
-        User user = userRepository.findById(userId)
-            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
-        
-        TripPoints newTripPoints = new TripPoints(user);
-        return tripPointsRepository.save(newTripPoints);
-    }
-
-    /**
-     * Get TripPoints by user ID
-     */
-    public Optional<TripPoints> getTripPointsByUserId(Long userId) {
-        return tripPointsRepository.findByUserId(userId);
-    }
-
-    /**
-     * Award points for leaving a review
-     */
-    public TripPoints awardPointsForReview(Long userId, Integer pointsEarned) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        
-        if (pointsEarned != null && pointsEarned > 0) {
-            tripPoints.addPoints(pointsEarned);
-            return tripPointsRepository.save(tripPoints);
-        }
-        
-        return tripPoints;
-    }
-
-    /**
-     * Award points for completing an experience
-     */
-    public TripPoints awardPointsForExperienceCompletion(Long userId) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        tripPoints.addPoints(POINTS_PER_EXPERIENCE_COMPLETION);
-        return tripPointsRepository.save(tripPoints);
-    }
-
-    /**
-     * Redeem points
-     */
-    public boolean redeemPoints(Long userId, Integer pointsToRedeem) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        
-        if (tripPoints.redeemPoints(pointsToRedeem)) {
-            tripPointsRepository.save(tripPoints);
-            return true;
-        }
-        
-        return false;
-    }
-
-    /**
-     * Get current points balance for user
+     * Get current balance for a user
      */
     public Integer getPointsBalance(Long userId) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        return tripPoints.getPointsBalance();
+        Integer balance = tripPointsRepository.getCurrentBalanceByUserId(userId);
+        return balance != null ? balance : 0;
     }
 
     /**
      * Get total points earned by user
      */
     public Integer getTotalEarned(Long userId) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        return tripPoints.getTotalEarned();
+        Integer earned = tripPointsRepository.getTotalEarnedByUserId(userId);
+        return earned != null ? earned : 0;
     }
 
     /**
      * Get total points redeemed by user
      */
     public Integer getTotalRedeemed(Long userId) {
-        TripPoints tripPoints = getOrCreateTripPoints(userId);
-        return tripPoints.getTotalRedeemed();
+        Integer redeemed = tripPointsRepository.getTotalRedeemedByUserId(userId);
+        return redeemed != null ? redeemed : 0;
+    }
+
+    /**
+     * Get all TripPoints transactions for a user (for history)
+     */
+    public List<TripPoints> getTripPointsHistory(Long userId) {
+        return tripPointsRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    /**
+     * Get latest TripPoints transaction for a user
+     */
+    public Optional<TripPoints> getLatestTripPoints(Long userId) {
+        return tripPointsRepository.findLatestByUserId(userId);
+    }
+
+    /**
+     * Award points for leaving a review
+     */
+    public TripPoints awardPointsForReview(Long userId, Long referenceId) {
+        return createTransaction(userId, TripPointsTransaction.REVIEW, POINTS_PER_REVIEW, referenceId);
+    }
+
+    /**
+     * Award points for completing an experience
+     */
+    public TripPoints awardPointsForExperience(Long userId, Long referenceId) {
+        return createTransaction(userId, TripPointsTransaction.EXPERIENCE_COMPLETION, POINTS_PER_EXPERIENCE_COMPLETION, referenceId);
+    }
+
+    /**
+     * Redeem points
+     */
+    public TripPoints redeemPoints(Long userId, Integer pointsToRedeem) {
+        if (pointsToRedeem <= 0) {
+            throw new IllegalArgumentException("Points to redeem must be positive");
+        }
+        
+        Integer currentBalance = getPointsBalance(userId);
+        if (currentBalance < pointsToRedeem) {
+            throw new IllegalArgumentException("Insufficient points balance");
+        }
+        
+        return createTransaction(userId, TripPointsTransaction.REDEMPTION, -pointsToRedeem, null);
+    }
+
+    /**
+     * Create a new TripPoints transaction
+     */
+    private TripPoints createTransaction(Long userId, TripPointsTransaction transactionType, Integer pointsChange, Long referenceId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        
+        Integer currentBalance = getPointsBalance(userId);
+        Integer newBalance = currentBalance + pointsChange;
+        
+        TripPoints transaction = new TripPoints(user, transactionType, pointsChange, newBalance);
+        transaction.setReferenceId(referenceId);
+        
+        return tripPointsRepository.save(transaction);
     }
 
     /**
@@ -123,10 +122,10 @@ public class TripPointsService {
     }
 
     /**
-     * Get TripPoints leaderboard (top earners)
+     * Get TripPoints leaderboard
      */
-    public List<TripPoints> getLeaderboard() {
-        return tripPointsRepository.findAllOrderByTotalEarnedDesc();
+    public List<Object[]> getLeaderboard() {
+        return tripPointsRepository.getLeaderboardData();
     }
 
     /**

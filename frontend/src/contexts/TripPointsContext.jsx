@@ -14,7 +14,6 @@ export const useTripPoints = () => {
 
 export const TripPointsProvider = ({ children }) => {
   const { user, isAuthenticated } = useAuth()
-  const [tripPoints, setTripPoints] = useState(null)
   const [pointsBalance, setPointsBalance] = useState({
     pointsBalance: 0,
     totalEarned: 0,
@@ -23,57 +22,39 @@ export const TripPointsProvider = ({ children }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // Fetch TripPoints data for the current user
-  const fetchTripPoints = async (userId) => {
+  // Fetch points balance for the current user
+  const fetchPointsBalance = async (userId) => {
     if (!userId) return
 
     try {
       setLoading(true)
       setError(null)
 
-      const response = await tripPointsService.getTripPointsByUserId(userId)
-      
-      if (response.success) {
-        setTripPoints(response.data)
-      } else {
-        setError(response.error)
-      }
-    } catch (err) {
-      console.error('Error fetching TripPoints:', err)
-      setError('Failed to fetch TripPoints data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Fetch points balance for the current user
-  const fetchPointsBalance = async (userId) => {
-    if (!userId) return
-
-    try {
       const response = await tripPointsService.getUserPointsBalance(userId)
       
       if (response.success) {
         setPointsBalance(response.data)
       } else {
-        console.error('Error fetching points balance:', response.error)
+        setError(response.error)
       }
     } catch (err) {
       console.error('Error fetching points balance:', err)
+      setError('Failed to fetch points balance')
+    } finally {
+      setLoading(false)
     }
   }
 
   // Award points for review
-  const awardPointsForReview = async (pointsEarned) => {
+  const awardPointsForReview = async (referenceId = null) => {
     if (!user?.id) return { success: false, error: 'User not authenticated' }
 
     try {
-      const response = await tripPointsService.awardPointsForReview(user.id, pointsEarned)
+      const response = await tripPointsService.awardPointsForReview(user.id, referenceId)
       
       if (response.success) {
         // Refresh the points balance after awarding
         await fetchPointsBalance(user.id)
-        await fetchTripPoints(user.id)
         return response
       } else {
         return response
@@ -85,16 +66,15 @@ export const TripPointsProvider = ({ children }) => {
   }
 
   // Award points for experience completion
-  const awardPointsForExperience = async () => {
+  const awardPointsForExperience = async (referenceId = null) => {
     if (!user?.id) return { success: false, error: 'User not authenticated' }
 
     try {
-      const response = await tripPointsService.awardPointsForExperience(user.id)
+      const response = await tripPointsService.awardPointsForExperience(user.id, referenceId)
       
       if (response.success) {
         // Refresh the points balance after awarding
         await fetchPointsBalance(user.id)
-        await fetchTripPoints(user.id)
         return response
       } else {
         return response
@@ -115,7 +95,6 @@ export const TripPointsProvider = ({ children }) => {
       if (response.success) {
         // Refresh the points balance after redemption
         await fetchPointsBalance(user.id)
-        await fetchTripPoints(user.id)
         return response
       } else {
         return response
@@ -148,24 +127,30 @@ export const TripPointsProvider = ({ children }) => {
     }
   }
 
+  // Get transaction history
+  const getTransactionHistory = async (userId) => {
+    try {
+      const response = await tripPointsService.getTransactionHistory(userId)
+      return response
+    } catch (err) {
+      console.error('Error fetching transaction history:', err)
+      return { success: false, error: 'Failed to fetch transaction history' }
+    }
+  }
+
   // Refresh all TripPoints data
   const refreshTripPoints = async () => {
     if (user?.id) {
-      await Promise.all([
-        fetchTripPoints(user.id),
-        fetchPointsBalance(user.id)
-      ])
+      await fetchPointsBalance(user.id)
     }
   }
 
   // Effect to fetch TripPoints data when user changes
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      fetchTripPoints(user.id)
       fetchPointsBalance(user.id)
     } else {
       // Clear data when user logs out
-      setTripPoints(null)
       setPointsBalance({
         pointsBalance: 0,
         totalEarned: 0,
@@ -177,19 +162,18 @@ export const TripPointsProvider = ({ children }) => {
 
   const value = {
     // State
-    tripPoints,
     pointsBalance,
     loading,
     error,
     
     // Actions
-    fetchTripPoints,
     fetchPointsBalance,
     awardPointsForReview,
     awardPointsForExperience,
     redeemPoints,
     getLeaderboard,
     getPointsPolicy,
+    getTransactionHistory,
     refreshTripPoints,
     
     // Computed values

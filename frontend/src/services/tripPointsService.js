@@ -44,27 +44,6 @@ api.interceptors.response.use(
 
 export const tripPointsService = {
   /**
-   * Get TripPoints data for a specific user
-   * @param {number} userId - The user ID
-   * @returns {Promise<Object>} TripPoints data
-   */
-  getTripPointsByUserId: async (userId) => {
-    try {
-      const response = await api.get(`/api/trip-points/user/${userId}`)
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      console.error('Error fetching TripPoints:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch TripPoints'
-      }
-    }
-  },
-
-  /**
    * Get user's points balance summary
    * @param {number} userId - The user ID
    * @returns {Promise<Object>} Points balance data
@@ -86,15 +65,36 @@ export const tripPointsService = {
   },
 
   /**
+   * Get user's transaction history
+   * @param {number} userId - The user ID
+   * @returns {Promise<Object>} Transaction history data
+   */
+  getTransactionHistory: async (userId) => {
+    try {
+      const response = await api.get(`/api/trip-points/user/${userId}/history`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error fetching transaction history:', error)
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch transaction history'
+      }
+    }
+  },
+
+  /**
    * Award points for leaving a review
    * @param {number} userId - The user ID
-   * @param {number} pointsEarned - Points earned from the review
+   * @param {number} referenceId - Optional reference ID (review ID)
    * @returns {Promise<Object>} Award response
    */
-  awardPointsForReview: async (userId, pointsEarned) => {
+  awardPointsForReview: async (userId, referenceId = null) => {
     try {
       const response = await api.post(`/api/trip-points/user/${userId}/award-review`, {
-        pointsEarned
+        referenceId
       })
       return {
         success: true,
@@ -112,11 +112,14 @@ export const tripPointsService = {
   /**
    * Award points for completing an experience
    * @param {number} userId - The user ID
+   * @param {number} referenceId - Optional reference ID (booking ID)
    * @returns {Promise<Object>} Award response
    */
-  awardPointsForExperience: async (userId) => {
+  awardPointsForExperience: async (userId, referenceId = null) => {
     try {
-      const response = await api.post(`/api/trip-points/user/${userId}/award-experience`)
+      const response = await api.post(`/api/trip-points/user/${userId}/award-experience`, {
+        referenceId
+      })
       return {
         success: true,
         data: response.data
@@ -195,10 +198,10 @@ export const tripPointsService = {
   },
 
   /**
-   * Get all TripPoints records (admin only)
+   * Get all TripPoints transactions (admin only)
    * @returns {Promise<Object>} All TripPoints data
    */
-  getAllTripPoints: async () => {
+  getAllTransactions: async () => {
     try {
       const response = await api.get('/api/trip-points')
       return {
@@ -206,10 +209,31 @@ export const tripPointsService = {
         data: response.data
       }
     } catch (error) {
-      console.error('Error fetching all TripPoints:', error)
+      console.error('Error fetching all transactions:', error)
       return {
         success: false,
-        error: error.response?.data?.message || 'Failed to fetch TripPoints'
+        error: error.response?.data?.message || 'Failed to fetch transactions'
+      }
+    }
+  },
+
+  /**
+   * Get transaction by ID
+   * @param {number} transactionId - The transaction ID
+   * @returns {Promise<Object>} Transaction data
+   */
+  getTransactionById: async (transactionId) => {
+    try {
+      const response = await api.get(`/api/trip-points/${transactionId}`)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      console.error('Error fetching transaction:', error)
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch transaction'
       }
     }
   }

@@ -1,169 +1,192 @@
-import React, { useState, useEffect } from 'react'
-import { useTripPoints } from '../../contexts/TripPointsContext'
+import React, { useState, useEffect } from 'react';
+import { Star, Target, Gift, Plus, Minus, Calendar, TrendingUp } from 'lucide-react';
+import tripPointsService from '../../services/tripPointsService';
 
-const TripPointsHistory = ({ userId, className = '' }) => {
-  const { tripPoints, loading, error } = useTripPoints()
-  const [history, setHistory] = useState([])
+const TripPointsHistory = ({ userId }) => {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    // For now, we'll create mock history data
-    // In a real implementation, this would come from the backend
-    const mockHistory = [
-      {
-        id: 1,
-        type: 'review',
-        description: 'Left a review for Venice Canal Tour',
-        points: 50,
-        date: new Date('2024-01-15'),
-        experienceName: 'Venice Canal Tour'
-      },
-      {
-        id: 2,
-        type: 'experience',
-        description: 'Completed Florence Art Tour',
-        points: 25,
-        date: new Date('2024-01-10'),
-        experienceName: 'Florence Art Tour'
-      },
-      {
-        id: 3,
-        type: 'review',
-        description: 'Left a review for Rome Colosseum Tour',
-        points: 50,
-        date: new Date('2024-01-05'),
-        experienceName: 'Rome Colosseum Tour'
-      },
-      {
-        id: 4,
-        type: 'redemption',
-        description: 'Redeemed points for discount',
-        points: -100,
-        date: new Date('2024-01-01'),
-        experienceName: 'Booking Discount'
+    fetchTransactionHistory();
+  }, [userId]);
+
+  const fetchTransactionHistory = async () => {
+    try {
+      setLoading(true);
+      const response = await tripPointsService.getTransactionHistory(userId);
+      if (response.success) {
+        setTransactions(response.data);
+      } else {
+        setError(response.error);
       }
-    ]
-    setHistory(mockHistory)
-  }, [tripPoints])
+    } catch (err) {
+      setError('Failed to load transaction history');
+      console.error('Error fetching transaction history:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const formatDate = (date) => {
-    return new Intl.DateTimeFormat('en-US', {
+  const getTransactionIcon = (transactionType) => {
+    switch (transactionType) {
+      case 'REVIEW':
+        return <Star className="w-5 h-5 text-yellow-500" />;
+      case 'EXPERIENCE_COMPLETION':
+        return <Target className="w-5 h-5 text-blue-500" />;
+      case 'REDEMPTION':
+        return <Gift className="w-5 h-5 text-red-500" />;
+      case 'BONUS':
+        return <Plus className="w-5 h-5 text-green-500" />;
+      case 'REFUND':
+        return <Minus className="w-5 h-5 text-purple-500" />;
+      default:
+        return <TrendingUp className="w-5 h-5 text-gray-500" />;
+    }
+  };
+
+  const getTransactionDescription = (transaction) => {
+    // Always use transaction type descriptions from enum
+    switch (transaction.transactionType) {
+      case 'REVIEW':
+        return 'Left a review';
+      case 'EXPERIENCE_COMPLETION':
+        return 'Completed experience';
+      case 'REDEMPTION':
+        return 'Redeemed points';
+      case 'BONUS':
+        return 'Bonus points';
+      case 'REFUND':
+        return 'Points refunded';
+      default:
+        return 'TripPoints transaction';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
       month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    }).format(date)
-  }
+      day: 'numeric'
+    });
+  };
 
-  const getTypeIcon = (type) => {
-    switch (type) {
-      case 'review':
-        return '⭐'
-      case 'experience':
-        return '🎯'
-      case 'redemption':
-        return '🎁'
-      default:
-        return '📝'
+  const formatPointsChange = (pointsChange) => {
+    if (pointsChange > 0) {
+      return `+${pointsChange}`;
     }
-  }
+    return pointsChange.toString();
+  };
 
-  const getTypeColor = (type) => {
-    switch (type) {
-      case 'review':
-        return 'text-blue-600'
-      case 'experience':
-        return 'text-green-600'
-      case 'redemption':
-        return 'text-orange-600'
-      default:
-        return 'text-neutrals-3'
+  const getPointsChangeColor = (pointsChange) => {
+    if (pointsChange > 0) {
+      return 'text-green-600';
     }
-  }
+    return 'text-red-600';
+  };
 
   if (loading) {
     return (
-      <div className={`bg-white rounded-xl p-6 shadow-sm border border-neutrals-6 ${className}`}>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="animate-pulse">
-          <div className="h-5 bg-neutrals-6 rounded w-1/3 mb-4"></div>
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-neutrals-6 rounded-full"></div>
-              <div className="flex-1">
-                <div className="h-4 bg-neutrals-6 rounded w-3/4 mb-1"></div>
-                <div className="h-3 bg-neutrals-6 rounded w-1/2"></div>
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center space-x-4">
+                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                </div>
+                <div className="h-4 bg-gray-200 rounded w-16"></div>
               </div>
-              <div className="h-4 bg-neutrals-6 rounded w-16"></div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
     return (
-      <div className={`bg-white rounded-xl p-6 shadow-sm border border-red-200 ${className}`}>
-        <div className="text-red-500 text-sm">
-          <p className="font-medium mb-2">Error loading history</p>
-          <p className="text-xs">{error}</p>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="text-center text-red-600">
+          <p>{error}</p>
+          <button 
+            onClick={fetchTransactionHistory}
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            Try Again
+          </button>
         </div>
       </div>
-    )
+    );
   }
 
   return (
-    <div className={`bg-white rounded-xl p-6 shadow-sm border border-neutrals-6 ${className}`}>
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-neutrals-1">Points History</h3>
-        <div className="text-sm text-neutrals-3">
-          {history.length} transactions
-        </div>
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="p-6 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-blue-500" />
+          Points History
+        </h3>
+        <p className="text-sm text-gray-500 mt-1">
+          {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {history.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="text-4xl mb-3">📊</div>
-          <p className="text-neutrals-3 text-sm">No points history yet</p>
-          <p className="text-neutrals-4 text-xs mt-1">
-            Start earning points by completing experiences and leaving reviews!
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {history.map((item) => (
-            <div key={item.id} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-neutrals-8 transition-colors">
-              <div className="text-2xl">
-                {getTypeIcon(item.type)}
-              </div>
-              
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-neutrals-1 truncate">
-                  {item.description}
-                </div>
-                <div className="text-xs text-neutrals-3 truncate">
-                  {item.experienceName}
-                </div>
-                <div className="text-xs text-neutrals-4">
-                  {formatDate(item.date)}
-                </div>
-              </div>
-              
-              <div className={`text-sm font-semibold ${getTypeColor(item.type)}`}>
-                {item.points > 0 ? '+' : ''}{item.points}
-              </div>
+      <div className="p-6">
+        {transactions.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="w-8 h-8 text-gray-400" />
             </div>
-          ))}
-        </div>
-      )}
-
-      {history.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-neutrals-6">
-          <button className="text-sm text-primary-1 hover:text-primary-2 transition-colors">
-            View all transactions →
-          </button>
-        </div>
-      )}
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No transactions yet</h4>
+            <p className="text-gray-500">
+              Start earning TripPoints by completing experiences and leaving reviews!
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {transactions.map((transaction) => (
+              <div 
+                key={transaction.pointsId} 
+                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0">
+                    {getTransactionIcon(transaction.transactionType)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {getTransactionDescription(transaction)}
+                    </p>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Calendar className="w-3 h-3 text-gray-400" />
+                      <p className="text-xs text-gray-500">
+                        {formatDate(transaction.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <div className="text-right">
+                    <p className={`text-sm font-semibold ${getPointsChangeColor(transaction.pointsChange)}`}>
+                      {formatPointsChange(transaction.pointsChange)}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Balance: {transaction.pointsBalanceAfter}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default TripPointsHistory
+export default TripPointsHistory;
