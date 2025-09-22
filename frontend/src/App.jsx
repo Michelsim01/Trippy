@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { UserProvider } from './contexts/UserContext'
+import { TripPointsProvider } from './contexts/TripPointsContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -237,11 +238,13 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <UserProvider>
-            <FormDataProvider>
-            <div className="App">
-              <AppRoutes />
-            </div>
-          </FormDataProvider>
+            <TripPointsProvider>
+              <FormDataProvider>
+                <div className="App">
+                  <AppRoutes />
+                </div>
+              </FormDataProvider>
+            </TripPointsProvider>
           </UserProvider>
         </AuthProvider>
       </ErrorBoundary>
