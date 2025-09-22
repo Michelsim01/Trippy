@@ -9,7 +9,7 @@ import Footer from '../components/Footer';
 import ExperienceHeader from '../components/experience-details/ExperienceHeader';
 import ExperienceGallery from '../components/experience-details/ExperienceGallery';
 import ExperienceContent from '../components/experience-details/ExperienceContent';
-import BookingCard from '../components/experience-details/BookingCard';
+import BookingWidget from '../components/experience-details/BookingWidget';
 import HostProfile from '../components/experience-details/HostProfile';
 
 const ExperienceDetailsPage = () => {
@@ -367,7 +367,7 @@ const ExperienceDetailsPage = () => {
                 </div>
 
                 <div className="col-span-1">
-                  <BookingCard
+                  <BookingWidget
                     displayData={displayData}
                     schedulesData={schedulesData}
                     formatScheduleDisplay={formatScheduleDisplay}
@@ -552,9 +552,9 @@ const ExperienceDetailsPage = () => {
               />
             </div>
 
-            {/* Mobile Booking Card */}
+            {/* Mobile Booking Widget */}
             <div className="mt-6">
-              <BookingCard
+              <BookingWidget
                 displayData={displayData}
                 schedulesData={schedulesData}
                 formatScheduleDisplay={formatScheduleDisplay}
