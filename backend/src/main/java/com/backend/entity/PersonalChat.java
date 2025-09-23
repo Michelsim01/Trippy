@@ -1,6 +1,7 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -12,8 +13,9 @@ public class PersonalChat {
     private Long personalChatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "experience_schedule_id", nullable = false)
-    private ExperienceSchedule experienceSchedule;
+    @JoinColumn(name = "experience_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "guide", "mediaList", "itineraries", "schedules", "reviews", "wishlistItems", "personalChats"})
+    private Experience experience;
 
     private String name;
     private LocalDateTime createdAt;
@@ -24,6 +26,7 @@ public class PersonalChat {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "tripChat", "user"})
     private List<ChatMember> chatMembers;
 
     @OneToMany(
@@ -32,12 +35,13 @@ public class PersonalChat {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "tripChat", "sender"})
     private List<Message> messages;
 
     public Long getPersonalChatId() { return personalChatId; }
     public void setPersonalChatId(Long personalChatId) { this.personalChatId = personalChatId; }
-    public ExperienceSchedule getExperienceSchedule() { return experienceSchedule; }
-    public void setExperienceSchedule(ExperienceSchedule experienceSchedule) { this.experienceSchedule = experienceSchedule; }
+    public Experience getExperience() { return experience; }
+    public void setExperience(Experience experience) { this.experience = experience; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public LocalDateTime getCreatedAt() { return createdAt; }

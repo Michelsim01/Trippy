@@ -35,6 +35,8 @@ public class ChatMember {
     public void setUser(User user) { this.user = user; }
     public ChatRoleEnum getRole() { return role; }
     public void setRole(ChatRoleEnum role) { this.role = role; }
+    public PersonalChat getPersonalChat() { return personalChat; }
+    public void setPersonalChat(PersonalChat personalChat) { this.personalChat = personalChat; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

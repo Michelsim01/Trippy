@@ -92,6 +92,10 @@ public class Experience {
     @JsonIgnore
     private List<WishlistItem> wishlistItems;
 
+    @OneToMany(mappedBy = "experience", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<PersonalChat> personalChats;
+
     public Long getExperienceId() {
         return experienceId;
     }
@@ -306,5 +310,13 @@ public class Experience {
 
     public void setWishlistItems(List<WishlistItem> wishlistItems) {
         this.wishlistItems = wishlistItems;
+    }
+
+    public List<PersonalChat> getPersonalChats() {
+        return personalChats;
+    }
+
+    public void setPersonalChats(List<PersonalChat> personalChats) {
+        this.personalChats = personalChats;
     }
 }

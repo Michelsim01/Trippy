@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConversationList from '../components/messages/ConversationList';
@@ -10,9 +12,13 @@ import SearchBar from '../components/messages/SearchBar';
 import AIChatButton from '../components/messages/AIChatButton';
 
 const MessagesPage = () => {
+    const { user } = useAuth();
+    const [searchParams] = useSearchParams();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [selectedChat, setSelectedChat] = useState(null);
     const [newMessage, setNewMessage] = useState('');
+    const [conversations, setConversations] = useState([]);
+    const [loading, setLoading] = useState(true);
     
     // Mock chat messages per conversation
     const [chatMessages, setChatMessages] = useState({
@@ -26,29 +32,56 @@ const MessagesPage = () => {
         ],
     });
 
-    // Mock conversation data - replace with real data from your API
-    const conversations = [
-        {
-            id: 1,
-            title: "Venice, Rome & Milan Tour",
-            lastMessage: "When do you release the coded...",
-            timestamp: "7:17 PM",
-            participants: "2 guests",
-            activity: "Airplane",
-            avatar: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-            unread: false
-        },
-        {
-            id: 2,
-            title: "Venice, Rome & Milan Tour",
-            lastMessage: "When do you release the coded...",
-            timestamp: "Yesterday",
-            participants: "2 guests",
-            activity: "Airplane",
-            avatar: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80",
-            unread: false
-        },
-    ];
+    // Load user chats on component mount
+    useEffect(() => {
+        const loadUserChats = async () => {
+            if (!user) return;
+            
+            try {
+                const userId = user.id || user.userId;
+                const response = await fetch(`http://localhost:8080/api/personal-chats/user/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const chats = await response.json();
+                    const formattedConversations = chats.map(chat => ({
+                        id: chat.personalChatId,
+                        title: chat.experience?.title || chat.name,
+                        lastMessage: "Start chatting...", // TODO: Get last message
+                        timestamp: new Date(chat.createdAt).toLocaleDateString(),
+                        participants: "You & Guide",
+                        activity: chat.experience?.category || "Experience",
+                        avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+                        unread: false,
+                        experience: chat.experience
+                    }));
+                    setConversations(formattedConversations);
+                } else {
+                    console.error('Failed to load chats');
+                }
+            } catch (error) {
+                console.error('Error loading chats:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadUserChats();
+    }, [user]);
+
+    // Handle direct chat navigation from URL parameter
+    useEffect(() => {
+        const chatId = searchParams.get('chatId');
+        if (chatId && conversations.length > 0) {
+            const chatExists = conversations.find(conv => conv.id.toString() === chatId);
+            if (chatExists) {
+                setSelectedChat(parseInt(chatId));
+            }
+        }
+    }, [searchParams, conversations]);
 
     // Handle sending a new message
     const handleSendMessage = () => {
@@ -125,7 +158,11 @@ const MessagesPage = () => {
 
                             {/* Conversations List */}
                             <div className="flex-1 overflow-y-auto">
-                                {conversations.length > 0 ? (
+                                {loading ? (
+                                    <div className="p-4 text-center text-neutrals-4">
+                                        Loading conversations...
+                                    </div>
+                                ) : conversations.length > 0 ? (
                                     <ConversationList 
                                         conversations={conversations} 
                                         selectedChat={selectedChat}
@@ -134,7 +171,7 @@ const MessagesPage = () => {
                                 ) : (
                                     <EmptyState 
                                         title="No conversations yet"
-                                        description="Start chatting with Trippy AI or other travelers!"
+                                        description="Start chatting with guides about experiences!"
                                         buttonText="Start chatting with Trippy AI"
                                         onButtonClick={startNewAIChat}
                                     />
@@ -212,7 +249,11 @@ const MessagesPage = () => {
                             
                             {/* Mobile Conversations List */}
                             <div className="bg-neutrals-8">
-                                {conversations.length > 0 ? (
+                                {loading ? (
+                                    <div className="p-4 text-center text-neutrals-4 bg-white">
+                                        Loading conversations...
+                                    </div>
+                                ) : conversations.length > 0 ? (
                                     <div className="bg-white">
                                         <ConversationList 
                                             conversations={conversations} 
@@ -224,7 +265,7 @@ const MessagesPage = () => {
                                 ) : (
                                     <EmptyState 
                                         title="No conversations yet"
-                                        description="Start chatting with Trippy AI or other travelers!"
+                                        description="Start chatting with guides about experiences!"
                                         buttonText="Start chatting with Trippy AI"
                                         onButtonClick={startNewAIChat}
                                     />
