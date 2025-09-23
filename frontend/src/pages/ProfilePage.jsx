@@ -10,7 +10,7 @@ import IntroductionTab from '../components/profile/IntroductionTab';
 import TourListTab from '../components/profile/TourListTab';
 import ReviewsTab from '../components/profile/ReviewsTab';
 import MyReviewsTab from '../components/profile/MyReviewsTab';
-import BlogsTab from '../components/profile/BlogsTab';
+import TripPointsHistory from '../components/trippoints/TripPointsHistory'
 
 const ProfilePage = () => {
     const { id } = useParams();
@@ -198,8 +198,8 @@ const ProfilePage = () => {
         : "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80";
 
     const tabs = isTourGuide 
-        ? ['Introduction', 'Tour list', 'Reviews', 'Blogs']
-        : ['Introduction', 'My reviews'];
+        ? ['Introduction', 'Tour list', 'Reviews', 'TripPoints', 'Blogs']
+        : ['Introduction', 'My reviews', 'TripPoints'];
 
     const tourData = [
         {
@@ -329,6 +329,12 @@ const ProfilePage = () => {
                 />;
             case 'Reviews':
                 return <ReviewsTab reviews={reviews} />;
+            case 'TripPoints':
+                return (
+                    <div className="space-y-6">
+                        <TripPointsHistory userId={id} />
+                    </div>
+                );
             case 'My reviews':
                 return <MyReviewsTab touristReviews={touristReviews} />;
             case 'Blogs':
