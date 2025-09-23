@@ -78,7 +78,7 @@ const BookingCard = ({ booking }) => {
 
     return (
         <div
-            className="bg-white rounded-2xl border border-neutrals-6 overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
+            className="bg-white rounded-2xl border border-neutrals-6 overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg flex flex-col h-full"
             onClick={handleCardClick}
         >
             {/* Image Container */}
@@ -99,54 +99,55 @@ const BookingCard = ({ booking }) => {
             </div>
 
             {/* Card Content */}
-            <div className="p-5 space-y-4">
+            <div className="p-5 flex flex-col h-full">
                 {/* Experience Title and Location */}
-                <div>
-                    <h3 className="text-lg font-semibold text-neutrals-1 mb-2 line-clamp-2">
+                <div className="mb-4">
+                    <h3 className="text-lg font-semibold text-neutrals-1 mb-2 line-clamp-2 min-h-[3.5rem]">
                         {booking.experience?.title || booking.experienceTitle || 'Experience Title'}
                     </h3>
                     <div className="flex items-center gap-1 text-sm text-neutrals-4">
-                        <MapPin className="w-4 h-4" />
-                        <span>{booking.experience?.country || booking.country || 'Country'}</span>
+                        <MapPin className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{booking.experience?.country || booking.country || 'Country'}</span>
                     </div>
                 </div>
 
                 {/* Booking Details */}
-                <div className="space-y-2">
+                <div className="space-y-3 mb-4 flex-grow">
                     {/* Date and Time */}
-                    <div className="flex items-center gap-2 text-sm text-neutrals-3">
-                        <Calendar className="w-4 h-4" />
-                        <span>
-                            {formatBookingDate(
-                                booking.experienceSchedule?.startDateTime || booking.bookingDate,
-                                booking.experienceSchedule?.endDateTime
+                    <div className="flex items-start gap-2 text-sm text-neutrals-3 min-h-[3rem]">
+                        <Calendar className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                            <div className="break-words">
+                                {formatBookingDate(
+                                    booking.experienceSchedule?.startDateTime || booking.bookingDate,
+                                    booking.experienceSchedule?.endDateTime
+                                )}
+                            </div>
+                            {/* Time Range */}
+                            {booking.experienceSchedule?.startDateTime && booking.experienceSchedule?.endDateTime && (
+                                <div className="text-neutrals-4 mt-1">
+                                    {formatTime(booking.experienceSchedule.startDateTime)} - {formatTime(booking.experienceSchedule.endDateTime)}
+                                </div>
                             )}
-                        </span>
-                    </div>
-
-                    {/* Time Range */}
-                    {booking.experienceSchedule?.startDateTime && booking.experienceSchedule?.endDateTime && (
-                        <div className="text-sm text-neutrals-4 ml-6">
-                            {formatTime(booking.experienceSchedule.startDateTime)} - {formatTime(booking.experienceSchedule.endDateTime)}
                         </div>
-                    )}
+                    </div>
 
                     {/* Participants */}
                     <div className="flex items-center gap-2 text-sm text-neutrals-3">
-                        <Users className="w-4 h-4" />
+                        <Users className="w-4 h-4 flex-shrink-0" />
                         <span>{booking.numberOfParticipants || 1} {booking.numberOfParticipants === 1 ? 'guest' : 'guests'}</span>
                     </div>
                 </div>
 
                 {/* Divider */}
-                <div className="h-px bg-neutrals-6 rounded-[1px]" />
+                <div className="h-px bg-neutrals-6 rounded-[1px] mb-4" />
 
                 {/* Bottom Section */}
-                <div className="flex items-center justify-between">
-                    <div className="text-sm text-neutrals-4">
+                <div className="flex items-center justify-between mt-auto">
+                    <div className="text-sm text-neutrals-4 truncate flex-1 mr-2">
                         Booking #{booking.confirmationCode || booking.bookingId}
                     </div>
-                    <div className="text-lg font-bold text-primary-1">
+                    <div className="text-lg font-bold text-primary-1 flex-shrink-0">
                         {formatPrice(booking.totalAmount)}
                     </div>
                 </div>

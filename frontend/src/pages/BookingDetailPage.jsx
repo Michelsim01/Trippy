@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
+import FormattedImportantInfo from '../components/FormattedImportantInfo';
 
 const BookingDetailPage = () => {
     const { bookingId } = useParams();
@@ -341,9 +342,9 @@ const BookingDetailPage = () => {
                             {/* Important Information */}
                             <div className="bg-white rounded-2xl border border-neutrals-6 p-6">
                                 <h3 className="text-xl font-semibold text-neutrals-1 mb-4">Important Information</h3>
-                                <p className="text-neutrals-3 leading-relaxed">
-                                    {booking.experience.importantInfo}
-                                </p>
+                                <div className="bg-neutrals-7 rounded-lg p-4">
+                                    <FormattedImportantInfo text={booking.experience.importantInfo} isMobile={false} />
+                                </div>
                             </div>
 
                             {/* Meeting Point */}
@@ -374,13 +375,13 @@ const BookingDetailPage = () => {
                             <div className="bg-white rounded-2xl border border-neutrals-6 p-6 sticky top-8">
                                 <h3 className="text-xl font-semibold text-neutrals-1 mb-4">Manage Booking</h3>
 
-                                {/* Chat Buttons - Only for CONFIRMED bookings */}
-                                {booking.status === 'CONFIRMED' && (
+                                {/* Chat Buttons - For CONFIRMED and COMPLETED bookings */}
+                                {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && (
                                     <div className="space-y-3 mb-6">
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => console.log('Chat with guide clicked')}
+                                            onClick={() => navigate('/messages')}
                                             className="w-full flex items-center justify-center gap-2"
                                         >
                                             <MessageCircle className="w-4 h-4" />
@@ -389,7 +390,7 @@ const BookingDetailPage = () => {
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => console.log('Chat with tour group clicked')}
+                                            onClick={() => navigate('/messages')}
                                             className="w-full flex items-center justify-center gap-2"
                                         >
                                             <UsersChat className="w-4 h-4" />
@@ -399,7 +400,7 @@ const BookingDetailPage = () => {
                                 )}
 
                                 {/* Divider if chat buttons are shown */}
-                                {booking.status === 'CONFIRMED' && (
+                                {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && (
                                     <div className="h-px bg-neutrals-6 rounded-[1px] mb-6" />
                                 )}
 
