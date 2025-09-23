@@ -103,7 +103,7 @@ const formatDuration = (experienceData, schedulesData) => {
   return null;
 };
 
-const BookingCard = ({
+const BookingWidget = ({
   displayData,
   schedulesData,
   selectedSchedule,
@@ -374,4 +374,4 @@ const BookingCard = ({
   );
 };
 
-export default BookingCard;
+export default BookingWidget;
