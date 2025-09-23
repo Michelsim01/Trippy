@@ -47,17 +47,27 @@ const MessagesPage = () => {
                 
                 if (response.ok) {
                     const chats = await response.json();
-                    const formattedConversations = chats.map(chat => ({
-                        id: chat.personalChatId,
-                        title: chat.experience?.title || chat.name,
-                        lastMessage: "Start chatting...", // TODO: Get last message
-                        timestamp: new Date(chat.createdAt).toLocaleDateString(),
-                        participants: "You & Guide",
-                        activity: chat.experience?.category || "Experience",
-                        avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-                        unread: false,
-                        experience: chat.experience
-                    }));
+                    const formattedConversations = chats.map(chat => {
+                        // Get participant names from chat members
+                        const currentUserId = user.id || user.userId;
+                        const otherParticipant = chat.chatMembers?.find(member => member.user.id !== currentUserId);
+                        const participantName = otherParticipant ? 
+                            `${otherParticipant.user.firstName} ${otherParticipant.user.lastName}` : 
+                            "Guide";
+                        
+                        return {
+                            id: chat.personalChatId,
+                            title: chat.experience?.title || chat.name,
+                            lastMessage: "Start chatting...", // TODO: Get last message
+                            timestamp: new Date(chat.createdAt).toLocaleDateString(),
+                            participants: `You & ${participantName}`,
+                            activity: chat.experience?.category || "Experience",
+                            avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
+                            unread: false,
+                            experience: chat.experience,
+                            chatMembers: chat.chatMembers
+                        };
+                    });
                     setConversations(formattedConversations);
                 } else {
                     console.error('Failed to load chats');

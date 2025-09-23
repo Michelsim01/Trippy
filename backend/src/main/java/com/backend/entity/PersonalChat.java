@@ -26,7 +26,7 @@ public class PersonalChat {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "tripChat", "user"})
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "tripChat"})
     private List<ChatMember> chatMembers;
 
     @OneToMany(
