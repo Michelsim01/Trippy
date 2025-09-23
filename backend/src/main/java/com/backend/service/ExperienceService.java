@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -200,10 +201,9 @@ public class ExperienceService {
         Experience existingExperience = experienceRepository.findById(experienceId)
                 .orElseThrow(() -> new RuntimeException("Experience not found with id: " + experienceId));
 
-        // Delete existing related data
+        // Delete existing related data (except schedules - they will be smartly updated)
         experienceMediaRepository.deleteByExperienceId(experienceId);
         experienceItineraryRepository.deleteByExperienceId(experienceId);
-        experienceScheduleRepository.deleteByExperienceExperienceId(experienceId);
 
         // Extract main experience data
         Map<String, Object> experienceData = (Map<String, Object>) payload.get("experience");
@@ -290,53 +290,69 @@ public class ExperienceService {
             }
         }
 
-        // Create and save new schedule items
+        // Smart schedule update logic - preserves existing schedule IDs and relationships
         List<Map<String, Object>> schedules = (List<Map<String, Object>>) payload.get("schedules");
-        System.out
-                .println("Processing schedules for update. Count: " + (schedules != null ? schedules.size() : "null"));
+        System.out.println("Processing schedules with smart update. Count: " + (schedules != null ? schedules.size() : "null"));
 
         if (schedules != null && !schedules.isEmpty()) {
+            // Get existing schedules from database
+            List<ExperienceSchedule> existingSchedules = experienceScheduleRepository.findByExperience_ExperienceId(experienceId);
+            List<Long> incomingScheduleIds = new ArrayList<>();
+
+            // Process each incoming schedule
             for (Map<String, Object> scheduleData : schedules) {
                 try {
-                    ExperienceSchedule schedule = new ExperienceSchedule();
-                    schedule.setExperience(updatedExperience);
-
-                    // Support both new format (startDateTime/endDateTime) and old format
-                    // (date/startTime/endTime)
-                    if (scheduleData.containsKey("startDateTime") && scheduleData.containsKey("endDateTime")) {
-                        // New format: Parse ISO datetime strings
-                        String startDateTimeStr = (String) scheduleData.get("startDateTime");
-                        String endDateTimeStr = (String) scheduleData.get("endDateTime");
-
-                        LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr,
-                                DateTimeFormatter.ISO_DATE_TIME);
-                        LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr,
-                                DateTimeFormatter.ISO_DATE_TIME);
-
-                        schedule.setStartDateTime(startDateTime);
-                        schedule.setEndDateTime(endDateTime);
-                        System.out.println(
-                                "Using new format for update - Start: " + startDateTime + ", End: " + endDateTime);
+                    // Extract schedule ID - could be existing DB ID or temp frontend ID
+                    final Long scheduleId;
+                    Object scheduleIdObj = scheduleData.get("scheduleId");
+                    if (scheduleIdObj != null) {
+                        scheduleId = scheduleIdObj instanceof Number ? ((Number) scheduleIdObj).longValue() : null;
                     } else {
-                        // Old format: Parse separate date, startTime, endTime fields
-                        LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
-                        LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
-                        LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
-
-                        schedule.setStartDateTime(LocalDateTime.of(date, startTime));
-                        schedule.setEndDateTime(LocalDateTime.of(date, endTime));
-                        System.out.println("Using old format for update - Date: " + date + ", Start: " + startTime
-                                + ", End: " + endTime);
+                        scheduleId = null;
                     }
 
-                    schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
-                    schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
-                    ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);
-                    System.out.println("Updated schedule: " + savedSchedule.getStartDateTime() + " to "
-                            + savedSchedule.getEndDateTime());
+                    boolean isNewSchedule = scheduleData.containsKey("isNew") && (Boolean) scheduleData.get("isNew");
+                    boolean isExistingDatabaseSchedule = scheduleId != null && scheduleId < 1000000000000L && !isNewSchedule;
+
+                    if (isExistingDatabaseSchedule) {
+                        // UPDATE existing schedule - preserve the schedule ID and relationships
+                        ExperienceSchedule existingSchedule = existingSchedules.stream()
+                                .filter(s -> s.getScheduleId().equals(scheduleId))
+                                .findFirst()
+                                .orElse(null);
+
+                        if (existingSchedule != null) {
+                            updateScheduleFromData(existingSchedule, scheduleData);
+                            ExperienceSchedule savedSchedule = experienceScheduleRepository.save(existingSchedule);
+                            incomingScheduleIds.add(savedSchedule.getScheduleId());
+                            System.out.println("UPDATED existing schedule ID " + scheduleId + ": " +
+                                    savedSchedule.getStartDateTime() + " to " + savedSchedule.getEndDateTime());
+                        } else {
+                            System.out.println("Warning: Schedule ID " + scheduleId + " not found in database, treating as new");
+                            createNewScheduleFromData(updatedExperience, scheduleData, incomingScheduleIds);
+                        }
+                    } else {
+                        // INSERT new schedule - generate new database ID
+                        createNewScheduleFromData(updatedExperience, scheduleData, incomingScheduleIds);
+                    }
                 } catch (Exception e) {
-                    System.err.println("Error updating schedule: " + e.getMessage());
+                    System.err.println("Error processing schedule: " + e.getMessage());
                     e.printStackTrace();
+                }
+            }
+
+            // DELETE schedules not in incoming list (with booking validation)
+            for (ExperienceSchedule existingSchedule : existingSchedules) {
+                if (!incomingScheduleIds.contains(existingSchedule.getScheduleId())) {
+                    // Check if schedule has bookings before deleting
+                    if (existingSchedule.getBookings() != null && !existingSchedule.getBookings().isEmpty()) {
+                        System.out.println("WARNING: Cannot delete schedule ID " + existingSchedule.getScheduleId() +
+                                " - it has " + existingSchedule.getBookings().size() + " existing bookings");
+                        // Keep the schedule to preserve booking relationships
+                    } else {
+                        experienceScheduleRepository.delete(existingSchedule);
+                        System.out.println("DELETED unused schedule ID " + existingSchedule.getScheduleId());
+                    }
                 }
             }
         } else {
@@ -344,6 +360,49 @@ public class ExperienceService {
         }
 
         return updatedExperience;
+    }
+
+    // Helper method to update an existing schedule with new data
+    private void updateScheduleFromData(ExperienceSchedule schedule, Map<String, Object> scheduleData) {
+        // Update datetime fields
+        if (scheduleData.containsKey("startDateTime") && scheduleData.containsKey("endDateTime")) {
+            // New format: Parse ISO datetime strings
+            String startDateTimeStr = (String) scheduleData.get("startDateTime");
+            String endDateTimeStr = (String) scheduleData.get("endDateTime");
+
+            LocalDateTime startDateTime = LocalDateTime.parse(startDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+            LocalDateTime endDateTime = LocalDateTime.parse(endDateTimeStr, DateTimeFormatter.ISO_DATE_TIME);
+
+            schedule.setStartDateTime(startDateTime);
+            schedule.setEndDateTime(endDateTime);
+        } else {
+            // Old format: Parse separate date, startTime, endTime fields
+            LocalDate date = LocalDate.parse((String) scheduleData.get("date"));
+            LocalTime startTime = LocalTime.parse((String) scheduleData.get("startTime"));
+            LocalTime endTime = LocalTime.parse((String) scheduleData.get("endTime"));
+
+            schedule.setStartDateTime(LocalDateTime.of(date, startTime));
+            schedule.setEndDateTime(LocalDateTime.of(date, endTime));
+        }
+
+        // Update other fields
+        schedule.setAvailableSpots((Integer) scheduleData.get("availableSpots"));
+        schedule.setIsAvailable((Boolean) scheduleData.get("isAvailable"));
+    }
+
+    // Helper method to create a new schedule from data
+    private void createNewScheduleFromData(Experience experience, Map<String, Object> scheduleData, List<Long> incomingScheduleIds) {
+        ExperienceSchedule schedule = new ExperienceSchedule();
+        schedule.setExperience(experience);
+
+        // Update with data using the same logic as update
+        updateScheduleFromData(schedule, scheduleData);
+
+        ExperienceSchedule savedSchedule = experienceScheduleRepository.save(schedule);
+        incomingScheduleIds.add(savedSchedule.getScheduleId());
+
+        System.out.println("CREATED new schedule ID " + savedSchedule.getScheduleId() + ": " +
+                savedSchedule.getStartDateTime() + " to " + savedSchedule.getEndDateTime());
     }
 
     /**

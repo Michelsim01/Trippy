@@ -3,8 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ChevronDown, X, Camera, Upload, Plus, AlertCircle } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import { useExperienceAuth } from '../hooks/useExperienceAuth';
-import { isMultiDayTour } from '../utils/scheduleGenerator';
-import { calculateDuration, formatDurationForDisplay } from '../utils/experienceHelpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -41,9 +39,6 @@ export default function EditExperienceBasicInfoPage() {
     shortDescription: "",
     highlights: [],
     category: "",
-    duration: "",
-    startDateTime: "",
-    endDateTime: "",
     location: "",
     country: "",
     tags: [],
@@ -95,9 +90,6 @@ export default function EditExperienceBasicInfoPage() {
         shortDescription: contextData?.shortDescription || "",
         highlights: contextData?.highlights || [],
         category: contextData?.category || "",
-        duration: contextData?.duration || "",
-        startDateTime: contextData?.startDateTime || "",
-        endDateTime: contextData?.endDateTime || "",
         location: contextData?.location || "",
         country: contextData?.country || "",
         tags: contextData?.tags || [],
@@ -109,18 +101,6 @@ export default function EditExperienceBasicInfoPage() {
     }
   }, [contextData, isEditMode]);
 
-  // Auto-calculate duration when start/end dates change
-  useEffect(() => {
-    if (formData.startDateTime && formData.endDateTime) {
-      const calculatedDuration = calculateDuration(formData.startDateTime, formData.endDateTime);
-      if (calculatedDuration !== null && calculatedDuration !== parseFloat(formData.duration)) {
-        setFormData(prev => ({
-          ...prev,
-          duration: calculatedDuration.toString()
-        }));
-      }
-    }
-  }, [formData.startDateTime, formData.endDateTime]);
 
   if (isLoading) {
     return (
@@ -143,9 +123,6 @@ export default function EditExperienceBasicInfoPage() {
         shortDescription: formData.shortDescription.trim(),
         highlights: formData.highlights,
         category: formData.category,
-        duration: formData.duration,
-        startDateTime: formData.startDateTime,
-        endDateTime: formData.endDateTime,
         location: formData.location.trim(),
         country: formData.country.trim(),
         tags: formData.tags,
@@ -184,18 +161,6 @@ export default function EditExperienceBasicInfoPage() {
       alert('Please select a category');
       return;
     }
-    if (!formData.duration || parseFloat(formData.duration) <= 0) {
-      alert('Please enter a valid duration');
-      return;
-    }
-    if (!formData.startDateTime) {
-      alert('Please select a start date and time');
-      return;
-    }
-    if (!formData.endDateTime) {
-      alert('Please select an end date and time');
-      return;
-    }
     if (!formData.location.trim()) {
       alert('Please enter a location');
       return;
@@ -214,9 +179,6 @@ export default function EditExperienceBasicInfoPage() {
       shortDescription: formData.shortDescription.trim(),
       highlights: formData.highlights,
       category: formData.category,
-      duration: formData.duration,
-      startDateTime: formData.startDateTime,
-      endDateTime: formData.endDateTime,
       location: formData.location.trim(),
       country: formData.country.trim(),
       tags: formData.tags,
@@ -283,13 +245,6 @@ export default function EditExperienceBasicInfoPage() {
     }
   };
 
-  // Helper function to check if tour spans multiple days
-  const isMultiDay = (startDateTime, endDateTime) => {
-    if (!startDateTime || !endDateTime) return false;
-    const startDate = new Date(startDateTime).toDateString();
-    const endDate = new Date(endDateTime).toDateString();
-    return startDate !== endDate;
-  };
 
   const handleInputChange = (field, value) => {
     // Don't allow changes to restricted fields when bookings exist
@@ -460,78 +415,6 @@ export default function EditExperienceBasicInfoPage() {
                     isMobile={false}
                   />
 
-                  {/* Start and End Date/Time */}
-                  <div className="grid grid-cols-2 gap-12" style={{marginBottom: '15px'}}>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Start Date & Time</label>
-                      {getFieldWarning('startDateTime') && (
-                        <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                          <div className="flex items-start space-x-2">
-                            <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-xs text-orange-700">{getFieldWarning('startDateTime')}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="relative">
-                        <input style={{padding: '6px'}}
-                          type="datetime-local"
-                          value={formData.startDateTime}
-                          onChange={(e) => handleInputChange('startDateTime', e.target.value)}
-                          disabled={isFieldDisabled('startDateTime')}
-                          className={`w-full px-6 py-5 border-2 rounded-xl focus:outline-none text-lg font-medium transition-colors ${
-                            isFieldDisabled('startDateTime')
-                              ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                              : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">End Date & Time</label>
-                      {getFieldWarning('endDateTime') && (
-                        <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                          <div className="flex items-start space-x-2">
-                            <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-xs text-orange-700">{getFieldWarning('endDateTime')}</p>
-                          </div>
-                        </div>
-                      )}
-                      <div className="relative">
-                        <input style={{padding: '6px'}}
-                          type="datetime-local"
-                          value={formData.endDateTime}
-                          onChange={(e) => handleInputChange('endDateTime', e.target.value)}
-                          disabled={isFieldDisabled('endDateTime')}
-                          className={`w-full px-6 py-5 border-2 rounded-xl focus:outline-none text-lg font-medium transition-colors ${
-                            isFieldDisabled('endDateTime')
-                              ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                              : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Duration Display and Multi-day Indicator */}
-                  {formData.startDateTime && formData.endDateTime && (
-                    <div style={{marginBottom: '15px'}}>
-                      <div className="flex items-center gap-4 bg-neutrals-7 px-6 py-4 rounded-xl">
-                        <div className="flex items-center gap-3">
-                          <span className="text-sm font-bold uppercase text-neutrals-5">Duration:</span>
-                          <span className="text-lg font-semibold text-neutrals-1">
-                            {formatDurationForDisplay(parseFloat(formData.duration))}
-                          </span>
-                        </div>
-                        {isMultiDay(formData.startDateTime, formData.endDateTime) && (
-                          <div className="flex items-center gap-2 ml-auto">
-                            <AlertCircle className="w-5 h-5 text-primary-1" />
-                            <span className="text-sm font-semibold text-primary-1">Multi-day Experience</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Country */}
                   <div style={{marginBottom: '15px'}}>
@@ -777,76 +660,6 @@ export default function EditExperienceBasicInfoPage() {
                 isMobile={true}
               />
 
-              {/* Start and End Date/Time */}
-              <div className="grid grid-cols-2 gap-4" style={{marginBottom: '10px'}}>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Start Date & Time</label>
-                  {getFieldWarning('startDateTime') && (
-                    <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                      <div className="flex items-start space-x-1">
-                        <AlertCircle className="w-3 h-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-orange-700">{getFieldWarning('startDateTime')}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="relative">
-                    <input style={{padding: '4px'}}
-                      type="datetime-local"
-                      value={formData.startDateTime}
-                      onChange={(e) => handleInputChange('startDateTime', e.target.value)}
-                      disabled={isFieldDisabled('startDateTime')}
-                      className={`w-full px-4 py-4 border-2 rounded-xl focus:outline-none text-sm font-medium transition-colors ${
-                        isFieldDisabled('startDateTime')
-                          ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                          : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                      }`}
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">End Date & Time</label>
-                  {getFieldWarning('endDateTime') && (
-                    <div className="mb-2 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                      <div className="flex items-start space-x-1">
-                        <AlertCircle className="w-3 h-3 text-orange-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs text-orange-700">{getFieldWarning('endDateTime')}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="relative">
-                    <input style={{padding: '4px'}}
-                      type="datetime-local"
-                      value={formData.endDateTime}
-                      onChange={(e) => handleInputChange('endDateTime', e.target.value)}
-                      disabled={isFieldDisabled('endDateTime')}
-                      className={`w-full px-4 py-4 border-2 rounded-xl focus:outline-none text-sm font-medium transition-colors ${
-                        isFieldDisabled('endDateTime')
-                          ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                          : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Duration Display and Multi-day Indicator */}
-              {formData.startDateTime && formData.endDateTime && (
-                <div style={{marginBottom: '10px'}}>
-                  <div className="flex items-center gap-3 bg-neutrals-7 px-4 py-3 rounded-xl">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold uppercase text-neutrals-5">Duration:</span>
-                      <span className="text-sm font-semibold text-neutrals-1">{formatDurationForDisplay(parseFloat(formData.duration))}</span>
-                    </div>
-                    {isMultiDay(formData.startDateTime, formData.endDateTime) && (
-                      <div className="flex items-center gap-1 ml-auto">
-                        <AlertCircle className="w-4 h-4 text-primary-1" />
-                        <span className="text-xs font-semibold text-primary-1">Multi-day</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* Country */}
               <div style={{marginBottom: '10px'}}>

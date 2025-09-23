@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Calendar, Clock } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
-import { generateScheduleRecords, isMultiDayTour, getTourDurationInDays, validateManualDateSelection } from '../utils/scheduleGenerator';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ProgressSteps from '../components/create-experience/ProgressSteps';
+import Button from '../components/Button';
 
 export default function EditExperienceAvailabilityPage() {
   const navigate = useNavigate();
@@ -27,12 +27,19 @@ export default function EditExperienceAvailabilityPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [dateValidationError, setDateValidationError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAddScheduleForm, setShowAddScheduleForm] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [scheduleForm, setScheduleForm] = useState({
+    startDateTime: '',
+    endDateTime: ''
+  });
 
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDates, setSelectedDates] = useState(new Set(contextData?.availability?.selectedDates || []));
-  const [blockedDates, setBlockedDates] = useState(new Set(contextData?.availability?.blockedDates || []));
+  // Master schedule settings state
+  const [masterSchedule, setMasterSchedule] = useState({
+    startDateTime: '',
+    duration: ''  // Duration in hours
+  });
 
   // Initialize form data for direct page access
   useEffect(() => {
@@ -50,1066 +57,595 @@ export default function EditExperienceAvailabilityPage() {
     initializeData();
   }, [id, isEditMode, experienceId, loadExistingExperience]);
 
-  // Extract the experience's start time if available (in 24-hour format for time input)
-  const getDefaultTimeSlot = () => {
-    // Check if we have a valid startDateTime (not empty string)
-    if (contextData?.startDateTime && contextData.startDateTime !== '') {
-      try {
-        const startTime = new Date(contextData.startDateTime);
-
-        // Check if the date is valid
-        if (!isNaN(startTime.getTime())) {
-          const hours = startTime.getHours();
-          const minutes = startTime.getMinutes();
-          // Return in 24-hour format (HH:MM) for HTML time input
-          const formattedTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-
-          return formattedTime;
-        }
-      } catch (error) {
-        console.error('Error parsing start time:', error);
-      }
+  // Initialize master schedule from context data
+  useEffect(() => {
+    if (contextData) {
+      setMasterSchedule({
+        startDateTime: contextData.startDateTime || '',
+        duration: contextData.duration || ''
+      });
     }
+  }, [contextData]);
 
-    return '10:00'; // 10:00 in 24-hour format
-  };
-
-  // Initialize recurring schedule with proper defaults
-  const initializeTimeSlots = () => {
-    // If we have saved time slots, validate and use them
-    if (contextData?.availability?.recurringSchedule?.timeSlots?.length > 0) {
-      // Convert any 12-hour format slots to 24-hour format for the time input
-      const convertedSlots = contextData.availability.recurringSchedule.timeSlots.map(slot => {
-        // If already in 24-hour format (HH:mm), keep it
-        if (slot && slot.match(/^\d{2}:\d{2}$/)) {
-          return slot;
-        }
-        // If in 12-hour format with AM/PM, convert to 24-hour
-        if (slot && (slot.includes('AM') || slot.includes('PM'))) {
-          const [time, period] = slot.split(' ');
-          const [hours, minutes] = time.split(':');
-          let hour = parseInt(hours);
-
-          if (period === 'PM' && hour !== 12) {
-            hour += 12;
-          } else if (period === 'AM' && hour === 12) {
-            hour = 0;
-          }
-
-          return `${hour.toString().padStart(2, '0')}:${minutes.padStart(2, '0')}`;
-        }
-        return null;
-      }).filter(slot => slot !== null);
-
-      if (convertedSlots.length > 0) {
-        return convertedSlots;
-      }
-    }
-
-    // Otherwise use the default from experience start time
-    return [getDefaultTimeSlot()];
-  };
-
-  const [recurringSchedule, setRecurringSchedule] = useState({
-    enabled: contextData?.availability?.recurringSchedule?.enabled || false,
-    daysOfWeek: contextData?.availability?.recurringSchedule?.daysOfWeek || [],
-    timeSlots: initializeTimeSlots()
+  // Get sorted schedules
+  const sortedSchedules = (contextData?.schedules || []).sort((a, b) => {
+    return new Date(a.startDateTime) - new Date(b.startDateTime);
   });
 
-  // Check if this is a multi-day tour
-  const isMultiDay = isMultiDayTour(contextData?.startDateTime, contextData?.endDateTime);
-  const tourDurationDays = isMultiDay ? getTourDurationInDays(contextData?.startDateTime, contextData?.endDateTime) : 1;
 
-  // Disable recurring schedule for multi-day tours
-  useEffect(() => {
-    if (isMultiDay && recurringSchedule.enabled) {
-      setRecurringSchedule(prev => ({
-        ...prev,
-        enabled: false
-      }));
-    }
-  }, [isMultiDay]);
-
-  const getDaysInMonth = (date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const days = [];
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push(i);
-    }
-    return days;
+  // Check if schedule can be edited/deleted
+  const isScheduleEditable = (schedule) => {
+    // Red status: has bookings or mock bookings enabled
+    // Green status: editable
+    return !hasBookings && !(schedule.hasBookings || false);
   };
 
-  const formatDate = (day) => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  // Calculate end time from start time and duration
+  const calculateEndTime = (startDateTime, durationHours) => {
+    if (!startDateTime || !durationHours) return '';
+
+    const start = new Date(startDateTime);
+    const end = new Date(start.getTime() + (parseFloat(durationHours) * 60 * 60 * 1000));
+
+    // Format back to datetime-local format (preserve local timezone)
+    const year = end.getFullYear();
+    const month = String(end.getMonth() + 1).padStart(2, '0');
+    const day = String(end.getDate()).padStart(2, '0');
+    const hours = String(end.getHours()).padStart(2, '0');
+    const minutes = String(end.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  const toggleDate = (day) => {
-    if (isFieldRestricted('availability')) {
-      return;
-    }
+  // Handle master schedule changes
+  const handleMasterScheduleChange = (field, value) => {
+    setMasterSchedule(prev => {
+      const updated = { ...prev, [field]: value };
 
-    const dateStr = formatDate(day);
-    const newSelected = new Set(selectedDates);
-    const newBlocked = new Set(blockedDates);
+      // Update context data when master schedule changes
+      updateFormData({
+        startDateTime: field === 'startDateTime' ? value : updated.startDateTime,
+        duration: field === 'duration' ? value : updated.duration
+      });
 
-    // Clear any previous validation error
-    setDateValidationError(null);
-
-    if (selectedDates.has(dateStr)) {
-      // Removing a selected date - allow this
-      newSelected.delete(dateStr);
-      newBlocked.add(dateStr);
-    } else if (blockedDates.has(dateStr)) {
-      // Removing from blocked dates - allow this
-      newBlocked.delete(dateStr);
-    } else {
-      // Adding a new selected date - validate for multi-day tours
-      if (isMultiDay) {
-        const validation = validateManualDateSelection(
-          dateStr,
-          {
-            startDateTime: contextData?.startDateTime,
-            endDateTime: contextData?.endDateTime
-          },
-          Array.from(selectedDates),
-          Array.from(blockedDates)
-        );
-
-        if (!validation.isValid) {
-          setDateValidationError(validation.conflictReason);
-          return; // Don't add the date if validation fails
-        }
-      }
-
-      newSelected.add(dateStr);
-    }
-
-    setSelectedDates(newSelected);
-    setBlockedDates(newBlocked);
+      return updated;
+    });
   };
 
-  const isPastDate = (day) => {
-    const today = new Date();
-    const checkDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    return checkDate < today;
-  };
-
-  const getDateStatus = (day) => {
-    const dateStr = formatDate(day);
-    const isAvailable = selectedDates.has(dateStr);
-    const isBlocked = blockedDates.has(dateStr);
-    const isPast = isPastDate(day);
-
-    // For multi-day tours, check if this date would conflict
-    let wouldConflict = false;
-    let conflictReason = '';
-
-    if (isMultiDay && !isAvailable && !isBlocked && !isPast) {
-      const validation = validateManualDateSelection(
-        dateStr,
-        {
-          startDateTime: contextData?.startDateTime,
-          endDateTime: contextData?.endDateTime
-        },
-        Array.from(selectedDates),
-        Array.from(blockedDates)
-      );
-
-      if (!validation.isValid) {
-        wouldConflict = true;
-        conflictReason = validation.conflictReason;
-      }
-    }
-
-    return {
-      isAvailable,
-      isBlocked,
-      isPast,
-      wouldConflict,
-      conflictReason
+  // Handle adding new schedule
+  const handleAddSchedule = () => {
+    // Pre-populate with master schedule if available
+    const initialForm = {
+      startDateTime: masterSchedule.startDateTime || '',
+      endDateTime: masterSchedule.startDateTime && masterSchedule.duration
+        ? calculateEndTime(masterSchedule.startDateTime, masterSchedule.duration)
+        : ''
     };
+    setScheduleForm(initialForm);
+    setEditingScheduleId(null);
+    setShowAddScheduleForm(true);
   };
 
-  const toggleDayOfWeek = (day) => {
-    if (isFieldRestricted('availability')) {
-      return;
-    }
-
-    setRecurringSchedule(prev => ({
-      ...prev,
-      daysOfWeek: prev.daysOfWeek.includes(day)
-        ? prev.daysOfWeek.filter(d => d !== day)
-        : [...prev.daysOfWeek, day]
-    }));
+  // Handle editing existing schedule
+  const handleEditSchedule = (schedule) => {
+    setScheduleForm({
+      startDateTime: schedule.startDateTime || '',
+      endDateTime: schedule.endDateTime || ''
+    });
+    setEditingScheduleId(schedule.scheduleId || schedule.id);
+    setShowAddScheduleForm(true);
   };
 
-  const addTimeSlot = () => {
-    if (isFieldRestricted('availability')) {
-      return;
+  // Handle deleting schedule
+  const handleDeleteSchedule = (scheduleId) => {
+    if (window.confirm('Are you sure you want to delete this schedule?')) {
+      const updatedSchedules = sortedSchedules.filter(schedule =>
+        (schedule.scheduleId || schedule.id) !== scheduleId
+      );
+      updateFormData({ schedules: updatedSchedules });
     }
-
-    // Add a default afternoon slot (14:00 in 24-hour format)
-    setRecurringSchedule(prev => ({
-      ...prev,
-      timeSlots: [...prev.timeSlots, '14:00']
-    }));
   };
 
-  const updateTimeSlot = (index, time) => {
-    if (isFieldRestricted('availability')) {
-      return;
-    }
-
-    // Validate the time input
-    if (time && time !== '') {
-      setRecurringSchedule(prev => ({
+  // Handle schedule form changes with auto-duration calculation
+  const handleScheduleFormChange = (field, value) => {
+    if (field === 'startDateTime' && masterSchedule.duration) {
+      // Auto-calculate end time when start time changes and master duration exists
+      const endDateTime = calculateEndTime(value, masterSchedule.duration);
+      setScheduleForm(prev => ({
         ...prev,
-        timeSlots: prev.timeSlots.map((t, i) => i === index ? time : t)
+        startDateTime: value,
+        endDateTime: endDateTime
+      }));
+    } else {
+      setScheduleForm(prev => ({
+        ...prev,
+        [field]: value
       }));
     }
   };
 
-  const removeTimeSlot = (index) => {
-    if (isFieldRestricted('availability')) {
+  // Calculate duration in hours between two datetime strings
+  const calculateDurationHours = (startDateTime, endDateTime) => {
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
+    return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  };
+
+  // Validate duration consistency with master schedule
+  const validateDurationConsistency = (startDateTime, endDateTime) => {
+    if (!masterSchedule.duration) return true; // No master duration set, skip validation
+
+    const calculatedDuration = calculateDurationHours(startDateTime, endDateTime);
+    const masterDuration = parseFloat(masterSchedule.duration);
+
+    // Allow small floating point tolerance (5 minutes = 0.083 hours)
+    const tolerance = 0.083;
+    return Math.abs(calculatedDuration - masterDuration) <= tolerance;
+  };
+
+  // Handle schedule form submission
+  const handleScheduleSubmit = () => {
+    if (!scheduleForm.startDateTime || !scheduleForm.endDateTime) {
+      alert('Please fill in both start and end date/time');
       return;
     }
 
-    setRecurringSchedule(prev => ({
-      ...prev,
-      timeSlots: prev.timeSlots.filter((_, i) => i !== index)
-    }));
+    if (new Date(scheduleForm.startDateTime) >= new Date(scheduleForm.endDateTime)) {
+      alert('End date/time must be after start date/time');
+      return;
+    }
+
+    // Validate duration consistency if master duration is set
+    if (masterSchedule.duration && !validateDurationConsistency(scheduleForm.startDateTime, scheduleForm.endDateTime)) {
+      const actualDuration = calculateDurationHours(scheduleForm.startDateTime, scheduleForm.endDateTime);
+      alert(`Duration mismatch! This schedule is ${actualDuration.toFixed(1)} hours, but master duration is ${masterSchedule.duration} hours. Please adjust the times or master duration.`);
+      return;
+    }
+
+    // Check for conflicts with existing schedules
+    const hasConflict = sortedSchedules.some(schedule => {
+      if (editingScheduleId && (schedule.scheduleId || schedule.id) === editingScheduleId) {
+        return false; // Skip self when editing
+      }
+
+      const newStart = new Date(scheduleForm.startDateTime);
+      const newEnd = new Date(scheduleForm.endDateTime);
+      const existingStart = new Date(schedule.startDateTime);
+      const existingEnd = new Date(schedule.endDateTime);
+
+      return (newStart < existingEnd && newEnd > existingStart);
+    });
+
+    if (hasConflict) {
+      alert('This schedule conflicts with an existing schedule. Please choose different times.');
+      return;
+    }
+
+    let updatedSchedules;
+    if (editingScheduleId) {
+      // Update existing schedule
+      updatedSchedules = sortedSchedules.map(schedule =>
+        (schedule.scheduleId || schedule.id) === editingScheduleId
+          ? { ...schedule, ...scheduleForm }
+          : schedule
+      );
+    } else {
+      // Add new schedule
+      const newSchedule = {
+        ...scheduleForm,
+        scheduleId: Date.now(), // Temporary ID for new schedules
+        availableSpots: parseInt(contextData?.participantsAllowed),
+        isAvailable: true,
+        isNew: true
+      };
+      updatedSchedules = [...sortedSchedules, newSchedule];
+    }
+
+    updateFormData({ schedules: updatedSchedules });
+    setShowAddScheduleForm(false);
+    setEditingScheduleId(null);
+    setScheduleForm({ startDateTime: '', endDateTime: '' });
   };
 
-  const handleSaveChanges = async () => {
-    if (isSaving) return;
-
-    setIsSaving(true);
-    setSaveError(null);
-    setSaveSuccess(false);
-
+  // Handle save
+  const handleSave = async () => {
     try {
-      // Auto-enable recurring schedule if user has selected days and times
-      const shouldEnableRecurring = recurringSchedule.daysOfWeek.length > 0 && recurringSchedule.timeSlots.length > 0;
-
-      // Prepare availability data
-      const availabilityData = {
-        selectedDates: Array.from(selectedDates),
-        blockedDates: Array.from(blockedDates),
-        recurringSchedule: {
-          ...recurringSchedule,
-          enabled: shouldEnableRecurring // Auto-enable if user has configured recurring schedule
-        }
-      };
-
-      console.log('Availability data being used for schedule generation:', availabilityData);
-
-      // Generate schedule records (preventing duplicates)
-      const schedules = generateScheduleRecords(
-        availabilityData,
-        contextData?.duration || 3, // Use experience duration from previous step, default 3 hours
-        3, // Generate 3 months of schedules
-        {
-          startDateTime: contextData?.startDateTime,
-          endDateTime: contextData?.endDateTime,
-          participantsAllowed: parseInt(contextData?.participantsAllowed) || 10
-        } // Pass experience info for multi-day detection and max participants
-      );
-
-      // Prepare complete data including availability and schedules
-      const completeData = {
-        ...contextData,
-        availability: availabilityData,
-        schedules: schedules
-      };
-
-      console.log(`Generated ${schedules.length} schedule records`);
-      console.log('Sample schedules:', schedules.slice(0, 3));
-      console.log('Saving availability changes:', completeData);
-
-      await saveCurrentChanges(completeData);
+      setIsSaving(true);
+      setSaveError(null);
+      await saveCurrentChanges();
       setSaveSuccess(true);
-
-      // Clear success message after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      console.error('Failed to save availability changes:', error);
+      console.error('Save failed:', error);
       setSaveError(error.message);
     } finally {
       setIsSaving(false);
     }
   };
 
+  // Handle navigation
   const handleBack = () => {
     navigate(`/edit-experience/${id}/pricing`);
   };
 
   const handleNext = () => {
-    // For edit mode, this could navigate to a summary page or back to experience details
-    navigate(`/experience/${id}`);
+    navigate(`/my-tours`);
   };
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const closeSidebar = () => {
-    setIsSidebarOpen(false);
-  };
-
-  // Show loading screen for direct page access
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
-          <p className="text-neutrals-3">Loading experience data...</p>
+          <div className="w-8 h-8 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-neutrals-4">Loading availability data...</p>
         </div>
       </div>
     );
   }
 
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
   return (
     <div className="min-h-screen bg-neutrals-8">
-      {/* Desktop Layout */}
-      <div className="hidden lg:flex">
-        <div className={`transition-all duration-300 ${isSidebarOpen ? 'w-[275px]' : 'w-0'} overflow-hidden`}>
-          <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="desktop" />
-        </div>
+      <Navbar
+        isAuthenticated={true}
+        isSidebarOpen={isSidebarOpen}
+        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+      />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} variant="desktop" />
 
-        <div className="flex-1 w-full transition-all duration-300">
-          <Navbar
-            isAuthenticated={true}
-            isSidebarOpen={isSidebarOpen}
-            onToggleSidebar={toggleSidebar}
-          />
-          <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
-            <div className="mb-16">
-              <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Edit Experience - Availability</h1>
-              <ProgressSteps currentStep={4} />
-            </div>
+      <div className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : ''}`}>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Progress Steps */}
+          <ProgressSteps currentStep={4} isEditMode={isEditMode} />
 
-            {/* Booking Toggle Section */}
-            <div className="bg-white rounded-xl p-6 mb-6 border border-neutrals-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Status</h3>
-                  <p className="text-sm text-neutrals-3">
-                    Toggle this to simulate whether this experience has existing bookings.
-                    When enabled, certain fields will be restricted to prevent conflicts with existing bookings.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`text-sm ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
-                    No Bookings
-                  </span>
-                  <button
-                    onClick={toggleBookings}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
-                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-neutrals-1 mb-2">
+              Edit Experience - Availability
+            </h1>
+            <p className="text-neutrals-4">Manage your experience schedules and time slots</p>
+          </div>
+
+          {/* Mock Bookings Toggle */}
+          <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Status</h3>
+                <p className="text-neutrals-4 text-sm">
+                  Toggle this to simulate whether this experience has existing bookings. When enabled, certain fields will be restricted to prevent conflicts with existing bookings.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-neutrals-3">No Bookings</span>
+                <button
+                  onClick={toggleBookings}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    hasBookings ? 'bg-primary-1' : 'bg-neutrals-5'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      hasBookings ? 'translate-x-6' : 'translate-x-1'
                     }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        hasBookings ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
-                    Has Bookings
-                  </span>
-                </div>
-              </div>
-              {hasBookings && (
-                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <p className="text-sm text-orange-700">
-                    <strong>Booking restrictions active:</strong> Some fields cannot be modified due to existing bookings
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-20">
-              <div className="lg:col-span-3">
-                <div className="space-y-8">
-                  {/* Recurring Schedule */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Recurring Schedule</label>
-                    <div className={`bg-white border-2 rounded-xl p-6 ${
-                      isFieldRestricted('availability') ? 'border-orange-300 bg-orange-50' : 'border-neutrals-6'
-                    }`}>
-                      {isFieldRestricted('availability') && (
-                        <div className="mb-4 p-4 bg-orange-100 border border-orange-200 rounded-lg">
-                          <p className="text-sm text-orange-700 font-medium mb-2">
-                            🔒 Availability settings cannot be modified due to existing bookings
-                          </p>
-                          <p className="text-xs text-orange-600">
-                            To change availability: Create a new experience with your desired schedule, then archive this one after existing bookings are completed.
-                          </p>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between mb-6">
-                        <div>
-                          <h3 className="text-lg font-semibold text-neutrals-1">Set Recurring Schedule</h3>
-                          {isMultiDay ? (
-                            <p className="text-sm text-orange-600 mt-1">
-                              Recurring schedules disabled for multi-day tours ({tourDurationDays} days). Use manual date selection below.
-                            </p>
-                          ) : (
-                            <p className="text-sm text-neutrals-3 mt-1">Offer this experience on regular days</p>
-                          )}
-                        </div>
-                        <button
-                          onClick={() => !isMultiDay && !isFieldRestricted('availability') && setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
-                          disabled={isMultiDay || isFieldRestricted('availability')}
-                          className={`w-14 h-7 rounded-full relative transition-colors ${
-                            isMultiDay || isFieldRestricted('availability') ? 'bg-neutrals-6 cursor-not-allowed' :
-                            recurringSchedule.enabled ? 'bg-primary-1' : 'bg-neutrals-5'
-                          }`}
-                        >
-                          <div className={`w-6 h-6 bg-white rounded-full absolute top-0.5 transition-transform ${
-                            recurringSchedule.enabled && !isMultiDay && !isFieldRestricted('availability') ? 'translate-x-7' : 'translate-x-0.5'
-                          }`} />
-                        </button>
-                      </div>
-
-                      {recurringSchedule.enabled && (
-                        <div className="space-y-6">
-                          {/* Days of Week */}
-                          <div>
-                            <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Available Days</label>
-                            <div className="grid grid-cols-7 gap-2">
-                              {daysOfWeek.map((day, index) => (
-                                <button
-                                  key={day}
-                                  onClick={() => !isFieldRestricted('availability') && toggleDayOfWeek(index)}
-                                  disabled={isFieldRestricted('availability')}
-                                  className={`text-sm font-medium py-3 rounded-lg transition-colors ${
-                                    isFieldRestricted('availability') ? 'cursor-not-allowed opacity-50' : ''
-                                  } ${
-                                    recurringSchedule.daysOfWeek.includes(index)
-                                      ? 'bg-primary-1 text-white'
-                                      : 'bg-neutrals-7 text-neutrals-3 hover:bg-neutrals-6'
-                                  }`}
-                                >
-                                  {day}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Time Slots */}
-                          <div>
-                            <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Time Slots</label>
-                            {!isMultiDay && (
-                              <p className="text-xs text-neutrals-3 mb-2">Each time slot creates a separate booking option for the selected days</p>
-                            )}
-                            <div className="space-y-3">
-                              {recurringSchedule.timeSlots.map((time, index) => (
-                                <div key={index} className="flex gap-3">
-                                  <input
-                                    type="time"
-                                    value={time}
-                                    onChange={(e) => updateTimeSlot(index, e.target.value)}
-                                    disabled={isFieldRestricted('availability')}
-                                    className={`flex-1 px-4 py-3 border-2 rounded-xl focus:outline-none text-lg font-medium transition-colors ${
-                                      isFieldRestricted('availability')
-                                        ? 'border-orange-300 bg-orange-50 text-orange-700 cursor-not-allowed'
-                                        : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                                    }`}
-                                    style={{padding: '6px'}}
-                                  />
-                                  {recurringSchedule.timeSlots.length > 1 && (
-                                    <button
-                                      onClick={() => !isFieldRestricted('availability') && removeTimeSlot(index)}
-                                      disabled={isFieldRestricted('availability')}
-                                      className={`w-12 h-12 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-xl transition-colors ${
-                                        isFieldRestricted('availability') ? 'cursor-not-allowed opacity-50' : ''
-                                      }`}
-                                    >
-                                      <X className="w-5 h-5" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
-                              <button
-                                onClick={addTimeSlot}
-                                disabled={isFieldRestricted('availability')}
-                                className={`flex items-center gap-2 font-medium transition-colors ${
-                                  isFieldRestricted('availability')
-                                    ? 'text-gray-400 cursor-not-allowed'
-                                    : 'text-primary-1 hover:text-primary-1/80'
-                                }`}
-                              >
-                                <Plus className="w-4 h-4" />
-                                Add time slot
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Calendar */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Specific Dates (Optional)</label>
-                    <div className={`bg-white border-2 rounded-xl p-6 ${
-                      isFieldRestricted('availability') ? 'border-orange-300 bg-orange-50' : 'border-neutrals-6'
-                    }`}>
-                      {/* Month Navigation */}
-                      <div className="flex items-center justify-between mb-6">
-                        <button
-                          onClick={() => {
-                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-                            setDateValidationError(null);
-                          }}
-                          className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
-                        >
-                          <ChevronLeft className="w-5 h-5 text-neutrals-3" />
-                        </button>
-                        <h3 className="text-lg font-semibold text-neutrals-1">
-                          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                        </h3>
-                        <button
-                          onClick={() => {
-                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
-                            setDateValidationError(null);
-                          }}
-                          className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors"
-                        >
-                          <ChevronRight className="w-5 h-5 text-neutrals-3" />
-                        </button>
-                      </div>
-
-                      {/* Days of Week Header */}
-                      <div className="grid grid-cols-7 gap-2 mb-4">
-                        {daysOfWeek.map(day => (
-                          <div key={day} className="text-center text-sm font-medium text-neutrals-4 py-2">
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Calendar Grid */}
-                      <div className="grid grid-cols-7 gap-2">
-                        {getDaysInMonth(currentMonth).map((day, index) => {
-                          if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
-
-                          const status = getDateStatus(day);
-
-                          return (
-                            <button
-                              key={day}
-                              onClick={() => !status.isPast && !isFieldRestricted('availability') && toggleDate(day)}
-                              disabled={status.isPast || status.wouldConflict || isFieldRestricted('availability')}
-                              title={status.wouldConflict ? status.conflictReason : isFieldRestricted('availability') ? 'Blocked due to existing bookings' : undefined}
-                              className={`
-                                aspect-square rounded-lg text-sm font-medium relative transition-colors
-                                ${status.isPast || isFieldRestricted('availability') ? 'cursor-not-allowed' : 'cursor-pointer'}
-                                ${isFieldRestricted('availability') ? 'opacity-50' : ''}
-                                ${status.isAvailable ? 'bg-primary-1 text-white hover:bg-primary-1/90' : ''}
-                                ${status.isBlocked ? 'bg-neutrals-5 text-white' : ''}
-                                ${status.wouldConflict ? 'bg-red-100 text-red-600 cursor-not-allowed border border-red-300' : ''}
-                                ${!status.isAvailable && !status.isBlocked && !status.isPast && !status.wouldConflict && !isFieldRestricted('availability') ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
-                                ${status.isPast ? 'text-neutrals-5' : ''}
-                              `}
-                            >
-                              {day}
-                              {status.isBlocked && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="w-full h-0.5 bg-white rotate-45"></div>
-                                </div>
-                              )}
-                              {status.wouldConflict && (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <div className="text-red-500 text-xs">⚠</div>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Date Validation Error */}
-                      {dateValidationError && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-sm text-red-700 font-medium">
-                            ⚠️ {dateValidationError}
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Legend */}
-                      <div className="flex gap-6 mt-6 text-sm">
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-primary-1 rounded"></div>
-                          <span className="text-neutrals-2">Available</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="w-4 h-4 bg-neutrals-5 rounded relative">
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-full h-0.5 bg-white rotate-45"></div>
-                            </div>
-                          </div>
-                          <span className="text-neutrals-2">Blocked</span>
-                        </div>
-                        {isMultiDay && (
-                          <div className="flex items-center gap-2">
-                            <div className="w-4 h-4 bg-red-100 border border-red-300 rounded relative">
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-red-500 text-xs">⚠</div>
-                              </div>
-                            </div>
-                            <span className="text-neutrals-2">Conflicts</span>
-                          </div>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-neutrals-4 mt-4">
-                        {isFieldRestricted('availability')
-                          ? 'Calendar interactions disabled due to existing bookings'
-                          : 'Click once to mark available, twice to block, three times to clear'
-                        }
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Success/Error Messages */}
-                {saveSuccess && (
-                  <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="text-green-800 text-sm font-medium">
-                      ✅ Availability changes saved successfully!
-                    </div>
-                  </div>
-                )}
-
-                {saveError && (
-                  <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <div className="text-red-800 text-sm">
-                      <strong>Error:</strong> {saveError}
-                    </div>
-                  </div>
-                )}
-
-                <div className="pt-8 flex gap-4" style={{marginBottom: '50px'}}>
-                  <button
-                    onClick={handleSaveChanges}
-                    disabled={isSaving}
-                    className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-6 rounded-full hover:bg-primary-1 hover:text-white transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    onClick={handleBack}
-                    disabled={isSaving}
-                    className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={isSaving}
-                    className="w-1/4 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-              <div className="lg:col-span-2">
-                <div className="space-y-6">
-                  <div className="bg-white border-2 border-neutrals-6 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-neutrals-1 mb-4">Availability Summary</h3>
-                    <div className="space-y-4">
-                      {recurringSchedule.enabled && (
-                        <div>
-                          <h4 className="font-medium text-neutrals-2 mb-2">Recurring Schedule</h4>
-                          <p className="text-sm text-neutrals-3">
-                            {recurringSchedule.daysOfWeek.length > 0
-                              ? `${recurringSchedule.daysOfWeek.map(d => daysOfWeek[d]).join(', ')} at ${recurringSchedule.timeSlots.join(', ')}`
-                              : 'No recurring schedule set'
-                            }
-                          </p>
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-medium text-neutrals-2 mb-2">Specific Dates</h4>
-                        <p className="text-sm text-neutrals-3">
-                          {selectedDates.size} available dates selected
-                        </p>
-                        <p className="text-sm text-neutrals-3">
-                          {blockedDates.size} dates blocked
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  />
+                </button>
+                <span className="text-sm text-neutrals-3">Has Bookings</span>
               </div>
             </div>
           </div>
 
-          <Footer />
+          {/* Master Schedule Settings */}
+          <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-neutrals-1 mb-2">Master Schedule Settings</h3>
+              <p className="text-neutrals-4 text-sm">
+                Set the base schedule that applies to all dates. Individual schedules will auto-calculate end times based on these settings.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Master Start Date & Time */}
+              <div>
+                <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                  Master Start Date & Time
+                </label>
+                <input
+                  type="datetime-local"
+                  value={masterSchedule.startDateTime}
+                  onChange={(e) => handleMasterScheduleChange('startDateTime', e.target.value)}
+                  className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none"
+                />
+                <p className="text-xs text-neutrals-4 mt-1">Base date and time for new schedules</p>
+              </div>
+
+              {/* Master Duration */}
+              <div>
+                <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                  Master Duration (hours)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0.5"
+                  max="24"
+                  value={masterSchedule.duration}
+                  onChange={(e) => handleMasterScheduleChange('duration', e.target.value)}
+                  placeholder="e.g., 2.5"
+                  disabled={masterSchedule.duration && sortedSchedules.length > 0}
+                  className={`w-full p-3 border rounded-lg focus:outline-none ${
+                    masterSchedule.duration && sortedSchedules.length > 0
+                      ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
+                      : 'border-neutrals-6 focus:border-primary-1'
+                  }`}
+                />
+                <p className="text-xs text-neutrals-4 mt-1">
+                  {masterSchedule.duration && sortedSchedules.length > 0
+                    ? "Duration is locked after schedules are created. Delete experience and recreate to change."
+                    : "Duration that applies to all schedules"}
+                </p>
+              </div>
+            </div>
+
+            {/* Duration Preview */}
+            {masterSchedule.duration && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">
+                    All schedules will be {masterSchedule.duration} hour{parseFloat(masterSchedule.duration) !== 1 ? 's' : ''} long
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Schedules List */}
+          <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-neutrals-1">Experience Schedules</h3>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handleAddSchedule}
+                className="flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                Add More Dates
+              </Button>
+            </div>
+
+            {sortedSchedules.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-4 text-neutrals-5">
+                  <Calendar className="w-full h-full" />
+                </div>
+                <h4 className="text-lg font-medium text-neutrals-2 mb-2">No schedules yet</h4>
+                <p className="text-neutrals-4 mb-4">Add your first schedule to make this experience available for booking.</p>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleAddSchedule}
+                  className="flex items-center gap-2 mx-auto"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Schedule
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {sortedSchedules.map((schedule, index) => {
+                  const isEditable = isScheduleEditable(schedule);
+                  return (
+                    <div
+                      key={schedule.scheduleId || schedule.id || index}
+                      className="flex items-center justify-between p-4 border border-neutrals-6 rounded-lg"
+                    >
+                      <div className="flex items-center gap-4">
+                        {/* Status Indicator */}
+                        <div className={`w-3 h-3 rounded-full ${isEditable ? 'bg-green-500' : 'bg-red-500'}`}></div>
+
+                        <div>
+                          {/* Date Display */}
+                          <div className="flex items-center gap-2 text-neutrals-2 font-semibold">
+                            <Calendar className="w-4 h-4" />
+                            <span>
+                              {schedule.startDateTime && schedule.endDateTime ? (() => {
+                                const startDate = new Date(schedule.startDateTime);
+                                const endDate = new Date(schedule.endDateTime);
+                                const isMultiDay = startDate.toDateString() !== endDate.toDateString();
+
+                                if (isMultiDay) {
+                                  const startStr = startDate.toLocaleDateString('en-US', {
+                                    day: 'numeric',
+                                    month: 'short'
+                                  });
+                                  const endStr = endDate.toLocaleDateString('en-US', {
+                                    day: 'numeric',
+                                    month: 'short'
+                                  });
+                                  return `${startStr} to ${endStr}`;
+                                } else {
+                                  return startDate.toLocaleDateString('en-US', {
+                                    weekday: 'short',
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric'
+                                  });
+                                }
+                              })() : 'Invalid Date'}
+                            </span>
+                          </div>
+                          {/* Time Range Display */}
+                          <div className="flex items-center gap-2 text-neutrals-4 text-sm mt-1">
+                            <Clock className="w-4 h-4" />
+                            <span>
+                              {schedule.startDateTime && schedule.endDateTime ?
+                                `${new Date(schedule.startDateTime).toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })} - ${new Date(schedule.endDateTime).toLocaleTimeString('en-US', {
+                                  hour: 'numeric',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}` : 'Invalid Time'
+                              }
+                            </span>
+                            {/* Duration indicator */}
+                            {schedule.startDateTime && schedule.endDateTime && (
+                              <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs">
+                                {calculateDurationHours(schedule.startDateTime, schedule.endDateTime).toFixed(1)}h
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isEditable ? (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleEditSchedule(schedule)}
+                              className="flex items-center gap-1"
+                            >
+                              <Edit className="w-3 h-3" />
+                              Edit
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteSchedule(schedule.scheduleId || schedule.id)}
+                              className="flex items-center gap-1 text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Delete
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-sm text-red-600 bg-red-50 px-3 py-1 rounded-full">
+                            Protected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Add/Edit Schedule Form Modal */}
+          {showAddScheduleForm && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4">
+                <h3 className="text-xl font-semibold text-neutrals-1 mb-4">
+                  {editingScheduleId ? 'Edit Schedule' : 'Add New Schedule'}
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                      Start Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduleForm.startDateTime}
+                      onChange={(e) => handleScheduleFormChange('startDateTime', e.target.value)}
+                      className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                      End Date & Time
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={scheduleForm.endDateTime}
+                      onChange={(e) => handleScheduleFormChange('endDateTime', e.target.value)}
+                      className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none"
+                      disabled={masterSchedule.duration ? true : false}
+                    />
+                    {masterSchedule.duration && (
+                      <p className="text-xs text-blue-600 mt-1">
+                        End time is auto-calculated from master duration ({masterSchedule.duration} hours)
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <Button
+                    variant="outline"
+                    size="md"
+                    onClick={() => setShowAddScheduleForm(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="md"
+                    onClick={handleScheduleSubmit}
+                    className="flex-1"
+                  >
+                    {editingScheduleId ? 'Update' : 'Add'} Schedule
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Error/Success Messages */}
+          {saveError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 text-sm">{saveError}</p>
+            </div>
+          )}
+
+          {saveSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+              <p className="text-green-800 text-sm">Changes saved successfully!</p>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={handleBack}
+              className="px-8"
+            >
+              Back
+            </Button>
+
+            <div className="flex gap-4">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-8 border-green-200 text-green-700 hover:bg-green-50"
+              >
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={handleNext}
+                className="px-8"
+              >
+                Finish
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Layout */}
-      <div className="lg:hidden w-full">
-        <Navbar
-          isAuthenticated={true}
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={toggleSidebar}
-        />
-        <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
-
-        <main className="w-full">
-          <div className="py-10" style={{paddingLeft: '20px', paddingRight: '20px'}}>
-            <div className="mb-10">
-              <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Edit Experience - Availability</h1>
-              <ProgressSteps currentStep={4} isMobile={true} />
-            </div>
-
-            {/* Booking Toggle Section */}
-            <div className="bg-white rounded-xl p-4 mb-6 border border-neutrals-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-neutrals-1 mb-2">Booking Status</h3>
-                  <p className="text-xs text-neutrals-3">
-                    Toggle to simulate whether this experience has existing bookings.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-xs ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
-                    No Bookings
-                  </span>
-                  <button
-                    onClick={toggleBookings}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
-                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        hasBookings ? 'translate-x-5' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-xs ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
-                    Has Bookings
-                  </span>
-                </div>
-              </div>
-              {hasBookings && (
-                <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded">
-                  <p className="text-xs text-orange-700">
-                    <strong>Booking restrictions active:</strong> Some fields cannot be modified due to existing bookings
-                  </p>
-                </div>
-              )}
-            </div>
-
-            </div>
-
-            <div className="space-y-6">
-              {/* Recurring Schedule */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Recurring Schedule</label>
-                <div className={`bg-white border-2 rounded-xl p-4 ${
-                  isFieldRestricted('availability') ? 'border-orange-300 bg-orange-50' : 'border-neutrals-6'
-                }`}>
-                  {isFieldRestricted('availability') && (
-                    <div className="mb-3 p-3 bg-orange-100 border border-orange-200 rounded">
-                      <p className="text-xs text-orange-700 font-medium mb-1">
-                        🔒 Blocked due to existing bookings
-                      </p>
-                      <p className="text-xs text-orange-600">
-                        Create a new experience instead to change availability.
-                      </p>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-sm font-semibold text-neutrals-1">Set Recurring Schedule</h3>
-                      {isMultiDay ? (
-                        <p className="text-xs text-orange-600 mt-1">
-                          Disabled for {tourDurationDays}-day tours. Use manual dates.
-                        </p>
-                      ) : (
-                        <p className="text-xs text-neutrals-3 mt-1">Offer on regular days</p>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => !isMultiDay && !isFieldRestricted('availability') && setRecurringSchedule(prev => ({ ...prev, enabled: !prev.enabled }))}
-                      disabled={isMultiDay || isFieldRestricted('availability')}
-                      className={`w-12 h-6 rounded-full relative transition-colors ${
-                        isMultiDay || isFieldRestricted('availability') ? 'bg-neutrals-6 cursor-not-allowed' :
-                        recurringSchedule.enabled ? 'bg-primary-1' : 'bg-neutrals-5'
-                      }`}
-                    >
-                      <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform ${
-                        recurringSchedule.enabled && !isMultiDay && !isFieldRestricted('availability') ? 'translate-x-6' : 'translate-x-0.5'
-                      }`} />
-                    </button>
-                  </div>
-
-                  {recurringSchedule.enabled && (
-                    <div className="space-y-4">
-                      {/* Days of Week */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-neutrals-5 mb-2">Available Days</label>
-                        <div className="grid grid-cols-7 gap-1">
-                          {daysOfWeek.map((day, index) => (
-                            <button
-                              key={day}
-                              onClick={() => !isFieldRestricted('availability') && toggleDayOfWeek(index)}
-                              disabled={isFieldRestricted('availability')}
-                              className={`text-xs font-medium py-2 rounded transition-colors ${
-                                isFieldRestricted('availability') ? 'cursor-not-allowed opacity-50' : ''
-                              } ${
-                                recurringSchedule.daysOfWeek.includes(index)
-                                  ? 'bg-primary-1 text-white'
-                                  : 'bg-neutrals-7 text-neutrals-3'
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Time Slots */}
-                      <div>
-                        <label className="block text-xs font-bold uppercase text-neutrals-5 mb-2">Time Slots</label>
-                        {!isMultiDay && (
-                          <p className="text-xs text-neutrals-3 mb-1">Each time slot creates a separate booking option</p>
-                        )}
-                        <div className="space-y-2">
-                          {recurringSchedule.timeSlots.map((time, index) => (
-                            <div key={index} className="flex gap-2">
-                              <input
-                                type="time"
-                                value={time}
-                                onChange={(e) => updateTimeSlot(index, e.target.value)}
-                                disabled={isFieldRestricted('availability')}
-                                className={`flex-1 px-3 py-2 border-2 rounded-xl focus:outline-none text-sm font-medium transition-colors ${
-                                  isFieldRestricted('availability')
-                                    ? 'border-orange-300 bg-orange-50 text-orange-700 cursor-not-allowed'
-                                    : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                                }`}
-                                style={{padding: '6px'}}
-                              />
-                              {recurringSchedule.timeSlots.length > 1 && (
-                                <button
-                                  onClick={() => !isFieldRestricted('availability') && removeTimeSlot(index)}
-                                  disabled={isFieldRestricted('availability')}
-                                  className={`w-10 h-10 flex items-center justify-center text-red-500 hover:bg-red-50 rounded-xl transition-colors ${
-                                    isFieldRestricted('availability') ? 'cursor-not-allowed opacity-50' : ''
-                                  }`}
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            onClick={addTimeSlot}
-                            disabled={isFieldRestricted('availability')}
-                            className={`flex items-center gap-2 text-sm font-medium ${
-                              isFieldRestricted('availability')
-                                ? 'text-gray-400 cursor-not-allowed'
-                                : 'text-primary-1'
-                            }`}
-                          >
-                            <Plus className="w-4 h-4" />
-                            Add time slot
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Mobile Calendar */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Specific Dates (Optional)</label>
-                <div className={`bg-white border-2 rounded-xl p-4 ${
-                  isFieldRestricted('availability') ? 'border-orange-300 bg-orange-50' : 'border-neutrals-6'
-                }`}>
-                  {/* Month Navigation */}
-                  <div className="flex items-center justify-between mb-4">
-                    <button
-                      onClick={() => {
-                        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1));
-                        setDateValidationError(null);
-                      }}
-                      className="p-1 hover:bg-neutrals-7 rounded transition-colors"
-                    >
-                      <ChevronLeft className="w-5 h-5 text-neutrals-3" />
-                    </button>
-                    <h3 className="text-sm font-semibold text-neutrals-1">
-                      {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                    </h3>
-                    <button
-                      onClick={() => {
-                        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1));
-                        setDateValidationError(null);
-                      }}
-                      className="p-1 hover:bg-neutrals-7 rounded transition-colors"
-                    >
-                      <ChevronRight className="w-5 h-5 text-neutrals-3" />
-                    </button>
-                  </div>
-
-                  {/* Days of Week Header */}
-                  <div className="grid grid-cols-7 gap-1 mb-2">
-                    {daysOfWeek.map(day => (
-                      <div key={day} className="text-center text-xs font-medium text-neutrals-4 py-1">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Calendar Grid */}
-                  <div className="grid grid-cols-7 gap-1">
-                    {getDaysInMonth(currentMonth).map((day, index) => {
-                      if (!day) return <div key={`empty-${index}`} className="aspect-square" />;
-
-                      const status = getDateStatus(day);
-
-                      return (
-                        <button
-                          key={day}
-                          onClick={() => !status.isPast && !isFieldRestricted('availability') && toggleDate(day)}
-                          disabled={status.isPast || status.wouldConflict || isFieldRestricted('availability')}
-                          title={status.wouldConflict ? status.conflictReason : isFieldRestricted('availability') ? 'Blocked due to bookings' : undefined}
-                          className={`
-                            aspect-square rounded text-xs font-medium relative transition-colors
-                            ${status.isPast || isFieldRestricted('availability') ? 'cursor-not-allowed' : 'cursor-pointer'}
-                            ${isFieldRestricted('availability') ? 'opacity-50' : ''}
-                            ${status.isAvailable ? 'bg-primary-1 text-white' : ''}
-                            ${status.isBlocked ? 'bg-neutrals-5 text-white' : ''}
-                            ${status.wouldConflict ? 'bg-red-100 text-red-600 cursor-not-allowed border border-red-300' : ''}
-                            ${!status.isAvailable && !status.isBlocked && !status.isPast && !status.wouldConflict && !isFieldRestricted('availability') ? 'hover:bg-neutrals-7 text-neutrals-2' : ''}
-                            ${status.isPast ? 'text-neutrals-5' : ''}
-                          `}
-                        >
-                          {day}
-                          {status.isBlocked && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="w-full h-0.5 bg-white rotate-45"></div>
-                            </div>
-                          )}
-                          {status.wouldConflict && (
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <div className="text-red-500" style={{fontSize: '8px'}}>⚠</div>
-                            </div>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Date Validation Error */}
-                  {dateValidationError && (
-                    <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
-                      <p className="text-xs text-red-700 font-medium">
-                        ⚠️ {dateValidationError}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Legend */}
-                  <div className="flex gap-4 mt-4 text-xs">
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-primary-1 rounded"></div>
-                      <span className="text-neutrals-2">Available</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="w-3 h-3 bg-neutrals-5 rounded relative">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-full h-0.5 bg-white rotate-45"></div>
-                        </div>
-                      </div>
-                      <span className="text-neutrals-2">Blocked</span>
-                    </div>
-                    {isMultiDay && (
-                      <div className="flex items-center gap-1">
-                        <div className="w-3 h-3 bg-red-100 border border-red-300 rounded relative">
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="text-red-500" style={{fontSize: '8px'}}>⚠</div>
-                          </div>
-                        </div>
-                        <span className="text-neutrals-2">Conflicts</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-neutrals-4 mt-3">
-                    {isFieldRestricted('availability')
-                      ? 'Calendar disabled due to existing bookings'
-                      : 'Click once for available, twice to block, three times to clear'
-                    }
-                  </p>
-                </div>
-              </div>
-
-              {/* Success/Error Messages - Mobile */}
-              {saveSuccess && (
-                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="text-green-800 text-xs font-medium">
-                    ✅ Changes saved successfully!
-                  </div>
-                </div>
-              )}
-
-              {saveError && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="text-red-800 text-xs">
-                    <strong>Error:</strong> {saveError}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-3" style={{marginBottom: '15px'}}>
-                <button
-                  onClick={handleSaveChanges}
-                  disabled={isSaving}
-                  className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-4 rounded-full hover:bg-primary-1 hover:text-white transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-                <button
-                  onClick={handleBack}
-                  disabled={isSaving}
-                  className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleNext}
-                  disabled={isSaving}
-                  className="w-1/4 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
-                >
-                  Next
-                </button>
-              </div>
-            </div>
-        </main>
-      </div>
+      <Footer />
     </div>
   );
 }
