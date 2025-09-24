@@ -19,18 +19,8 @@ const MessagesPage = () => {
     const [newMessage, setNewMessage] = useState('');
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
-    
-    // Mock chat messages per conversation
-    const [chatMessages, setChatMessages] = useState({
-        1: [
-            { id: 1, sender: 'You', text: 'Hi! Is this tour available?', timestamp: '7:18 PM' },
-            { id: 2, sender: 'Host', text: 'Yes, it is! Do you have any questions?', timestamp: '7:19 PM' },
-        ],
-        2: [
-            { id: 1, sender: 'You', text: 'Hello! Can I get more info?', timestamp: 'Yesterday' },
-            { id: 2, sender: 'Host', text: 'Of course! What would you like to know?', timestamp: 'Yesterday' },
-        ],
-    });
+    const [chatMessages, setChatMessages] = useState({});
+    const [loadingMessages, setLoadingMessages] = useState(false);
 
     // Load user chats on component mount
     useEffect(() => {
@@ -82,6 +72,42 @@ const MessagesPage = () => {
         loadUserChats();
     }, [user]);
 
+    // Load messages for a specific chat
+    const loadChatMessages = async (chatId) => {
+        if (chatMessages[chatId]) return; // Already loaded
+        
+        setLoadingMessages(true);
+        try {
+            const response = await fetch(`http://localhost:8080/api/messages/chat/${chatId}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (response.ok) {
+                const messages = await response.json();
+                const formattedMessages = messages.map(msg => ({
+                    id: msg.messageId,
+                    sender: msg.sender.id === (user.id || user.userId) ? 'You' : msg.sender.firstName + ' ' + msg.sender.lastName,
+                    text: msg.content,
+                    timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    senderId: msg.sender.id
+                }));
+                
+                setChatMessages(prev => ({
+                    ...prev,
+                    [chatId]: formattedMessages
+                }));
+            } else {
+                console.error('Failed to load messages for chat', chatId);
+            }
+        } catch (error) {
+            console.error('Error loading chat messages:', error);
+        } finally {
+            setLoadingMessages(false);
+        }
+    };
+
     // Handle direct chat navigation from URL parameter
     useEffect(() => {
         const chatId = searchParams.get('chatId');
@@ -94,21 +120,48 @@ const MessagesPage = () => {
     }, [searchParams, conversations]);
 
     // Handle sending a new message
-    const handleSendMessage = () => {
+    const handleSendMessage = async () => {
         if (!newMessage.trim() || !selectedChat) return;
-        setChatMessages(prev => ({
-            ...prev,
-            [selectedChat]: [
-                ...(prev[selectedChat] || []),
-                {
-                    id: Date.now(),
+        
+        const messageText = newMessage;
+        setNewMessage(''); // Clear input immediately
+        
+        try {
+            const userId = user.id || user.userId;
+            const response = await fetch(`http://localhost:8080/api/messages/chat/${selectedChat}/send?senderId=${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ content: messageText })
+            });
+            
+            if (response.ok) {
+                const newMessage = await response.json();
+                const formattedMessage = {
+                    id: newMessage.messageId,
                     sender: 'You',
-                    text: newMessage,
-                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }
-            ]
-        }));
-        setNewMessage('');
+                    text: newMessage.content,
+                    timestamp: new Date(newMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    senderId: newMessage.sender.id
+                };
+                
+                setChatMessages(prev => ({
+                    ...prev,
+                    [selectedChat]: [
+                        ...(prev[selectedChat] || []),
+                        formattedMessage
+                    ]
+                }));
+            } else {
+                console.error('Failed to send message');
+                setNewMessage(messageText); // Restore message if failed
+            }
+        } catch (error) {
+            console.error('Error sending message:', error);
+            setNewMessage(messageText); // Restore message if failed
+        }
     };
 
     // Handle Enter key in input
@@ -128,6 +181,7 @@ const MessagesPage = () => {
 
     const handleChatSelect = (chatId) => {
         setSelectedChat(chatId);
+        loadChatMessages(chatId);
     };
 
     const startNewAIChat = () => {
@@ -195,13 +249,21 @@ const MessagesPage = () => {
                                 // Chat interface for selected chat
                                 <div className="flex-1 flex flex-col h-full">
                                     <ChatHeader conversation={selectedConversation} />
-                                    <MessageList messages={chatMessages[selectedChat] || []} />
-                                    <MessageInput 
-                                        newMessage={newMessage}
-                                        setNewMessage={setNewMessage}
-                                        onSendMessage={handleSendMessage}
-                                        onKeyDown={handleInputKeyDown}
-                                    />
+                                    {loadingMessages ? (
+                                        <div className="flex-1 flex items-center justify-center bg-neutrals-8">
+                                            <div className="text-neutrals-4">Loading messages...</div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <MessageList messages={chatMessages[selectedChat] || []} />
+                                            <MessageInput 
+                                                newMessage={newMessage}
+                                                setNewMessage={setNewMessage}
+                                                onSendMessage={handleSendMessage}
+                                                onKeyDown={handleInputKeyDown}
+                                            />
+                                        </>
+                                    )}
                                 </div>
                             ) : (
                                 // No chat selected state
@@ -237,13 +299,21 @@ const MessagesPage = () => {
                                 onBack={() => setSelectedChat(null)}
                                 showBackButton={true}
                             />
-                            <MessageList messages={chatMessages[selectedChat] || []} />
-                            <MessageInput 
-                                newMessage={newMessage}
-                                setNewMessage={setNewMessage}
-                                onSendMessage={handleSendMessage}
-                                onKeyDown={handleInputKeyDown}
-                            />
+                            {loadingMessages ? (
+                                <div className="flex-1 flex items-center justify-center bg-neutrals-8">
+                                    <div className="text-neutrals-4">Loading messages...</div>
+                                </div>
+                            ) : (
+                                <>
+                                    <MessageList messages={chatMessages[selectedChat] || []} />
+                                    <MessageInput 
+                                        newMessage={newMessage}
+                                        setNewMessage={setNewMessage}
+                                        onSendMessage={handleSendMessage}
+                                        onKeyDown={handleInputKeyDown}
+                                    />
+                                </>
+                            )}
                         </div>
                     ) : (
                         // Mobile Conversation List
