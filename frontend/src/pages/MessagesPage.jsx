@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import useWebSocket from '../hooks/useWebSocket';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConversationList from '../components/messages/ConversationList';
@@ -21,6 +22,10 @@ const MessagesPage = () => {
     const [loading, setLoading] = useState(true);
     const [chatMessages, setChatMessages] = useState({});
     const [loadingMessages, setLoadingMessages] = useState(false);
+    
+    // WebSocket integration
+    const currentUserId = user?.id || user?.userId;
+    const { isConnected, sendMessage: sendWebSocketMessage, incomingMessages, clearIncomingMessages } = useWebSocket(selectedChat, currentUserId);
 
     // Load user chats on component mount
     useEffect(() => {
@@ -71,6 +76,26 @@ const MessagesPage = () => {
 
         loadUserChats();
     }, [user]);
+    
+    // Handle incoming WebSocket messages
+    useEffect(() => {
+        if (incomingMessages.length > 0 && selectedChat) {
+            // Add only new messages and prevent duplicates
+            setChatMessages(prev => {
+                const currentMessages = prev[selectedChat] || [];
+                const existingIds = new Set(currentMessages.map(msg => msg.id));
+                const newMessages = incomingMessages.filter(msg => !existingIds.has(msg.id));
+                
+                return newMessages.length > 0 ? {
+                    ...prev,
+                    [selectedChat]: [...currentMessages, ...newMessages]
+                } : prev;
+            });
+            
+            // Clear incoming messages after processing
+            clearIncomingMessages();
+        }
+    }, [incomingMessages, selectedChat, clearIncomingMessages]);
 
     // Load messages for a specific chat
     const loadChatMessages = async (chatId) => {
@@ -126,6 +151,15 @@ const MessagesPage = () => {
         const messageText = newMessage;
         setNewMessage(''); // Clear input immediately
         
+        // Try WebSocket first
+        if (isConnected && sendWebSocketMessage(messageText)) {
+            console.log('Message sent via WebSocket');
+            // WebSocket will handle the message response, no need to add message manually
+            return;
+        }
+        
+        // Fallback to REST API only when WebSocket is not available
+        console.log('WebSocket not available, falling back to REST API');
         try {
             const userId = user.id || user.userId;
             const response = await fetch(`http://localhost:8080/api/messages/chat/${selectedChat}/send?senderId=${userId}`, {
@@ -147,13 +181,20 @@ const MessagesPage = () => {
                     senderId: newMessage.sender.id
                 };
                 
-                setChatMessages(prev => ({
-                    ...prev,
-                    [selectedChat]: [
-                        ...(prev[selectedChat] || []),
-                        formattedMessage
-                    ]
-                }));
+                // Add message to UI only for REST API (WebSocket handles this automatically)
+                setChatMessages(prev => {
+                    const currentMessages = prev[selectedChat] || [];
+                    const existingIds = new Set(currentMessages.map(msg => msg.id));
+                    
+                    // Only add if not already exists (prevent duplicates)
+                    if (!existingIds.has(formattedMessage.id)) {
+                        return {
+                            ...prev,
+                            [selectedChat]: [...currentMessages, formattedMessage]
+                        };
+                    }
+                    return prev;
+                });
             } else {
                 console.error('Failed to send message');
                 setNewMessage(messageText); // Restore message if failed
@@ -244,10 +285,10 @@ const MessagesPage = () => {
                         </div>
 
                         {/* Chat Panel */}
-                        <div className="flex-1 flex flex-col bg-neutrals-8">
+                        <div className="flex-1 flex flex-col bg-neutrals-8 min-h-0">
                             {selectedChat ? (
                                 // Chat interface for selected chat
-                                <div className="flex-1 flex flex-col h-full">
+                                <div className="flex-1 flex flex-col min-h-0">
                                     <ChatHeader conversation={selectedConversation} />
                                     {loadingMessages ? (
                                         <div className="flex-1 flex items-center justify-center bg-neutrals-8">
@@ -256,12 +297,22 @@ const MessagesPage = () => {
                                     ) : (
                                         <>
                                             <MessageList messages={chatMessages[selectedChat] || []} />
-                                            <MessageInput 
-                                                newMessage={newMessage}
-                                                setNewMessage={setNewMessage}
-                                                onSendMessage={handleSendMessage}
-                                                onKeyDown={handleInputKeyDown}
-                                            />
+                                            <div className="px-4 pb-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                        <span className="text-xs text-neutrals-4">
+                                                            {isConnected ? 'Live chat connected' : 'Using standard messaging'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <MessageInput 
+                                                    newMessage={newMessage}
+                                                    setNewMessage={setNewMessage}
+                                                    onSendMessage={handleSendMessage}
+                                                    onKeyDown={handleInputKeyDown}
+                                                />
+                                            </div>
                                         </>
                                     )}
                                 </div>
@@ -293,7 +344,7 @@ const MessagesPage = () => {
                     {/* If a chat is selected, show chat interface, else show conversation list */}
                     {selectedChat ? (
                         // Mobile Chat Interface
-                        <div className="flex flex-col h-[calc(100vh-56px)] bg-neutrals-8">
+                        <div className="flex flex-col h-[calc(100vh-56px)] bg-neutrals-8 min-h-0">
                             <ChatHeader 
                                 conversation={selectedConversation} 
                                 onBack={() => setSelectedChat(null)}
@@ -306,12 +357,22 @@ const MessagesPage = () => {
                             ) : (
                                 <>
                                     <MessageList messages={chatMessages[selectedChat] || []} />
-                                    <MessageInput 
-                                        newMessage={newMessage}
-                                        setNewMessage={setNewMessage}
-                                        onSendMessage={handleSendMessage}
-                                        onKeyDown={handleInputKeyDown}
-                                    />
+                                    <div className="px-4 pb-4">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                <span className="text-xs text-neutrals-4">
+                                                    {isConnected ? 'Live chat connected' : 'Using standard messaging'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <MessageInput 
+                                            newMessage={newMessage}
+                                            setNewMessage={setNewMessage}
+                                            onSendMessage={handleSendMessage}
+                                            onKeyDown={handleInputKeyDown}
+                                        />
+                                    </div>
                                 </>
                             )}
                         </div>
