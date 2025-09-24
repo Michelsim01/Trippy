@@ -17,19 +17,18 @@ const ConversationItem = ({ conversation, isSelected, onSelect }) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <h3 className="font-medium text-neutrals-1 truncate text-sm">
-              {conversation.title}
+              {conversation.participantName || "Guide"}
             </h3>
             <span className="text-xs text-neutrals-4 flex-shrink-0">
               {conversation.timestamp}
             </span>
           </div>
-          <p className="text-sm text-neutrals-3 truncate mb-1">
+          <p className="text-xs text-neutrals-3 truncate mb-1">
+            {conversation.title}
+          </p>
+          <p className="text-sm text-neutrals-3 truncate">
             {conversation.lastMessage}
           </p>
-          <div className="flex items-center gap-4 text-xs text-neutrals-4">
-            <span>{conversation.participants}</span>
-            <span>{conversation.activity}</span>
-          </div>
         </div>
       </div>
     </div>
