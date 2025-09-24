@@ -26,10 +26,18 @@ const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
           {conversation?.title}
         </h3>
         <div className="flex flex-wrap gap-2 text-xs text-neutrals-4 mt-1">
-          <span className="bg-neutrals-7 px-2 py-1 rounded">Check-in: 2025-09-10</span>
-          <span className="bg-neutrals-7 px-2 py-1 rounded">Check-out: 2025-09-15</span>
-          <span className="bg-neutrals-7 px-2 py-1 rounded">{conversation?.participants}</span>
-          <span className="bg-neutrals-7 px-2 py-1 rounded">{conversation?.activity}</span>
+          {conversation?.experience?.price && (
+            <span className="bg-neutrals-7 px-2 py-1 rounded">
+              ${conversation.experience.price}/person
+            </span>
+          )}
+          {conversation?.experience?.location && (
+            <span className="bg-neutrals-7 px-2 py-1 rounded">
+              {conversation.experience.location}
+            </span>
+          )}
+          <span className="bg-neutrals-7 px-2 py-1 rounded">{conversation?.participants || "You & Guide"}</span>
+          <span className="bg-neutrals-7 px-2 py-1 rounded">{conversation?.activity || "Experience Chat"}</span>
         </div>
       </div>
     </div>
