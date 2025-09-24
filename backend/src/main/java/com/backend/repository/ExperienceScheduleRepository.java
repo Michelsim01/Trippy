@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface ExperienceScheduleRepository extends JpaRepository<ExperienceSchedule, Long> {
     void deleteByExperienceExperienceId(Long experienceId);
-    List<ExperienceSchedule> findByExperience_ExperienceId(Long experienceId);
+    List<ExperienceSchedule> findByExperience_ExperienceIdOrderByStartDateTimeAsc(Long experienceId);
     
     // Find all schedules for experiences guided by a specific user
     @Query("SELECT es FROM ExperienceSchedule es WHERE es.experience.guide.id = :guideId ORDER BY es.startDateTime ASC")

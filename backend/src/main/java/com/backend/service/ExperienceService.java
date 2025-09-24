@@ -296,7 +296,7 @@ public class ExperienceService {
 
         if (schedules != null && !schedules.isEmpty()) {
             // Get existing schedules from database
-            List<ExperienceSchedule> existingSchedules = experienceScheduleRepository.findByExperience_ExperienceId(experienceId);
+            List<ExperienceSchedule> existingSchedules = experienceScheduleRepository.findByExperience_ExperienceIdOrderByStartDateTimeAsc(experienceId);
             List<Long> incomingScheduleIds = new ArrayList<>();
 
             // Process each incoming schedule

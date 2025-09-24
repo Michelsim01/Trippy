@@ -27,7 +27,7 @@ public class ExperienceScheduleController {
 
     @GetMapping("/experience/{experienceId}")
     public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long experienceId) {
-        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(experienceId);
+        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceIdOrderByStartDateTimeAsc(experienceId);
         
         return schedules.stream().map(schedule -> {
             Map<String, Object> scheduleMap = new HashMap<>();
