@@ -120,9 +120,22 @@ const CalendarPage = () => {
             timePeriod: activeFilters.timePeriod === 'all' ? null : activeFilters.timePeriod
         });
 
-
-        // Sort by date
-        filtered.sort((a, b) => new Date(a.startDateTime) - new Date(b.startDateTime));
+        // Sort by date with upcoming events first, then past events
+        const now = new Date();
+        filtered.sort((a, b) => {
+            const dateA = new Date(a.startDateTime);
+            const dateB = new Date(b.startDateTime);
+            
+            const isAUpcoming = dateA >= now;
+            const isBUpcoming = dateB >= now;
+            
+            // If one is upcoming and one is past, prioritize upcoming
+            if (isAUpcoming && !isBUpcoming) return -1;
+            if (!isAUpcoming && isBUpcoming) return 1;
+            
+            // Both are upcoming or both are past, sort by date (earliest first)
+            return dateA - dateB;
+        });
 
         setFilteredEvents(filtered);
     };
@@ -168,29 +181,6 @@ const CalendarPage = () => {
             style: 'currency',
             currency: 'USD'
         }).format(price);
-    };
-
-    const formatDuration = (duration) => {
-        if (duration >= 24) {
-            const days = Math.floor(duration / 24);
-            const hours = duration % 24;
-            return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-        }
-        return `${duration}h`;
-    };
-
-    const getEventTypeColor = (userRole, isPast) => {
-        if (isPast) {
-            return 'bg-neutrals-6 text-neutrals-4';
-        }
-
-        return userRole === 'guide'
-            ? 'bg-blue-100 text-blue-800 border-blue-200'
-            : 'bg-green-100 text-green-800 border-green-200';
-    };
-
-    const getEventTypeBadge = (userRole) => {
-        return userRole === 'guide' ? 'Leading' : 'Participating';
     };
 
     const generateCalendarDays = () => {
@@ -390,9 +380,13 @@ const CalendarPage = () => {
         return userRole === 'guide' ? Crown : Ticket;
     };
 
-    // Handle click on event to navigate to experience details
+    // Handle click on event to navigate to experience details or booking details
     const handleEventClick = (event) => {
-        if (event.experienceId) {
+        // If user is participating in the event, navigate to booking details
+        if (event.userRole === 'participant' && event.bookingId) {
+            navigate(`/booking/${event.bookingId}`);
+        } else if (event.experienceId) {
+            // Otherwise, navigate to experience details
             navigate(`/experience/${event.experienceId}`);
         }
     };

@@ -159,15 +159,6 @@ const ResetPasswordPage = () => {
                     <div className="absolute inset-0 bg-black/40"></div>
                 </div>
 
-                {/* Logo on image */}
-                <div className="relative z-10 p-10">
-                    <div className="flex items-center gap-2">
-                        <div className="w-40 h-15 flex items-center justify-center bg-white rounded-lg shadow-lg">
-                            <img src="/Logo.png" alt="Logo" className="w-50 h-50 object-contain" />
-                        </div>
-                    </div>
-                </div>
-
                 {/* Decorative elements */}
                 <div className="absolute top-20 right-20 w-3 h-3 bg-primary-3 rounded transform rotate-45"></div>
                 <div className="absolute top-40 right-32 w-4 h-4 bg-primary-1 rounded transform rotate-45"></div>
