@@ -1,6 +1,19 @@
+/**
+ * Enhanced CalendarPage Component
+ * 
+ * Features:
+ * 1. Visual indication for cancelled bookings - Events with status 'cancelled' display with strikethrough text and reduced opacity
+ * 2. Multi-day event support - Events spanning multiple days appear as continuous bars in month/week views
+ * 3. Overlapping event handling - Events at the same time are positioned side-by-side in day view to prevent visual overlap
+ * 4. Full title display - Event titles wrap to multiple lines instead of truncating, so users can see the complete title
+ * 
+ * The component maintains existing functionality while adding these visual enhancements across all view types (Month/Week/Day).
+ * Calendar cell heights have been increased to accommodate multi-line event titles.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Crown, Ticket, Eye } from 'lucide-react';
+import { Crown, Ticket, Eye, Calendar, Clock } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { calendarApi } from '../services/calendarApi';
 import Navbar from '../components/Navbar';
@@ -31,6 +44,7 @@ const CalendarPage = () => {
     });
 
     const [calendarView, setCalendarView] = useState('month'); // 'month', 'week', 'day' (removed 'list')
+    const [expandedDays, setExpandedDays] = useState(new Set()); // Track which days have expanded event lists
 
     useEffect(() => {
         if (user?.id || user?.userId) {
@@ -120,9 +134,22 @@ const CalendarPage = () => {
             timePeriod: activeFilters.timePeriod === 'all' ? null : activeFilters.timePeriod
         });
 
-
-        // Sort by date
-        filtered.sort((a, b) => new Date(a.startDateTime) - new Date(b.startDateTime));
+        // Sort by date with upcoming events first, then past events
+        const now = new Date();
+        filtered.sort((a, b) => {
+            const dateA = new Date(a.startDateTime);
+            const dateB = new Date(b.startDateTime);
+            
+            const isAUpcoming = dateA >= now;
+            const isBUpcoming = dateB >= now;
+            
+            // If one is upcoming and one is past, prioritize upcoming
+            if (isAUpcoming && !isBUpcoming) return -1;
+            if (!isAUpcoming && isBUpcoming) return 1;
+            
+            // Both are upcoming or both are past, sort by date (earliest first)
+            return dateA - dateB;
+        });
 
         setFilteredEvents(filtered);
     };
@@ -135,9 +162,53 @@ const CalendarPage = () => {
         setIsSidebarOpen(false);
     };
 
+    // Helper functions for expanding/collapsing day events
+    const toggleDayExpansion = (dayKey) => {
+        setExpandedDays(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(dayKey)) {
+                newSet.delete(dayKey);
+            } else {
+                newSet.add(dayKey);
+            }
+            return newSet;
+        });
+    };
+
+    const isDayExpanded = (dayKey) => {
+        return expandedDays.has(dayKey);
+    };
+
+    // Enhanced formatting for multi-day events
     const formatEventTime = (startDateTime, endDateTime) => {
         const start = new Date(startDateTime);
         const end = new Date(endDateTime);
+
+        // Check if it's a multi-day event
+        const isMultiDay = start.toDateString() !== end.toDateString();
+
+        if (isMultiDay) {
+            const startTime = start.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const endTime = end.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+            });
+            const startDate = start.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+            const endDate = end.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric'
+            });
+
+            return `${startDate} ${startTime} - ${endDate} ${endTime}`;
+        }
 
         const startTime = start.toLocaleTimeString('en-US', {
             hour: 'numeric',
@@ -170,27 +241,89 @@ const CalendarPage = () => {
         }).format(price);
     };
 
-    const formatDuration = (duration) => {
-        if (duration >= 24) {
-            const days = Math.floor(duration / 24);
-            const hours = duration % 24;
-            return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
-        }
-        return `${duration}h`;
+    // Utility function to check if event is cancelled
+    const isEventCancelled = (event) => {
+        return event.status === 'cancelled';
     };
 
-    const getEventTypeColor = (userRole, isPast) => {
-        if (isPast) {
-            return 'bg-neutrals-6 text-neutrals-4';
-        }
-
-        return userRole === 'guide'
-            ? 'bg-blue-100 text-blue-800 border-blue-200'
-            : 'bg-green-100 text-green-800 border-green-200';
+    // Utility function to check if event spans multiple days
+    const isMultiDayEvent = (event) => {
+        const start = new Date(event.startDateTime);
+        const end = new Date(event.endDateTime);
+        return start.toDateString() !== end.toDateString();
     };
 
-    const getEventTypeBadge = (userRole) => {
-        return userRole === 'guide' ? 'Leading' : 'Participating';
+    // Get all dates that a multi-day event spans
+    const getEventDateSpan = (event) => {
+        const start = new Date(event.startDateTime);
+        const end = new Date(event.endDateTime);
+        const dates = [];
+        
+        const currentDate = new Date(start);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        while (currentDate <= end) {
+            dates.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+        
+        return dates;
+    };
+
+    // Detect overlapping events for day view positioning
+    const detectOverlappingEvents = (events) => {
+        // Sort events by start time, then by id for consistent ordering of identical times
+        const sortedEvents = [...events].sort((a, b) => {
+            const startComparison = new Date(a.startDateTime) - new Date(b.startDateTime);
+            if (startComparison !== 0) return startComparison;
+            // For events with identical start times, sort by id for consistency
+            return a.id.toString().localeCompare(b.id.toString());
+        });
+
+        return sortedEvents.map((event, index) => {
+            const eventStart = new Date(event.startDateTime);
+            const eventEnd = new Date(event.endDateTime);
+            
+            // Find overlapping events (including events with identical times)
+            const overlapping = sortedEvents.filter((other, otherIndex) => {
+                if (otherIndex === index) return false;
+                
+                const otherStart = new Date(other.startDateTime);
+                const otherEnd = new Date(other.endDateTime);
+                
+                // Check for overlap - events overlap if they share any time period
+                // This includes events with exactly the same start and end times
+                return eventStart < otherEnd && eventEnd > otherStart;
+            });
+
+            // Calculate position based on overlap
+            const overlapCount = overlapping.length + 1;
+            
+            // For positioning, count how many overlapping events come before this one
+            // in our sorted order (by start time, then by id)
+            const eventPosition = overlapping.filter((other) => {
+                const otherStart = new Date(other.startDateTime);
+                const eventStartTime = eventStart.getTime();
+                const otherStartTime = otherStart.getTime();
+                
+                // If other event starts before this one, it gets a lower position
+                if (otherStartTime < eventStartTime) return true;
+                
+                // If they have the same start time, use id comparison for consistent ordering
+                if (otherStartTime === eventStartTime) {
+                    return other.id.toString().localeCompare(event.id.toString()) < 0;
+                }
+                
+                return false;
+            }).length;
+
+            return {
+                ...event,
+                overlapCount,
+                overlapPosition: eventPosition,
+                hasOverlap: overlapCount > 1
+            };
+        });
     };
 
     const generateCalendarDays = () => {
@@ -203,7 +336,35 @@ const CalendarPage = () => {
         startDate.setDate(startDate.getDate() - firstDay.getDay());
 
         const days = [];
-        const eventsByDate = calendarApi.groupEventsByDate(filteredEvents);
+        const eventsByDate = {};
+
+        // Process events for multi-day support
+        filteredEvents.forEach(event => {
+            if (isMultiDayEvent(event)) {
+                const spanDates = getEventDateSpan(event);
+                spanDates.forEach((date, index) => {
+                    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                    
+                    // Add metadata for multi-day display
+                    const eventWithMeta = {
+                        ...event,
+                        isMultiDay: true,
+                        isFirstDay: index === 0,
+                        isLastDay: index === spanDates.length - 1,
+                        dayIndex: index,
+                        totalDays: spanDates.length,
+                        spanId: `${event.id}-span-${index}`
+                    };
+                    eventsByDate[dateKey].push(eventWithMeta);
+                });
+            } else {
+                const eventDate = new Date(event.startDateTime);
+                const dateKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                eventsByDate[dateKey].push({ ...event, isMultiDay: false });
+            }
+        });
 
         for (let i = 0; i < 42; i++) {
             const day = new Date(startDate);
@@ -232,7 +393,34 @@ const CalendarPage = () => {
         startOfWeek.setDate(currentDate.getDate() - day);
 
         const days = [];
-        const eventsByDate = calendarApi.groupEventsByDate(filteredEvents);
+        const eventsByDate = {};
+
+        // Process events for multi-day support
+        filteredEvents.forEach(event => {
+            if (isMultiDayEvent(event)) {
+                const spanDates = getEventDateSpan(event);
+                spanDates.forEach((date, index) => {
+                    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                    
+                    const eventWithMeta = {
+                        ...event,
+                        isMultiDay: true,
+                        isFirstDay: index === 0,
+                        isLastDay: index === spanDates.length - 1,
+                        dayIndex: index,
+                        totalDays: spanDates.length,
+                        spanId: `${event.id}-span-${index}`
+                    };
+                    eventsByDate[dateKey].push(eventWithMeta);
+                });
+            } else {
+                const eventDate = new Date(event.startDateTime);
+                const dateKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                eventsByDate[dateKey].push({ ...event, isMultiDay: false });
+            }
+        });
 
         for (let i = 0; i < 7; i++) {
             const day = new Date(startOfWeek);
@@ -255,8 +443,46 @@ const CalendarPage = () => {
 
     const getCurrentDayEvents = () => {
         const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-        const eventsByDate = calendarApi.groupEventsByDate(filteredEvents);
-        return eventsByDate[dateKey] || [];
+        const eventsForDay = [];
+
+        // Process events for current day including multi-day events
+        filteredEvents.forEach(event => {
+            const eventStart = new Date(event.startDateTime);
+            const eventEnd = new Date(event.endDateTime);
+            const currentDateOnly = new Date(currentDate);
+            currentDateOnly.setHours(0, 0, 0, 0);
+            
+            // Check if event occurs on current date
+            if (eventStart.toDateString() === currentDate.toDateString() || 
+                eventEnd.toDateString() === currentDate.toDateString() ||
+                (eventStart < currentDateOnly && eventEnd > currentDateOnly)) {
+                
+                if (isMultiDayEvent(event)) {
+                    const spanDates = getEventDateSpan(event);
+                    const dayIndex = spanDates.findIndex(date => 
+                        date.toDateString() === currentDate.toDateString()
+                    );
+                    
+                    if (dayIndex !== -1) {
+                        eventsForDay.push({
+                            ...event,
+                            isMultiDay: true,
+                            isFirstDay: dayIndex === 0,
+                            isLastDay: dayIndex === spanDates.length - 1,
+                            dayIndex,
+                            totalDays: spanDates.length,
+                            continuesFromPrevious: dayIndex > 0,
+                            continuesToNext: dayIndex < spanDates.length - 1
+                        });
+                    }
+                } else {
+                    eventsForDay.push({ ...event, isMultiDay: false });
+                }
+            }
+        });
+
+        // Apply overlap detection for positioning
+        return detectOverlappingEvents(eventsForDay);
     };
 
     const generateTimeSlots = () => {
@@ -281,28 +507,58 @@ const CalendarPage = () => {
         const startTime = new Date(event.startDateTime);
         const endTime = new Date(event.endDateTime);
 
-        const startHour = startTime.getHours();
-        const startMinutes = startTime.getMinutes();
-        const endHour = endTime.getHours();
-        const endMinutes = endTime.getMinutes();
+        // For multi-day events, adjust times based on the current day
+        let displayStartTime = startTime;
+        let displayEndTime = endTime;
+
+        if (event.isMultiDay) {
+            const currentDateStart = new Date(currentDate);
+            currentDateStart.setHours(0, 0, 0, 0);
+            const currentDateEnd = new Date(currentDate);
+            currentDateEnd.setHours(23, 59, 59, 999);
+
+            // If event continues from previous day, start from beginning of day
+            if (event.continuesFromPrevious) {
+                displayStartTime = currentDateStart;
+            }
+
+            // If event continues to next day, end at end of day
+            if (event.continuesToNext) {
+                displayEndTime = currentDateEnd;
+            }
+        }
+
+        const startHour = displayStartTime.getHours();
+        const startMinutes = displayStartTime.getMinutes();
+        const endHour = displayEndTime.getHours();
+        const endMinutes = displayEndTime.getMinutes();
 
         // Calculate position as percentage from start of day (64px per hour for h-16)
         const startPosition = (startHour * 60) + startMinutes; // minutes from start of day
         const duration = ((endHour * 60) + endMinutes) - startPosition; // duration in minutes
 
+        // Calculate overlap positioning
+        const overlapWidth = event.hasOverlap ? `${100 / event.overlapCount}%` : '100%';
+        const overlapLeft = event.hasOverlap ? `${(event.overlapPosition * 100) / event.overlapCount}%` : '0%';
+
         return {
             top: (startPosition / 60) * 64, // 64px per hour (h-16)
             height: Math.max((duration / 60) * 64, 32), // minimum 32px height, 64px per hour
-            startTime: startTime.toLocaleTimeString('en-US', {
+            width: overlapWidth,
+            left: overlapLeft,
+            startTime: displayStartTime.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true
             }),
-            endTime: endTime.toLocaleTimeString('en-US', {
+            endTime: displayEndTime.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
                 hour12: true
-            })
+            }),
+            isMultiDay: event.isMultiDay || false,
+            continuesFromPrevious: event.continuesFromPrevious || false,
+            continuesToNext: event.continuesToNext || false
         };
     };
 
@@ -321,6 +577,8 @@ const CalendarPage = () => {
         }
 
         setCurrentDate(newDate);
+        // Clear expanded days when navigating to prevent stale expansions
+        setExpandedDays(new Set());
         setTimeout(() => setNavigationLoading(false), 300);
     };
 
@@ -380,7 +638,8 @@ const CalendarPage = () => {
     };
 
     // Get color based on event type and state
-    const getEventColor = (userRole, isPast) => {
+    const getEventColor = (userRole, isPast, isCancelled = false) => {
+        if (isCancelled) return 'var(--color-neutrals-5)'; // Gray for cancelled events
         if (isPast) return 'var(--color-neutrals-4)';
         return userRole === 'guide' ? 'var(--color-primary-4)' : 'var(--color-primary-1)';
     };
@@ -390,9 +649,13 @@ const CalendarPage = () => {
         return userRole === 'guide' ? Crown : Ticket;
     };
 
-    // Handle click on event to navigate to experience details
+    // Handle click on event to navigate to experience details or booking details
     const handleEventClick = (event) => {
-        if (event.experienceId) {
+        // If user is participating in the event, navigate to booking details
+        if (event.userRole === 'participant' && event.bookingId) {
+            navigate(`/booking/${event.bookingId}`);
+        } else if (event.experienceId) {
+            // Otherwise, navigate to experience details
             navigate(`/experience/${event.experienceId}`);
         }
     };
@@ -434,10 +697,10 @@ const CalendarPage = () => {
                         isSidebarOpen={isSidebarOpen}
                         onToggleSidebar={toggleSidebar}
                     />
-                    <main className="w-full p-8">
-                        <div className="max-w-full mx-auto">
+                    <main className="w-full p-4 lg:p-8 pb-24 overflow-hidden min-w-0">
+                        <div className="max-w-full mx-auto min-w-0">
                             {/* Header */}
-                            <div className="flex items-center justify-between mb-6">
+                            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between mb-6 gap-4">
                                 <div>
                                     <div className="flex items-center gap-3 mb-2">
                                         <h1 className="text-4xl font-bold text-neutrals-1">Calendar</h1>
@@ -457,10 +720,10 @@ const CalendarPage = () => {
                                 </div>
 
                                 {/* View Toggle Buttons */}
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 flex-shrink-0">
                                     <button
                                         onClick={() => setCalendarView('month')}
-                                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'month'
+                                        className={`px-3 lg:px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'month'
                                             ? 'bg-primary-1 text-white'
                                             : 'bg-white text-neutrals-3 border border-neutrals-6 hover:bg-neutrals-8'
                                             }`}
@@ -469,7 +732,7 @@ const CalendarPage = () => {
                                     </button>
                                     <button
                                         onClick={() => setCalendarView('week')}
-                                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'week'
+                                        className={`px-3 lg:px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'week'
                                             ? 'bg-primary-1 text-white'
                                             : 'bg-white text-neutrals-3 border border-neutrals-6 hover:bg-neutrals-8'
                                             }`}
@@ -478,7 +741,7 @@ const CalendarPage = () => {
                                     </button>
                                     <button
                                         onClick={() => setCalendarView('day')}
-                                        className={`px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'day'
+                                        className={`px-3 lg:px-4 py-2 text-sm rounded-lg transition-colors ${calendarView === 'day'
                                             ? 'bg-primary-1 text-white'
                                             : 'bg-white text-neutrals-3 border border-neutrals-6 hover:bg-neutrals-8'
                                             }`}
@@ -488,10 +751,10 @@ const CalendarPage = () => {
                                 </div>
                             </div>
 
-                            {/* Split Layout: Left Panel (30%) + Calendar (70%) */}
-                            <div className={`flex gap-6 ${calendarView === 'day' ? 'h-auto min-h-[800px]' : 'h-[800px]'}`}>
+                            {/* Split Layout: Left Panel + Calendar */}
+                            <div className={`flex flex-col xl:flex-row gap-4 lg:gap-6 ${calendarView === 'day' ? 'h-auto min-h-[800px]' : 'min-h-[800px]'} overflow-hidden`}>
                                 {/* Left Panel */}
-                                <div className="w-[30%] bg-white rounded-lg shadow-sm flex flex-col">
+                                <div className="w-full xl:w-[350px] xl:flex-shrink-0 bg-white rounded-lg shadow-sm flex flex-col max-h-[800px]">
                                     {/* Filters Section */}
                                     <div className="p-6 border-b border-neutrals-6">
                                         <h3 className="text-lg font-semibold text-neutrals-1 mb-4">Filters</h3>
@@ -572,14 +835,19 @@ const CalendarPage = () => {
                                                     <>
                                                         {getLeftPanelEvents().map((event) => {
                                                             const EventIcon = getEventIcon(event.userRole);
+                                                            const isCancelled = isEventCancelled(event);
+                                                            const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                            
                                                             return (
                                                                 <div
                                                                     key={event.id}
                                                                     onClick={() => handleEventClick(event)}
-                                                                    className="border border-neutrals-6 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer"
+                                                                    className={`border border-neutrals-6 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                                                                        isCancelled ? 'opacity-70' : ''
+                                                                    }`}
                                                                     style={{
                                                                         borderLeftWidth: '4px',
-                                                                        borderLeftColor: getEventColor(event.userRole, event.isPast)
+                                                                        borderLeftColor: eventColor
                                                                     }}
                                                                 >
                                                                     <div className="flex items-start gap-3">
@@ -587,27 +855,44 @@ const CalendarPage = () => {
                                                                             <img
                                                                                 src={event.coverPhotoUrl}
                                                                                 alt={event.title}
-                                                                                className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                                                                className={`w-12 h-12 rounded-lg object-cover flex-shrink-0 ${
+                                                                                    isCancelled ? 'grayscale' : ''
+                                                                                }`}
                                                                             />
                                                                         ) : (
                                                                             <div className="w-12 h-12 rounded-lg bg-neutrals-7 flex items-center justify-center flex-shrink-0">
                                                                                 <EventIcon
                                                                                     size={20}
-                                                                                    style={{ color: getEventColor(event.userRole, event.isPast) }}
+                                                                                    style={{ color: eventColor }}
                                                                                 />
                                                                             </div>
                                                                         )}
 
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex items-center gap-2 mb-1">
-                                                                                <h5 className="font-semibold text-sm text-neutrals-1 leading-tight">{event.title}</h5>
+                                                                                <h5 className={`font-semibold text-sm text-neutrals-1 leading-tight ${
+                                                                                    isCancelled ? 'line-through' : ''
+                                                                                }`} style={{
+                                                                                    wordBreak: 'break-word',
+                                                                                    overflowWrap: 'break-word',
+                                                                                    whiteSpace: 'normal',
+                                                                                    lineHeight: '1.3'
+                                                                                }}>
+                                                                                    {event.title}
+                                                                                </h5>
                                                                                 <EventIcon
                                                                                     size={14}
-                                                                                    style={{ color: getEventColor(event.userRole, event.isPast) }}
+                                                                                    style={{ color: eventColor }}
                                                                                 />
+                                                                                {isCancelled && (
+                                                                                    <span className="text-xs text-red-600 font-medium">CANCELLED</span>
+                                                                                )}
                                                                             </div>
                                                                             <p className="text-xs text-neutrals-4 mb-1">
                                                                                 {formatEventDate(event.startDateTime)}
+                                                                                {event.isMultiDay && (
+                                                                                    <span className="ml-2 text-blue-600">Multi-day</span>
+                                                                                )}
                                                                             </p>
                                                                             <p className="text-xs text-neutrals-4 mb-1">
                                                                                 {formatEventTime(event.startDateTime, event.endDateTime)}
@@ -620,7 +905,6 @@ const CalendarPage = () => {
                                                                 </div>
                                                             );
                                                         })}
-                                                        {/* 👇 Spacer div to ensure last item isn’t flush with bottom */}
                                                         <div className="h-8" />
                                                     </>
                                                 )}
@@ -631,8 +915,8 @@ const CalendarPage = () => {
                                     </div>
                                 </div>
 
-                                {/* Calendar Section (70%) */}
-                                <div className="w-[70%] bg-white rounded-lg shadow-sm">
+                                {/* Calendar Section */}
+                                <div className="flex-1 min-w-0 bg-white rounded-lg shadow-sm overflow-hidden">
                                     {calendarView === 'month' && (
                                         <div className="h-full rounded-lg">
                                             {/* Calendar header */}
@@ -686,68 +970,126 @@ const CalendarPage = () => {
                                             </div>
 
                                             {/* Calendar grid */}
-                                            <div className={`p-6 transition-opacity duration-300 ${navigationLoading ? 'opacity-70' : 'opacity-100'}`}>
+                                            <div className={`p-4 lg:p-6 transition-opacity duration-300 overflow-hidden ${navigationLoading ? 'opacity-70' : 'opacity-100'}`}>
                                                 {/* Days of week */}
                                                 <div className="grid grid-cols-7 gap-1 mb-4">
                                                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                                                        <div key={day} className="p-3 text-center text-sm font-medium text-neutrals-4">
+                                                        <div key={day} className="p-2 lg:p-3 text-center text-xs lg:text-sm font-medium text-neutrals-4">
                                                             {day}
                                                         </div>
                                                     ))}
                                                 </div>
 
                                                 {/* Calendar days */}
-                                                <div className="grid grid-cols-7 gap-1 transition-all duration-300">
-                                                    {generateCalendarDays().map((dayInfo, i) => (
-                                                        <div
-                                                            key={i}
-                                                            className={`min-h-[100px] p-2 border border-neutrals-7 transition-all duration-200 ${dayInfo.isCurrentMonth ? 'bg-white hover:bg-neutrals-8' : 'bg-neutrals-8'
-                                                                } ${dayInfo.isToday ? 'bg-green-50 ring-2 ring-green-500 border-green-500' : ''}`}
-                                                        >
-                                                            <div className={`text-sm mb-1 ${dayInfo.isCurrentMonth ? 'text-neutrals-1' : 'text-neutrals-5'
-                                                                } ${dayInfo.isToday ? 'font-bold text-green-700' : ''}`}>
-                                                                {dayInfo.day}
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                {dayInfo.events.slice(0, 2).map((event) => {
+                                                <div className="grid grid-cols-7 gap-1 transition-all duration-300 min-w-0">
+                                                    {generateCalendarDays().map((dayInfo, i) => {
+                                                        const dayKey = `${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`;
+                                                        const isExpanded = isDayExpanded(dayKey);
+                                                        const eventsToShow = isExpanded ? dayInfo.events : dayInfo.events.slice(0, 2);
+                                                        
+                                                        return (
+                                                            <div
+                                                                key={i}
+                                                                className={`min-h-[100px] lg:min-h-[140px] p-1 lg:p-2 border border-neutrals-7 transition-all duration-200 overflow-hidden ${dayInfo.isCurrentMonth ? 'bg-white hover:bg-neutrals-8' : 'bg-neutrals-8'
+                                                                    } ${dayInfo.isToday ? 'bg-green-50 ring-2 ring-green-500 border-green-500' : ''} ${isExpanded ? 'min-h-auto' : ''}`}
+                                                            >
+                                                                <div className={`text-sm mb-1 ${dayInfo.isCurrentMonth ? 'text-neutrals-1' : 'text-neutrals-5'
+                                                                    } ${dayInfo.isToday ? 'font-bold text-green-700' : ''}`}>
+                                                                    {dayInfo.day}
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    {eventsToShow.map((event) => {
                                                                     const EventIcon = getEventIcon(event.userRole);
+                                                                    const isCancelled = isEventCancelled(event);
+                                                                    const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                                    
                                                                     return (
                                                                         <div
-                                                                            key={event.id}
+                                                                            key={event.spanId || event.id}
                                                                             onClick={() => handleEventClick(event)}
-                                                                            className="text-xs p-1 rounded leading-tight overflow-hidden flex items-center gap-1 cursor-pointer transition-all duration-200 ease-in-out"
-                                                                            title={`${event.title} - ${event.userRole === 'guide' ? 'Leading' : 'Participating'}`}
+                                                                            className={`text-xs p-1 rounded leading-tight overflow-hidden flex items-center gap-1 cursor-pointer transition-all duration-200 ease-in-out ${
+                                                                                event.isMultiDay ? (
+                                                                                    event.isFirstDay ? 'rounded-r-none' : 
+                                                                                    event.isLastDay ? 'rounded-l-none' : 
+                                                                                    'rounded-none'
+                                                                                ) : ''
+                                                                            }`}
+                                                                            title={`${event.title} - ${event.userRole === 'guide' ? 'Leading' : 'Participating'}${
+                                                                                isCancelled ? ' (Cancelled)' : ''
+                                                                            }${event.isMultiDay ? ` (Day ${event.dayIndex + 1}/${event.totalDays})` : ''}`}
                                                                             style={{
                                                                                 fontSize: '10px',
                                                                                 lineHeight: '1.2',
                                                                                 wordBreak: 'break-word',
-                                                                                display: '-webkit-box',
-                                                                                WebkitLineClamp: 2,
-                                                                                WebkitBoxOrient: 'vertical',
-                                                                                backgroundColor: `${getEventColor(event.userRole, event.isPast)}20`,
-                                                                                borderLeft: `3px solid ${getEventColor(event.userRole, event.isPast)}`,
-                                                                                color: '#000000'
+                                                                                overflowWrap: 'break-word',
+                                                                                whiteSpace: 'normal',
+                                                                                backgroundColor: `${eventColor}20`,
+                                                                                borderLeft: event.isFirstDay || !event.isMultiDay ? `3px solid ${eventColor}` : 'none',
+                                                                                borderRight: event.isLastDay || !event.isMultiDay ? 'none' : `1px solid ${eventColor}`,
+                                                                                color: '#000000',
+                                                                                textDecoration: isCancelled ? 'line-through' : 'none',
+                                                                                opacity: isCancelled ? 0.7 : 1,
+                                                                                marginLeft: event.isMultiDay && !event.isFirstDay ? '-1px' : '0',
+                                                                                marginRight: event.isMultiDay && !event.isLastDay ? '-1px' : '0'
                                                                             }}
                                                                             onMouseEnter={(e) => {
-                                                                                e.currentTarget.style.transform = 'translateX(2px)';
-                                                                                e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-                                                                                e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}40`;
+                                                                                // Highlight all parts of multi-day event on hover
+                                                                                if (event.isMultiDay) {
+                                                                                    const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                                    allSpans.forEach(span => {
+                                                                                        span.style.transform = 'translateY(-1px)';
+                                                                                        span.style.boxShadow = '0 3px 8px rgba(0,0,0,0.15)';
+                                                                                        span.style.backgroundColor = `${eventColor}40`;
+                                                                                        span.style.zIndex = '10';
+                                                                                    });
+                                                                                } else {
+                                                                                    e.currentTarget.style.transform = 'translateX(2px)';
+                                                                                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                                                                                    e.currentTarget.style.backgroundColor = `${eventColor}40`;
+                                                                                }
                                                                             }}
                                                                             onMouseLeave={(e) => {
-                                                                                e.currentTarget.style.transform = 'translateX(0)';
-                                                                                e.currentTarget.style.boxShadow = 'none';
-                                                                                e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}20`;
+                                                                                if (event.isMultiDay) {
+                                                                                    const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                                    allSpans.forEach(span => {
+                                                                                        span.style.transform = 'translateY(0)';
+                                                                                        span.style.boxShadow = 'none';
+                                                                                        span.style.backgroundColor = `${eventColor}20`;
+                                                                                        span.style.zIndex = 'auto';
+                                                                                    });
+                                                                                } else {
+                                                                                    e.currentTarget.style.transform = 'translateX(0)';
+                                                                                    e.currentTarget.style.boxShadow = 'none';
+                                                                                    e.currentTarget.style.backgroundColor = `${eventColor}20`;
+                                                                                }
                                                                             }}
+                                                                            data-event-id={event.id}
                                                                         >
-                                                                            <EventIcon size={8} color={`${getEventColor(event.userRole, event.isPast)}`} />
-                                                                            <span className="truncate">{event.title}</span>
+                                                                            {(event.isFirstDay || !event.isMultiDay) && (
+                                                                                <EventIcon size={10} className="flex-shrink-0 mt-0.5" color={eventColor} />
+                                                                            )}
+                                                                            <span className={`${isCancelled ? 'line-through' : ''}`} style={{
+                                                                                wordBreak: 'break-word',
+                                                                                overflowWrap: 'break-word',
+                                                                                whiteSpace: 'normal',
+                                                                                lineHeight: '1.2'
+                                                                            }}>
+                                                                                {event.isMultiDay ? 
+                                                                                    `${event.title} (Day ${event.dayIndex + 1}/${event.totalDays})` : 
+                                                                                    event.title
+                                                                                }
+                                                                            </span>
                                                                         </div>
                                                                     );
                                                                 })}
-                                                                {dayInfo.events.length > 2 && (
+                                                                {dayInfo.events.length > 2 && !isExpanded && (
                                                                     <div
-                                                                        className="text-xs text-neutrals-4 px-1 cursor-pointer transition-opacity duration-200"
+                                                                        className="text-xs text-neutrals-4 px-1 cursor-pointer transition-opacity duration-200 hover:bg-gray-100 rounded"
                                                                         title={`View all ${dayInfo.events.length} events`}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleDayExpansion(dayKey);
+                                                                        }}
                                                                         onMouseEnter={(e) => {
                                                                             e.currentTarget.style.opacity = '0.8';
                                                                             e.currentTarget.style.fontWeight = '500';
@@ -760,9 +1102,22 @@ const CalendarPage = () => {
                                                                         +{dayInfo.events.length - 2} more
                                                                     </div>
                                                                 )}
+                                                                {isExpanded && dayInfo.events.length > 2 && (
+                                                                    <div
+                                                                        className="text-xs text-blue-600 px-1 cursor-pointer transition-opacity duration-200 hover:bg-blue-50 rounded font-medium"
+                                                                        title="Show less"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            toggleDayExpansion(dayKey);
+                                                                        }}
+                                                                    >
+                                                                        Show less
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                    );
+                                                })}
                                                 </div>
                                             </div>
                                         </div>
@@ -821,82 +1176,110 @@ const CalendarPage = () => {
                                             </div>
 
                                             {/* Week view grid */}
-                                            <div className={`p-6 transition-opacity duration-300 ${navigationLoading ? 'opacity-70' : 'opacity-100'}`}>
-                                                <div className="grid grid-cols-7 gap-4">
+                                            <div className={`p-4 lg:p-6 transition-opacity duration-300 overflow-hidden ${navigationLoading ? 'opacity-70' : 'opacity-100'}`}>
+                                                <div className="grid grid-cols-7 gap-1 lg:gap-4">
                                                     {generateWeekDays().map((dayInfo, i) => (
-                                                        <div key={i} className="min-h-[300px] border border-neutrals-7 rounded-lg">
-                                                            <div className={`p-3 text-center border-b border-neutrals-7 ${dayInfo.isToday ? 'bg-primary-1 text-white' : 'bg-neutrals-8'
+                                                        <div key={i} className="min-h-[280px] lg:min-h-[350px] border border-neutrals-7 rounded-lg overflow-hidden">
+                                                            <div className={`p-2 lg:p-3 text-center border-b border-neutrals-7 ${dayInfo.isToday ? 'bg-primary-1 text-white' : 'bg-neutrals-8'
                                                                 }`}>
                                                                 <div className="text-xs font-medium">
                                                                     {dayInfo.date.toLocaleDateString('en-US', { weekday: 'short' })}
                                                                 </div>
-                                                                <div className="text-lg font-semibold">
+                                                                <div className="text-sm lg:text-lg font-semibold">
                                                                     {dayInfo.day}
                                                                 </div>
                                                             </div>
-                                                            <div className="p-2 space-y-1">
+                                                            <div className="p-1 lg:p-2 space-y-1 overflow-hidden">
                                                                 {dayInfo.events.map((event) => {
                                                                     const EventIcon = getEventIcon(event.userRole);
+                                                                    const isCancelled = isEventCancelled(event);
+                                                                    const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                                    
                                                                     return (
-                                                                        <div className="p-2 space-y-1">
-                                                                            {dayInfo.events.map((event) => {
-                                                                                const EventIcon = getEventIcon(event.userRole);
-                                                                                return (
-                                                                                    <div
-                                                                                        key={event.id}
-                                                                                        className="p-2 rounded text-xs flex items-start gap-1 cursor-pointer transition-all duration-200 ease-in-out"
-                                                                                        onClick={() => handleEventClick(event)}
-                                                                                        style={{
-                                                                                            backgroundColor: `${getEventColor(event.userRole, event.isPast)}20`,
-                                                                                            borderLeft: `3px solid ${getEventColor(event.userRole, event.isPast)}`,
-                                                                                            color: '#000000'
-                                                                                        }}
-                                                                                        title={`${event.title} - ${event.userRole === 'guide' ? 'Leading' : 'Participating'}`}
-                                                                                        onMouseEnter={(e) => {
-                                                                                            e.currentTarget.style.transform = 'translateX(3px) scale(1.02)';
-                                                                                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.12)';
-                                                                                            e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}30`;
-                                                                                            e.currentTarget.style.zIndex = '10';
-                                                                                        }}
-                                                                                        onMouseLeave={(e) => {
-                                                                                            e.currentTarget.style.transform = 'translateX(0) scale(1)';
-                                                                                            e.currentTarget.style.boxShadow = 'none';
-                                                                                            e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}20`;
-                                                                                            e.currentTarget.style.zIndex = 'auto';
-                                                                                        }}
-                                                                                    >
-                                                                                        <EventIcon
-                                                                                            size={10}
-                                                                                            className="flex-shrink-0 mt-0.5 transition-transform duration-200"
-                                                                                            color={`${getEventColor(event.userRole, event.isPast)}`}
-                                                                                            onMouseEnter={(e) => {
-                                                                                                e.currentTarget.style.transform = 'scale(1.2)';
-                                                                                            }}
-                                                                                            onMouseLeave={(e) => {
-                                                                                                e.currentTarget.style.transform = 'scale(1)';
-                                                                                            }}
-                                                                                        />
-                                                                                        <div className="flex-1 min-w-0">
-                                                                                            <div className="font-medium leading-tight transition-colors duration-200" style={{
-                                                                                                fontSize: '10px',
-                                                                                                lineHeight: '1.2',
-                                                                                                wordBreak: 'break-word',
-                                                                                                overflowWrap: 'break-word',
-                                                                                                display: '-webkit-box',
-                                                                                                WebkitLineClamp: 3,
-                                                                                                WebkitBoxOrient: 'vertical',
-                                                                                                overflow: 'hidden',
-                                                                                                color: '#000000'
-                                                                                            }}>
-                                                                                                {event.title}
-                                                                                            </div>
-                                                                                            <div className="opacity-75 mt-1 transition-opacity duration-200 " style={{ fontSize: '8px', color: '#000000' }}>
-                                                                                                {formatEventTime(event.startDateTime, event.endDateTime)}
-                                                                                            </div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
+                                                                        <div
+                                                                            key={event.spanId || event.id}
+                                                                            className={`p-2 rounded text-xs flex items-start gap-1 cursor-pointer transition-all duration-200 ease-in-out ${
+                                                                                event.isMultiDay ? (
+                                                                                    event.isFirstDay ? 'rounded-r-none' : 
+                                                                                    event.isLastDay ? 'rounded-l-none' : 
+                                                                                    'rounded-none'
+                                                                                ) : ''
+                                                                            }`}
+                                                                            onClick={() => handleEventClick(event)}
+                                                                            style={{
+                                                                                backgroundColor: `${eventColor}20`,
+                                                                                borderLeft: event.isFirstDay || !event.isMultiDay ? `3px solid ${eventColor}` : 'none',
+                                                                                borderRight: event.isLastDay || !event.isMultiDay ? 'none' : `1px solid ${eventColor}`,
+                                                                                color: '#000000',
+                                                                                textDecoration: isCancelled ? 'line-through' : 'none',
+                                                                                opacity: isCancelled ? 0.7 : 1,
+                                                                                marginLeft: event.isMultiDay && !event.isFirstDay ? '-1px' : '0',
+                                                                                marginRight: event.isMultiDay && !event.isLastDay ? '-1px' : '0'
+                                                                            }}
+                                                                            title={`${event.title} - ${event.userRole === 'guide' ? 'Leading' : 'Participating'}${
+                                                                                isCancelled ? ' (Cancelled)' : ''
+                                                                            }${event.isMultiDay ? ` (Day ${event.dayIndex + 1}/${event.totalDays})` : ''}`}
+                                                                            onMouseEnter={(e) => {
+                                                                                if (event.isMultiDay) {
+                                                                                    const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                                    allSpans.forEach(span => {
+                                                                                        span.style.transform = 'translateY(-2px) scale(1.02)';
+                                                                                        span.style.boxShadow = '0 6px 12px rgba(0,0,0,0.15)';
+                                                                                        span.style.backgroundColor = `${eventColor}35`;
+                                                                                        span.style.zIndex = '10';
+                                                                                    });
+                                                                                } else {
+                                                                                    e.currentTarget.style.transform = 'translateX(3px) scale(1.02)';
+                                                                                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.12)';
+                                                                                    e.currentTarget.style.backgroundColor = `${eventColor}30`;
+                                                                                    e.currentTarget.style.zIndex = '10';
+                                                                                }
+                                                                            }}
+                                                                            onMouseLeave={(e) => {
+                                                                                if (event.isMultiDay) {
+                                                                                    const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                                    allSpans.forEach(span => {
+                                                                                        span.style.transform = 'translateY(0) scale(1)';
+                                                                                        span.style.boxShadow = 'none';
+                                                                                        span.style.backgroundColor = `${eventColor}20`;
+                                                                                        span.style.zIndex = 'auto';
+                                                                                    });
+                                                                                } else {
+                                                                                    e.currentTarget.style.transform = 'translateX(0) scale(1)';
+                                                                                    e.currentTarget.style.boxShadow = 'none';
+                                                                                    e.currentTarget.style.backgroundColor = `${eventColor}20`;
+                                                                                    e.currentTarget.style.zIndex = 'auto';
+                                                                                }
+                                                                            }}
+                                                                            data-event-id={event.id}
+                                                                        >
+                                                                            {(event.isFirstDay || !event.isMultiDay) ? (
+                                                                                <EventIcon
+                                                                                    size={10}
+                                                                                    className="flex-shrink-0 mt-0.5 transition-transform duration-200"
+                                                                                    color={eventColor}
+                                                                                />
+                                                                            ) : (
+                                                                                <EventIcon size={10} className="flex-shrink-0 mt-0.5" color={eventColor} />
+                                                                            )}
+                                                                            <div className="flex-1 min-w-0">
+                                                                                <div className={`font-medium leading-tight transition-colors duration-200 ${isCancelled ? 'line-through' : ''}`} style={{
+                                                                                    fontSize: '10px',
+                                                                                    lineHeight: '1.2',
+                                                                                    wordBreak: 'break-word',
+                                                                                    overflowWrap: 'break-word',
+                                                                                    whiteSpace: 'normal',
+                                                                                    color: '#000000'
+                                                                                }}>
+                                                                                    {event.isMultiDay ? 
+                                                                                        `${event.title} (Day ${event.dayIndex + 1}/${event.totalDays})` : 
+                                                                                        event.title
+                                                                                    }
+                                                                                </div>
+                                                                                <div className="opacity-75 mt-1 transition-opacity duration-200" style={{ fontSize: '8px', color: '#000000' }}>
+                                                                                    {formatEventTime(event.startDateTime, event.endDateTime)}
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
                                                                     );
                                                                 })}
@@ -964,7 +1347,7 @@ const CalendarPage = () => {
                                             </div>
 
                                             {/* Day view content - Schedule Layout */}
-                                            <div className={`transition-opacity duration-300 ${navigationLoading ? 'opacity-70' : 'opacity-100'} overflow-auto max-h-[calc(100vh-200px)]`}>
+                                            <div className={`transition-opacity duration-300 ${navigationLoading ? 'opacity-70' : 'opacity-100'} overflow-auto max-h-[calc(100vh-200px)] p-4 lg:p-0`}>
                                                 {getCurrentDayEvents().length === 0 ? (
                                                     <div className="p-12 text-center">
                                                         <p className="text-neutrals-4 text-lg">No events scheduled for this day.</p>
@@ -989,55 +1372,82 @@ const CalendarPage = () => {
                                                                 <div key={slot.hour} className="h-16 border-b border-neutrals-8"></div>
                                                             ))}
 
-                                                            {/* Events positioned absolutely */}
+                                                            {/* Events positioned absolutely with overlap support */}
                                                             {getCurrentDayEvents().map((event) => {
                                                                 const position = getEventPosition(event);
                                                                 const EventIcon = getEventIcon(event.userRole);
+                                                                const isCancelled = isEventCancelled(event);
+                                                                const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                                
                                                                 return (
                                                                     <div
                                                                         key={event.id}
-                                                                        className="absolute left-2 right-2 rounded-lg p-3 border-l-4 shadow-sm transition-all duration-300 ease-out cursor-pointer group"
+                                                                        className="absolute rounded-lg p-3 border-l-4 shadow-sm transition-all duration-300 ease-out cursor-pointer group"
                                                                         style={{
                                                                             top: `${position.top}px`,
                                                                             height: `${position.height}px`,
+                                                                            width: event.hasOverlap ? position.width : `calc(${position.width} - 16px)`,
+                                                                            left: event.hasOverlap ? `calc(${position.left} + 8px)` : '8px',
                                                                             minHeight: '60px',
                                                                             backgroundColor: '#ffffff',
-                                                                            borderLeftColor: getEventColor(event.userRole, event.isPast),
+                                                                            borderLeftColor: eventColor,
                                                                             color: '#000000',
                                                                             transform: 'translateY(0) scale(1)',
-                                                                            zIndex: '1'
+                                                                            zIndex: event.hasOverlap ? `${2 + event.overlapPosition}` : '1',
+                                                                            textDecoration: isCancelled ? 'line-through' : 'none',
+                                                                            opacity: isCancelled ? 0.7 : 1
                                                                         }}
+                                                                        title={`${event.title}${isCancelled ? ' (Cancelled)' : ''}${
+                                                                            event.isMultiDay ? ` (Multi-day)` : ''
+                                                                        }${event.hasOverlap ? ` (${event.overlapPosition + 1} of ${event.overlapCount})` : ''}`}
                                                                         onClick={() => handleEventClick(event)}
                                                                         onMouseEnter={(e) => {
-                                                                            e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
-                                                                            e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)';
-                                                                            e.currentTarget.style.zIndex = '10';
+                                                                            if (event.hasOverlap) {
+                                                                                // Highlight all overlapping events
+                                                                                const allOverlapping = document.querySelectorAll(`[data-overlap-group="${event.id}"]`);
+                                                                                allOverlapping.forEach(el => {
+                                                                                    el.style.transform = 'translateY(-2px) scale(1.02)';
+                                                                                    el.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)';
+                                                                                    el.style.zIndex = '20';
+                                                                                });
+                                                                            } else {
+                                                                                e.currentTarget.style.transform = 'translateY(-2px) scale(1.02)';
+                                                                                e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15), 0 2px 6px rgba(0,0,0,0.1)';
+                                                                                e.currentTarget.style.zIndex = '10';
+                                                                            }
                                                                             e.currentTarget.style.borderLeftWidth = '6px';
-                                                                            e.currentTarget.style.marginLeft = '-2px';
-                                                                            e.currentTarget.style.marginRight = '-2px';
                                                                         }}
                                                                         onMouseLeave={(e) => {
-                                                                            e.currentTarget.style.transform = 'translateY(0) scale(1)';
-                                                                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
-                                                                            e.currentTarget.style.zIndex = '1';
+                                                                            if (event.hasOverlap) {
+                                                                                const allOverlapping = document.querySelectorAll(`[data-overlap-group="${event.id}"]`);
+                                                                                allOverlapping.forEach(el => {
+                                                                                    el.style.transform = 'translateY(0) scale(1)';
+                                                                                    el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
+                                                                                    el.style.zIndex = `${2 + parseInt(el.dataset.overlapPosition)}`;
+                                                                                });
+                                                                            } else {
+                                                                                e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                                                                                e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.12)';
+                                                                                e.currentTarget.style.zIndex = '1';
+                                                                            }
                                                                             e.currentTarget.style.borderLeftWidth = '4px';
-                                                                            e.currentTarget.style.marginLeft = '0';
-                                                                            e.currentTarget.style.marginRight = '0';
                                                                         }}
+                                                                        data-overlap-group={event.hasOverlap ? event.id : null}
+                                                                        data-overlap-position={event.overlapPosition}
                                                                     >
                                                                         <div className="flex items-start justify-between h-full">
                                                                             <div className="flex-1 min-w-0">
                                                                                 <div className="flex items-center gap-2 mb-1">
                                                                                     <EventIcon
                                                                                         size={14}
-                                                                                        color={getEventColor(event.userRole, event.isPast)}
+                                                                                        color={eventColor}
                                                                                         className="transition-transform duration-300 group-hover:scale-125"
                                                                                     />
-                                                                                    <h4 className="font-semibold text-sm leading-tight transition-all duration-300 group-hover:text-blue-800" style={{
-                                                                                        display: '-webkit-box',
-                                                                                        WebkitLineClamp: 2,
-                                                                                        WebkitBoxOrient: 'vertical',
-                                                                                        overflow: 'hidden',
+                                                                                    <h4 className={`font-semibold text-sm leading-tight transition-all duration-300 group-hover:text-blue-800 ${isCancelled ? 'line-through' : ''}`} style={{
+                                                                                        wordBreak: 'break-word',
+                                                                                        overflowWrap: 'break-word',
+                                                                                        whiteSpace: 'normal',
+                                                                                        lineHeight: '1.3',
                                                                                         color: '#000000'
                                                                                     }}>
                                                                                         {event.title}
@@ -1045,6 +1455,11 @@ const CalendarPage = () => {
                                                                                 </div>
                                                                                 <p className="text-xs opacity-90 mb-1 transition-opacity duration-300 group-hover:opacity-100" style={{ color: '#000000' }}>
                                                                                     {position.startTime} - {position.endTime}
+                                                                                    {position.isMultiDay && (
+                                                                                        <span className="ml-2 text-xs text-blue-600">
+                                                                                            Multi-day
+                                                                                        </span>
+                                                                                    )}
                                                                                 </p>
                                                                                 {position.height > 90 && (
                                                                                     <>
@@ -1057,6 +1472,11 @@ const CalendarPage = () => {
                                                                                             </p>
                                                                                         )}
                                                                                     </>
+                                                                                )}
+                                                                                {isCancelled && (
+                                                                                    <p className="text-xs text-red-600 opacity-80 mt-1">
+                                                                                        ❌ Cancelled
+                                                                                    </p>
                                                                                 )}
                                                                             </div>
                                                                         </div>
@@ -1086,8 +1506,8 @@ const CalendarPage = () => {
                     onToggleSidebar={toggleSidebar}
                 />
                 <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
-                <main className="w-full p-4">
-                    <div className="max-w-6xl mx-auto">
+                <main className="w-full p-4 pb-24 overflow-hidden min-w-0">
+                    <div className="max-w-6xl mx-auto min-w-0">
                         {/* Header */}
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-bold text-neutrals-1">Calendar</h1>
@@ -1187,38 +1607,71 @@ const CalendarPage = () => {
                                             {generateCalendarDays().map((dayInfo, i) => (
                                                 <div
                                                     key={i}
-                                                    className={`min-h-[60px] p-1 border border-neutrals-7 rounded transition-all duration-200 ${dayInfo.isCurrentMonth ? 'bg-white' : 'bg-neutrals-8'
+                                                    className={`min-h-[80px] p-1 border border-neutrals-7 rounded transition-all duration-200 ${dayInfo.isCurrentMonth ? 'bg-white' : 'bg-neutrals-8'
                                                         } ${dayInfo.isToday ? 'bg-green-50 ring-1 ring-green-500 border-green-500' : ''}`}
                                                 >
                                                     <div className={`text-xs mb-1 text-center ${dayInfo.isCurrentMonth ? 'text-neutrals-1' : 'text-neutrals-5'
                                                         } ${dayInfo.isToday ? 'font-bold text-green-700' : ''}`}>
                                                         {dayInfo.day}
                                                     </div>
-                                                    <div className="space-y-0.5">
-                                                        {dayInfo.events.slice(0, 1).map((event) => (
-                                                            <div
-                                                                key={event.id}
-                                                                onClick={() => handleEventClick(event)}
-                                                                className="w-2 h-2 rounded-full mx-auto cursor-pointer transition-all duration-200 hover:scale-125 hover:shadow-lg"
-                                                                style={{ backgroundColor: getEventColor(event.userRole, event.isPast) }}
-                                                                title={event.title}
-                                                                onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.transform = 'scale(1.4)';
-                                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
-                                                                    e.currentTarget.style.zIndex = '10';
-                                                                }}
-                                                                onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.transform = 'scale(1)';
-                                                                    e.currentTarget.style.boxShadow = 'none';
-                                                                    e.currentTarget.style.zIndex = 'auto';
-                                                                }}
-                                                            />
-                                                        ))}
-                                                        {dayInfo.events.length > 1 && (
-                                                            <div className="text-xs text-neutrals-4 text-center">
-                                                                +{dayInfo.events.length - 1}
-                                                            </div>
-                                                        )}
+                                                    <div className="flex flex-wrap gap-0.5 justify-center">
+                                                        {dayInfo.events.slice(0, 4).map((event) => {
+                                                            const isCancelled = isEventCancelled(event);
+                                                            const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                            
+                                                            return (
+                                                                <div
+                                                                    key={event.spanId || event.id}
+                                                                    onClick={() => handleEventClick(event)}
+                                                                    className={`cursor-pointer transition-all duration-200 hover:scale-125 hover:shadow-lg ${
+                                                                        event.isMultiDay ? 'rounded-none' : 'rounded-full'
+                                                                    } ${isCancelled ? 'opacity-60' : ''}`}
+                                                                    style={{ 
+                                                                        backgroundColor: eventColor,
+                                                                        width: event.isMultiDay ? '12px' : '6px',
+                                                                        height: '6px',
+                                                                        borderRadius: event.isMultiDay ? (
+                                                                            event.isFirstDay ? '3px 0 0 3px' : 
+                                                                            event.isLastDay ? '0 3px 3px 0' : 
+                                                                            '0'
+                                                                        ) : '50%'
+                                                                    }}
+                                                                    title={`${event.title}${isCancelled ? ' (Cancelled)' : ''}${
+                                                                        event.isMultiDay ? ` (Day ${event.dayIndex + 1}/${event.totalDays})` : ''
+                                                                    }`}
+                                                                    onMouseEnter={(e) => {
+                                                                        if (event.isMultiDay) {
+                                                                            const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                            allSpans.forEach(span => {
+                                                                                span.style.transform = 'scaleY(1.5)';
+                                                                                span.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+                                                                                span.style.zIndex = '10';
+                                                                            });
+                                                                        } else {
+                                                                            e.currentTarget.style.transform = 'scale(1.4)';
+                                                                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                                                                            e.currentTarget.style.zIndex = '10';
+                                                                        }
+                                                                    }}
+                                                                    onMouseLeave={(e) => {
+                                                                        if (event.isMultiDay) {
+                                                                            const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                            allSpans.forEach(span => {
+                                                                                span.style.transform = 'scaleY(1)';
+                                                                                span.style.boxShadow = 'none';
+                                                                                span.style.zIndex = 'auto';
+                                                                            });
+                                                                        } else {
+                                                                            e.currentTarget.style.transform = 'scale(1)';
+                                                                            e.currentTarget.style.boxShadow = 'none';
+                                                                            e.currentTarget.style.zIndex = 'auto';
+                                                                        }
+                                                                    }}
+                                                                    data-event-id={event.id}
+                                                                />
+                                                            );
+                                                        })}
+                                                        {/* No "+X more" annotation for mobile month view */}
                                                     </div>
                                                 </div>
                                             ))}
@@ -1239,69 +1692,64 @@ const CalendarPage = () => {
                                                         {dayInfo.day}
                                                     </div>
                                                 </div>
-                                                <div className="p-1 space-y-0.5">
-                                                    {dayInfo.events.slice(0, 3).map((event) => {
-                                                        const EventIcon = getEventIcon(event.userRole);
+                                                <div className="p-2 flex flex-wrap gap-1 justify-center">
+                                                    {dayInfo.events.slice(0, 6).map((event) => {
+                                                        const isCancelled = isEventCancelled(event);
+                                                        const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                        
                                                         return (
                                                             <div
-                                                                key={event.id}
+                                                                key={event.spanId || event.id}
                                                                 onClick={() => handleEventClick(event)}
-                                                                className="p-1 rounded cursor-pointer transition-all duration-200 hover:shadow-md border-l-2"
+                                                                className={`w-2 h-2 cursor-pointer transition-all duration-200 hover:scale-125 hover:shadow-lg ${
+                                                                    event.isMultiDay ? 'rounded-none' : 'rounded-full'
+                                                                } ${isCancelled ? 'opacity-60' : ''}`}
                                                                 style={{ 
-                                                                    backgroundColor: `${getEventColor(event.userRole, event.isPast)}15`,
-                                                                    borderLeftColor: getEventColor(event.userRole, event.isPast)
+                                                                    backgroundColor: eventColor,
+                                                                    width: event.isMultiDay ? '16px' : '8px',
+                                                                    height: '8px',
+                                                                    borderRadius: event.isMultiDay ? (
+                                                                        event.isFirstDay ? '4px 0 0 4px' : 
+                                                                        event.isLastDay ? '0 4px 4px 0' : 
+                                                                        '0'
+                                                                    ) : '50%'
                                                                 }}
+                                                                title={`${event.title}${isCancelled ? ' (Cancelled)' : ''}${
+                                                                    event.isMultiDay ? ` (Day ${event.dayIndex + 1}/${event.totalDays})` : ''
+                                                                } - ${formatEventTime(event.startDateTime, event.endDateTime)}`}
                                                                 onMouseEnter={(e) => {
-                                                                    e.currentTarget.style.transform = 'translateX(2px) scale(1.02)';
-                                                                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
-                                                                    e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}25`;
-                                                                    e.currentTarget.style.zIndex = '10';
-                                                                    e.currentTarget.style.borderLeftWidth = '3px';
+                                                                    if (event.isMultiDay) {
+                                                                        const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                        allSpans.forEach(span => {
+                                                                            span.style.transform = 'scaleY(1.5)';
+                                                                            span.style.boxShadow = '0 2px 8px rgba(0,0,0,0.25)';
+                                                                            span.style.zIndex = '10';
+                                                                        });
+                                                                    } else {
+                                                                        e.currentTarget.style.transform = 'scale(1.4)';
+                                                                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                                                                        e.currentTarget.style.zIndex = '10';
+                                                                    }
                                                                 }}
                                                                 onMouseLeave={(e) => {
-                                                                    e.currentTarget.style.transform = 'translateX(0) scale(1)';
-                                                                    e.currentTarget.style.boxShadow = 'none';
-                                                                    e.currentTarget.style.backgroundColor = `${getEventColor(event.userRole, event.isPast)}15`;
-                                                                    e.currentTarget.style.zIndex = 'auto';
-                                                                    e.currentTarget.style.borderLeftWidth = '2px';
+                                                                    if (event.isMultiDay) {
+                                                                        const allSpans = document.querySelectorAll(`[data-event-id="${event.id}"]`);
+                                                                        allSpans.forEach(span => {
+                                                                            span.style.transform = 'scaleY(1)';
+                                                                            span.style.boxShadow = 'none';
+                                                                            span.style.zIndex = 'auto';
+                                                                        });
+                                                                    } else {
+                                                                        e.currentTarget.style.transform = 'scale(1)';
+                                                                        e.currentTarget.style.boxShadow = 'none';
+                                                                        e.currentTarget.style.zIndex = 'auto';
+                                                                    }
                                                                 }}
-                                                            >
-                                                                <div className="flex items-start gap-1">
-                                                                    <EventIcon 
-                                                                        size={8} 
-                                                                        className="flex-shrink-0 mt-0.5 transition-transform duration-200" 
-                                                                        color={getEventColor(event.userRole, event.isPast)}
-                                                                        onMouseEnter={(e) => {
-                                                                            e.currentTarget.style.transform = 'scale(1.2)';
-                                                                        }}
-                                                                        onMouseLeave={(e) => {
-                                                                            e.currentTarget.style.transform = 'scale(1)';
-                                                                        }}
-                                                                    />
-                                                                    <div className="flex-1 min-w-0">
-                                                                        <div className="text-xs font-medium leading-tight text-neutrals-1" style={{
-                                                                            fontSize: '10px',
-                                                                            lineHeight: '1.2',
-                                                                            display: '-webkit-box',
-                                                                            WebkitLineClamp: 2,
-                                                                            WebkitBoxOrient: 'vertical',
-                                                                            overflow: 'hidden'
-                                                                        }}>
-                                                                            {event.title}
-                                                                        </div>
-                                                                        <div className="text-xs text-neutrals-4 mt-0.5" style={{ fontSize: '8px' }}>
-                                                                            {formatEventTime(event.startDateTime, event.endDateTime)}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
+                                                                data-event-id={event.id}
+                                                            />
                                                         );
                                                     })}
-                                                    {dayInfo.events.length > 3 && (
-                                                        <div className="text-xs text-neutrals-4 px-1 text-center" style={{ fontSize: '9px' }}>
-                                                            +{dayInfo.events.length - 3} more
-                                                        </div>
-                                                    )}
+                                                    {/* No "+X more" annotation for mobile week view */}
                                                 </div>
                                             </div>
                                         ))}
@@ -1342,18 +1790,26 @@ const CalendarPage = () => {
                                                         const mobileTop = position.top * 0.75;
                                                         const mobileHeight = Math.max(position.height * 0.75, 36);
                                                         
+                                                        const isCancelled = isEventCancelled(event);
+                                                        const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                                        
                                                         return (
                                                             <div
                                                                 key={event.id}
-                                                                className="absolute left-1 right-1 rounded-lg p-2 border-l-2 shadow-sm transition-all duration-200 cursor-pointer group"
+                                                                className={`absolute rounded-lg p-2 border-l-2 shadow-sm transition-all duration-200 cursor-pointer group ${
+                                                                    isCancelled ? 'opacity-70' : ''
+                                                                }`}
                                                                 style={{
                                                                     top: `${mobileTop}px`,
                                                                     height: `${mobileHeight}px`,
+                                                                    width: event.hasOverlap ? position.width : `calc(${position.width} - 8px)`,
+                                                                    left: event.hasOverlap ? `calc(${position.left} + 4px)` : '4px',
                                                                     minHeight: '36px',
                                                                     backgroundColor: '#ffffff',
-                                                                    borderLeftColor: getEventColor(event.userRole, event.isPast),
+                                                                    borderLeftColor: eventColor,
                                                                     transform: 'translateY(0) scale(1)',
-                                                                    zIndex: '1'
+                                                                    zIndex: event.hasOverlap ? `${2 + event.overlapPosition}` : '1',
+                                                                    textDecoration: isCancelled ? 'line-through' : 'none'
                                                                 }}
                                                                 onClick={() => handleEventClick(event)}
                                                                 onMouseEnter={(e) => {
@@ -1376,17 +1832,18 @@ const CalendarPage = () => {
                                                                 <div className="flex items-start gap-1 h-full">
                                                                     <EventIcon
                                                                         size={10}
-                                                                        color={getEventColor(event.userRole, event.isPast)}
+                                                                        color={eventColor}
                                                                         className="flex-shrink-0 mt-0.5 transition-transform duration-200 group-hover:scale-110"
                                                                     />
                                                                     <div className="flex-1 min-w-0">
-                                                                        <h4 className="font-medium text-neutrals-1 leading-tight transition-colors duration-200 group-hover:text-blue-800" style={{
+                                                                        <h4 className={`font-medium text-neutrals-1 leading-tight transition-colors duration-200 group-hover:text-blue-800 ${
+                                                                            isCancelled ? 'line-through' : ''
+                                                                        }`} style={{
                                                                             fontSize: '11px',
                                                                             lineHeight: '1.2',
-                                                                            display: '-webkit-box',
-                                                                            WebkitLineClamp: mobileHeight > 50 ? 2 : 1,
-                                                                            WebkitBoxOrient: 'vertical',
-                                                                            overflow: 'hidden'
+                                                                            wordBreak: 'break-word',
+                                                                            overflowWrap: 'break-word',
+                                                                            whiteSpace: 'normal'
                                                                         }}>
                                                                             {event.title}
                                                                         </h4>
@@ -1490,29 +1947,48 @@ const CalendarPage = () => {
                                 ) : (
                                     getLeftPanelEvents().map((event) => {
                                         const EventIcon = getEventIcon(event.userRole);
+                                        const isCancelled = isEventCancelled(event);
+                                        const eventColor = getEventColor(event.userRole, event.isPast, isCancelled);
+                                        
                                         return (
                                             <div
                                                 key={event.id}
                                                 onClick={() => handleEventClick(event)}
-                                                className="flex items-start gap-3 p-3 rounded-lg border border-neutrals-6 hover:border-primary-1 cursor-pointer transition-all duration-200"
+                                                className={`flex items-start gap-3 p-3 rounded-lg border border-neutrals-6 hover:border-primary-1 cursor-pointer transition-all duration-200 ${
+                                                    isCancelled ? 'opacity-70' : ''
+                                                }`}
                                             >
                                                 {event.coverPhotoUrl && (
                                                     <img
                                                         src={event.coverPhotoUrl}
                                                         alt={event.title}
-                                                        className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
+                                                        className={`w-12 h-12 rounded-lg object-cover flex-shrink-0 ${
+                                                            isCancelled ? 'grayscale' : ''
+                                                        }`}
                                                     />
                                                 )}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-start gap-2 mb-1">
-                                                        <EventIcon className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: getEventColor(event.userRole, event.isPast) }} />
-                                                        <h3 className="font-medium text-neutrals-1 text-sm leading-tight flex-1" style={{
+                                                        <EventIcon size={16} className="flex-shrink-0 mt-0.5" style={{ color: eventColor }} />
+                                                        <h3 className={`font-medium text-neutrals-1 text-sm leading-tight flex-1 ${
+                                                            isCancelled ? 'line-through' : ''
+                                                        }`} style={{
                                                             wordBreak: 'break-word',
-                                                            overflowWrap: 'break-word'
-                                                        }}>{event.title}</h3>
+                                                            overflowWrap: 'break-word',
+                                                            whiteSpace: 'normal',
+                                                            lineHeight: '1.3'
+                                                        }}>
+                                                            {event.title}
+                                                        </h3>
+                                                        {isCancelled && (
+                                                            <span className="text-xs text-red-600 font-medium">CANCELLED</span>
+                                                        )}
                                                     </div>
                                                     <p className="text-xs text-neutrals-4 mb-1">
                                                         {formatEventDate(event.startDateTime)}
+                                                        {event.isMultiDay && (
+                                                            <span className="ml-2 text-blue-600">Multi-day</span>
+                                                        )}
                                                     </p>
                                                     <p className="text-xs text-neutrals-4">
                                                         {formatEventTime(event.startDateTime, event.endDateTime)}

@@ -203,7 +203,7 @@ public class ExperienceController {
 
     @GetMapping("/{id}/schedules")
     public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long id) {
-        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceId(id);
+        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceIdOrderByStartDateTimeAsc(id);
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (ExperienceSchedule schedule : schedules) {
