@@ -13,7 +13,7 @@ public class PersonalChat {
     private Long personalChatId;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "experience_id", nullable = false)
+    @JoinColumn(name = "experience_id", nullable = true)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "guide", "mediaList", "itineraries", "schedules", "reviews", "wishlistItems", "personalChats"})
     private Experience experience;
 

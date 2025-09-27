@@ -1,20 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit } from 'lucide-react'
+import { Edit, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext';
+import { experienceApi } from '../services/experienceApi';
 
-const ExperienceCard = ({ 
+const ExperienceCard = ({
     experience,
     showWishlistButton = true,
     onWishlistToggle = null,
     variant = 'default',
     showExplore = false,
-    showEditButton = false ,
+    showEditButton = false,
+    showDeleteButton = false, // New prop to show delete button
+    onExperienceDeleted = null, // Callback when experience is deleted
     isInWishlist = false, // New prop to indicate if this item is in the user's wishlist
     schedules = [] // New prop for schedule data
 }) => {
     const { user } = useAuth();
     const [isWishlisted, setIsWishlisted] = useState(isInWishlist); // Initialize based on prop
+    const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
 
@@ -94,6 +98,35 @@ const ExperienceCard = ({
         navigate(`/experience/${experienceId}`);
     };
 
+    const handleDeleteClick = async (e) => {
+        e.stopPropagation();
+
+        // Simple browser confirmation
+        const confirmed = window.confirm(`Are you sure you want to delete "${cardData.title}"? This action cannot be undone.`);
+        if (!confirmed) return;
+
+        setIsDeleting(true);
+
+        try {
+            const experienceId = experience?.experienceId || experience?.id;
+            await experienceApi.deleteExperience(experienceId);
+
+            // Call the parent callback if provided
+            if (onExperienceDeleted) {
+                onExperienceDeleted(experienceId);
+            }
+
+            // Success
+        } catch (error) {
+            console.error('Error deleting experience:', error);
+            // Show simple popup for errors
+            alert(error.message || 'An error occurred while deleting the experience');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+
     // Use experience data directly
     const cardData = experience;
 
@@ -110,7 +143,7 @@ const ExperienceCard = ({
 
     return (
             <div
-                className="flex flex-col w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
+                className="relative flex flex-col w-64 shrink-0 cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white rounded-[16px] border border-neutrals-6 overflow-hidden"
                 onClick={handleCardClick}
             >
                 {/* Image Container */}
@@ -139,6 +172,29 @@ const ExperienceCard = ({
                         {/* Tooltip on hover */}
                         <span className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
                             Edit
+                        </span>
+                    </button>
+                )}
+
+                {/* Delete Button (only if showDeleteButton) */}
+                {showDeleteButton && (
+                    <button
+                        className={`absolute top-4 left-16 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group ${
+                            isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                        onClick={handleDeleteClick}
+                        title="Delete Experience"
+                        disabled={isDeleting}
+                        style={{ position: 'absolute' }}
+                    >
+                        {isDeleting ? (
+                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                            <Trash2 size={20} className="text-neutrals-1 group-hover:text-red-500 transition-colors duration-200" />
+                        )}
+                        {/* Tooltip on hover */}
+                        <span className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-red-500 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                            {isDeleting ? 'Deleting...' : 'Delete'}
                         </span>
                     </button>
                 )}
@@ -240,6 +296,7 @@ const ExperienceCard = ({
                     </div>
                 </div>
             </div>
+
         </div>
     );
 };
