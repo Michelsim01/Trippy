@@ -93,9 +93,11 @@ public class TripPointsController {
 
         Long referenceId = request.get("referenceId") != null ? 
             Long.valueOf(request.get("referenceId").toString()) : null;
+        Integer pointsToAward = request.get("pointsToAward") != null ? 
+            Integer.valueOf(request.get("pointsToAward").toString()) : 50; // Default to 50 if not specified
 
         try {
-            TripPoints transaction = tripPointsService.awardPointsForReview(userId, referenceId);
+            TripPoints transaction = tripPointsService.awardPointsForReview(userId, referenceId, pointsToAward);
 
             Map<String, Object> response = Map.of(
                 "success", true,

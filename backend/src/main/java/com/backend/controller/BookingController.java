@@ -143,6 +143,59 @@ public class BookingController {
                 return ResponseEntity.badRequest().build();
             }
 
+            List<Booking> bookings = bookingRepository.findByTraveler_Id(userId);
+
+            // Create safe response objects to avoid lazy loading issues
+            List<Map<String, Object>> safeBookings = bookings.stream().map(booking -> {
+                Map<String, Object> bookingMap = new HashMap<>();
+                bookingMap.put("bookingId", booking.getBookingId());
+                bookingMap.put("confirmationCode", booking.getConfirmationCode());
+                bookingMap.put("status", booking.getStatus());
+                bookingMap.put("numberOfParticipants", booking.getNumberOfParticipants());
+                bookingMap.put("totalAmount", booking.getTotalAmount());
+                bookingMap.put("bookingDate", booking.getBookingDate());
+                bookingMap.put("cancellationReason", booking.getCancellationReason());
+                bookingMap.put("cancelledAt", booking.getCancelledAt());
+
+                // Handle traveler safely
+                if (booking.getTraveler() != null) {
+                    Map<String, Object> travelerMap = new HashMap<>();
+                    travelerMap.put("id", booking.getTraveler().getId());
+                    travelerMap.put("firstName", booking.getTraveler().getFirstName());
+                    travelerMap.put("lastName", booking.getTraveler().getLastName());
+                    travelerMap.put("email", booking.getTraveler().getEmail());
+                    bookingMap.put("traveler", travelerMap);
+                }
+
+                // Handle experienceSchedule safely
+                if (booking.getExperienceSchedule() != null) {
+                    Map<String, Object> scheduleMap = new HashMap<>();
+                    scheduleMap.put("startDateTime", booking.getExperienceSchedule().getStartDateTime());
+                    scheduleMap.put("endDateTime", booking.getExperienceSchedule().getEndDateTime());
+
+                    // Handle experience within schedule safely
+                    if (booking.getExperienceSchedule().getExperience() != null) {
+                        Map<String, Object> experienceMap = new HashMap<>();
+                        experienceMap.put("experienceId",
+                                booking.getExperienceSchedule().getExperience().getExperienceId());
+                        experienceMap.put("title", booking.getExperienceSchedule().getExperience().getTitle());
+                        experienceMap.put("shortDescription",
+                                booking.getExperienceSchedule().getExperience().getShortDescription());
+                        experienceMap.put("location", booking.getExperienceSchedule().getExperience().getLocation());
+                        experienceMap.put("country", booking.getExperienceSchedule().getExperience().getCountry());
+                        experienceMap.put("price", booking.getExperienceSchedule().getExperience().getPrice());
+                        experienceMap.put("coverPhotoUrl",
+                                booking.getExperienceSchedule().getExperience().getCoverPhotoUrl());
+                        scheduleMap.put("experience", experienceMap);
+                    }
+
+                    bookingMap.put("experienceSchedule", scheduleMap);
+                }
+
+                return bookingMap;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(safeBookings);
             BookingResponseDTO booking = bookingService.getBookingByConfirmationCode(confirmationCode);
             return ResponseEntity.ok(booking);
 
