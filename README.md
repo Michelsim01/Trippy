@@ -96,6 +96,20 @@ spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
 
 # Email Templates
 spring.mail.templates.path=classpath:/templates/email/
+
+# Stripe Configuration
+stripe.api.secret-key=sk_test_51SASx4PPgLxRpMEFgG9lqCXpgBxIqBquMKF6hGsbpk8RazH7G6ZcpcaP2rF75jvF4MI9VEnQCu1xaqFppIQen7J100EuR3LCRC
+stripe.api.publishable-key=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
+```
+
+4. Create a `.env` file in the frontend directory (`frontend/.env`):
+
+```env
+# Backend API Configuration
+VITE_API_BASE_URL=http://localhost:8080
+
+# Stripe Configuration (Test Mode)
+VITE_STRIPE_PUBLIC_KEY=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
 ```
 
 ### 2. Start the Database
@@ -125,8 +139,6 @@ Stay in the backend directory and run:
 # On Windows
 mvnw.cmd spring-boot:run
 ```
-- The backend will start on http://localhost:8080
-- Test the API: http://localhost:8080/api/hello
 
 ### 4. Run the Frontend
 Open a new terminal, navigate to the frontend directory:
@@ -140,7 +152,27 @@ The frontend will start on http://localhost:3000
 ### Verify Everything Works
 
 - Database is running: docker ps should show postgres-spring container
-- Backend is running: http://localhost:8080/api/hello returns a message
-- Frontend is running: http://localhost:3000 loads React app
+- Backend is running
+- Frontend is running
+
+## Testing Payment Integration
+
+The application uses Stripe in test mode for payment processing. Use the following test card numbers to simulate different payment scenarios:
+
+### Successful Payment Test Cards
+
+- **Visa** → `4242 4242 4242 4242`
+- **Mastercard** → `5555 5555 5555 4444`
+- **American Express** → `3782 822463 10005`
+
+### Error Simulation Test Cards
+
+- **Declined card** → `4000 0000 0000 0002`
+- **Insufficient funds** → `4000 0000 0000 9995`
+- **Incorrect CVC** → `4000 0000 0000 0127`
+- **Expired card** → `4000 0000 0000 0069`
+- **Processing error** → `4000 0000 0000 0119`
+
+**Note:** For all test cards, you can use any future expiration date and any 3-digit CVC code.
 
 

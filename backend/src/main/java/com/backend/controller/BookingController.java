@@ -1,428 +1,462 @@
 package com.backend.controller;
 
-import com.backend.entity.Booking;
-import com.backend.entity.ExperienceSchedule;
-import com.backend.repository.BookingRepository;
-import com.backend.repository.ExperienceScheduleRepository;
+import com.backend.dto.*;
+import com.backend.dto.request.*;
+import com.backend.dto.response.*;
+import com.backend.entity.Transaction;
+import com.backend.repository.TransactionRepository;
+import com.backend.service.BookingService;
+import com.backend.service.PaymentService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bookings")
 public class BookingController {
-    @Autowired
-    private BookingRepository bookingRepository;
 
     @Autowired
-    private ExperienceScheduleRepository experienceScheduleRepository;
+    private BookingService bookingService;
 
-    @GetMapping
-    public ResponseEntity<List<Booking>> getAllBookings() {
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    // ================================
+    // BOOKING MANAGEMENT METHODS
+    // ================================
+
+    /**
+     * Validate a booking request before creation
+     * 
+     * @param bookingRequest the booking request to validate
+     * @return BookingValidationDTO with validation results
+     */
+    @PostMapping("/validate")
+    public ResponseEntity<BookingValidationDTO> validateBooking(@Valid @RequestBody BookingRequestDTO bookingRequest) {
         try {
-            List<Booking> bookings = bookingRepository.findAll();
-            return ResponseEntity.ok(bookings);
+            if (bookingRequest == null) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            BookingValidationDTO validation = bookingService.validateBooking(bookingRequest);
+            return ResponseEntity.ok(validation);
+
         } catch (Exception e) {
-            System.err.println("Error retrieving all bookings: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            System.err.println("Error validating booking: " + e.getMessage());
+            BookingValidationDTO errorValidation = new BookingValidationDTO();
+            errorValidation.setValid(false);
+            errorValidation.setMessage("Validation error occurred");
+            errorValidation.addValidationError("System error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorValidation);
         }
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getBookingById(@PathVariable Long id) {
+    /**
+     * Create a new booking in PENDING status
+     * 
+     * @param bookingRequest the booking request containing all booking details
+     * @return BookingResponseDTO with created booking information
+     */
+    @PostMapping("/create")
+    public ResponseEntity<BookingResponseDTO> createBooking(@Valid @RequestBody BookingRequestDTO bookingRequest) {
         try {
-            if (id == null || id <= 0) {
+            if (bookingRequest == null) {
                 return ResponseEntity.badRequest().build();
             }
 
-            Optional<Booking> bookingOpt = bookingRepository.findById(id);
-            if (bookingOpt.isPresent()) {
-                Booking booking = bookingOpt.get();
+            BookingResponseDTO booking = bookingService.createBooking(bookingRequest);
+            return ResponseEntity.status(HttpStatus.CREATED).body(booking);
 
-                // Create safe response object to avoid lazy loading issues
-                Map<String, Object> bookingMap = new HashMap<>();
-                bookingMap.put("bookingId", booking.getBookingId());
-                bookingMap.put("confirmationCode", booking.getConfirmationCode());
-                bookingMap.put("status", booking.getStatus());
-                bookingMap.put("numberOfParticipants", booking.getNumberOfParticipants());
-                bookingMap.put("totalAmount", booking.getTotalAmount());
-                bookingMap.put("bookingDate", booking.getBookingDate());
-                bookingMap.put("cancellationReason", booking.getCancellationReason());
-                bookingMap.put("cancelledAt", booking.getCancelledAt());
-
-                // Handle experienceSchedule safely
-                if (booking.getExperienceSchedule() != null) {
-                    Map<String, Object> scheduleMap = new HashMap<>();
-                    scheduleMap.put("startDateTime", booking.getExperienceSchedule().getStartDateTime());
-                    scheduleMap.put("endDateTime", booking.getExperienceSchedule().getEndDateTime());
-
-                    // Handle experience within schedule safely
-                    if (booking.getExperienceSchedule().getExperience() != null) {
-                        Map<String, Object> experienceMap = new HashMap<>();
-                        experienceMap.put("experienceId",
-                                booking.getExperienceSchedule().getExperience().getExperienceId());
-                        experienceMap.put("title", booking.getExperienceSchedule().getExperience().getTitle());
-                        experienceMap.put("shortDescription",
-                                booking.getExperienceSchedule().getExperience().getShortDescription());
-                        experienceMap.put("fullDescription",
-                                booking.getExperienceSchedule().getExperience().getFullDescription());
-                        experienceMap.put("location", booking.getExperienceSchedule().getExperience().getLocation());
-                        experienceMap.put("country", booking.getExperienceSchedule().getExperience().getCountry());
-                        experienceMap.put("price", booking.getExperienceSchedule().getExperience().getPrice());
-                        experienceMap.put("coverPhotoUrl",
-                                booking.getExperienceSchedule().getExperience().getCoverPhotoUrl());
-                        experienceMap.put("importantInfo",
-                                booking.getExperienceSchedule().getExperience().getImportantInfo());
-                        scheduleMap.put("experience", experienceMap);
-                    }
-
-                    bookingMap.put("experienceSchedule", scheduleMap);
-                }
-
-                return ResponseEntity.ok(bookingMap);
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+        } catch (IllegalArgumentException e) {
+            System.err.println("Booking validation error: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (RuntimeException e) {
+            System.err.println("Booking creation error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         } catch (Exception e) {
-            System.err.println("Error retrieving booking with ID " + id + ": " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", "Failed to fetch booking: " + e.getMessage()));
-        }
-    }
-
-    @GetMapping("/user/{userId}")
-    public ResponseEntity<?> getUserBookings(@PathVariable Long userId) {
-        try {
-            if (userId == null || userId <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            List<Booking> bookings = bookingRepository.findByTraveler_Id(userId);
-
-            // Create safe response objects to avoid lazy loading issues
-            List<Map<String, Object>> safeBookings = bookings.stream().map(booking -> {
-                Map<String, Object> bookingMap = new HashMap<>();
-                bookingMap.put("bookingId", booking.getBookingId());
-                bookingMap.put("confirmationCode", booking.getConfirmationCode());
-                bookingMap.put("status", booking.getStatus());
-                bookingMap.put("numberOfParticipants", booking.getNumberOfParticipants());
-                bookingMap.put("totalAmount", booking.getTotalAmount());
-                bookingMap.put("bookingDate", booking.getBookingDate());
-                bookingMap.put("cancellationReason", booking.getCancellationReason());
-                bookingMap.put("cancelledAt", booking.getCancelledAt());
-
-                // Handle experienceSchedule safely
-                if (booking.getExperienceSchedule() != null) {
-                    Map<String, Object> scheduleMap = new HashMap<>();
-                    scheduleMap.put("startDateTime", booking.getExperienceSchedule().getStartDateTime());
-                    scheduleMap.put("endDateTime", booking.getExperienceSchedule().getEndDateTime());
-
-                    // Handle experience within schedule safely
-                    if (booking.getExperienceSchedule().getExperience() != null) {
-                        Map<String, Object> experienceMap = new HashMap<>();
-                        experienceMap.put("experienceId",
-                                booking.getExperienceSchedule().getExperience().getExperienceId());
-                        experienceMap.put("title", booking.getExperienceSchedule().getExperience().getTitle());
-                        experienceMap.put("shortDescription",
-                                booking.getExperienceSchedule().getExperience().getShortDescription());
-                        experienceMap.put("location", booking.getExperienceSchedule().getExperience().getLocation());
-                        experienceMap.put("country", booking.getExperienceSchedule().getExperience().getCountry());
-                        experienceMap.put("price", booking.getExperienceSchedule().getExperience().getPrice());
-                        experienceMap.put("coverPhotoUrl",
-                                booking.getExperienceSchedule().getExperience().getCoverPhotoUrl());
-                        scheduleMap.put("experience", experienceMap);
-                    }
-
-                    bookingMap.put("experienceSchedule", scheduleMap);
-                }
-
-                return bookingMap;
-            }).collect(Collectors.toList());
-
-            return ResponseEntity.ok(safeBookings);
-        } catch (Exception e) {
-            System.err.println("Error retrieving bookings for user ID " + userId + ": " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", "Failed to fetch bookings: " + e.getMessage()));
-        }
-    }
-
-    @PostMapping
-    public ResponseEntity<Booking> createBooking(@RequestBody Booking booking) {
-        try {
-            if (booking == null) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            Booking savedBooking = bookingRepository.save(booking);
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedBooking);
-        } catch (Exception e) {
-            System.err.println("Error creating booking: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Booking> updateBooking(@PathVariable Long id, @RequestBody Booking booking) {
-        try {
-            if (id == null || id <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            if (booking == null) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            if (!bookingRepository.existsById(id)) {
-                return ResponseEntity.notFound().build();
-            }
-
-            booking.setBookingId(id);
-            Booking savedBooking = bookingRepository.save(booking);
-            return ResponseEntity.ok(savedBooking);
-        } catch (Exception e) {
-            System.err.println("Error updating booking with ID " + id + ": " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBooking(@PathVariable Long id) {
-        try {
-            if (id == null || id <= 0) {
-                return ResponseEntity.badRequest().build();
-            }
-
-            if (!bookingRepository.existsById(id)) {
-                return ResponseEntity.notFound().build();
-            }
-
-            bookingRepository.deleteById(id);
-            return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            System.err.println("Error deleting booking with ID " + id + ": " + e.getMessage());
+            System.err.println("Unexpected booking error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    // Calendar endpoints
-    @GetMapping("/user/{userId}/calendar")
-    public ResponseEntity<Map<String, Object>> getUserCalendarBookings(@PathVariable Long userId,
-            @RequestParam(required = false) String startDate,
-            @RequestParam(required = false) String endDate) {
+    /**
+     * Get booking details by booking ID
+     * 
+     * @param bookingId the ID of the booking to retrieve
+     * @return BookingResponseDTO with complete booking information
+     */
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<BookingResponseDTO> getBookingById(@PathVariable Long bookingId) {
         try {
-            System.out.println("DEBUG: Calendar endpoint called for userId: " + userId);
-            System.out.println("DEBUG: Date range: " + startDate + " to " + endDate);
-
-            if (userId == null || userId <= 0) {
-                return ResponseEntity.badRequest().body(Map.of("error", "Invalid user ID"));
+            if (bookingId == null || bookingId <= 0) {
+                return ResponseEntity.badRequest().build();
             }
 
-            List<Booking> participantBookings;
-            List<ExperienceSchedule> guideSchedules; // Changed from guideBookings to guideSchedules
+            BookingResponseDTO booking = bookingService.getBookingById(bookingId);
+            return ResponseEntity.ok(booking);
 
-            if (startDate != null && endDate != null) {
-                LocalDateTime start = LocalDateTime.parse(startDate, DateTimeFormatter.ISO_DATE_TIME);
-                LocalDateTime end = LocalDateTime.parse(endDate, DateTimeFormatter.ISO_DATE_TIME);
-
-                participantBookings = bookingRepository
-                        .findByTravelerIdAndDateRangeOrderByScheduleStartDateTimeAsc(userId, start, end);
-                guideSchedules = experienceScheduleRepository
-                        .findByGuideIdAndDateRangeOrderByStartDateTimeAsc(userId, start, end);
-
-                System.out
-                        .println("DEBUG: Found " + participantBookings.size() + " participant bookings for date range");
-                System.out.println("DEBUG: Found " + guideSchedules.size() + " guide schedules for date range");
-            } else {
-                participantBookings = bookingRepository
-                        .findByTraveler_IdOrderByExperienceSchedule_StartDateTimeAsc(userId);
-                guideSchedules = experienceScheduleRepository.findByGuideIdOrderByStartDateTimeAsc(userId);
-
-                System.out.println("DEBUG: Found " + participantBookings.size() + " participant bookings (all time)");
-                System.out.println("DEBUG: Found " + guideSchedules.size() + " guide schedules (all time)");
-            }
-
-            // Debug: Print some details about guide schedules
-            for (ExperienceSchedule schedule : guideSchedules) {
-                System.out.println("DEBUG: Guide schedule - ID: " + schedule.getScheduleId() +
-                        ", Experience: " + schedule.getExperience().getTitle() +
-                        ", Guide ID: " + schedule.getExperience().getGuide().getId() +
-                        ", Start: " + schedule.getStartDateTime());
-            }
-
-            // Transform bookings and schedules to calendar events
-            List<Map<String, Object>> participantEvents = transformBookingsToEvents(participantBookings, "participant");
-            List<Map<String, Object>> guideEvents = transformSchedulesToEvents(guideSchedules, "guide");
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("participantEvents", participantEvents);
-            response.put("guideEvents", guideEvents);
-            response.put("success", true);
-
-            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Booking not found: " + e.getMessage());
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            System.err.println("Error retrieving calendar bookings for user " + userId + ": " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to retrieve calendar data", "success", false));
+            System.err.println("Error retrieving booking with ID " + bookingId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    private List<Map<String, Object>> transformBookingsToEvents(List<Booking> bookings, String userRole) {
-        List<Map<String, Object>> events = new ArrayList<>();
-
-        for (Booking booking : bookings) {
-            ExperienceSchedule schedule = booking.getExperienceSchedule();
-            Map<String, Object> event = new HashMap<>();
-
-            event.put("id", booking.getBookingId());
-            event.put("bookingId", booking.getBookingId());
-            event.put("experienceId", schedule.getExperience().getExperienceId());
-            event.put("title", schedule.getExperience().getTitle());
-            event.put("description", schedule.getExperience().getShortDescription());
-            event.put("location", schedule.getExperience().getLocation());
-            event.put("country",
-                    schedule.getExperience().getCountry() != null ? schedule.getExperience().getCountry() : "Unknown");
-            event.put("startDateTime", schedule.getStartDateTime());
-            event.put("endDateTime", schedule.getEndDateTime());
-            event.put("status", booking.getStatus().toString());
-            event.put("paymentStatus", booking.getPaymentStatus().toString());
-            event.put("totalAmount", booking.getTotalAmount());
-            event.put("numberOfParticipants", booking.getNumberOfParticipants());
-            event.put("confirmationCode", booking.getConfirmationCode());
-            event.put("userRole", userRole); // "participant" or "guide"
-            event.put("coverPhotoUrl", schedule.getExperience().getCoverPhotoUrl());
-            event.put("price", schedule.getExperience().getPrice());
-            event.put("duration", schedule.getExperience().getDuration());
-            event.put("category", schedule.getExperience().getCategory().toString());
-
-            // Determine if this is a past or future event
-            LocalDateTime now = LocalDateTime.now();
-            event.put("isPast", schedule.getEndDateTime().isBefore(now));
-
-            events.add(event);
-        }
-
-        return events;
-    }
-
-    private List<Map<String, Object>> transformSchedulesToEvents(List<ExperienceSchedule> schedules, String userRole) {
-        List<Map<String, Object>> events = new ArrayList<>();
-
-        for (ExperienceSchedule schedule : schedules) {
-            Map<String, Object> event = new HashMap<>();
-
-            // For guide events, we use the schedule ID as the main ID since there might not
-            // be bookings yet
-            event.put("id", schedule.getScheduleId());
-            event.put("scheduleId", schedule.getScheduleId());
-            event.put("experienceId", schedule.getExperience().getExperienceId());
-            event.put("title", schedule.getExperience().getTitle());
-            event.put("description", schedule.getExperience().getShortDescription());
-            event.put("location", schedule.getExperience().getLocation());
-            event.put("country",
-                    schedule.getExperience().getCountry() != null ? schedule.getExperience().getCountry() : "Unknown");
-            event.put("startDateTime", schedule.getStartDateTime());
-            event.put("endDateTime", schedule.getEndDateTime());
-
-            // For guide events from schedules, we don't have booking-specific info
-            event.put("status", "SCHEDULED"); // Default status for scheduled events
-            event.put("paymentStatus", "N/A"); // Not applicable for guide view
-            event.put("totalAmount", 0); // Not applicable for guide view
-            event.put("numberOfParticipants", schedule.getBookings() != null ? schedule.getBookings().size() : 0);
-            event.put("confirmationCode", "N/A"); // Not applicable for guide view
-            event.put("userRole", userRole); // "guide"
-            event.put("coverPhotoUrl", schedule.getExperience().getCoverPhotoUrl());
-            event.put("price", schedule.getExperience().getPrice());
-            event.put("duration", schedule.getExperience().getDuration());
-            event.put("category", schedule.getExperience().getCategory().toString());
-            event.put("availableSpots", schedule.getAvailableSpots());
-            event.put("isAvailable", schedule.getIsAvailable());
-
-            // Determine if this is a past or future event
-            LocalDateTime now = LocalDateTime.now();
-            event.put("isPast", schedule.getEndDateTime().isBefore(now));
-
-            events.add(event);
-        }
-
-        return events;
-    }
-
-    // Debug endpoint to check guide data
-    @GetMapping("/debug/user/{userId}")
-    public ResponseEntity<Map<String, Object>> debugUserData(@PathVariable Long userId) {
+    /**
+     * Get booking details by confirmation code
+     * 
+     * @param confirmationCode the confirmation code of the booking
+     * @return BookingResponseDTO with complete booking information
+     */
+    @GetMapping("/confirmation/{confirmationCode}")
+    public ResponseEntity<BookingResponseDTO> getBookingByConfirmationCode(@PathVariable String confirmationCode) {
         try {
-            Map<String, Object> debug = new HashMap<>();
-
-            // Check all bookings where user is participant
-            List<Booking> participantBookings = bookingRepository
-                    .findByTraveler_IdOrderByExperienceSchedule_StartDateTimeAsc(userId);
-            debug.put("participantBookingsCount", participantBookings.size());
-
-            // Check all schedules where user is guide (NEW - this is the correct source)
-            List<ExperienceSchedule> guideSchedules = experienceScheduleRepository
-                    .findByGuideIdOrderByStartDateTimeAsc(userId);
-            debug.put("guideSchedulesCount", guideSchedules.size());
-
-            // Check all bookings where user is guide (OLD - for comparison)
-            List<Booking> guideBookings = bookingRepository.findByGuideIdOrderByScheduleStartDateTimeAsc(userId);
-            debug.put("guideBookingsCount", guideBookings.size());
-
-            // Get some sample data
-            List<Map<String, Object>> participantDetails = new ArrayList<>();
-            for (int i = 0; i < Math.min(3, participantBookings.size()); i++) {
-                Booking b = participantBookings.get(i);
-                Map<String, Object> detail = new HashMap<>();
-                detail.put("bookingId", b.getBookingId());
-                detail.put("title", b.getExperienceSchedule().getExperience().getTitle());
-                detail.put("startDateTime", b.getExperienceSchedule().getStartDateTime());
-                participantDetails.add(detail);
+            // Enhanced validation for confirmation code format
+            if (!isValidConfirmationCodeFormat(confirmationCode)) {
+                System.err.println("Invalid confirmation code format: " + confirmationCode);
+                return ResponseEntity.badRequest().build();
             }
-            debug.put("participantSample", participantDetails);
 
-            // Guide schedules sample (NEW)
-            List<Map<String, Object>> guideScheduleDetails = new ArrayList<>();
-            for (int i = 0; i < Math.min(3, guideSchedules.size()); i++) {
-                ExperienceSchedule s = guideSchedules.get(i);
-                Map<String, Object> detail = new HashMap<>();
-                detail.put("scheduleId", s.getScheduleId());
-                detail.put("title", s.getExperience().getTitle());
-                detail.put("guideId", s.getExperience().getGuide().getId());
-                detail.put("startDateTime", s.getStartDateTime());
-                detail.put("availableSpots", s.getAvailableSpots());
-                guideScheduleDetails.add(detail);
-            }
-            debug.put("guideScheduleSample", guideScheduleDetails);
+            BookingResponseDTO booking = bookingService.getBookingByConfirmationCode(confirmationCode);
+            return ResponseEntity.ok(booking);
 
-            // Guide bookings sample (OLD - for comparison)
-            List<Map<String, Object>> guideDetails = new ArrayList<>();
-            for (int i = 0; i < Math.min(3, guideBookings.size()); i++) {
-                Booking b = guideBookings.get(i);
-                Map<String, Object> detail = new HashMap<>();
-                detail.put("bookingId", b.getBookingId());
-                detail.put("title", b.getExperienceSchedule().getExperience().getTitle());
-                detail.put("guideId", b.getExperienceSchedule().getExperience().getGuide().getId());
-                detail.put("startDateTime", b.getExperienceSchedule().getStartDateTime());
-                guideDetails.add(detail);
-            }
-            debug.put("guideSample", guideDetails);
-
-            return ResponseEntity.ok(debug);
+        } catch (IllegalArgumentException e) {
+            System.err.println("Booking not found: " + e.getMessage());
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", e.getMessage()));
+            System.err.println(
+                    "Error retrieving booking with confirmation code " + confirmationCode + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
+    }
+
+    /**
+     * Get all bookings for a user by email
+     * 
+     * @param email the email address of the user
+     * @return List of BookingSummaryDTO containing user's bookings
+     */
+    @GetMapping("/user/{email}")
+    public ResponseEntity<List<BookingSummaryDTO>> getUserBookings(@PathVariable String email) {
+        try {
+            if (email == null || email.trim().isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            List<BookingSummaryDTO> bookings = bookingService.getUserBookings(email);
+            return ResponseEntity.ok(bookings);
+
+        } catch (Exception e) {
+            System.err.println("Error retrieving bookings for user " + email + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Calculate pricing for a booking - internal method for frontend to calculate
+     * pricing
+     * 
+     * @param experienceScheduleId the ID of the experience schedule
+     * @param numberOfParticipants the number of participants
+     * @return BookingPricingDTO with calculated pricing breakdown
+     */
+    @GetMapping("/calculate-pricing")
+    public ResponseEntity<BookingPricingDTO> calculatePricing(
+            @RequestParam Long experienceScheduleId,
+            @RequestParam Integer numberOfParticipants) {
+        try {
+            if (experienceScheduleId == null || experienceScheduleId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            if (numberOfParticipants == null || numberOfParticipants <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            BookingPricingDTO pricing = bookingService.calculatePricing(experienceScheduleId, numberOfParticipants);
+            return ResponseEntity.ok(pricing);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Pricing calculation error: " + e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            System.err.println("Error calculating pricing: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Cancel an existing booking
+     * 
+     * @param bookingId the ID of the booking to cancel
+     * @param reason    the reason for cancellation
+     * @return BookingResponseDTO with updated booking information
+     */
+    @PostMapping("/{bookingId}/cancel")
+    public ResponseEntity<BookingResponseDTO> cancelBooking(
+            @PathVariable Long bookingId,
+            @RequestParam String reason) {
+        try {
+            if (bookingId == null || bookingId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            BookingResponseDTO booking = bookingService.cancelBooking(bookingId, reason);
+            return ResponseEntity.ok(booking);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Booking not found: " + e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException e) {
+            System.err.println("Cancellation state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        } catch (Exception e) {
+            System.err.println("Error cancelling booking " + bookingId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ================================
+    // PAYMENT PROCESSING METHODS
+    // ================================
+
+    /**
+     * Process payment for an existing booking
+     * 
+     * @param bookingId    the ID of the booking to process payment for
+     * @param paymentToken the Stripe payment token from the client
+     * @return BookingResponseDTO with updated booking information
+     */
+    @PostMapping("/{bookingId}/process-payment")
+    public ResponseEntity<BookingResponseDTO> processPayment(
+            @PathVariable Long bookingId,
+            @RequestParam String paymentToken) {
+        try {
+            if (bookingId == null || bookingId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(BookingResponseDTO.failure("Invalid booking ID", "INVALID_BOOKING_ID"));
+            }
+            if (paymentToken == null || paymentToken.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(BookingResponseDTO.failure("Payment token is required", "INVALID_PAYMENT_TOKEN"));
+            }
+
+            BookingResponseDTO booking = bookingService.processPaymentAndConfirmBooking(bookingId, paymentToken);
+            return ResponseEntity.ok(booking);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Payment validation error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(BookingResponseDTO.failure(e.getMessage(), "VALIDATION_ERROR"));
+        } catch (IllegalStateException e) {
+            System.err.println("Payment state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(BookingResponseDTO.failure(e.getMessage(), "PAYMENT_STATE_ERROR"));
+        } catch (RuntimeException e) {
+            System.err.println("Payment processing error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                    .body(BookingResponseDTO.failure(e.getMessage(), "PAYMENT_FAILED"));
+        } catch (Exception e) {
+            System.err.println("Unexpected payment error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(BookingResponseDTO.failure("Internal server error", "INTERNAL_ERROR"));
+        }
+    }
+
+    /**
+     * Process a refund for a booking transaction
+     * 
+     * @param bookingId     the booking ID containing the transaction to refund
+     * @param transactionId the original transaction ID to refund
+     * @param refundAmount  the amount to refund (optional, defaults to full amount)
+     * @param reason        the reason for refund (optional)
+     * @return PaymentResponseDTO for the refund transaction
+     */
+    @PostMapping("/{bookingId}/refund/{transactionId}")
+    public ResponseEntity<PaymentResponseDTO> processRefund(
+            @PathVariable Long bookingId,
+            @PathVariable Long transactionId,
+            @RequestParam(required = false) BigDecimal refundAmount,
+            @RequestParam(required = false) String reason) {
+        try {
+            if (bookingId == null || bookingId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(PaymentResponseDTO.failure("Invalid booking ID", "INVALID_BOOKING_ID"));
+            }
+            if (transactionId == null || transactionId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(PaymentResponseDTO.failure("Invalid transaction ID", "INVALID_TRANSACTION_ID"));
+            }
+
+            Optional<Transaction> originalTransaction = transactionRepository.findById(transactionId);
+            if (!originalTransaction.isPresent()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(PaymentResponseDTO.failure("Transaction not found", "TRANSACTION_NOT_FOUND"));
+            }
+
+            // Verify transaction belongs to the booking
+            if (!originalTransaction.get().getBooking().getBookingId().equals(bookingId)) {
+                return ResponseEntity.badRequest()
+                        .body(PaymentResponseDTO.failure("Transaction does not belong to this booking",
+                                "TRANSACTION_BOOKING_MISMATCH"));
+            }
+
+            // If no refund amount specified, refund the full amount
+            BigDecimal amountToRefund = refundAmount != null ? refundAmount : originalTransaction.get().getAmount();
+
+            Transaction refundTransaction = paymentService.processRefund(
+                    originalTransaction.get(),
+                    amountToRefund,
+                    reason);
+
+            PaymentTransactionDTO dto = convertToPaymentTransactionDTO(refundTransaction);
+            return ResponseEntity.ok(PaymentResponseDTO.refundSuccess(dto));
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Refund validation error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(PaymentResponseDTO.failure(e.getMessage(), "VALIDATION_ERROR"));
+        } catch (IllegalStateException e) {
+            System.err.println("Refund state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(PaymentResponseDTO.failure(e.getMessage(), "INVALID_TRANSACTION_STATE"));
+        } catch (RuntimeException e) {
+            System.err.println("Refund processing error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED)
+                    .body(PaymentResponseDTO.failure(e.getMessage(), "REFUND_FAILED"));
+        } catch (Exception e) {
+            System.err.println("Unexpected refund error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(PaymentResponseDTO.failure("Internal server error", "INTERNAL_ERROR"));
+        }
+    }
+
+    /**
+     * Calculate service fee for a given base amount
+     * 
+     * @param baseAmount the base booking amount
+     * @return calculated service fee
+     */
+    @GetMapping("/calculate-fee")
+    public ResponseEntity<BigDecimal> calculateServiceFee(@RequestParam BigDecimal baseAmount) {
+        try {
+            if (baseAmount == null || baseAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            BigDecimal serviceFee = paymentService.calculateServiceFee(baseAmount);
+            return ResponseEntity.ok(serviceFee);
+        } catch (Exception e) {
+            System.err.println("Error calculating service fee: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Calculate total amount including service fee
+     * 
+     * @param baseAmount the base booking amount
+     * @return total amount including service fee
+     */
+    @GetMapping("/calculate-total")
+    public ResponseEntity<BigDecimal> calculateTotalAmount(@RequestParam BigDecimal baseAmount) {
+        try {
+            if (baseAmount == null || baseAmount.compareTo(BigDecimal.ZERO) <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            BigDecimal serviceFee = paymentService.calculateServiceFee(baseAmount);
+            BigDecimal totalAmount = paymentService.calculateTotalAmount(baseAmount, serviceFee);
+            return ResponseEntity.ok(totalAmount);
+        } catch (Exception e) {
+            System.err.println("Error calculating total amount: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ================================
+    // TRANSACTION MANAGEMENT METHODS
+    // ================================
+
+    /**
+     * Get all transactions for a specific booking
+     * 
+     * @param bookingId the booking ID
+     * @return List of transactions for the booking
+     */
+    @GetMapping("/{bookingId}/transactions")
+    public ResponseEntity<List<PaymentTransactionDTO>> getTransactionsByBooking(@PathVariable Long bookingId) {
+        try {
+            if (bookingId == null || bookingId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            List<Transaction> transactions = transactionRepository
+                    .findByBookingBookingIdOrderByCreatedAtDesc(bookingId);
+            List<PaymentTransactionDTO> transactionDTOs = transactions.stream()
+                    .map(this::convertToPaymentTransactionDTO)
+                    .toList();
+
+            return ResponseEntity.ok(transactionDTOs);
+        } catch (Exception e) {
+            System.err.println("Error retrieving transactions for booking " + bookingId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ================================
+    // HELPER METHODS
+    // ================================
+
+    /**
+     * Validate confirmation code format
+     * 
+     * Ensures the confirmation code matches the expected format:
+     * - Starts with "TRP-"
+     * - Followed by 8-12 alphanumeric characters (uppercase)
+     * - Total length between 12-16 characters
+     * 
+     * @param confirmationCode the confirmation code to validate
+     * @return true if format is valid, false otherwise
+     */
+    private boolean isValidConfirmationCodeFormat(String confirmationCode) {
+        if (confirmationCode == null) {
+            return false;
+        }
+
+        // Remove any whitespace
+        confirmationCode = confirmationCode.trim().toUpperCase();
+
+        // Check basic format: TRP- followed by 8-12 alphanumeric characters
+        // This accommodates both normal (8 chars) and extended (12 chars) codes from
+        // uniqueness fallback
+        return confirmationCode.matches("^TRP-[A-Z0-9]{8,12}$") &&
+                confirmationCode.length() >= 12 &&
+                confirmationCode.length() <= 16;
+    }
+
+    /**
+     * Helper method to convert Transaction entity to PaymentTransactionDTO
+     */
+    private PaymentTransactionDTO convertToPaymentTransactionDTO(Transaction transaction) {
+        return new PaymentTransactionDTO(
+                transaction.getTransactionId(),
+                transaction.getType(),
+                transaction.getStatus(),
+                transaction.getAmount(),
+                transaction.getPaymentMethod(),
+                transaction.getLastFourDigits(),
+                transaction.getCardBrand(),
+                transaction.getCreatedAt());
     }
 }

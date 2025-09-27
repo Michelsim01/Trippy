@@ -507,7 +507,7 @@ const ExperienceDetailsPage = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </button>
-                </div>z``
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-8">
@@ -749,66 +749,76 @@ const ExperienceDetailsPage = () => {
             {/* Modal Content */}
             <div className="p-6">
               <div className="space-y-3">
-                {schedulesData && schedulesData.length > 0 ? (
-                  schedulesData.map((schedule, index) => (
-                    <div
-                      key={index}
-                      className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedSchedule === index
-                          ? 'border-primary-1 bg-primary-1 bg-opacity-10'
-                          : 'border-neutrals-6 hover:border-primary-1'
-                        }`}
-                      onClick={() => {
-                        setSelectedSchedule(index);
-                        setShowAllSchedules(false);
-                      }}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          {(() => {
-                            const formattedSchedule = formatScheduleDisplay(schedule);
-                            return (
-                              <>
-                                <div className={`font-semibold ${selectedSchedule === index ? 'text-primary-1' : 'text-neutrals-2'}`}>
-                                  {formattedSchedule.dateText}
-                                </div>
-                                <div className="text-sm text-neutrals-4">
-                                  {formattedSchedule.timeText}
-                                </div>
-                              </>
-                            );
-                          })()}
+                {schedulesData && schedulesData.length > 0 ? (() => {
+                  // Filter available schedules - same logic as BookingCard
+                  const availableSchedules = schedulesData.filter(schedule => {
+                    return schedule.availableSpots > 0 && schedule.isAvailable !== false;
+                  });
+
+                  // Check if there are any available schedules
+                  if (availableSchedules.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-neutrals-4">
+                        <div className="text-lg font-medium mb-2">
+                          No Available Dates
                         </div>
-                        <div className="text-sm text-neutrals-4">
-                          {schedule.availableSpots || 4} spots available
+                        <div className="text-sm">
+                          All schedules for this experience are currently full. Please check back later or contact the host.
                         </div>
                       </div>
-                    </div>
-                  ))
-                ) : (
-                  // Fallback demo schedules for modal
-                  <>
-                    {['Sunday, 5 October', 'Monday, 6 October', 'Tuesday, 7 October', 'Wednesday, 8 October', 'Thursday, 9 October', 'Friday, 10 October', 'Saturday, 11 October'].map((date, index) => (
+                    );
+                  }
+
+                  // Display available schedules with original index tracking
+                  return availableSchedules.map((schedule, filteredIndex) => {
+                    // Get the original index in the full schedulesData array for proper state tracking
+                    const originalIndex = schedulesData.findIndex(s => s.scheduleId === schedule.scheduleId);
+
+                    return (
                       <div
-                        key={index}
-                        className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedSchedule === `demo-${index}`
-                            ? 'border-primary-1 bg-primary-1 bg-opacity-10'
-                            : 'border-neutrals-6 hover:border-primary-1'
+                        key={schedule.scheduleId || filteredIndex}
+                        className={`border rounded-lg p-4 transition-colors cursor-pointer ${selectedSchedule === originalIndex
+                          ? 'border-primary-1 bg-primary-1 bg-opacity-10'
+                          : 'border-neutrals-6 hover:border-primary-1'
                           }`}
                         onClick={() => {
-                          setSelectedSchedule(`demo-${index}`);
+                          setSelectedSchedule(originalIndex);
                           setShowAllSchedules(false);
                         }}
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <div className={`font-semibold ${selectedSchedule === `demo-${index}` ? 'text-primary-1' : 'text-neutrals-2'}`}>{date}</div>
-                            <div className="text-sm text-neutrals-4">10:00 am - 3:30 pm</div>
+                            {(() => {
+                              const formattedSchedule = formatScheduleDisplay(schedule);
+                              return (
+                                <>
+                                  <div className={`font-semibold ${selectedSchedule === originalIndex ? 'text-primary-1' : 'text-neutrals-2'}`}>
+                                    {formattedSchedule.dateText}
+                                  </div>
+                                  <div className="text-sm text-neutrals-4">
+                                    {formattedSchedule.timeText}
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
-                          <div className="text-sm text-neutrals-4">4 spots available</div>
+                          <div className="text-sm text-neutrals-4">
+                            {schedule.availableSpots} spot{schedule.availableSpots !== 1 ? 's' : ''} available
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </>
+                    );
+                  });
+                })() : (
+                  // No schedule data available
+                  <div className="text-center py-8 text-neutrals-4">
+                    <div className="text-lg font-medium mb-2">
+                      No Schedule Data
+                    </div>
+                    <div className="text-sm">
+                      Schedule information is currently unavailable. Please contact the host for booking details.
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

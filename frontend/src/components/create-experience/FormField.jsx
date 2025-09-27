@@ -13,13 +13,19 @@ export default function FormField({
   isOpen = false, // For dropdown
   onToggle = null, // For dropdown
   onSelect = null, // For dropdown
+  error = null, // Error message to display
   ...props
 }) {
   const marginBottom = isMobile ? '10px' : '15px';
   const inputPadding = isMobile ? '4px' : '8px';
+  
+  // Apply error styling if there's an error
+  const borderColor = error ? 'border-red-500' : 'border-neutrals-5';
+  const focusBorderColor = error ? 'focus:border-red-500' : 'focus:border-primary-1';
+  
   const inputClasses = isMobile
-    ? "w-full px-2 py-1 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-sm font-medium text-neutrals-2 transition-colors"
-    : "w-full px-2 py-1 border-2 border-neutrals-5 rounded-xl focus:outline-none focus:border-primary-1 text-lg font-medium text-neutrals-2 transition-colors";
+    ? `w-full px-2 py-1 border-2 ${borderColor} rounded-xl focus:outline-none ${focusBorderColor} text-sm font-medium text-neutrals-2 transition-colors`
+    : `w-full px-2 py-1 border-2 ${borderColor} rounded-xl focus:outline-none ${focusBorderColor} text-lg font-medium text-neutrals-2 transition-colors`;
 
   if (type === 'dropdown') {
     return (
@@ -48,6 +54,11 @@ export default function FormField({
             </div>
           )}
         </div>
+        {error && (
+          <div className={`mt-2 text-red-500 ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+            {error}
+          </div>
+        )}
       </div>
     );
   }
@@ -64,6 +75,11 @@ export default function FormField({
           placeholder={placeholder}
           {...props}
         />
+        {error && (
+          <div className={`mt-2 text-red-500 ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+            {error}
+          </div>
+        )}
       </div>
     );
   }
@@ -80,6 +96,11 @@ export default function FormField({
         placeholder={placeholder}
         {...props}
       />
+      {error && (
+        <div className={`mt-2 text-red-500 ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }
