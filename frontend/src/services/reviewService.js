@@ -184,7 +184,7 @@ export const reviewService = {
   // Get review statistics for an experience
   async getReviewStats(experienceId) {
     try {
-      const response = await api.get(`/experiences/${experienceId}/review-stats`);
+      const response = await api.get(`/reviews/experience/${experienceId}/stats`);
       return {
         success: true,
         data: response.data

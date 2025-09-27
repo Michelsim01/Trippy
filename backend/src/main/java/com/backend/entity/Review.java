@@ -23,8 +23,13 @@ public class Review {
     private Experience experience;
 
     private Integer rating;
+
+    @Column(length = 100)
     private String title;
+
+    @Column(length = 1000)
     private String comment;
+
     private Integer tripPointsEarned;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

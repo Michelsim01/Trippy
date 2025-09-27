@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { useReviews } from '../contexts/ReviewContext';
-import { reviewService } from '../services/reviewService';
 import { userService } from '../services/userService';
 import { experienceApi } from '../services/experienceApi';
 import { reviewService } from '../services/reviewService';
@@ -19,7 +17,6 @@ const ProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, isAuthenticated, isLoading: authLoading, token } = useAuth();
-    const { userReviews } = useReviews();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Introduction');
     const [currentRole, setCurrentRole] = useState(UserRole.TOURIST);
@@ -27,7 +24,6 @@ const ProfilePage = () => {
     const [userExperiences, setUserExperiences] = useState([]);
     const [experiencesLoading, setExperiencesLoading] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [profileUserReviews, setProfileUserReviews] = useState([]);
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
     const [wishlistExperienceIds, setWishlistExperienceIds] = useState([]);
