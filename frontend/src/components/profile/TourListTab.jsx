@@ -2,7 +2,7 @@ import React from 'react';
 import ExperienceCard from '../ExperienceCard';
 import { Link } from 'react-router-dom';
 
-const TourListTab = ({ tourData, loading = false, isOwnProfile, wishlistExperienceIds = [] }) => {
+const TourListTab = ({ tourData, loading = false, isOwnProfile, wishlistExperienceIds = [], onTourDeleted = null }) => {
     console.log('TourListTab props:', { 
         tourData: tourData?.length || 0, 
         loading, 
@@ -64,10 +64,12 @@ const TourListTab = ({ tourData, loading = false, isOwnProfile, wishlistExperien
                     console.log(`TourListTab - Tour ${experienceId} (type: ${typeof experienceId}): isInWishlist=${isInWishlist}`);
                     console.log(`TourListTab - Wishlist contains: ${JSON.stringify(wishlistExperienceIds)} (types: ${wishlistExperienceIds.map(id => typeof id).join(', ')})`);
                     return (
-                        <ExperienceCard 
+                        <ExperienceCard
                             key={experienceId}
-                            experience={tour} 
+                            experience={tour}
                             showEditButton={isOwnProfile}
+                            showDeleteButton={isOwnProfile}
+                            onExperienceDeleted={onTourDeleted}
                             showWishlistButton={!isOwnProfile}
                             isInWishlist={isInWishlist}
                         />

@@ -9,7 +9,7 @@ import Footer from '../components/Footer';
 import ExperienceHeader from '../components/experience-details/ExperienceHeader';
 import ExperienceGallery from '../components/experience-details/ExperienceGallery';
 import ExperienceContent from '../components/experience-details/ExperienceContent';
-import BookingCard from '../components/experience-details/BookingCard';
+import BookingWidget from '../components/experience-details/BookingWidget';
 import HostProfile from '../components/experience-details/HostProfile';
 
 const ExperienceDetailsPage = () => {
@@ -198,6 +198,46 @@ const ExperienceDetailsPage = () => {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const closeSidebar = () => setIsSidebarOpen(false);
 
+  const handleChatWithGuide = async () => {
+    try {
+      if (!user) {
+        navigate('/login');
+        return;
+      }
+
+      if (!displayData || !displayData.guide) {
+        console.error('Guide information not available');
+        return;
+      }
+
+      const touristId = user.id || user.userId;
+      const guideId = displayData.guide.userId;
+      const experienceId = displayData.experienceId || id;
+
+      const response = await fetch(`http://localhost:8080/api/personal-chats/experience/${experienceId}/chat?touristId=${touristId}&guideId=${guideId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const chatData = await response.json();
+        navigate(`/messages?chatId=${chatData.personalChatId}`);
+      } else {
+        if (response.status === 401) {
+          console.error('Authentication required - redirecting to login');
+          navigate('/login');
+        } else {
+          console.error('Failed to create or get chat:', response.status, await response.text());
+        }
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+    }
+  };
+
   // Use experienceData if available (from API), otherwise use formData (from context)
   const displayData = experienceData;
 
@@ -367,7 +407,7 @@ const ExperienceDetailsPage = () => {
                 </div>
 
                 <div className="col-span-1">
-                  <BookingCard
+                  <BookingWidget
                     displayData={displayData}
                     schedulesData={schedulesData}
                     formatScheduleDisplay={formatScheduleDisplay}
@@ -379,6 +419,7 @@ const ExperienceDetailsPage = () => {
                     setShowAllSchedules={setShowAllSchedules}
                     reviews={reviews}
                     isMobile={false}
+                    onChatWithGuide={handleChatWithGuide}
                   />
                 </div>
               </div>
@@ -552,9 +593,9 @@ const ExperienceDetailsPage = () => {
               />
             </div>
 
-            {/* Mobile Booking Card */}
+            {/* Mobile Booking Widget */}
             <div className="mt-6">
-              <BookingCard
+              <BookingWidget
                 displayData={displayData}
                 schedulesData={schedulesData}
                 formatScheduleDisplay={formatScheduleDisplay}
@@ -566,6 +607,7 @@ const ExperienceDetailsPage = () => {
                 setShowAllSchedules={setShowAllSchedules}
                 reviews={reviews}
                 isMobile={true}
+                onChatWithGuide={handleChatWithGuide}
               />
             </div>
           </div>

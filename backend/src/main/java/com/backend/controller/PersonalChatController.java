@@ -1,19 +1,44 @@
 package com.backend.controller;
 
 import com.backend.entity.PersonalChat;
+import com.backend.entity.ChatMember;
+import com.backend.entity.Experience;
+import com.backend.entity.User;
+import com.backend.entity.Message;
+import com.backend.entity.ChatRoleEnum;
 import com.backend.repository.PersonalChatRepository;
+import com.backend.repository.ChatMemberRepository;
+import com.backend.repository.ExperienceRepository;
+import com.backend.repository.UserRepository;
+import com.backend.repository.MessageRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/personal-chats")
+@CrossOrigin(origins = "http://localhost:3000")
 public class PersonalChatController {
     @Autowired
     private PersonalChatRepository personalChatRepository;
+    
+    @Autowired
+    private ChatMemberRepository chatMemberRepository;
+    
+    @Autowired
+    private ExperienceRepository experienceRepository;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private MessageRepository messageRepository;
 
     @GetMapping
     public ResponseEntity<List<PersonalChat>> getAllPersonalChats() {
@@ -100,6 +125,97 @@ public class PersonalChatController {
         } catch (Exception e) {
             System.err.println("Error deleting personal chat with ID " + id + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @PostMapping("/experience/{experienceId}/chat")
+    public ResponseEntity<PersonalChat> getOrCreateExperienceChat(
+            @PathVariable Long experienceId,
+            @RequestParam Long touristId,
+            @RequestParam Long guideId) {
+        try {
+            System.out.println("Creating chat for experienceId: " + experienceId + ", touristId: " + touristId + ", guideId: " + guideId);
+            Optional<PersonalChat> existingChat = personalChatRepository
+                .findByExperienceAndTouristAndGuide(experienceId, touristId, guideId);
+            
+            if (existingChat.isPresent()) {
+                return ResponseEntity.ok(existingChat.get());
+            }
+            
+            Optional<Experience> experience = experienceRepository.findById(experienceId);
+            Optional<User> tourist = userRepository.findById(touristId);
+            Optional<User> guide = userRepository.findById(guideId);
+            
+            if (experience.isEmpty() || tourist.isEmpty() || guide.isEmpty()) {
+                return ResponseEntity.badRequest().build();
+            }
+            
+            PersonalChat newChat = new PersonalChat();
+            newChat.setExperience(experience.get());
+            newChat.setName(experience.get().getTitle() + " - Chat");
+            newChat.setCreatedAt(LocalDateTime.now());
+            newChat.setChatMembers(new ArrayList<>());
+            
+            PersonalChat savedChat = personalChatRepository.save(newChat);
+            
+            ChatMember touristMember = new ChatMember();
+            touristMember.setPersonalChat(savedChat);
+            touristMember.setUser(tourist.get());
+            touristMember.setRole(ChatRoleEnum.MEMBER);
+            touristMember.setCreatedAt(LocalDateTime.now());
+            
+            ChatMember guideMember = new ChatMember();
+            guideMember.setPersonalChat(savedChat);
+            guideMember.setUser(guide.get());
+            guideMember.setRole(ChatRoleEnum.ADMIN);
+            guideMember.setCreatedAt(LocalDateTime.now());
+            
+            chatMemberRepository.save(touristMember);
+            chatMemberRepository.save(guideMember);
+            
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedChat);
+            
+        } catch (Exception e) {
+            System.err.println("Error creating experience chat: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+    
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PersonalChat>> getUserChats(@PathVariable Long userId) {
+        try {
+            List<PersonalChat> userChats = personalChatRepository.findChatsByUserId(userId);
+            
+            if (!userChats.isEmpty()) {
+                // Get all chat IDs
+                List<Long> chatIds = userChats.stream()
+                    .map(PersonalChat::getPersonalChatId)
+                    .collect(Collectors.toList());
+                
+                // Get last messages for all chats in one query
+                List<Message> lastMessages = personalChatRepository.findLastMessagesForChats(chatIds);
+                
+                // Create a map for quick lookup
+                var lastMessageMap = lastMessages.stream()
+                    .collect(Collectors.toMap(
+                        m -> m.getPersonalChat().getPersonalChatId(),
+                        m -> m
+                    ));
+                
+                // Populate last message for each chat
+                for (PersonalChat chat : userChats) {
+                    Message lastMessage = lastMessageMap.get(chat.getPersonalChatId());
+                    if (lastMessage != null) {
+                        chat.setLastMessage(lastMessage.getContent());
+                        chat.setLastMessageTime(lastMessage.getCreatedAt());
+                    }
+                }
+            }
+            
+            return ResponseEntity.ok(userChats);
+        } catch (Exception e) {
+            System.err.println("Error retrieving chats for user " + userId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }

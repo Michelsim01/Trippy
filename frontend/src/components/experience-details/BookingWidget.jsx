@@ -104,7 +104,7 @@ const formatDuration = (experienceData, schedulesData) => {
   return null;
 };
 
-const BookingCard = ({
+const BookingWidget = ({
   displayData,
   schedulesData,
   selectedSchedule,
@@ -112,7 +112,8 @@ const BookingCard = ({
   guests,
   setGuests,
   setShowAllSchedules,
-  isMobile = false
+  isMobile = false,
+  onChatWithGuide
 }) => {
   const navigate = useNavigate();
 
@@ -357,15 +358,36 @@ const BookingCard = ({
 
       {/* Book Now Button */}
       <button
+<<<<<<< HEAD:frontend/src/components/experience-details/BookingCard.jsx
         onClick={handleBookNow}
         className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${selectedSchedule === null
           ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
           : 'bg-primary-1 text-white hover:bg-opacity-90'
           } ${isMobile ? 'mb-0' : 'mb-4'}`}
         disabled={selectedSchedule === null}
+=======
+        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
+          isMobile && selectedSchedule === null
+            ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
+            : 'bg-primary-1 text-white hover:bg-opacity-90'
+        } ${isMobile ? 'mb-2' : 'mb-3'}`}
+        disabled={isMobile && selectedSchedule === null}
+>>>>>>> master:frontend/src/components/experience-details/BookingWidget.jsx
         style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
       >
         {selectedSchedule === null ? 'Select a date to book' : 'Book Now'}
+      </button>
+
+      {/* Chat with Guide Button */}
+      <button
+        onClick={onChatWithGuide}
+        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} border-2 border-primary-1 text-primary-1 hover:bg-primary-1 hover:text-white ${isMobile ? 'mb-0' : 'mb-4'}`}
+        style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
+      >
+        <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        Chat with Guide
       </button>
 
       {/* Standardized Cancellation Policy - Desktop only */}
@@ -403,4 +425,4 @@ const BookingCard = ({
   );
 };
 
-export default BookingCard;
+export default BookingWidget;

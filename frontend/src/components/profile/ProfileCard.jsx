@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Star, Check, Flag, Edit, MessageCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
+import { useTripPoints } from '../../contexts/TripPointsContext';
 
 const UserRole = {
     TOURIST: 'tourist',
@@ -14,6 +15,7 @@ const ProfileCard = ({
     className = "" 
 }) => {
     const { isAuthenticated, token, user: currentUser } = useAuth();
+    const { currentBalance } = useTripPoints();
     const [userData, setUserData] = useState(propUserData || null);
     const [userStats, setUserStats] = useState(null);
     const [loading, setLoading] = useState(!propUserData);
@@ -172,7 +174,7 @@ const ProfileCard = ({
 
                 {/* Rating or Member Status */}
                 {isTourGuide && (
-                    <div className="flex items-center justify-center gap-2 mb-6">
+                    <div className="flex items-center justify-center gap-2 mb-4">
                         <Star className="w-5 h-5 text-yellow-400 fill-current" />
                         <span className="text-lg font-semibold text-gray-900">
                             {stats ? (stats.rating || 'N/A') : '...'}
@@ -180,6 +182,18 @@ const ProfileCard = ({
                         <span className="text-gray-500">
                             ({stats ? (stats.reviewCount || 0) : 0} reviews)
                         </span>
+                    </div>
+                )}
+
+                {/* TripPoints Display */}
+                {isCurrentUserProfile && (
+                    <div className="text-center mb-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span className="text-sm font-medium text-blue-700">
+                                {currentBalance.toLocaleString()} TripPoints
+                            </span>
+                        </div>
                     </div>
                 )}
             </div>

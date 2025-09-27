@@ -112,6 +112,18 @@ const MyToursPage = () => {
         navigate(`/experience/${tourId}`)
     }
 
+    const handleTourDeleted = (deletedTourId) => {
+        // Remove the deleted tour from the tours list
+        setTours(prevTours => prevTours.filter(tour => tour.experienceId !== deletedTourId))
+
+        // Also remove from schedules state (JPA will handle DB cleanup)
+        setSchedules(prevSchedules => {
+            const newSchedules = { ...prevSchedules }
+            delete newSchedules[deletedTourId]
+            return newSchedules
+        })
+    }
+
     // Calculate stats for the quick stats section
     const totalBookings = tours.reduce((sum, tour) => {
         const tourSchedules = schedules[tour.experienceId] || []
@@ -222,6 +234,8 @@ const MyToursPage = () => {
                                                 experience={tour}
                                                 showWishlistButton={false}
                                                 showEditButton={true}
+                                                showDeleteButton={true}
+                                                onExperienceDeleted={handleTourDeleted}
                                                 schedules={schedules[tour.experienceId] || []}
                                                 showExplore={false}
                                             />
@@ -330,6 +344,8 @@ const MyToursPage = () => {
                                         experience={tour}
                                         showWishlistButton={false}
                                         showEditButton={true}
+                                        showDeleteButton={true}
+                                        onExperienceDeleted={handleTourDeleted}
                                         schedules={schedules[tour.experienceId] || []}
                                         showExplore={false}
                                     />
