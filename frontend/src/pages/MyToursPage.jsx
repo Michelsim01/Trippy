@@ -18,38 +18,30 @@ const MyToursPage = () => {
     const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false)
     const [selectedExperienceId, setSelectedExperienceId] = useState(null)
     const [selectedExperienceTitle, setSelectedExperienceTitle] = useState('')
-
-    // Mock earnings data - consistent 3-card structure
-    const mockEarnings = {
-        totalEarnings: 2130.00,
-        pendingEarnings: 1240.00,
-        paidOutEarnings: 890.00,
-        totalBookings: 14,
-        pendingBookings: 8,
-        completedBookings: 6
-    }
+    const [earnings, setEarnings] = useState(null)
+    const [earningsLoading, setEarningsLoading] = useState(true)
 
     useEffect(() => {
         const fetchTours = async () => {
             try {
                 setLoading(true)
                 console.log('MyToursPage - Fetching tours for user:', user?.id || user?.userId)
-                
+
                 const response = await fetch(`http://localhost:8080/api/experiences/guide/${user?.id || user?.userId}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
                         'Content-Type': 'application/json'
                     }
                 })
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`)
                 }
-                
+
                 const data = await response.json()
                 console.log('MyToursPage - Fetched tours data:', data)
                 console.log('MyToursPage - Tours count:', data.length)
-                
+
                 // Transform the API data to match our component structure
                 const transformedData = data.map(experience => ({
                     id: experience.experienceId,
@@ -67,11 +59,11 @@ const MyToursPage = () => {
                     totalReviews: experience.totalReviews,
                     createdAt: experience.createdAt
                 }))
-                
+
                 setTours(transformedData)
-                
+
                 // Fetch schedule data for all user's experiences
-                const schedulePromises = data.map(experience => 
+                const schedulePromises = data.map(experience =>
                     fetch(`http://localhost:8080/api/experiences/${experience.experienceId}/schedules`, {
                         headers: {
                             'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -81,15 +73,15 @@ const MyToursPage = () => {
                         .then(response => response.ok ? response.json() : [])
                         .catch(() => []) // If schedule fetch fails, use empty array
                 )
-                
+
                 const schedulesData = await Promise.all(schedulePromises)
-                
+
                 // Create schedules object with experience ID as key
                 const schedulesMap = {}
                 data.forEach((experience, index) => {
                     schedulesMap[experience.experienceId] = schedulesData[index]
                 })
-                
+
                 setSchedules(schedulesMap)
                 setError(null)
             } catch (err) {
@@ -103,6 +95,36 @@ const MyToursPage = () => {
 
         if (user?.id || user?.userId) {
             fetchTours()
+        }
+    }, [user?.id, user?.userId])
+
+    useEffect(() => {
+        const fetchEarnings = async () => {
+            try {
+                setEarningsLoading(true)
+                const response = await fetch(`http://localhost:8080/api/earnings/guide/${user?.id || user?.userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                })
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`)
+                }
+
+                const data = await response.json()
+                setEarnings(data)
+            } catch (error) {
+                console.error('Error fetching earnings:', error)
+                setEarnings(null)
+            } finally {
+                setEarningsLoading(false)
+            }
+        }
+
+        if (user?.id || user?.userId) {
+            fetchEarnings()
         }
     }, [user?.id, user?.userId])
 
@@ -157,7 +179,7 @@ const MyToursPage = () => {
         return sum + tourSchedules.reduce((scheduleSum, schedule) => scheduleSum + (schedule.bookedSpots || 0), 0)
     }, 0)
 
-    const averageRating = tours.filter(t => t.rating > 0).length > 0 
+    const averageRating = tours.filter(t => t.rating > 0).length > 0
         ? (tours.reduce((sum, tour) => sum + tour.rating, 0) / tours.filter(t => t.rating > 0).length).toFixed(1)
         : '0.0'
 
@@ -183,7 +205,7 @@ const MyToursPage = () => {
                                     <h1 className="text-3xl font-bold text-neutrals-1 mb-2">My Tours</h1>
                                     <p className="text-neutrals-4">Manage your experiences and bookings</p>
                                 </div>
-                                <button 
+                                <button
                                     onClick={handleCreateTour}
                                     className="btn btn-primary btn-md mt-4 sm:mt-0"
                                 >
@@ -197,76 +219,86 @@ const MyToursPage = () => {
                             {/* Earnings Summary */}
                             <div className="mb-8">
                                 <h2 className="text-xl font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    {/* Total Earnings Card */}
-                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center">
-                                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-lg font-semibold text-neutrals-1">Total Earnings</h3>
-                                                    <p className="text-sm text-neutrals-4">All time earnings</p>
+                                {earningsLoading ? (
+                                    <div className="bg-white rounded-lg p-8 shadow-sm text-center">
+                                        <p className="text-neutrals-3">Loading earnings...</p>
+                                    </div>
+                                ) : earnings ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        {/* Total Earnings Card */}
+                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-neutrals-1">Total Earnings</h3>
+                                                        <p className="text-sm text-neutrals-4">All time earnings</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="text-3xl font-bold text-blue-600 mb-2">
+                                                ${earnings.totalEarnings.toFixed(2)}
+                                            </div>
+                                            <div className="text-sm text-neutrals-4">
+                                                {earnings.totalBookings} total bookings
+                                            </div>
                                         </div>
-                                        <div className="text-3xl font-bold text-blue-600 mb-2">
-                                            ${mockEarnings.totalEarnings.toFixed(2)}
-                                        </div>
-                                        <div className="text-sm text-neutrals-4">
-                                            {mockEarnings.totalBookings} total bookings
-                                        </div>
-                                    </div>
 
-                                    {/* Pending Payout Card */}
-                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center">
-                                                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                                                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-lg font-semibold text-neutrals-1">Pending</h3>
-                                                    <p className="text-sm text-neutrals-4">Available after completing tours</p>
+                                        {/* Pending Payout Card */}
+                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-neutrals-1">Pending</h3>
+                                                        <p className="text-sm text-neutrals-4">Available after completing tours</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="text-3xl font-bold text-yellow-600 mb-2">
+                                                ${earnings.pendingEarnings.toFixed(2)}
+                                            </div>
+                                            <div className="text-sm text-neutrals-4">
+                                                {earnings.pendingBookings} confirmed bookings
+                                            </div>
                                         </div>
-                                        <div className="text-3xl font-bold text-yellow-600 mb-2">
-                                            ${mockEarnings.pendingEarnings.toFixed(2)}
-                                        </div>
-                                        <div className="text-sm text-neutrals-4">
-                                            {mockEarnings.pendingBookings} confirmed bookings
-                                        </div>
-                                    </div>
 
-                                    {/* Paid Out Card */}
-                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="flex items-center">
-                                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                                                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                    </svg>
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-lg font-semibold text-neutrals-1">Paid Out</h3>
-                                                    <p className="text-sm text-neutrals-4">Released to guide for payout</p>
+                                        {/* Paid Out Card */}
+                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                                        <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-neutrals-1">Paid Out</h3>
+                                                        <p className="text-sm text-neutrals-4">Released to guide for payout</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="text-3xl font-bold text-green-600 mb-2">
-                                            ${mockEarnings.paidOutEarnings.toFixed(2)}
-                                        </div>
-                                        <div className="text-sm text-neutrals-4">
-                                            {mockEarnings.completedBookings} completed tours
+                                            <div className="text-3xl font-bold text-green-600 mb-2">
+                                                ${earnings.paidOutEarnings.toFixed(2)}
+                                            </div>
+                                            <div className="text-sm text-neutrals-4">
+                                                {earnings.completedBookings} completed tours
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="bg-white rounded-lg p-8 shadow-sm text-center">
+                                        <p className="text-red-500">Failed to load earnings data</p>
+                                    </div>
+                                )}
                             </div>
 
                             {loading ? (
@@ -276,7 +308,7 @@ const MyToursPage = () => {
                             ) : error ? (
                                 <div className="bg-white rounded-lg p-8 shadow-sm text-center">
                                     <p className="text-red-500 text-lg mb-2">Error loading tours: {error}</p>
-                                    <button 
+                                    <button
                                         onClick={() => window.location.reload()}
                                         className="btn btn-outline-primary btn-md"
                                     >
@@ -293,7 +325,7 @@ const MyToursPage = () => {
                                     </div>
                                     <h3 className="text-lg font-medium text-neutrals-2 mb-2">No tours created yet</h3>
                                     <p className="text-neutrals-4 mb-6">Start sharing your expertise by creating your first tour experience!</p>
-                                    <button 
+                                    <button
                                         onClick={handleCreateTour}
                                         className="btn btn-primary btn-md"
                                     >
@@ -370,7 +402,7 @@ const MyToursPage = () => {
                             <h1 className="text-2xl font-bold text-neutrals-1 mb-2">My Tours</h1>
                             <p className="text-neutrals-4">Manage your experiences and bookings</p>
                         </div>
-                        <button 
+                        <button
                             onClick={handleCreateTour}
                             className="btn btn-primary btn-md mt-4 sm:mt-0"
                         >
@@ -384,70 +416,80 @@ const MyToursPage = () => {
                     {/* Earnings Summary - Mobile */}
                     <div className="mb-6">
                         <h2 className="text-lg font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
-                        <div className="grid grid-cols-1 gap-4">
-                            {/* Total Earnings Card */}
-                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
-                                <div className="flex items-center mb-3">
-                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h3 className="text-md font-semibold text-neutrals-1">Total Earnings</h3>
-                                        <p className="text-xs text-neutrals-4">All time earnings</p>
-                                    </div>
-                                </div>
-                                <div className="text-2xl font-bold text-blue-600 mb-1">
-                                    ${mockEarnings.totalEarnings.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-neutrals-4">
-                                    {mockEarnings.totalBookings} total bookings
-                                </div>
+                        {earningsLoading ? (
+                            <div className="bg-white rounded-lg p-6 shadow-sm text-center">
+                                <p className="text-neutrals-3">Loading earnings...</p>
                             </div>
+                        ) : earnings ? (
+                            <div className="grid grid-cols-1 gap-4">
+                                {/* Total Earnings Card */}
+                                <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                    <div className="flex items-center mb-3">
+                                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-md font-semibold text-neutrals-1">Total Earnings</h3>
+                                            <p className="text-xs text-neutrals-4">All time earnings</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-2xl font-bold text-blue-600 mb-1">
+                                        ${earnings.totalEarnings.toFixed(2)}
+                                    </div>
+                                    <div className="text-xs text-neutrals-4">
+                                        {earnings.totalBookings} total bookings
+                                    </div>
+                                </div>
 
-                            {/* Pending Payout Card */}
-                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
-                                <div className="flex items-center mb-3">
-                                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
-                                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                {/* Pending Payout Card */}
+                                <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                    <div className="flex items-center mb-3">
+                                        <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                            <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-md font-semibold text-neutrals-1">Pending</h3>
+                                            <p className="text-xs text-neutrals-4">Available after completing tours</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-md font-semibold text-neutrals-1">Pending</h3>
-                                        <p className="text-xs text-neutrals-4">Available after completing tours</p>
+                                    <div className="text-2xl font-bold text-yellow-600 mb-1">
+                                        ${earnings.pendingEarnings.toFixed(2)}
+                                    </div>
+                                    <div className="text-xs text-neutrals-4">
+                                        {earnings.pendingBookings} confirmed bookings
                                     </div>
                                 </div>
-                                <div className="text-2xl font-bold text-yellow-600 mb-1">
-                                    ${mockEarnings.pendingEarnings.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-neutrals-4">
-                                    {mockEarnings.pendingBookings} confirmed bookings
-                                </div>
-                            </div>
 
-                            {/* Paid Out Card */}
-                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
-                                <div className="flex items-center mb-3">
-                                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
-                                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                {/* Paid Out Card */}
+                                <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                    <div className="flex items-center mb-3">
+                                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                            <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-md font-semibold text-neutrals-1">Paid Out</h3>
+                                            <p className="text-xs text-neutrals-4">Released to guide for payout</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-md font-semibold text-neutrals-1">Paid Out</h3>
-                                        <p className="text-xs text-neutrals-4">Released to guide for payout</p>
+                                    <div className="text-2xl font-bold text-green-600 mb-1">
+                                        ${earnings.paidOutEarnings.toFixed(2)}
                                     </div>
-                                </div>
-                                <div className="text-2xl font-bold text-green-600 mb-1">
-                                    ${mockEarnings.paidOutEarnings.toFixed(2)}
-                                </div>
-                                <div className="text-xs text-neutrals-4">
-                                    {mockEarnings.completedBookings} completed tours
+                                    <div className="text-xs text-neutrals-4">
+                                        {earnings.completedBookings} completed tours
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="bg-white rounded-lg p-6 shadow-sm text-center">
+                                <p className="text-red-500">Failed to load earnings data</p>
+                            </div>
+                        )}
                     </div>
 
                     {loading ? (
@@ -457,7 +499,7 @@ const MyToursPage = () => {
                     ) : error ? (
                         <div className="bg-white rounded-lg p-6 shadow-sm text-center">
                             <p className="text-red-500 mb-2">Error loading tours: {error}</p>
-                            <button 
+                            <button
                                 onClick={() => window.location.reload()}
                                 className="btn btn-outline-primary btn-md"
                             >
@@ -474,7 +516,7 @@ const MyToursPage = () => {
                             </div>
                             <h3 className="text-lg font-medium text-neutrals-2 mb-2">No tours created yet</h3>
                             <p className="text-neutrals-4 mb-6">Start sharing your expertise by creating your first tour experience!</p>
-                            <button 
+                            <button
                                 onClick={handleCreateTour}
                                 className="btn btn-primary btn-md"
                             >
