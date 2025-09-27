@@ -129,6 +129,10 @@ function AppRoutes() {
         element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
       />
       <Route
+        path="/booking/:bookingId"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <BookingDetailPage />}
+      />
+      <Route
         path="/my-tours"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
       />

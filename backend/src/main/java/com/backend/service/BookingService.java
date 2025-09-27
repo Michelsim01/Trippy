@@ -493,6 +493,8 @@ public class BookingService {
         response.setExperienceDescription(experience.getShortDescription());
         response.setExperienceCoverPhotoUrl(experience.getCoverPhotoUrl());
         response.setExperienceLocation(experience.getLocation());
+        response.setExperienceCountry(experience.getCountry());
+        response.setExperienceImportantInfo(experience.getImportantInfo());
         response.setExperiencePrice(experience.getPrice());
         response.setGuideRating(experience.getAverageRating());
     }
@@ -508,6 +510,7 @@ public class BookingService {
         summary.setExperienceTitle(experience.getTitle());
         summary.setExperienceCoverPhotoUrl(experience.getCoverPhotoUrl());
         summary.setExperienceLocation(experience.getLocation());
+        summary.setExperienceCountry(experience.getCountry());
         summary.setGuideRating(experience.getAverageRating());
     }
 

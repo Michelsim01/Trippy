@@ -25,6 +25,8 @@ public class BookingResponseDTO {
     private String experienceDescription;
     private String experienceCoverPhotoUrl;
     private String experienceLocation;
+    private String experienceCountry;
+    private String experienceImportantInfo;
     private BigDecimal experiencePrice;
 
     // Schedule Details
@@ -175,6 +177,22 @@ public class BookingResponseDTO {
 
     public void setExperienceLocation(String experienceLocation) {
         this.experienceLocation = experienceLocation;
+    }
+
+    public String getExperienceCountry() {
+        return experienceCountry;
+    }
+
+    public void setExperienceCountry(String experienceCountry) {
+        this.experienceCountry = experienceCountry;
+    }
+
+    public String getExperienceImportantInfo() {
+        return experienceImportantInfo;
+    }
+
+    public void setExperienceImportantInfo(String experienceImportantInfo) {
+        this.experienceImportantInfo = experienceImportantInfo;
     }
 
     public BigDecimal getExperiencePrice() {

@@ -3,8 +3,12 @@ package com.backend.controller;
 import com.backend.dto.*;
 import com.backend.dto.request.*;
 import com.backend.dto.response.*;
+import com.backend.entity.Booking;
 import com.backend.entity.BookingStatus;
+import com.backend.entity.ExperienceSchedule;
 import com.backend.entity.Transaction;
+import com.backend.repository.BookingRepository;
+import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.TransactionRepository;
 import com.backend.service.BookingService;
 import com.backend.service.PaymentService;
@@ -15,8 +19,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -30,6 +38,12 @@ public class BookingController {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private BookingRepository bookingRepository;
+
+    @Autowired
+    private ExperienceScheduleRepository experienceScheduleRepository;
 
     // ================================
     // BOOKING MANAGEMENT METHODS

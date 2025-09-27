@@ -19,9 +19,9 @@ const MyBookingsPage = () => {
         const fetchBookings = async () => {
             try {
                 setLoading(true)
-                console.log('MyBookingsPage - Fetching bookings for user:', user?.id || user?.userId)
+                console.log('MyBookingsPage - Fetching bookings for user:', user?.email)
 
-                const response = await fetch(`http://localhost:8080/api/bookings/user/${user?.id || user?.userId}`, {
+                const response = await fetch(`http://localhost:8080/api/bookings/user/${user?.email}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`,
                         'Content-Type': 'application/json'
@@ -46,10 +46,14 @@ const MyBookingsPage = () => {
                     bookingDate: booking.bookingDate,
                     cancellationReason: booking.cancellationReason,
                     cancelledAt: booking.cancelledAt,
-                    experience: booking.experienceSchedule?.experience || {},
+                    experience: {
+                        title: booking.experienceTitle,
+                        coverPhotoUrl: booking.experienceCoverPhotoUrl,
+                        country: booking.experienceCountry
+                    },
                     experienceSchedule: {
-                        startDateTime: booking.experienceSchedule?.startDateTime,
-                        endDateTime: booking.experienceSchedule?.endDateTime
+                        startDateTime: booking.startDateTime,
+                        endDateTime: booking.endDateTime
                     }
                 }))
 

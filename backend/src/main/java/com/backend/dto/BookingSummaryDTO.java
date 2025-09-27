@@ -21,6 +21,7 @@ public class BookingSummaryDTO {
     private String experienceTitle;
     private String experienceCoverPhotoUrl;
     private String experienceLocation;
+    private String experienceCountry;
     
     // Schedule Info
     private LocalDateTime startDateTime;
@@ -87,6 +88,9 @@ public class BookingSummaryDTO {
     
     public String getExperienceLocation() { return experienceLocation; }
     public void setExperienceLocation(String experienceLocation) { this.experienceLocation = experienceLocation; }
+
+    public String getExperienceCountry() { return experienceCountry; }
+    public void setExperienceCountry(String experienceCountry) { this.experienceCountry = experienceCountry; }
     
     public LocalDateTime getStartDateTime() { return startDateTime; }
     public void setStartDateTime(LocalDateTime startDateTime) { this.startDateTime = startDateTime; }

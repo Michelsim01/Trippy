@@ -55,17 +55,17 @@ const BookingDetailPage = () => {
                     cancellationReason: data.cancellationReason,
                     cancelledAt: data.cancelledAt,
                     experience: {
-                        experienceId: data.experienceSchedule?.experience?.experienceId,
-                        title: data.experienceSchedule?.experience?.title,
-                        country: data.experienceSchedule?.experience?.country,
-                        coverPhotoUrl: data.experienceSchedule?.experience?.coverPhotoUrl,
-                        shortDescription: data.experienceSchedule?.experience?.shortDescription,
-                        importantInfo: data.experienceSchedule?.experience?.importantInfo,
-                        location: data.experienceSchedule?.experience?.location
+                        experienceId: data.experienceId,
+                        title: data.experienceTitle,
+                        country: data.experienceCountry,
+                        coverPhotoUrl: data.experienceCoverPhotoUrl,
+                        shortDescription: data.experienceDescription,
+                        importantInfo: data.experienceImportantInfo,
+                        location: data.experienceLocation
                     },
                     experienceSchedule: {
-                        startDateTime: data.experienceSchedule?.startDateTime,
-                        endDateTime: data.experienceSchedule?.endDateTime
+                        startDateTime: data.startDateTime,
+                        endDateTime: data.endDateTime
                     }
                 };
 
