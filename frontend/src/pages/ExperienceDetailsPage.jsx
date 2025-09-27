@@ -392,6 +392,8 @@ const ExperienceDetailsPage = () => {
                 displayData={displayData}
                 isWishlisted={isWishlisted}
                 handleWishlistToggle={handleWishlistToggle}
+                averageRating={averageRating}
+                totalReviews={totalReviews}
                 isMobile={false}
               />
 
@@ -431,6 +433,8 @@ const ExperienceDetailsPage = () => {
                     setSelectedSchedule={setSelectedSchedule}
                     setShowAllSchedules={setShowAllSchedules}
                     reviews={reviews}
+                    averageRating={averageRating}
+                    totalReviews={totalReviews}
                     isMobile={false}
                     onChatWithGuide={handleChatWithGuide}
                   />
@@ -596,6 +600,8 @@ const ExperienceDetailsPage = () => {
               displayData={displayData}
               isWishlisted={isWishlisted}
               handleWishlistToggle={handleWishlistToggle}
+              averageRating={averageRating}
+              totalReviews={totalReviews}
               isMobile={true}
             />
 
@@ -635,6 +641,8 @@ const ExperienceDetailsPage = () => {
                 setSelectedSchedule={setSelectedSchedule}
                 setShowAllSchedules={setShowAllSchedules}
                 reviews={reviews}
+                averageRating={averageRating}
+                totalReviews={totalReviews}
                 isMobile={true}
                 onChatWithGuide={handleChatWithGuide}
               />

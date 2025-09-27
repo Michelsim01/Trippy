@@ -4,10 +4,12 @@ import com.backend.entity.Experience;
 import com.backend.entity.ExperienceSchedule;
 import com.backend.entity.ExperienceMedia;
 import com.backend.entity.ExperienceItinerary;
+import com.backend.entity.Review;
 import com.backend.repository.ExperienceRepository;
 import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.ExperienceMediaRepository;
 import com.backend.repository.ExperienceItineraryRepository;
+import com.backend.repository.ReviewRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.dto.ExperienceResponseDTO;
 import com.backend.service.ExperienceService;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.HashMap;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/experiences")
@@ -35,6 +38,9 @@ public class ExperienceController {
 
     @Autowired
     private ExperienceItineraryRepository experienceItineraryRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @Autowired
     private ExperienceService experienceService;
@@ -319,6 +325,102 @@ public class ExperienceController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
+    @GetMapping("/{id}/reviews")
+    public ResponseEntity<?> getExperienceReviews(@PathVariable Long id) {
+        try {
+            // Check if experience exists first
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get reviews for this experience
+            List<Review> reviews = reviewRepository.findByExperience_ExperienceId(id);
+
+            // Create safe response objects to avoid circular references
+            List<Map<String, Object>> safeReviews = reviews.stream().map(review -> {
+                Map<String, Object> reviewMap = new HashMap<>();
+                reviewMap.put("reviewId", review.getReviewId());
+                reviewMap.put("rating", review.getRating());
+                reviewMap.put("title", review.getTitle());
+                reviewMap.put("comment", review.getComment());
+                reviewMap.put("tripPointsEarned", review.getTripPointsEarned());
+                reviewMap.put("createdAt", review.getCreatedAt());
+                reviewMap.put("updatedAt", review.getUpdatedAt());
+
+                // Add reviewer info safely
+                if (review.getReviewer() != null) {
+                    Map<String, Object> reviewerMap = new HashMap<>();
+                    reviewerMap.put("id", review.getReviewer().getId());
+                    reviewerMap.put("firstName", review.getReviewer().getFirstName());
+                    reviewerMap.put("lastName", review.getReviewer().getLastName());
+                    reviewerMap.put("profileImageUrl", review.getReviewer().getProfileImageUrl());
+                    reviewMap.put("reviewer", reviewerMap);
+                }
+
+                return reviewMap;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(safeReviews);
+        } catch (Exception e) {
+            System.err.println("Error fetching reviews for experience " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to fetch reviews: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/review-stats")
+    public ResponseEntity<?> getReviewStats(@PathVariable Long id) {
+        try {
+            // Check if experience exists first
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get reviews for this experience
+            List<Review> reviews = reviewRepository.findByExperience_ExperienceId(id);
+
+            Map<String, Object> stats = new HashMap<>();
+
+            if (reviews.isEmpty()) {
+                stats.put("totalReviews", 0);
+                stats.put("averageRating", 0.0);
+                stats.put("ratingDistribution", Map.of(
+                    "5", 0, "4", 0, "3", 0, "2", 0, "1", 0
+                ));
+            } else {
+                // Calculate total reviews
+                stats.put("totalReviews", reviews.size());
+
+                // Calculate average rating
+                double average = reviews.stream()
+                    .mapToInt(Review::getRating)
+                    .average()
+                    .orElse(0.0);
+                stats.put("averageRating", Math.round(average * 10.0) / 10.0);
+
+                // Calculate rating distribution
+                Map<String, Long> distribution = reviews.stream()
+                    .collect(Collectors.groupingBy(
+                        review -> String.valueOf(review.getRating()),
+                        Collectors.counting()
+                    ));
+
+                Map<String, Integer> ratingDistribution = new HashMap<>();
+                for (int i = 1; i <= 5; i++) {
+                    String rating = String.valueOf(i);
+                    ratingDistribution.put(rating, distribution.getOrDefault(rating, 0L).intValue());
+                }
+                stats.put("ratingDistribution", ratingDistribution);
+            }
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            System.err.println("Error fetching review stats for experience " + id + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to fetch review statistics: " + e.getMessage()));
         }
     }
 

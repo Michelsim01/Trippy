@@ -60,6 +60,16 @@ public class BookingController {
                 bookingMap.put("cancellationReason", booking.getCancellationReason());
                 bookingMap.put("cancelledAt", booking.getCancelledAt());
 
+                // Handle traveler safely
+                if (booking.getTraveler() != null) {
+                    Map<String, Object> travelerMap = new HashMap<>();
+                    travelerMap.put("id", booking.getTraveler().getId());
+                    travelerMap.put("firstName", booking.getTraveler().getFirstName());
+                    travelerMap.put("lastName", booking.getTraveler().getLastName());
+                    travelerMap.put("email", booking.getTraveler().getEmail());
+                    bookingMap.put("traveler", travelerMap);
+                }
+
                 // Handle experienceSchedule safely
                 if (booking.getExperienceSchedule() != null) {
                     Map<String, Object> scheduleMap = new HashMap<>();
@@ -121,6 +131,16 @@ public class BookingController {
                 bookingMap.put("bookingDate", booking.getBookingDate());
                 bookingMap.put("cancellationReason", booking.getCancellationReason());
                 bookingMap.put("cancelledAt", booking.getCancelledAt());
+
+                // Handle traveler safely
+                if (booking.getTraveler() != null) {
+                    Map<String, Object> travelerMap = new HashMap<>();
+                    travelerMap.put("id", booking.getTraveler().getId());
+                    travelerMap.put("firstName", booking.getTraveler().getFirstName());
+                    travelerMap.put("lastName", booking.getTraveler().getLastName());
+                    travelerMap.put("email", booking.getTraveler().getEmail());
+                    bookingMap.put("traveler", travelerMap);
+                }
 
                 // Handle experienceSchedule safely
                 if (booking.getExperienceSchedule() != null) {

@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { UserProvider } from './contexts/UserContext'
 import { TripPointsProvider } from './contexts/TripPointsContext'
+import { ReviewProvider } from './contexts/ReviewContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -38,6 +39,7 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
+import WriteReviewPage from './pages/WriteReviewPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -220,6 +222,12 @@ function AppRoutes() {
             element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
           />
 
+          {/* Write Review Page */}
+          <Route
+            path="/write-review/:bookingId"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <WriteReviewPage />}
+          />
+
           {/* Error Pages */}
           <Route
             path="/404"
@@ -244,11 +252,13 @@ export default function App() {
         <AuthProvider>
           <UserProvider>
             <TripPointsProvider>
-              <FormDataProvider>
-                <div className="App">
-                  <AppRoutes />
-                </div>
-              </FormDataProvider>
+              <ReviewProvider>
+                <FormDataProvider>
+                  <div className="App">
+                    <AppRoutes />
+                  </div>
+                </FormDataProvider>
+              </ReviewProvider>
             </TripPointsProvider>
           </UserProvider>
         </AuthProvider>
