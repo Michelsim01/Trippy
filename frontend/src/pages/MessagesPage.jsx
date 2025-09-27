@@ -63,7 +63,7 @@ const MessagesPage = () => {
                             participantName: participantName,
                             activity: chat.experience?.category || (chat.experience ? "Experience" : "Experience Unavailable"),
                             avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
-                            unread: false,
+                            unreadCount: chat.unreadCount || 0,
                             experience: chat.experience,
                             chatMembers: chat.chatMembers
                         };
@@ -179,18 +179,25 @@ const MessagesPage = () => {
         if (chatNotifications.length > 0) {
             chatNotifications.forEach(notification => {
                 if (notification.type === 'NEW_MESSAGE') {
-                    // Update the conversation list with the new last message
+                    // Update the conversation list with the new last message and unread count from backend
                     setConversations(prevConversations => 
                         prevConversations.map(conv => 
                             conv.id === notification.chatId 
                                 ? { 
                                     ...conv, 
                                     lastMessage: notification.content,
-                                    timestamp: new Date().toLocaleDateString() 
+                                    timestamp: new Date().toLocaleDateString(),
+                                    // Use unread count from notification (calculated by backend)
+                                    unreadCount: notification.chatId === selectedChat ? 0 : notification.unreadCount || 0
                                 }
                                 : conv
                         )
                     );
+                    
+                    // If notification is for the currently selected chat, automatically mark as read
+                    if (notification.chatId === selectedChat) {
+                        markChatAsRead(notification.chatId);
+                    }
                 }
             });
             
@@ -284,9 +291,37 @@ const MessagesPage = () => {
         setIsSidebarOpen(false);
     };
 
-    const handleChatSelect = (chatId) => {
+    const handleChatSelect = async (chatId) => {
         setSelectedChat(chatId);
         loadChatMessages(chatId);
+        
+        // Mark chat as read
+        await markChatAsRead(chatId);
+    };
+    
+    const markChatAsRead = async (chatId) => {
+        try {
+            const userId = user.id || user.userId;
+            const response = await fetch(`http://localhost:8080/api/personal-chats/${chatId}/mark-read?userId=${userId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                }
+            });
+            
+            if (response.ok) {
+                // Update local conversations to set unread count to 0
+                setConversations(prevConversations => 
+                    prevConversations.map(conv => 
+                        conv.id === chatId 
+                            ? { ...conv, unreadCount: 0 }
+                            : conv
+                    )
+                );
+            }
+        } catch (error) {
+            console.error('Error marking chat as read:', error);
+        }
     };
 
     const startNewAIChat = () => {

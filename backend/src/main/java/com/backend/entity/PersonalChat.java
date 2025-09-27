@@ -46,6 +46,10 @@ public class PersonalChat {
     @Transient
     private LocalDateTime lastMessageTime;
 
+    // Transient field for unread count (for current user)
+    @Transient
+    private Integer unreadCount;
+
     public Long getPersonalChatId() { return personalChatId; }
     public void setPersonalChatId(Long personalChatId) { this.personalChatId = personalChatId; }
     public Experience getExperience() { return experience; }
@@ -62,4 +66,6 @@ public class PersonalChat {
     public void setLastMessage(String lastMessage) { this.lastMessage = lastMessage; }
     public LocalDateTime getLastMessageTime() { return lastMessageTime; }
     public void setLastMessageTime(LocalDateTime lastMessageTime) { this.lastMessageTime = lastMessageTime; }
+    public Integer getUnreadCount() { return unreadCount; }
+    public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
 }

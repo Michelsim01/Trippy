@@ -4,9 +4,11 @@ import com.backend.entity.Message;
 import com.backend.entity.PersonalChat;
 import com.backend.entity.User;
 import com.backend.entity.MessageTypeEnum;
+import com.backend.entity.ChatUnreadCount;
 import com.backend.repository.MessageRepository;
 import com.backend.repository.PersonalChatRepository;
 import com.backend.repository.UserRepository;
+import com.backend.repository.ChatUnreadCountRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -18,6 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
@@ -28,6 +31,7 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final UserNotificationWebSocketHandler userNotificationHandler;
+    private final ChatUnreadCountRepository chatUnreadCountRepository;
     
     // Map to store active WebSocket sessions by chat ID
     private final Map<Long, Set<WebSocketSession>> chatSessions = new ConcurrentHashMap<>();
@@ -40,12 +44,14 @@ public class ChatWebSocketHandler implements WebSocketHandler {
             PersonalChatRepository personalChatRepository,
             UserRepository userRepository,
             ObjectMapper objectMapper,
-            UserNotificationWebSocketHandler userNotificationHandler) {
+            UserNotificationWebSocketHandler userNotificationHandler,
+            ChatUnreadCountRepository chatUnreadCountRepository) {
         this.messageRepository = messageRepository;
         this.personalChatRepository = personalChatRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.userNotificationHandler = userNotificationHandler;
+        this.chatUnreadCountRepository = chatUnreadCountRepository;
     }
 
     @Override
@@ -107,6 +113,14 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                                 .map(member -> member.getUser().getId())
                                 .toList();
                             
+                            // Increment unread counts for all members except sender and collect updated counts
+                            Map<Long, Integer> unreadCounts = memberUserIds.stream()
+                                .filter(userId -> !userId.equals(savedMessage.getSender().getId()))
+                                .collect(Collectors.toMap(
+                                    userId -> userId,
+                                    userId -> incrementUnreadCount(chatId, userId)
+                                ));
+                            
                             // Call notification handler with all data
                             userNotificationHandler.notifyUsersOfNewMessage(
                                 chatId,
@@ -116,7 +130,8 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                                 savedMessage.getSender().getFirstName() + " " + savedMessage.getSender().getLastName(),
                                 savedMessage.getCreatedAt().toString(),
                                 chatTitle,
-                                memberUserIds
+                                memberUserIds,
+                                unreadCounts
                             );
                         }
                     }
@@ -227,6 +242,33 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                 }
             }
         }
+    }
+    
+    private Integer incrementUnreadCount(Long chatId, Long userId) {
+        try {
+            Optional<ChatUnreadCount> unreadCountOpt = chatUnreadCountRepository.findByChatIdAndUserId(chatId, userId);
+            
+            if (unreadCountOpt.isPresent()) {
+                ChatUnreadCount unreadCount = unreadCountOpt.get();
+                unreadCount.setUnreadCount(unreadCount.getUnreadCount() + 1);
+                ChatUnreadCount saved = chatUnreadCountRepository.save(unreadCount);
+                return saved.getUnreadCount();
+            } else {
+                // Create initial unread count record
+                Optional<PersonalChat> chatOpt = personalChatRepository.findById(chatId);
+                Optional<User> userOpt = userRepository.findById(userId);
+                
+                if (chatOpt.isPresent() && userOpt.isPresent()) {
+                    ChatUnreadCount unreadCount = new ChatUnreadCount(chatOpt.get(), userOpt.get());
+                    unreadCount.setUnreadCount(1);
+                    ChatUnreadCount saved = chatUnreadCountRepository.save(unreadCount);
+                    return saved.getUnreadCount();
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error incrementing unread count: " + e.getMessage());
+        }
+        return 0;
     }
 
     // Inner classes for data transfer

@@ -82,7 +82,7 @@ public class UserNotificationWebSocketHandler implements WebSocketHandler {
         return null;
     }
 
-    public void notifyUsersOfNewMessage(Long chatId, Long messageId, String content, Long senderId, String senderName, String timestamp, String chatTitle, List<Long> memberUserIds) {
+    public void notifyUsersOfNewMessage(Long chatId, Long messageId, String content, Long senderId, String senderName, String timestamp, String chatTitle, List<Long> memberUserIds, Map<Long, Integer> unreadCounts) {
         try {
             // Create notification message
             ChatNotification notification = new ChatNotification();
@@ -98,6 +98,8 @@ public class UserNotificationWebSocketHandler implements WebSocketHandler {
             // Notify all users in the chat (except the sender)
             memberUserIds.forEach(userId -> {
                 if (!userId.equals(senderId)) {
+                    // Set user-specific unread count
+                    notification.setUnreadCount(unreadCounts.getOrDefault(userId, 0));
                     notifyUser(userId, notification);
                 }
             });
@@ -160,6 +162,7 @@ public class UserNotificationWebSocketHandler implements WebSocketHandler {
         private String senderName;
         private String timestamp;
         private String chatTitle;
+        private Integer unreadCount;
 
         // Getters and Setters
         public String getType() { return type; }
@@ -185,6 +188,9 @@ public class UserNotificationWebSocketHandler implements WebSocketHandler {
         
         public String getChatTitle() { return chatTitle; }
         public void setChatTitle(String chatTitle) { this.chatTitle = chatTitle; }
+        
+        public Integer getUnreadCount() { return unreadCount; }
+        public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
     }
 
     private static class SessionInfo {

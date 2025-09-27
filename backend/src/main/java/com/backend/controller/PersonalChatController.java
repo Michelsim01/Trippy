@@ -6,11 +6,13 @@ import com.backend.entity.Experience;
 import com.backend.entity.User;
 import com.backend.entity.Message;
 import com.backend.entity.ChatRoleEnum;
+import com.backend.entity.ChatUnreadCount;
 import com.backend.repository.PersonalChatRepository;
 import com.backend.repository.ChatMemberRepository;
 import com.backend.repository.ExperienceRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.MessageRepository;
+import com.backend.repository.ChatUnreadCountRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +41,9 @@ public class PersonalChatController {
     
     @Autowired
     private MessageRepository messageRepository;
+    
+    @Autowired
+    private ChatUnreadCountRepository chatUnreadCountRepository;
 
     @GetMapping
     public ResponseEntity<List<PersonalChat>> getAllPersonalChats() {
@@ -202,13 +207,25 @@ public class PersonalChatController {
                         m -> m
                     ));
                 
-                // Populate last message for each chat
+                // Get unread counts for all chats
+                List<ChatUnreadCount> unreadCounts = chatUnreadCountRepository.findByUserId(userId);
+                var unreadCountMap = unreadCounts.stream()
+                    .collect(Collectors.toMap(
+                        uc -> uc.getPersonalChat().getPersonalChatId(),
+                        ChatUnreadCount::getUnreadCount
+                    ));
+                
+                // Populate last message and unread count for each chat
                 for (PersonalChat chat : userChats) {
                     Message lastMessage = lastMessageMap.get(chat.getPersonalChatId());
                     if (lastMessage != null) {
                         chat.setLastMessage(lastMessage.getContent());
                         chat.setLastMessageTime(lastMessage.getCreatedAt());
                     }
+                    
+                    // Set unread count
+                    Integer unreadCount = unreadCountMap.getOrDefault(chat.getPersonalChatId(), 0);
+                    chat.setUnreadCount(unreadCount);
                 }
             }
             
@@ -216,6 +233,47 @@ public class PersonalChatController {
         } catch (Exception e) {
             System.err.println("Error retrieving chats for user " + userId + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+    
+    @PostMapping("/{chatId}/mark-read")
+    public ResponseEntity<Void> markChatAsRead(@PathVariable Long chatId, @RequestParam Long userId) {
+        try {
+            Optional<ChatUnreadCount> unreadCountOpt = chatUnreadCountRepository.findByChatIdAndUserId(chatId, userId);
+            
+            if (unreadCountOpt.isPresent()) {
+                ChatUnreadCount unreadCount = unreadCountOpt.get();
+                unreadCount.setUnreadCount(0);
+                
+                // Set last read message to the latest message
+                List<Message> lastMessages = messageRepository.findByPersonalChatIdOrderByCreatedAtDesc(chatId);
+                if (!lastMessages.isEmpty()) {
+                    unreadCount.setLastReadMessageId(lastMessages.get(0).getMessageId());
+                }
+                
+                chatUnreadCountRepository.save(unreadCount);
+            } else {
+                // Create initial unread count record
+                Optional<PersonalChat> chatOpt = personalChatRepository.findById(chatId);
+                Optional<User> userOpt = userRepository.findById(userId);
+                
+                if (chatOpt.isPresent() && userOpt.isPresent()) {
+                    ChatUnreadCount unreadCount = new ChatUnreadCount(chatOpt.get(), userOpt.get());
+                    
+                    // Set last read message to the latest message
+                    List<Message> lastMessages = messageRepository.findByPersonalChatIdOrderByCreatedAtDesc(chatId);
+                    if (!lastMessages.isEmpty()) {
+                        unreadCount.setLastReadMessageId(lastMessages.get(0).getMessageId());
+                    }
+                    
+                    chatUnreadCountRepository.save(unreadCount);
+                }
+            }
+            
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("Error marking chat as read: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 }

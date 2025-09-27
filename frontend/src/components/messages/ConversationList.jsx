@@ -19,14 +19,21 @@ const ConversationItem = ({ conversation, isSelected, onSelect }) => {
             <h3 className="font-medium text-neutrals-1 truncate text-sm">
               {conversation.participantName || "Guide"}
             </h3>
-            <span className="text-xs text-neutrals-4 flex-shrink-0">
-              {conversation.timestamp}
-            </span>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="text-xs text-neutrals-4">
+                {conversation.timestamp}
+              </span>
+              {conversation.unreadCount > 0 && (
+                <span className="bg-blue-500 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center">
+                  {conversation.unreadCount}
+                </span>
+              )}
+            </div>
           </div>
           <p className="text-xs text-neutrals-3 truncate mb-1">
             {conversation.title}
           </p>
-          <p className="text-sm text-neutrals-3 truncate">
+          <p className={`text-sm truncate ${conversation.unreadCount > 0 ? 'font-semibold text-neutrals-1' : 'text-neutrals-3'}`}>
             {conversation.lastMessage}
           </p>
         </div>
