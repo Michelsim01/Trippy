@@ -14,11 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.Map;
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -37,7 +34,6 @@ public class ReviewController {
 
     @Autowired
     private TripPointsService tripPointsService;
-
     @GetMapping
     public ResponseEntity<List<Review>> getAllReviews() {
         try {
@@ -172,18 +168,12 @@ public class ReviewController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createReview(@RequestBody Map<String, Object> reviewData) {
+    public ResponseEntity<Review> createReview(@RequestBody Review review) {
         try {
-            System.out.println("DEBUG: Received review data: " + reviewData);
-
-            // Validate required fields
-            if (reviewData == null ||
-                !reviewData.containsKey("bookingId") ||
-                !reviewData.containsKey("reviewerId") ||
-                !reviewData.containsKey("rating")) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Missing required fields: bookingId, reviewerId, rating"));
+            if (review == null) {
+                return ResponseEntity.badRequest().build();
             }
+<<<<<<< HEAD
 
             // Extract data
             Long bookingId = Long.valueOf(reviewData.get("bookingId").toString());
@@ -278,12 +268,9 @@ public class ReviewController {
             response.put("success", true);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
         } catch (Exception e) {
             System.err.println("Error creating review: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to create review: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 
