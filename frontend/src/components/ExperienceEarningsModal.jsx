@@ -11,6 +11,9 @@ const ExperienceEarningsModal = ({
     const [earningsData, setEarningsData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+    const [selectedScheduleId, setSelectedScheduleId] = useState(null);
+    const [completingSchedule, setCompletingSchedule] = useState(null);
 
     // Fetch earnings data when modal opens
     useEffect(() => {
@@ -66,9 +69,60 @@ const ExperienceEarningsModal = ({
     };
 
     const handleCompleteTimeslot = (scheduleId) => {
-        // Phase 6 implementation - for now just log
-        console.log(`Complete timeslot ${scheduleId} for experience ${experienceId}`);
-        alert(`Complete timeslot functionality will be implemented in Phase 6!`);
+        setSelectedScheduleId(scheduleId);
+        setShowConfirmDialog(true);
+    };
+
+    const handleConfirmComplete = async () => {
+        if (!selectedScheduleId) return;
+
+        try {
+            setCompletingSchedule(selectedScheduleId);
+            setShowConfirmDialog(false);
+
+            const response = await fetch(`http://localhost:8080/api/bookings/complete-timeslot/${selectedScheduleId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Refresh earnings data to show updated amounts
+            if (isOpen && experienceId && userId) {
+                const earningsResponse = await fetch(`http://localhost:8080/api/earnings/experience/${experienceId}/guide/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (earningsResponse.ok) {
+                    const updatedData = await earningsResponse.json();
+                    setEarningsData(updatedData);
+                }
+            }
+
+            alert(`Timeslot completed successfully! ${result.updatedBookingsCount} booking(s) updated.`);
+
+        } catch (error) {
+            console.error('Error completing timeslot:', error);
+            alert('Failed to complete timeslot. Please try again.');
+        } finally {
+            setCompletingSchedule(null);
+            setSelectedScheduleId(null);
+        }
+    };
+
+    const handleCancelComplete = () => {
+        setShowConfirmDialog(false);
+        setSelectedScheduleId(null);
     };
 
     // Get earnings totals from API data or default values
@@ -220,8 +274,9 @@ const ExperienceEarningsModal = ({
                                                     variant="primary"
                                                     size="sm"
                                                     onClick={() => handleCompleteTimeslot(schedule.scheduleId)}
+                                                    disabled={completingSchedule === schedule.scheduleId}
                                                 >
-                                                    Complete
+                                                    {completingSchedule === schedule.scheduleId ? 'Completing...' : 'Complete'}
                                                 </Button>
                                             ) : (
                                                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
@@ -238,6 +293,77 @@ const ExperienceEarningsModal = ({
                     )}
                 </div>
             </div>
+
+            {/* Confirmation Dialog */}
+            {showConfirmDialog && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        {/* Dialog Header */}
+                        <div className="flex items-center mb-4">
+                            <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-semibold text-neutrals-1">Complete Timeslot Confirmation</h3>
+                        </div>
+
+                        {/* Dialog Content */}
+                        <div className="mb-6">
+                            <p className="text-sm text-neutrals-2 mb-4">
+                                You are about to mark this timeslot as <strong>COMPLETED</strong>. This will:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-neutrals-2 mb-4 space-y-1">
+                                <li>Move all confirmed bookings to "Paid Out" status</li>
+                                <li>Release earnings for payout processing</li>
+                                <li>Cannot be undone</li>
+                            </ul>
+
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                <div className="flex items-start">
+                                    <svg className="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-semibold text-red-800 mb-1">IMPORTANT BUYER PROTECTION WARNING</p>
+                                        <p className="text-xs text-red-700 mb-2">
+                                            Completing a timeslot before the tour has actually ended may result in:
+                                        </p>
+                                        <ul className="list-disc list-inside text-xs text-red-700 space-y-1">
+                                            <li>Account suspension or permanent ban</li>
+                                            <li>Police report for fraudulent activity</li>
+                                            <li>Legal action for breach of platform terms</li>
+                                        </ul>
+                                        <p className="text-xs text-red-700 mt-2 font-medium">
+                                            Only complete this timeslot if the tour has genuinely ended and all participants have been served.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Dialog Actions */}
+                        <div className="flex space-x-3">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleCancelComplete}
+                                className="flex-1"
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={handleConfirmComplete}
+                                className="flex-1 bg-red-600 hover:bg-red-700"
+                            >
+                                I Understand - Complete Timeslot
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
