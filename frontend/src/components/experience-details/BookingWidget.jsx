@@ -358,21 +358,12 @@ const BookingWidget = ({
 
       {/* Book Now Button */}
       <button
-<<<<<<< HEAD:frontend/src/components/experience-details/BookingCard.jsx
         onClick={handleBookNow}
         className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${selectedSchedule === null
           ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
           : 'bg-primary-1 text-white hover:bg-opacity-90'
           } ${isMobile ? 'mb-0' : 'mb-4'}`}
         disabled={selectedSchedule === null}
-=======
-        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
-          isMobile && selectedSchedule === null
-            ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
-            : 'bg-primary-1 text-white hover:bg-opacity-90'
-        } ${isMobile ? 'mb-2' : 'mb-3'}`}
-        disabled={isMobile && selectedSchedule === null}
->>>>>>> master:frontend/src/components/experience-details/BookingWidget.jsx
         style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
       >
         {selectedSchedule === null ? 'Select a date to book' : 'Book Now'}

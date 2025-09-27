@@ -5,11 +5,8 @@ import { Elements } from '@stripe/react-stripe-js'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { UserProvider } from './contexts/UserContext'
-<<<<<<< HEAD
 import { CheckoutProvider } from './contexts/CheckoutContext'
-=======
 import { TripPointsProvider } from './contexts/TripPointsContext'
->>>>>>> master
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -106,7 +103,6 @@ function AppRoutes() {
         element={<VerifyEmailPage />}
       />
 
-<<<<<<< HEAD
       {/* Protected routes */}
       <Route
         path="/home"
@@ -212,117 +208,6 @@ function AppRoutes() {
         path="/settings"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
       />
-=======
-            {/* Protected routes */}
-            <Route
-              path="/home"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
-            />
-            <Route
-            path="/search"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <SearchResultsPage />}
-          />
-          <Route
-              path="/notifications"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
-            />
-            <Route
-              path="/wishlist"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
-            />
-            <Route
-              path="/messages"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
-            />
-            <Route
-              path="/my-bookings"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
-            />
-            <Route
-              path="/booking/:bookingId"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <BookingDetailPage />}
-            />
-            <Route
-              path="/my-tours"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
-            />
-            <Route
-              path="/profile/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
-            />
-            <Route
-              path="/blog"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
-            />
-            
-            {/*create experience*/}
-            <Route
-              path="/create-experience"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/create-experience/basic-info" replace />}
-            />
-            <Route
-              path="/create-experience/basic-info"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfoPage />}
-            />
-            <Route
-              path="/create-experience/details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetailsPage />}
-            />
-            <Route
-              path="/create-experience/pricing"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricingPage />}
-            />
-            <Route
-              path="/create-experience/availability"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailabilityPage />}
-            />
-            <Route
-              path="/create-experience/success"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
-            />
-            <Route
-              path="/experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
-            />
-            
-            {/* Edit Experience Flow */}
-            <Route
-              path="/edit-experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="basic-info" replace />}
-            />
-            <Route
-              path="/edit-experience/:id/basic-info"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceBasicInfoPage />}
-            />
-            <Route
-              path="/edit-experience/:id/details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceDetailsPage />}
-            />
-            <Route
-              path="/edit-experience/:id/pricing"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperiencePricingPage />}
-            />
-            <Route
-              path="/edit-experience/:id/availability"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceAvailabilityPage />}
-            />
-          <Route
-              path="/calendar"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
-            />
-            <Route
-              path="/about"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
-            />
-            <Route
-              path="/contact"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
-            />
-            <Route
-              path="/settings"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
-            />
->>>>>>> master
 
 
       <Route
@@ -377,7 +262,6 @@ export default function App() {
       <ErrorBoundary>
         <AuthProvider>
           <UserProvider>
-<<<<<<< HEAD
             <FormDataProvider>
               <Elements stripe={stripePromise}>
                 <div className="App">
@@ -385,7 +269,6 @@ export default function App() {
                 </div>
               </Elements>
             </FormDataProvider>
-=======
             <TripPointsProvider>
               <FormDataProvider>
                 <div className="App">
@@ -393,7 +276,6 @@ export default function App() {
                 </div>
               </FormDataProvider>
             </TripPointsProvider>
->>>>>>> master
           </UserProvider>
         </AuthProvider>
       </ErrorBoundary>

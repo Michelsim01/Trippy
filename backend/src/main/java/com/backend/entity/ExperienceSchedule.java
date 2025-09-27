@@ -31,10 +31,6 @@ public class ExperienceSchedule {
     @JsonIgnoreProperties("experienceSchedule")
     private List<Booking> bookings;
 
-    @OneToMany(mappedBy = "experienceSchedule", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @JsonIgnoreProperties("experienceSchedule")
-    private List<PersonalChat> personalChats;
-
     @OneToOne(mappedBy = "experienceSchedule", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonIgnoreProperties("experienceSchedule")
     private TripCohort tripCohort;

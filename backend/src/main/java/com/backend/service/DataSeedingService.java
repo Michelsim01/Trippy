@@ -111,7 +111,7 @@ public class DataSeedingService {
             guide.setFirstName(firstName);
             guide.setLastName(lastName);
             guide.setEmail(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@trippy.guide");
-            guide.setPassword("$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfVvwM1b7z9Wg3Oiq8c9Ni"); // "Password123"
+            guide.setPassword(new BCryptPasswordEncoder().encode("Password123"));
             guide.setPhoneNumber("+1" + (2000000000L + random.nextInt(899999999)));
             guide.setIsEmailVerified(true);
             guide.setIsActive(true);
@@ -140,7 +140,7 @@ public class DataSeedingService {
             traveler.setFirstName(firstName);
             traveler.setLastName(lastName);
             traveler.setEmail(firstName.toLowerCase() + "." + lastName.toLowerCase() + "@trippy.traveler");
-            traveler.setPassword("$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqfVvwM1b7z9Wg3Oiq8c9Ni"); // "Password123"
+            traveler.setPassword(new BCryptPasswordEncoder().encode("Password123"));
             traveler.setPhoneNumber("+1" + (2000000000L + random.nextInt(899999999)));
             traveler.setIsEmailVerified(true);
             traveler.setIsActive(true);
