@@ -5,16 +5,17 @@ import com.backend.entity.Booking;
 import com.backend.entity.User;
 import com.backend.entity.Experience;
 import com.backend.entity.TripPoints;
+import com.backend.entity.TripPoints;
 import com.backend.repository.ReviewRepository;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.ExperienceRepository;
 import com.backend.service.TripPointsService;
+import com.backend.service.TripPointsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
@@ -215,18 +216,12 @@ public class ReviewController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createReview(@RequestBody Map<String, Object> reviewData) {
+    public ResponseEntity<Review> createReview(@RequestBody Review review) {
         try {
-            System.out.println("DEBUG: Received review data: " + reviewData);
-
-            // Validate required fields
-            if (reviewData == null ||
-                !reviewData.containsKey("bookingId") ||
-                !reviewData.containsKey("reviewerId") ||
-                !reviewData.containsKey("rating")) {
-                return ResponseEntity.badRequest()
-                    .body(Map.of("error", "Missing required fields: bookingId, reviewerId, rating"));
+            if (review == null) {
+                return ResponseEntity.badRequest().build();
             }
+<<<<<<< HEAD
 
             // Extract data
             Long bookingId = Long.valueOf(reviewData.get("bookingId").toString());
@@ -283,10 +278,14 @@ public class ReviewController {
             Review review = new Review();
             review.setBooking(booking);
             review.setReviewer(reviewer);
+            // Calculate TripPoints based on booking total amount (rounded down to whole number)
+            Integer pointsToAward = booking.getTotalAmount().intValue(); // This automatically rounds down
+            
             review.setExperience(experience);
             review.setRating(rating);
             review.setTitle(title);
             review.setComment(comment);
+            review.setTripPointsEarned(pointsToAward); // Points based on booking amount
             review.setTripPointsEarned(pointsToAward); // Points based on booking amount
             review.setCreatedAt(LocalDateTime.now());
             review.setUpdatedAt(LocalDateTime.now());
@@ -321,12 +320,9 @@ public class ReviewController {
             response.put("success", true);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
-
         } catch (Exception e) {
             System.err.println("Error creating review: " + e.getMessage());
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Failed to create review: " + e.getMessage()));
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 

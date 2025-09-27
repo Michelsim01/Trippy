@@ -7,7 +7,6 @@ import { FormDataProvider } from './contexts/FormDataContext'
 import { UserProvider } from './contexts/UserContext'
 import { CheckoutProvider } from './contexts/CheckoutContext'
 import { TripPointsProvider } from './contexts/TripPointsContext'
-import { ReviewProvider } from './contexts/ReviewContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -45,6 +44,7 @@ import KycSubmittedPage from './pages/KycSubmittedPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
+import WriteReviewPage from './pages/WriteReviewPage'
 import WriteReviewPage from './pages/WriteReviewPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
@@ -272,6 +272,13 @@ export default function App() {
           <UserProvider>
             <FormDataProvider>
               <TripPointsProvider>
+                <ReviewProvider>
+                  <Elements stripe={stripePromise}>
+                    <div className="App">
+                      <AppRoutes />
+                    </div>
+                  </Elements>
+                </ReviewProvider>
                 <ReviewProvider>
                   <Elements stripe={stripePromise}>
                     <div className="App">

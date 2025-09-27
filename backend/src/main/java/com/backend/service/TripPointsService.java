@@ -27,7 +27,6 @@ public class TripPointsService {
     private UserRepository userRepository;
 
     // Points policy constants
-    private static final int POINTS_PER_REVIEW = 50;
     private static final int POINTS_PER_EXPERIENCE_COMPLETION = 25;
 
     /**
@@ -162,8 +161,8 @@ public class TripPointsService {
      */
     public String getPointsPolicy() {
         return String.format(
-            "Points Policy: %d points per review, %d points per experience completion",
-            POINTS_PER_REVIEW, POINTS_PER_EXPERIENCE_COMPLETION
+            "Points Policy: Points equal to booking amount (rounded down) per review, %d points per experience completion",
+            POINTS_PER_EXPERIENCE_COMPLETION
         );
     }
 }
