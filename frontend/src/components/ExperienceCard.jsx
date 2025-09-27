@@ -12,6 +12,8 @@ const ExperienceCard = ({
     showExplore = false,
     showEditButton = false,
     showDeleteButton = false, // New prop to show delete button
+    showEarningsButton = false, // New prop to show earnings button
+    onEarningsClick = null, // Callback when earnings button is clicked
     onExperienceDeleted = null, // Callback when experience is deleted
     isInWishlist = false, // New prop to indicate if this item is in the user's wishlist
     schedules = [] // New prop for schedule data
@@ -126,6 +128,14 @@ const ExperienceCard = ({
         }
     };
 
+    const handleEarningsClick = (e) => {
+        e.stopPropagation();
+        const experienceId = experience?.experienceId || experience?.id;
+        if (onEarningsClick) {
+            onEarningsClick(experienceId);
+        }
+    };
+
 
     // Use experience data directly
     const cardData = experience;
@@ -213,22 +223,40 @@ const ExperienceCard = ({
                     </div>
                 )}
                 
+                {/* Earnings Button */}
+                {showEarningsButton && (
+                    <button
+                        className="absolute top-4 right-26 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group"
+                        onClick={handleEarningsClick}
+                        title="View Earnings"
+                        style={{ position: 'absolute' }}
+                    >
+                        <svg className="w-5 h-5 text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                        </svg>
+                        {/* Tooltip on hover */}
+                        <span className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                            Earnings
+                        </span>
+                    </button>
+                )}
+
                 {/* Wishlist Heart Button */}
                 {showWishlistButton && (
-                    <button 
+                    <button
                         onClick={handleWishlistToggle}
                         className={`absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${isWishlisted ? 'animate-pulse' : ''}`}
                     >
-                        <svg 
-                            width="20" 
-                            height="20" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
                             xmlns="http://www.w3.org/2000/svg"
                             className={`transition-all duration-300 ${isWishlisted ? 'scale-110' : 'scale-100'}`}
                         >
-                            <path 
-                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" 
+                            <path
+                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
                                 fill={isWishlisted ? "#FD7FE9" : "#B1B5C3"}
                                 className="transition-colors duration-300"
                             />

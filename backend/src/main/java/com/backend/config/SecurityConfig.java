@@ -156,6 +156,7 @@ public class SecurityConfig {
                 // Guide endpoints (requires GUIDE role)
                 .requestMatchers("/api/experiences/create").hasRole("GUIDE")
                 .requestMatchers("/api/experiences/*/manage").hasRole("GUIDE")
+                .requestMatchers("/api/earnings/**").hasRole("GUIDE")
                 .requestMatchers("/api/kyc/submit").hasAnyRole("TRAVELER", "GUIDE")
                 
                 // Traveler endpoints (requires TRAVELER role)

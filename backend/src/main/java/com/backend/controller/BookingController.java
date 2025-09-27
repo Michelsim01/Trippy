@@ -3,6 +3,7 @@ package com.backend.controller;
 import com.backend.dto.*;
 import com.backend.dto.request.*;
 import com.backend.dto.response.*;
+import com.backend.entity.BookingStatus;
 import com.backend.entity.Transaction;
 import com.backend.repository.TransactionRepository;
 import com.backend.service.BookingService;
@@ -458,5 +459,52 @@ public class BookingController {
                 transaction.getLastFourDigits(),
                 transaction.getCardBrand(),
                 transaction.getCreatedAt());
+    }
+
+    // Complete timeslot endpoint - marks all CONFIRMED bookings for a schedule as COMPLETED
+    @PutMapping("/complete-timeslot/{scheduleId}")
+    public ResponseEntity<Map<String, Object>> completeTimeslot(@PathVariable Long scheduleId) {
+        try {
+            if (scheduleId == null || scheduleId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Verify schedule exists
+            Optional<ExperienceSchedule> scheduleOpt = experienceScheduleRepository.findById(scheduleId);
+            if (scheduleOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            ExperienceSchedule schedule = scheduleOpt.get();
+
+            // Find all CONFIRMED bookings for this schedule
+            List<Booking> confirmedBookings = bookingRepository.findAll().stream()
+                .filter(booking -> booking.getExperienceSchedule() != null &&
+                                 booking.getExperienceSchedule().getScheduleId().equals(scheduleId) &&
+                                 booking.getStatus() == BookingStatus.CONFIRMED)
+                .collect(Collectors.toList());
+
+            // Update all confirmed bookings to COMPLETED
+            int updatedCount = 0;
+            for (Booking booking : confirmedBookings) {
+                booking.setStatus(BookingStatus.COMPLETED);
+                booking.setUpdatedAt(LocalDateTime.now());
+                bookingRepository.save(booking);
+                updatedCount++;
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Timeslot completed successfully");
+            response.put("updatedBookingsCount", updatedCount);
+            response.put("scheduleId", scheduleId);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error completing timeslot " + scheduleId + ": " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 }
