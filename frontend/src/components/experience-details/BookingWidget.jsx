@@ -1,4 +1,5 @@
 import { Clock } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { convertTo12Hr } from '../../utils/scheduleGenerator';
 
 // Helper function to format schedule display
@@ -114,6 +115,59 @@ const BookingWidget = ({
   isMobile = false,
   onChatWithGuide
 }) => {
+  const navigate = useNavigate();
+
+  // Helper function to get maximum allowed guests based on selected schedule
+  const getMaxAllowedGuests = () => {
+    if (selectedSchedule !== null && schedulesData && schedulesData[selectedSchedule]) {
+      const schedule = schedulesData[selectedSchedule];
+      return Math.min(
+        schedule.availableSpots || 1,
+        displayData.participantsAllowed || 8
+      );
+    }
+    return displayData.participantsAllowed || 8;
+  };
+
+  const handleBookNow = () => {
+    // Ensure a schedule is selected
+    if (selectedSchedule === null) {
+      alert('Please select a date and time to continue booking.');
+      return;
+    }
+
+    // Get the selected schedule data
+    let selectedScheduleData;
+    if (schedulesData && schedulesData.length > 0) {
+      selectedScheduleData = schedulesData[selectedSchedule];
+
+      // Additional validation: Check if the selected schedule is still available
+      if (!selectedScheduleData || selectedScheduleData.availableSpots <= 0 || selectedScheduleData.isAvailable === false) {
+        alert('The selected schedule is no longer available. Please choose another date.');
+        setSelectedSchedule(null); // Clear the invalid selection
+        return;
+      }
+
+      // Check if there are enough spots for the requested number of guests
+      if (guests > selectedScheduleData.availableSpots) {
+        alert(`Only ${selectedScheduleData.availableSpots} spot${selectedScheduleData.availableSpots !== 1 ? 's' : ''} available for this schedule. Please reduce the number of guests or choose another date.`);
+        return;
+      }
+    } else {
+      // Fallback to demo data if no real schedules
+      console.warn('No real schedule data available, using demo data');
+      return;
+    }
+
+    // Navigate to checkout contact page with data
+    const searchParams = new URLSearchParams({
+      experienceId: displayData.experienceId || displayData.id,
+      scheduleId: selectedScheduleData.scheduleId || selectedScheduleData.id,
+      participants: guests.toString()
+    });
+
+    navigate(`/checkout/contact?${searchParams.toString()}`);
+  };
   return (
     <div className={`bg-white border border-neutrals-6 rounded-2xl shadow-lg ${isMobile ? 'p-4' : 'p-6'}`}>
       {/* Price Section */}
@@ -149,116 +203,91 @@ const BookingWidget = ({
 
       {/* Available Schedules */}
       <div className={`space-y-${isMobile ? '2' : '3'} mb-4`}>
-        {schedulesData && schedulesData.length > 0 ? (
-          schedulesData.slice(0, isMobile ? 3 : 5).map((schedule, index) => (
-            <div
-              key={index}
-              className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
-                selectedSchedule === index
-                  ? 'border-primary-1 bg-primary-1'
-                  : 'border-neutrals-6 hover:border-primary-1'
-              }`}
-              onClick={() => setSelectedSchedule(isMobile && selectedSchedule === index ? null : index)}
-            >
-              {isMobile && selectedSchedule === index && (
-                <div className="absolute inset-0 bg-primary-1 rounded-lg"></div>
-              )}
-              <div className="flex justify-between items-center relative z-10">
-                <div>
-                  {(() => {
-                    const formattedSchedule = formatScheduleDisplay(schedule);
-                    return (
-                      <>
-                        <div className={`font-semibold ${isMobile ? 'text-xs' : ''} ${selectedSchedule === index ? 'text-white' : 'text-neutrals-2'}`}>
-                          {formattedSchedule.dateText}
-                        </div>
-                        <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                          {formattedSchedule.timeText}
-                        </div>
-                      </>
-                    );
-                  })()}
+        {schedulesData && schedulesData.length > 0 ? (() => {
+          // Filter available schedules
+          const availableSchedules = schedulesData.filter(schedule => {
+            // Filter out schedules with no available spots or not available
+            return schedule.availableSpots > 0 && schedule.isAvailable !== false;
+          });
+
+          // Check if there are any available schedules
+          if (availableSchedules.length === 0) {
+            return (
+              <div className="text-center py-6 text-neutrals-4">
+                <div className={`${isMobile ? 'text-sm' : 'text-base'} font-medium mb-2`}>
+                  No Available Dates
                 </div>
-                <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === index ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                  {schedule.availableSpots || 4} spots available
+                <div className={`${isMobile ? 'text-xs' : 'text-sm'}`}>
+                  All schedules for this experience are currently full. Please check back later or contact the host.
                 </div>
               </div>
-            </div>
-          ))
-        ) : (
-          // Fallback demo schedules
-          <>
-            <div
-              className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
-                selectedSchedule === (isMobile ? 0 : 'demo-0')
-                  ? 'border-primary-1 bg-primary-1'
-                  : 'border-neutrals-6 hover:border-primary-1'
-              }`}
-              onClick={() => setSelectedSchedule(isMobile ? (selectedSchedule === 0 ? null : 0) : 'demo-0')}
-            >
-              {isMobile && selectedSchedule === 0 && (
-                <div className="absolute inset-0 bg-primary-1 rounded-lg"></div>
-              )}
-              <div className="flex justify-between items-center relative z-10">
-                <div>
-                  <div className={`font-semibold ${isMobile ? 'text-xs' : ''} ${selectedSchedule === (isMobile ? 0 : 'demo-0') ? 'text-white' : 'text-neutrals-2'}`}>
-                    {isMobile ? 'Saturday, 5 October' : 'Sunday, 5 October'}
-                  </div>
-                  <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === (isMobile ? 0 : 'demo-0') ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                    10:00 {isMobile ? 'AM' : 'am'} - 3:30 {isMobile ? 'PM' : 'pm'}
-                  </div>
-                </div>
-                <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === (isMobile ? 0 : 'demo-0') ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
-                  4 spots available
-                </div>
-              </div>
-            </div>
-            {!isMobile && (
-              <>
+            );
+          }
+
+          // Display available schedules
+          return availableSchedules
+            .slice(0, isMobile ? 3 : 5)
+            .map((schedule, index) => {
+              // Get the original index in the full schedulesData array for proper state tracking
+              const originalIndex = schedulesData.findIndex(s => s.scheduleId === schedule.scheduleId);
+
+              return (
                 <div
-                  className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
-                    selectedSchedule === 'demo-1'
-                      ? 'border-primary-1 bg-primary-1'
-                      : 'border-neutrals-6 hover:border-primary-1'
-                  }`}
-                  onClick={() => setSelectedSchedule('demo-1')}
+                  key={schedule.scheduleId || index}
+                  className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${selectedSchedule === originalIndex
+                    ? 'border-primary-1 bg-primary-1'
+                    : 'border-neutrals-6 hover:border-primary-1'
+                    }`}
+                  onClick={() => setSelectedSchedule(isMobile && selectedSchedule === originalIndex ? null : originalIndex)}
                 >
+                  {isMobile && selectedSchedule === originalIndex && (
+                    <div className="absolute inset-0 bg-primary-1 rounded-lg"></div>
+                  )}
                   <div className="flex justify-between items-center relative z-10">
                     <div>
-                      <div className={`font-semibold ${selectedSchedule === 'demo-1' ? 'text-white' : 'text-neutrals-2'}`}>Monday, 6 October</div>
-                      <div className={`text-sm ${selectedSchedule === 'demo-1' ? 'text-white opacity-90' : 'text-neutrals-4'}`}>10:00 am - 3:30 pm</div>
+                      {(() => {
+                        const formattedSchedule = formatScheduleDisplay(schedule);
+                        return (
+                          <>
+                            <div className={`font-semibold ${isMobile ? 'text-xs' : ''} ${selectedSchedule === originalIndex ? 'text-white' : 'text-neutrals-2'}`}>
+                              {formattedSchedule.dateText}
+                            </div>
+                            <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === originalIndex ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
+                              {formattedSchedule.timeText}
+                            </div>
+                          </>
+                        );
+                      })()}
                     </div>
-                    <div className={`text-sm ${selectedSchedule === 'demo-1' ? 'text-white opacity-90' : 'text-neutrals-4'}`}>4 spots available</div>
+                    <div className={`${isMobile ? 'text-xs' : 'text-sm'} ${selectedSchedule === originalIndex ? 'text-white opacity-90' : 'text-neutrals-4'}`}>
+                      {schedule.availableSpots} spot{schedule.availableSpots !== 1 ? 's' : ''} available
+                    </div>
                   </div>
                 </div>
-                <div
-                  className={`border-2 rounded-lg p-3 transition-colors cursor-pointer relative ${
-                    selectedSchedule === 'demo-2'
-                      ? 'border-primary-1 bg-primary-1'
-                      : 'border-neutrals-6 hover:border-primary-1'
-                  }`}
-                  onClick={() => setSelectedSchedule('demo-2')}
-                >
-                  <div className="flex justify-between items-center relative z-10">
-                    <div>
-                      <div className={`font-semibold ${selectedSchedule === 'demo-2' ? 'text-white' : 'text-neutrals-2'}`}>Tuesday, 7 October</div>
-                      <div className={`text-sm ${selectedSchedule === 'demo-2' ? 'text-white opacity-90' : 'text-neutrals-4'}`}>10:00 am - 3:30 pm</div>
-                    </div>
-                    <div className={`text-sm ${selectedSchedule === 'demo-2' ? 'text-white opacity-90' : 'text-neutrals-4'}`}>4 spots available</div>
-                  </div>
-                </div>
-              </>
-            )}
-          </>
+              );
+            });
+        })() : (
+          // No schedule data available
+          <div className={`text-center py-6 text-neutrals-4`}>
+            <div className={`${isMobile ? 'text-sm' : 'text-base'} font-medium mb-2`}>
+              No Schedule Data
+            </div>
+            <div className={`${isMobile ? 'text-xs' : 'text-sm'}`}>
+              Schedule information is currently unavailable. Please contact the host for booking details.
+            </div>
+          </div>
         )}
 
-        {/* Show All Dates Link */}
-        <button
-          className={`w-full text-center text-neutrals-4 hover:text-primary-1 transition-colors py-2 ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}
-          onClick={() => setShowAllSchedules(true)}
-        >
-          Show all dates
-        </button>
+        {/* Show All Dates Link - Only show if there are available schedules */}
+        {schedulesData && schedulesData.length > 0 &&
+          schedulesData.filter(schedule => schedule.availableSpots > 0 && schedule.isAvailable !== false).length > 0 && (
+            <button
+              className={`w-full text-center text-neutrals-4 hover:text-primary-1 transition-colors py-2 ${isMobile ? 'text-xs' : 'text-sm'} font-medium`}
+              onClick={() => setShowAllSchedules(true)}
+            >
+              Show all dates
+            </button>
+          )}
       </div>
 
       {/* Guest Selection */}
@@ -274,9 +303,9 @@ const BookingWidget = ({
             </button>
             <span className="text-sm font-medium text-neutrals-2">{guests} guests</span>
             <button
-              onClick={() => setGuests(Math.min((displayData.participantsAllowed || 8), guests + 1))}
+              onClick={() => setGuests(Math.min(getMaxAllowedGuests(), guests + 1))}
               className="w-6 h-6 rounded-full border border-neutrals-5 flex items-center justify-center hover:bg-neutrals-7 transition-colors"
-              disabled={guests >= (displayData.participantsAllowed || 8)}
+              disabled={guests >= getMaxAllowedGuests()}
             >
               <span className="text-neutrals-3">+</span>
             </button>
@@ -296,9 +325,9 @@ const BookingWidget = ({
               </button>
               <span className="text-neutrals-2 min-w-[2rem] text-center">{guests}</span>
               <button
-                onClick={() => setGuests(Math.min((displayData.participantsAllowed || 8), guests + 1))}
+                onClick={() => setGuests(Math.min(getMaxAllowedGuests(), guests + 1))}
                 className="w-8 h-8 rounded-full border border-neutrals-6 flex items-center justify-center hover:bg-neutrals-7 disabled:opacity-50"
-                disabled={guests >= (displayData.participantsAllowed || 8)}
+                disabled={guests >= getMaxAllowedGuests()}
               >
                 <span className="text-neutrals-2">+</span>
               </button>
@@ -329,15 +358,24 @@ const BookingWidget = ({
 
       {/* Book Now Button */}
       <button
+<<<<<<< HEAD:frontend/src/components/experience-details/BookingCard.jsx
+        onClick={handleBookNow}
+        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${selectedSchedule === null
+          ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
+          : 'bg-primary-1 text-white hover:bg-opacity-90'
+          } ${isMobile ? 'mb-0' : 'mb-4'}`}
+        disabled={selectedSchedule === null}
+=======
         className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
           isMobile && selectedSchedule === null
             ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
             : 'bg-primary-1 text-white hover:bg-opacity-90'
         } ${isMobile ? 'mb-2' : 'mb-3'}`}
         disabled={isMobile && selectedSchedule === null}
+>>>>>>> master:frontend/src/components/experience-details/BookingWidget.jsx
         style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
       >
-        {isMobile && selectedSchedule === null ? 'Select a date to book' : 'Book Now'}
+        {selectedSchedule === null ? 'Select a date to book' : 'Book Now'}
       </button>
 
       {/* Chat with Guide Button */}

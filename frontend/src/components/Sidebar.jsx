@@ -10,7 +10,6 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const navigate = useNavigate();
     const { clearFormData } = useFormData();
     const { user } = useAuth();
-    console.log('Sidebar - User Object:', user);
     const isKycApproved = user?.kycStatus === 'APPROVED';
     const navItems = [
         { id: 'blog', label: 'Blog' },

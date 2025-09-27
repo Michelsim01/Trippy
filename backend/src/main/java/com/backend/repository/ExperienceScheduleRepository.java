@@ -24,4 +24,6 @@ public interface ExperienceScheduleRepository extends JpaRepository<ExperienceSc
         @Param("startDate") LocalDateTime startDate, 
         @Param("endDate") LocalDateTime endDate
     );
+
+    List<ExperienceSchedule> findByExperience_ExperienceId(Long experienceId);
 }
