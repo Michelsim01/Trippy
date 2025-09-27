@@ -263,19 +263,14 @@ export default function App() {
         <AuthProvider>
           <UserProvider>
             <FormDataProvider>
-              <Elements stripe={stripePromise}>
-                <div className="App">
-                  <AppRoutes />
-                </div>
-              </Elements>
+              <TripPointsProvider>
+                <Elements stripe={stripePromise}>
+                  <div className="App">
+                    <AppRoutes />
+                  </div>
+                </Elements>
+              </TripPointsProvider>
             </FormDataProvider>
-            <TripPointsProvider>
-              <FormDataProvider>
-                <div className="App">
-                  <AppRoutes />
-                </div>
-              </FormDataProvider>
-            </TripPointsProvider>
           </UserProvider>
         </AuthProvider>
       </ErrorBoundary>
