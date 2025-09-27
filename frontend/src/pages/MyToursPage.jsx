@@ -19,12 +19,14 @@ const MyToursPage = () => {
     const [selectedExperienceId, setSelectedExperienceId] = useState(null)
     const [selectedExperienceTitle, setSelectedExperienceTitle] = useState('')
 
-    // Mock earnings data for Phase 1
+    // Mock earnings data - consistent 3-card structure
     const mockEarnings = {
-        confirmedEarnings: 1240.00,
-        completedEarnings: 890.00,
-        confirmedBookingCount: 8,
-        completedBookingCount: 6
+        totalEarnings: 2130.00,
+        pendingEarnings: 1240.00,
+        paidOutEarnings: 890.00,
+        totalBookings: 14,
+        pendingBookings: 8,
+        completedBookings: 6
     }
 
     useEffect(() => {
@@ -195,7 +197,30 @@ const MyToursPage = () => {
                             {/* Earnings Summary */}
                             <div className="mb-8">
                                 <h2 className="text-xl font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {/* Total Earnings Card */}
+                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center">
+                                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-neutrals-1">Total Earnings</h3>
+                                                    <p className="text-sm text-neutrals-4">All time earnings</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-3xl font-bold text-blue-600 mb-2">
+                                            ${mockEarnings.totalEarnings.toFixed(2)}
+                                        </div>
+                                        <div className="text-sm text-neutrals-4">
+                                            {mockEarnings.totalBookings} total bookings
+                                        </div>
+                                    </div>
+
                                     {/* Pending Payout Card */}
                                     <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
                                         <div className="flex items-center justify-between mb-4">
@@ -206,20 +231,20 @@ const MyToursPage = () => {
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-semibold text-neutrals-1">Pending Payout</h3>
+                                                    <h3 className="text-lg font-semibold text-neutrals-1">Pending</h3>
                                                     <p className="text-sm text-neutrals-4">Available after completing tours</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-3xl font-bold text-yellow-600 mb-2">
-                                            ${mockEarnings.confirmedEarnings.toFixed(2)}
+                                            ${mockEarnings.pendingEarnings.toFixed(2)}
                                         </div>
                                         <div className="text-sm text-neutrals-4">
-                                            {mockEarnings.confirmedBookingCount} confirmed bookings
+                                            {mockEarnings.pendingBookings} confirmed bookings
                                         </div>
                                     </div>
 
-                                    {/* Available Now Card */}
+                                    {/* Paid Out Card */}
                                     <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="flex items-center">
@@ -229,16 +254,16 @@ const MyToursPage = () => {
                                                     </svg>
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-semibold text-neutrals-1">Current Total Earnings</h3>
+                                                    <h3 className="text-lg font-semibold text-neutrals-1">Paid Out</h3>
                                                     <p className="text-sm text-neutrals-4">Released to guide for payout</p>
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="text-3xl font-bold text-green-600 mb-2">
-                                            ${mockEarnings.completedEarnings.toFixed(2)}
+                                            ${mockEarnings.paidOutEarnings.toFixed(2)}
                                         </div>
                                         <div className="text-sm text-neutrals-4">
-                                            {mockEarnings.completedBookingCount} completed tours
+                                            {mockEarnings.completedBookings} completed tours
                                         </div>
                                     </div>
                                 </div>
@@ -360,6 +385,27 @@ const MyToursPage = () => {
                     <div className="mb-6">
                         <h2 className="text-lg font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
                         <div className="grid grid-cols-1 gap-4">
+                            {/* Total Earnings Card */}
+                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                <div className="flex items-center mb-3">
+                                    <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                        <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-md font-semibold text-neutrals-1">Total Earnings</h3>
+                                        <p className="text-xs text-neutrals-4">All time earnings</p>
+                                    </div>
+                                </div>
+                                <div className="text-2xl font-bold text-blue-600 mb-1">
+                                    ${mockEarnings.totalEarnings.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-neutrals-4">
+                                    {mockEarnings.totalBookings} total bookings
+                                </div>
+                            </div>
+
                             {/* Pending Payout Card */}
                             <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
                                 <div className="flex items-center mb-3">
@@ -369,19 +415,19 @@ const MyToursPage = () => {
                                         </svg>
                                     </div>
                                     <div>
-                                        <h3 className="text-md font-semibold text-neutrals-1">Pending Payout</h3>
+                                        <h3 className="text-md font-semibold text-neutrals-1">Pending</h3>
                                         <p className="text-xs text-neutrals-4">Available after completing tours</p>
                                     </div>
                                 </div>
                                 <div className="text-2xl font-bold text-yellow-600 mb-1">
-                                    ${mockEarnings.confirmedEarnings.toFixed(2)}
+                                    ${mockEarnings.pendingEarnings.toFixed(2)}
                                 </div>
                                 <div className="text-xs text-neutrals-4">
-                                    {mockEarnings.confirmedBookingCount} confirmed bookings
+                                    {mockEarnings.pendingBookings} confirmed bookings
                                 </div>
                             </div>
 
-                            {/* Available Now Card */}
+                            {/* Paid Out Card */}
                             <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
                                 <div className="flex items-center mb-3">
                                     <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
@@ -390,15 +436,15 @@ const MyToursPage = () => {
                                         </svg>
                                     </div>
                                     <div>
-                                        <h3 className="text-md font-semibold text-neutrals-1">Current Total Earnings</h3>
+                                        <h3 className="text-md font-semibold text-neutrals-1">Paid Out</h3>
                                         <p className="text-xs text-neutrals-4">Released to guide for payout</p>
                                     </div>
                                 </div>
                                 <div className="text-2xl font-bold text-green-600 mb-1">
-                                    ${mockEarnings.completedEarnings.toFixed(2)}
+                                    ${mockEarnings.paidOutEarnings.toFixed(2)}
                                 </div>
                                 <div className="text-xs text-neutrals-4">
-                                    {mockEarnings.completedBookingCount} completed tours
+                                    {mockEarnings.completedBookings} completed tours
                                 </div>
                             </div>
                         </div>
