@@ -581,6 +581,7 @@ const MyToursPage = () => {
                 onClose={handleCloseEarningsModal}
                 experienceTitle={selectedExperienceTitle}
                 experienceId={selectedExperienceId}
+                userId={user?.id || user?.userId}
             />
         </div>
     )

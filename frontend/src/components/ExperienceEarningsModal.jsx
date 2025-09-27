@@ -1,63 +1,67 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from './Button';
 
 const ExperienceEarningsModal = ({
     isOpen,
     onClose,
     experienceTitle,
-    experienceId
+    experienceId,
+    userId
 }) => {
+    const [earningsData, setEarningsData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    // Fetch earnings data when modal opens
+    useEffect(() => {
+        const fetchEarningsData = async () => {
+            if (!isOpen || !experienceId || !userId) return;
+
+            try {
+                setLoading(true);
+                setError(null);
+
+                const response = await fetch(`http://localhost:8080/api/earnings/experience/${experienceId}/guide/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                setEarningsData(data);
+            } catch (error) {
+                console.error('Error fetching experience earnings:', error);
+                setError(error.message);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchEarningsData();
+    }, [isOpen, experienceId, userId]);
+
     if (!isOpen) return null;
 
-    // Mock timeslot data for Phase 3
-    const mockScheduleData = {
-        experienceId: experienceId,
-        schedules: [
-            {
-                scheduleId: 1,
-                date: "2024-10-15",
-                time: "9:00 AM",
-                bookingCount: 3,
-                totalGuests: 7,
-                potentialEarnings: 420,
-                status: "CONFIRMED"
-            },
-            {
-                scheduleId: 2,
-                date: "2024-10-16",
-                time: "2:00 PM",
-                bookingCount: 2,
-                totalGuests: 4,
-                potentialEarnings: 240,
-                status: "COMPLETED"
-            },
-            {
-                scheduleId: 3,
-                date: "2024-10-18",
-                time: "10:30 AM",
-                bookingCount: 1,
-                totalGuests: 2,
-                potentialEarnings: 120,
-                status: "CONFIRMED"
-            },
-            {
-                scheduleId: 4,
-                date: "2024-10-20",
-                time: "3:00 PM",
-                bookingCount: 4,
-                totalGuests: 8,
-                potentialEarnings: 480,
-                status: "COMPLETED"
-            }
-        ]
-    };
-
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
+    const formatDate = (dateTimeString) => {
+        const date = new Date(dateTimeString);
         return date.toLocaleDateString('en-US', {
             weekday: 'short',
             month: 'short',
             day: 'numeric'
+        });
+    };
+
+    const formatTime = (dateTimeString) => {
+        const date = new Date(dateTimeString);
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
         });
     };
 
@@ -67,22 +71,14 @@ const ExperienceEarningsModal = ({
         alert(`Complete timeslot functionality will be implemented in Phase 6!`);
     };
 
-    // Calculate experience-level earnings totals
-    const calculateEarningsTotals = () => {
-        const pending = mockScheduleData.schedules
-            .filter(schedule => schedule.status === "CONFIRMED")
-            .reduce((sum, schedule) => sum + schedule.potentialEarnings, 0);
+    // Get earnings totals from API data or default values
+    const earningsTotals = earningsData ? {
+        total: parseFloat(earningsData.totalEarnings || 0),
+        pending: parseFloat(earningsData.pendingEarnings || 0),
+        paidOut: parseFloat(earningsData.paidOutEarnings || 0)
+    } : { total: 0, pending: 0, paidOut: 0 };
 
-        const paidOut = mockScheduleData.schedules
-            .filter(schedule => schedule.status === "COMPLETED")
-            .reduce((sum, schedule) => sum + schedule.potentialEarnings, 0);
-
-        const total = pending + paidOut;
-
-        return { total, pending, paidOut };
-    };
-
-    const earningsTotals = calculateEarningsTotals();
+    const schedules = earningsData?.schedules || [];
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -91,7 +87,7 @@ const ExperienceEarningsModal = ({
                 <div className="flex items-center justify-between p-6 border-b border-neutrals-6">
                     <div>
                         <h2 className="text-xl font-semibold text-neutrals-1">
-                            {experienceTitle} - Earnings
+                            {earningsData?.experienceTitle || experienceTitle} - Earnings
                         </h2>
                         <p className="text-sm text-neutrals-4 mt-1">
                             Manage your scheduled tours and earnings
@@ -144,7 +140,25 @@ const ExperienceEarningsModal = ({
 
                 {/* Modal Content */}
                 <div className="p-6 overflow-y-auto max-h-[calc(80vh-240px)]">
-                    {mockScheduleData.schedules.length === 0 ? (
+                    {loading ? (
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 mx-auto mb-4">
+                                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-1"></div>
+                            </div>
+                            <h3 className="text-lg font-medium text-neutrals-2 mb-2">Loading earnings data...</h3>
+                            <p className="text-neutrals-4">Please wait while we fetch your earnings information.</p>
+                        </div>
+                    ) : error ? (
+                        <div className="text-center py-8">
+                            <div className="w-16 h-16 mx-auto mb-4 text-red-500">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-medium text-neutrals-2 mb-2">Error loading earnings</h3>
+                            <p className="text-neutrals-4">{error}</p>
+                        </div>
+                    ) : schedules.length === 0 ? (
                         <div className="text-center py-8">
                             <div className="w-16 h-16 mx-auto mb-4 text-neutrals-5">
                                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -156,7 +170,7 @@ const ExperienceEarningsModal = ({
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            {mockScheduleData.schedules.map((schedule) => (
+                            {schedules.map((schedule) => (
                                 <div key={schedule.scheduleId} className="bg-neutrals-8 rounded-lg p-4 border border-neutrals-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center space-x-4">
@@ -171,7 +185,7 @@ const ExperienceEarningsModal = ({
                                             <div>
                                                 <div className="flex items-center space-x-2">
                                                     <h3 className="text-lg font-medium text-neutrals-1">
-                                                        {formatDate(schedule.date)}, {schedule.time}
+                                                        {formatDate(schedule.startDateTime)}, {formatTime(schedule.startDateTime)}
                                                     </h3>
                                                     {schedule.status === "COMPLETED" ? (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -194,7 +208,7 @@ const ExperienceEarningsModal = ({
                                                     <span>•</span>
                                                     <span>{schedule.totalGuests} guests</span>
                                                     <span>•</span>
-                                                    <span className="font-semibold text-primary-1">${schedule.potentialEarnings}</span>
+                                                    <span className="font-semibold text-primary-1">${parseFloat(schedule.potentialEarnings || 0).toFixed(2)}</span>
                                                 </div>
                                             </div>
                                         </div>
