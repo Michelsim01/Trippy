@@ -5,6 +5,7 @@ import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 import Footer from '../components/Footer'
 import ExperienceCard from '../components/ExperienceCard'
+import ExperienceEarningsModal from '../components/ExperienceEarningsModal'
 
 const MyToursPage = () => {
     const { user } = useAuth()
@@ -14,6 +15,17 @@ const MyToursPage = () => {
     const [schedules, setSchedules] = useState({}) // Store schedules by experience ID
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [isEarningsModalOpen, setIsEarningsModalOpen] = useState(false)
+    const [selectedExperienceId, setSelectedExperienceId] = useState(null)
+    const [selectedExperienceTitle, setSelectedExperienceTitle] = useState('')
+
+    // Mock earnings data for Phase 1
+    const mockEarnings = {
+        confirmedEarnings: 1240.00,
+        completedEarnings: 890.00,
+        confirmedBookingCount: 8,
+        completedBookingCount: 6
+    }
 
     useEffect(() => {
         const fetchTours = async () => {
@@ -124,6 +136,19 @@ const MyToursPage = () => {
         })
     }
 
+    const handleEarningsClick = (experienceId) => {
+        const experience = tours.find(tour => tour.experienceId === experienceId)
+        setSelectedExperienceId(experienceId)
+        setSelectedExperienceTitle(experience?.title || 'Unknown Experience')
+        setIsEarningsModalOpen(true)
+    }
+
+    const handleCloseEarningsModal = () => {
+        setIsEarningsModalOpen(false)
+        setSelectedExperienceId(null)
+        setSelectedExperienceTitle('')
+    }
+
     // Calculate stats for the quick stats section
     const totalBookings = tours.reduce((sum, tour) => {
         const tourSchedules = schedules[tour.experienceId] || []
@@ -166,7 +191,59 @@ const MyToursPage = () => {
                                     Create New Tour
                                 </button>
                             </div>
-                            
+
+                            {/* Earnings Summary */}
+                            <div className="mb-8">
+                                <h2 className="text-xl font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Pending Payout Card */}
+                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center">
+                                                <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-neutrals-1">Pending Payout</h3>
+                                                    <p className="text-sm text-neutrals-4">Available after completing tours</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-3xl font-bold text-yellow-600 mb-2">
+                                            ${mockEarnings.confirmedEarnings.toFixed(2)}
+                                        </div>
+                                        <div className="text-sm text-neutrals-4">
+                                            {mockEarnings.confirmedBookingCount} confirmed bookings
+                                        </div>
+                                    </div>
+
+                                    {/* Available Now Card */}
+                                    <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="flex items-center">
+                                                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-neutrals-1">Current Total Earnings</h3>
+                                                    <p className="text-sm text-neutrals-4">Released to guide for payout</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-3xl font-bold text-green-600 mb-2">
+                                            ${mockEarnings.completedEarnings.toFixed(2)}
+                                        </div>
+                                        <div className="text-sm text-neutrals-4">
+                                            {mockEarnings.completedBookingCount} completed tours
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             {loading ? (
                                 <div className="bg-white rounded-lg p-8 shadow-sm text-center">
                                     <p className="text-neutrals-3 text-lg">Loading your tours...</p>
@@ -235,6 +312,8 @@ const MyToursPage = () => {
                                                 showWishlistButton={false}
                                                 showEditButton={true}
                                                 showDeleteButton={true}
+                                                showEarningsButton={true}
+                                                onEarningsClick={handleEarningsClick}
                                                 onExperienceDeleted={handleTourDeleted}
                                                 schedules={schedules[tour.experienceId] || []}
                                                 showExplore={false}
@@ -276,7 +355,55 @@ const MyToursPage = () => {
                             Create New Tour
                         </button>
                     </div>
-                    
+
+                    {/* Earnings Summary - Mobile */}
+                    <div className="mb-6">
+                        <h2 className="text-lg font-semibold text-neutrals-1 mb-4">Your Earnings</h2>
+                        <div className="grid grid-cols-1 gap-4">
+                            {/* Pending Payout Card */}
+                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                <div className="flex items-center mb-3">
+                                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                        <svg className="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-md font-semibold text-neutrals-1">Pending Payout</h3>
+                                        <p className="text-xs text-neutrals-4">Available after completing tours</p>
+                                    </div>
+                                </div>
+                                <div className="text-2xl font-bold text-yellow-600 mb-1">
+                                    ${mockEarnings.confirmedEarnings.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-neutrals-4">
+                                    {mockEarnings.confirmedBookingCount} confirmed bookings
+                                </div>
+                            </div>
+
+                            {/* Available Now Card */}
+                            <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                <div className="flex items-center mb-3">
+                                    <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                        <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-md font-semibold text-neutrals-1">Current Total Earnings</h3>
+                                        <p className="text-xs text-neutrals-4">Released to guide for payout</p>
+                                    </div>
+                                </div>
+                                <div className="text-2xl font-bold text-green-600 mb-1">
+                                    ${mockEarnings.completedEarnings.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-neutrals-4">
+                                    {mockEarnings.completedBookingCount} completed tours
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {loading ? (
                         <div className="bg-white rounded-lg p-6 shadow-sm text-center">
                             <p className="text-neutrals-3">Loading your tours...</p>
@@ -345,6 +472,8 @@ const MyToursPage = () => {
                                         showWishlistButton={false}
                                         showEditButton={true}
                                         showDeleteButton={true}
+                                        showEarningsButton={true}
+                                        onEarningsClick={handleEarningsClick}
                                         onExperienceDeleted={handleTourDeleted}
                                         schedules={schedules[tour.experienceId] || []}
                                         showExplore={false}
@@ -357,6 +486,14 @@ const MyToursPage = () => {
                 <div className="h-px bg-neutrals-6 w-full" />
                 <Footer />
             </div>
+
+            {/* Earnings Modal */}
+            <ExperienceEarningsModal
+                isOpen={isEarningsModalOpen}
+                onClose={handleCloseEarningsModal}
+                experienceTitle={selectedExperienceTitle}
+                experienceId={selectedExperienceId}
+            />
         </div>
     )
 }
