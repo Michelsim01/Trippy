@@ -1,8 +1,11 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { loadStripe } from '@stripe/stripe-js'
+import { Elements } from '@stripe/react-stripe-js'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import { UserProvider } from './contexts/UserContext'
+import { CheckoutProvider } from './contexts/CheckoutContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -36,10 +39,16 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
+import CheckoutContactPage from './pages/CheckoutContactPage'
+import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
+import CheckoutCompletePage from './pages/CheckoutCompletePage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
 import ErrorBoundary from './components/ErrorBoundary'
-import './App.css' 
+import './App.css'
+
+// Initialize Stripe with publishable key
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
 
 // AppRoutes component that uses authentication context
 function AppRoutes() {
@@ -92,138 +101,152 @@ function AppRoutes() {
         element={<VerifyEmailPage />}
       />
 
-            {/* Protected routes */}
-            <Route
-              path="/home"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
-            />
-            <Route
-            path="/search"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <SearchResultsPage />}
-          />
-          <Route
-              path="/notifications"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
-            />
-            <Route
-              path="/wishlist"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
-            />
-            <Route
-              path="/messages"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
-            />
-            <Route
-              path="/my-bookings"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
-            />
-            <Route
-              path="/my-tours"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
-            />
-            <Route
-              path="/profile/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
-            />
-            <Route
-              path="/blog"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
-            />
-            
-            {/*create experience*/}
-            <Route
-              path="/create-experience"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/create-experience/basic-info" replace />}
-            />
-            <Route
-              path="/create-experience/basic-info"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfoPage />}
-            />
-            <Route
-              path="/create-experience/details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetailsPage />}
-            />
-            <Route
-              path="/create-experience/pricing"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricingPage />}
-            />
-            <Route
-              path="/create-experience/availability"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailabilityPage />}
-            />
-            <Route
-              path="/create-experience/success"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
-            />
-            <Route
-              path="/experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
-            />
-            
-            {/* Edit Experience Flow */}
-            <Route
-              path="/edit-experience/:id"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="basic-info" replace />}
-            />
-            <Route
-              path="/edit-experience/:id/basic-info"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceBasicInfoPage />}
-            />
-            <Route
-              path="/edit-experience/:id/details"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceDetailsPage />}
-            />
-            <Route
-              path="/edit-experience/:id/pricing"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperiencePricingPage />}
-            />
-            <Route
-              path="/edit-experience/:id/availability"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceAvailabilityPage />}
-            />
-          <Route
-              path="/calendar"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
-            />
-            <Route
-              path="/about"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
-            />
-            <Route
-              path="/contact"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
-            />
-            <Route
-              path="/settings"
-              element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
-            />
+      {/* Protected routes */}
+      <Route
+        path="/home"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
+      />
+      <Route
+        path="/search"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <SearchResultsPage />}
+      />
+      <Route
+        path="/notifications"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
+      />
+      <Route
+        path="/wishlist"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
+      />
+      <Route
+        path="/messages"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
+      />
+      <Route
+        path="/my-bookings"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
+      />
+      <Route
+        path="/my-tours"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
+      />
+      <Route
+        path="/profile/:id"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
+      />
+      <Route
+        path="/blog"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
+      />
+
+      {/*create experience*/}
+      <Route
+        path="/create-experience"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/create-experience/basic-info" replace />}
+      />
+      <Route
+        path="/create-experience/basic-info"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfoPage />}
+      />
+      <Route
+        path="/create-experience/details"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetailsPage />}
+      />
+      <Route
+        path="/create-experience/pricing"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricingPage />}
+      />
+      <Route
+        path="/create-experience/availability"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailabilityPage />}
+      />
+      <Route
+        path="/create-experience/success"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
+      />
+      <Route
+        path="/experience/:id"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
+      />
+
+      {/* Edit Experience Flow */}
+      <Route
+        path="/edit-experience/:id"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="basic-info" replace />}
+      />
+      <Route
+        path="/edit-experience/:id/basic-info"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceBasicInfoPage />}
+      />
+      <Route
+        path="/edit-experience/:id/details"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceDetailsPage />}
+      />
+      <Route
+        path="/edit-experience/:id/pricing"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperiencePricingPage />}
+      />
+      <Route
+        path="/edit-experience/:id/availability"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceAvailabilityPage />}
+      />
+      <Route
+        path="/calendar"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
+      />
+      <Route
+        path="/about"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
+      />
+      <Route
+        path="/contact"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
+      />
+      <Route
+        path="/settings"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
+      />
 
 
-          <Route
-            path="/kyc-onboarding"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycOnboardingPage />}
-          />
+      <Route
+        path="/kyc-onboarding"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycOnboardingPage />}
+      />
 
-          <Route
-            path="/kyc-verification"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycVerificationPage />}
-          />
+      <Route
+        path="/kyc-verification"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycVerificationPage />}
+      />
 
-          <Route
-            path="/kyc-submitted"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
-          />
+      <Route
+        path="/kyc-submitted"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
+      />
 
-          {/* Error Pages */}
-          <Route
-            path="/404"
-            element={<NotFoundPage />}
-          />
-          
-          <Route
-            path="/500"
-            element={<ServerErrorPage />}
-          />
+      {/* Checkout Flow */}
+      <Route
+        path="/checkout/*"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : (
+          <CheckoutProvider>
+            <Routes>
+              <Route path="contact" element={<CheckoutContactPage />} />
+              <Route path="payment" element={<CheckoutPaymentPage />} />
+              <Route path="complete" element={<CheckoutCompletePage />} />
+            </Routes>
+          </CheckoutProvider>
+        )}
+      />
+
+      {/* Error Pages */}
+      <Route
+        path="/404"
+        element={<NotFoundPage />}
+      />
+
+      <Route
+        path="/500"
+        element={<ServerErrorPage />}
+      />
 
       {/* Catch all route - redirect to 404 */}
       <Route path="*" element={<Navigate to="/404" replace />} />
@@ -238,13 +261,15 @@ export default function App() {
         <AuthProvider>
           <UserProvider>
             <FormDataProvider>
-            <div className="App">
-              <AppRoutes />
-            </div>
-          </FormDataProvider>
+              <Elements stripe={stripePromise}>
+                <div className="App">
+                  <AppRoutes />
+                </div>
+              </Elements>
+            </FormDataProvider>
           </UserProvider>
         </AuthProvider>
       </ErrorBoundary>
-      </Router>
+    </Router>
   )
-}
+} 

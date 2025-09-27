@@ -9,7 +9,6 @@ import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.ExperienceMediaRepository;
 import com.backend.repository.ExperienceItineraryRepository;
 import com.backend.dto.SearchSuggestionDTO;
-import com.backend.dto.ExperienceResponseDTO;
 import com.backend.service.ExperienceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -84,8 +83,7 @@ public class ExperienceController {
             Experience exp = experienceRepository.findById(id).orElse(null);
             if (exp == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
-                        "error", "Experience not found"
-                ));
+                        "error", "Experience not found"));
             }
 
             Map<String, Object> expMap = new HashMap<>();
@@ -125,8 +123,7 @@ public class ExperienceController {
             return ResponseEntity.ok(expMap);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
-                    "error", "Failed to fetch experience: " + e.getMessage()
-            ));
+                    "error", "Failed to fetch experience: " + e.getMessage()));
         }
     }
 
@@ -228,10 +225,10 @@ public class ExperienceController {
             if (!experienceRepository.existsById(id)) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             // Use repository to avoid lazy loading issues
             List<ExperienceMedia> mediaList = experienceMediaRepository.findByExperienceId(id);
-            
+
             // Create safe response objects to avoid circular references
             List<Map<String, Object>> safeMediaList = mediaList.stream().map(media -> {
                 Map<String, Object> mediaMap = new HashMap<>();
@@ -242,7 +239,7 @@ public class ExperienceController {
                 mediaMap.put("displayOrder", media.getDisplayOrder());
                 return mediaMap;
             }).collect(Collectors.toList());
-            
+
             return ResponseEntity.ok(safeMediaList);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
@@ -257,10 +254,10 @@ public class ExperienceController {
             if (!experienceRepository.existsById(id)) {
                 return ResponseEntity.notFound().build();
             }
-            
+
             // Use repository to avoid lazy loading issues
             List<ExperienceItinerary> itineraryList = experienceItineraryRepository.findByExperienceId(id);
-            
+
             // Create safe response objects to avoid circular references
             List<Map<String, Object>> safeItineraryList = itineraryList.stream().map(itinerary -> {
                 Map<String, Object> itineraryMap = new HashMap<>();
@@ -271,7 +268,7 @@ public class ExperienceController {
                 itineraryMap.put("duration", itinerary.getDuration());
                 return itineraryMap;
             }).collect(Collectors.toList());
-            
+
             return ResponseEntity.ok(safeItineraryList);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
