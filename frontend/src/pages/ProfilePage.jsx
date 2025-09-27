@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useReviews } from '../contexts/ReviewContext';
+import { reviewService } from '../services/reviewService';
 import { userService } from '../services/userService';
 import { experienceApi } from '../services/experienceApi';
 import Navbar from '../components/Navbar';
@@ -16,6 +18,7 @@ const ProfilePage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user, isAuthenticated, isLoading: authLoading, token } = useAuth();
+    const { userReviews } = useReviews();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Introduction');
     const [currentRole, setCurrentRole] = useState(UserRole.TOURIST);
@@ -23,6 +26,7 @@ const ProfilePage = () => {
     const [userExperiences, setUserExperiences] = useState([]);
     const [experiencesLoading, setExperiencesLoading] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [profileUserReviews, setProfileUserReviews] = useState([]);
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
     const [wishlistExperienceIds, setWishlistExperienceIds] = useState([]);
@@ -270,35 +274,37 @@ const ProfilePage = () => {
         }
     ];
 
-    const touristReviews = [
-        {
-            id: 1,
-            tourGuide: 'Farley',
-            tourName: 'Venice, Rome & Milan Tour',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 5,
-            comment: 'Amazing tour! Farley was incredibly knowledgeable and made the history come alive. Highly recommend!',
-            timeAgo: '2 weeks ago'
-        },
-        {
-            id: 2,
-            tourGuide: 'Marco',
-            tourName: 'Florence Art & Culture Tour',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 4,
-            comment: 'Great insights into Renaissance art. Marco really knows his stuff!',
-            timeAgo: '1 month ago'
-        },
-        {
-            id: 3,
-            tourGuide: 'Sofia',
-            tourName: 'Barcelona Food Tour',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332c27d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 5,
-            comment: 'Best food tour ever! Sofia took us to amazing local spots that tourists never find.',
-            timeAgo: '2 months ago'
+    // Load user reviews when component mounts or user changes
+    useEffect(() => {
+        if (id && isAuthenticated) {
+            // Load reviews for the profile user, not the current logged-in user
+            const loadProfileUserReviews = async () => {
+                try {
+                    const response = await reviewService.getUserReviews(parseInt(id));
+                    if (response.success) {
+                        setProfileUserReviews(response.data);
+                    } else {
+                        console.warn('Failed to load profile user reviews:', response.error);
+                    }
+                } catch (error) {
+                    console.error('Error loading profile user reviews:', error);
+                }
+            };
+            loadProfileUserReviews();
         }
-    ];
+    }, [id, isAuthenticated]);
+
+    // Transform profileUserReviews to match MyReviewsTab expected format
+    const touristReviews = profileUserReviews.map(review => ({
+        id: review.reviewId,
+        tourGuide: review.experience?.title || 'Unknown Experience',
+        tourName: review.experience?.title || 'Unknown Tour',
+        avatar: review.experience?.coverPhotoUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
+        rating: review.rating,
+        comment: review.comment,
+        timeAgo: new Date(review.createdAt).toLocaleDateString(),
+        tripPointsEarned: review.tripPointsEarned
+    }));
 
     const blogs = [
         {
