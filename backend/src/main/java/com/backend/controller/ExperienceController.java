@@ -10,6 +10,7 @@ import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.ExperienceMediaRepository;
 import com.backend.repository.ExperienceItineraryRepository;
 import com.backend.repository.BookingRepository;
+import com.backend.repository.PersonalChatRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.dto.ExperienceResponseDTO;
 import com.backend.service.ExperienceService;
@@ -45,6 +46,9 @@ public class ExperienceController {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private PersonalChatRepository personalChatRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAllExperiences() {
@@ -210,6 +214,21 @@ public class ExperienceController {
                         "success", false,
                         "message", "Cannot delete experience with existing bookings"
                 ));
+            }
+
+            // Nullify experience references in personal chats to preserve chat history
+            List<com.backend.entity.PersonalChat> relatedChats = personalChatRepository.findAll()
+                .stream()
+                .filter(chat -> chat.getExperience() != null && chat.getExperience().getExperienceId().equals(id))
+                .collect(Collectors.toList());
+
+            for (com.backend.entity.PersonalChat chat : relatedChats) {
+                // Preserve the original experience title before nullifying the reference
+                if (chat.getExperience() != null && chat.getExperience().getTitle() != null) {
+                    chat.setName(chat.getExperience().getTitle() + " (Experience Deleted)");
+                }
+                chat.setExperience(null);
+                personalChatRepository.save(chat);
             }
 
             // If all checks pass, delete the experience

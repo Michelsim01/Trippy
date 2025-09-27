@@ -52,11 +52,11 @@ const MessagesPage = () => {
                         
                         return {
                             id: chat.personalChatId,
-                            title: chat.experience?.title || chat.name,
+                            title: chat.experience?.title || chat.name || "Chat with Guide",
                             lastMessage: "Start chatting...", // TODO: Get last message
                             timestamp: new Date(chat.createdAt).toLocaleDateString(),
                             participants: `You & ${participantName}`,
-                            activity: chat.experience?.category || "Experience",
+                            activity: chat.experience?.category || (chat.experience ? "Experience" : "Experience Unavailable"),
                             avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
                             unread: false,
                             experience: chat.experience,
