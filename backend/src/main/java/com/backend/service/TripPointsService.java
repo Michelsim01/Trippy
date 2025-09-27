@@ -71,8 +71,8 @@ public class TripPointsService {
     /**
      * Award points for leaving a review
      */
-    public TripPoints awardPointsForReview(Long userId, Long referenceId) {
-        return createTransaction(userId, TripPointsTransaction.REVIEW, POINTS_PER_REVIEW, referenceId);
+    public TripPoints awardPointsForReview(Long userId, Long referenceId, Integer pointsToAward) {
+        return createTransaction(userId, TripPointsTransaction.REVIEW, pointsToAward, referenceId);
     }
 
     /**

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
 import { experienceApi } from '../services/experienceApi';
+import { reviewService } from '../services/reviewService';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ProfileCard, { UserRole } from '../components/profile/ProfileCard';
@@ -26,6 +27,11 @@ const ProfilePage = () => {
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
     const [wishlistExperienceIds, setWishlistExperienceIds] = useState([]);
+    
+    // Reviews state
+    const [userReviews, setUserReviews] = useState([]);
+    const [experienceReviews, setExperienceReviews] = useState([]);
+    const [reviewsLoading, setReviewsLoading] = useState(false);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -142,6 +148,39 @@ const ProfilePage = () => {
         }
     };
 
+    const fetchUserReviews = async (userId) => {
+        setReviewsLoading(true);
+        try {
+            const response = await reviewService.getUserReviews(userId);
+            if (response.success) {
+                setUserReviews(response.data);
+            } else {
+                console.error('Failed to fetch user reviews:', response.error);
+                setUserReviews([]);
+            }
+        } catch (error) {
+            console.error('Error fetching user reviews:', error);
+            setUserReviews([]);
+        } finally {
+            setReviewsLoading(false);
+        }
+    };
+
+    const fetchExperienceReviews = async (experienceId) => {
+        try {
+            const response = await reviewService.getExperienceReviews(experienceId);
+            if (response.success) {
+                return response.data;
+            } else {
+                console.error('Failed to fetch experience reviews:', response.error);
+                return [];
+            }
+        } catch (error) {
+            console.error('Error fetching experience reviews:', error);
+            return [];
+        }
+    };
+
     const handleTourDeleted = (deletedTourId) => {
         // Remove the deleted tour from the userExperiences list
         setUserExperiences(prevExperiences =>
@@ -199,6 +238,12 @@ const ProfilePage = () => {
             fetchCurrentUserWishlist();
         }
     }, [userData, user?.id]);
+
+    useEffect(() => {
+        if (id) {
+            fetchUserReviews(parseInt(id));
+        }
+    }, [id]);
 
     const isTourGuide = currentRole === UserRole.TOUR_GUIDE;
     const userName = userData?.firstName || (isTourGuide ? 'Farley' : 'Sarah');
@@ -270,35 +315,17 @@ const ProfilePage = () => {
         }
     ];
 
-    const touristReviews = [
-        {
-            id: 1,
-            tourGuide: 'Farley',
-            tourName: 'Venice, Rome & Milan Tour',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 5,
-            comment: 'Amazing tour! Farley was incredibly knowledgeable and made the history come alive. Highly recommend!',
-            timeAgo: '2 weeks ago'
-        },
-        {
-            id: 2,
-            tourGuide: 'Marco',
-            tourName: 'Florence Art & Culture Tour',
-            avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 4,
-            comment: 'Great insights into Renaissance art. Marco really knows his stuff!',
-            timeAgo: '1 month ago'
-        },
-        {
-            id: 3,
-            tourGuide: 'Sofia',
-            tourName: 'Barcelona Food Tour',
-            avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332c27d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 5,
-            comment: 'Best food tour ever! Sofia took us to amazing local spots that tourists never find.',
-            timeAgo: '2 months ago'
-        }
-    ];
+    // Transform user reviews for display
+    const touristReviews = userReviews.map(review => ({
+        id: review.reviewId,
+        tourGuide: review.experience?.title || 'Unknown Experience',
+        tourName: review.experience?.title || 'Unknown Tour',
+        avatar: review.experience?.coverPhotoUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
+        rating: review.rating,
+        comment: review.comment,
+        timeAgo: new Date(review.createdAt).toLocaleDateString(),
+        tripPointsEarned: review.tripPointsEarned
+    }));
 
     const blogs = [
         {
@@ -338,7 +365,7 @@ const ProfilePage = () => {
                     onTourDeleted={handleTourDeleted}
                 />;
             case 'Reviews':
-                return <ReviewsTab reviews={reviews} />;
+                return <ReviewsTab reviews={experienceReviews} loading={reviewsLoading} />;
             case 'TripPoints':
                 return (
                     <div className="space-y-6">
@@ -346,7 +373,7 @@ const ProfilePage = () => {
                     </div>
                 );
             case 'My reviews':
-                return <MyReviewsTab touristReviews={touristReviews} />;
+                return <MyReviewsTab touristReviews={touristReviews} loading={reviewsLoading} />;
             case 'Blogs':
                 return <BlogsTab blogs={blogs} />;
             default:
