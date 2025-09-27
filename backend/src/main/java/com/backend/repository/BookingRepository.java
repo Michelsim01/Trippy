@@ -33,4 +33,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("guideId") Long guideId,
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate);
+
+    // Check if an experience has any bookings
+    @Query("SELECT COUNT(b) > 0 FROM Booking b WHERE b.experienceSchedule.experience.experienceId = :experienceId")
+    boolean existsByExperienceId(@Param("experienceId") Long experienceId);
 }

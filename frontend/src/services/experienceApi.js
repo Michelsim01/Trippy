@@ -254,6 +254,41 @@ export const experienceApi = {
       console.error('Update complete experience API error:', error);
       throw new Error(`Failed to update complete experience: ${error.message}`);
     }
+  },
+
+  /**
+   * Deletes an experience
+   * @param {number} experienceId - The experience ID to delete
+   * @returns {Promise<Object>} Response indicating success or failure
+   */
+  deleteExperience: async (experienceId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+
+        // Handle specific error cases
+        if (response.status === 409) {
+          throw new Error(errorData.message || 'Cannot delete experience with existing bookings');
+        } else if (response.status === 403) {
+          throw new Error(errorData.message || 'You are not authorized to delete this experience');
+        } else if (response.status === 404) {
+          throw new Error(errorData.message || 'Experience not found');
+        } else {
+          throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        }
+      }
+
+      return { success: true, message: 'Experience deleted successfully' };
+    } catch (error) {
+      console.error('Delete experience API error:', error);
+      throw error; // Re-throw to preserve the specific error message
+    }
   }
 };
 

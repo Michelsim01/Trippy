@@ -99,7 +99,7 @@ const ProfilePage = () => {
             console.log('ProfilePage - No user ID available for wishlist fetch');
             return;
         }
-        
+
         try {
             console.log('ProfilePage - Fetching wishlist for user:', user.id);
             const token = localStorage.getItem('token');
@@ -107,27 +107,27 @@ const ProfilePage = () => {
                 console.log('ProfilePage - No auth token available');
                 return;
             }
-            
+
             const response = await fetch(`http://localhost:8080/api/wishlist-items/user/${user.id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
-            
+
             console.log('ProfilePage - Wishlist API response status:', response.status);
-            
+
             if (response.ok) {
                 const wishlistData = await response.json();
                 console.log('ProfilePage - Raw wishlist data received:', wishlistData);
-                
+
                 if (Array.isArray(wishlistData)) {
                     const experienceIds = wishlistData.map(item => {
                         const id = item.experience?.experienceId || item.experienceId || item.id;
                         console.log('ProfilePage - Extracting experience ID:', id, 'from item:', item);
                         return id;
                     }).filter(id => id !== undefined);
-                    
+
                     console.log('ProfilePage - Final extracted experience IDs:', experienceIds);
                     setWishlistExperienceIds(experienceIds);
                 } else {
@@ -140,6 +140,15 @@ const ProfilePage = () => {
         } catch (error) {
             console.error('ProfilePage - Error fetching wishlist:', error);
         }
+    };
+
+    const handleTourDeleted = (deletedTourId) => {
+        // Remove the deleted tour from the userExperiences list
+        setUserExperiences(prevExperiences =>
+            prevExperiences.filter(experience =>
+                experience.experienceId !== deletedTourId && experience.id !== deletedTourId
+            )
+        );
     };
 
     useEffect(() => {
@@ -321,11 +330,12 @@ const ProfilePage = () => {
                     onUserDataUpdate={setUserData}
                 />;
             case 'Tour list':
-                return <TourListTab 
-                    tourData={userExperiences} 
+                return <TourListTab
+                    tourData={userExperiences}
                     loading={experiencesLoading}
                     isOwnProfile={isOwnProfile}
                     wishlistExperienceIds={wishlistExperienceIds}
+                    onTourDeleted={handleTourDeleted}
                 />;
             case 'Reviews':
                 return <ReviewsTab reviews={reviews} />;

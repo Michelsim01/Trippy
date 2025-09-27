@@ -4,16 +4,20 @@ import com.backend.entity.Experience;
 import com.backend.entity.ExperienceSchedule;
 import com.backend.entity.ExperienceMedia;
 import com.backend.entity.ExperienceItinerary;
+import com.backend.entity.User;
 import com.backend.repository.ExperienceRepository;
 import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.ExperienceMediaRepository;
 import com.backend.repository.ExperienceItineraryRepository;
+import com.backend.repository.BookingRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.dto.ExperienceResponseDTO;
 import com.backend.service.ExperienceService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.ArrayList;
@@ -38,6 +42,9 @@ public class ExperienceController {
 
     @Autowired
     private ExperienceService experienceService;
+
+    @Autowired
+    private BookingRepository bookingRepository;
 
     @GetMapping
     public List<Map<String, Object>> getAllExperiences() {
@@ -168,8 +175,57 @@ public class ExperienceController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteExperience(@PathVariable Long id) {
-        experienceRepository.deleteById(id);
+    public ResponseEntity<Map<String, Object>> deleteExperience(@PathVariable Long id) {
+        try {
+            if (id == null || id <= 0) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Invalid experience ID"
+                ));
+            }
+
+            // Check if experience exists
+            Experience experience = experienceRepository.findById(id).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get current authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userEmail = authentication.getName();
+
+            // Verify that the current user owns this experience
+            User guide = experience.getGuide();
+            if (guide == null || !guide.getEmail().equals(userEmail)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                        "success", false,
+                        "message", "You are not authorized to delete this experience"
+                ));
+            }
+
+            // Check if experience has any bookings
+            boolean hasBookings = bookingRepository.existsByExperienceId(id);
+            if (hasBookings) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                        "success", false,
+                        "message", "Cannot delete experience with existing bookings"
+                ));
+            }
+
+            // If all checks pass, delete the experience
+            experienceRepository.deleteById(id);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Experience deleted successfully"
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "success", false,
+                    "message", "Failed to delete experience: " + e.getMessage()
+            ));
+        }
     }
 
     @GetMapping("/search/suggestions")
