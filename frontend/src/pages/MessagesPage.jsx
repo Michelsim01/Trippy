@@ -56,6 +56,7 @@ const MessagesPage = () => {
                             lastMessage: "Start chatting...", // TODO: Get last message
                             timestamp: new Date(chat.createdAt).toLocaleDateString(),
                             participants: `You & ${participantName}`,
+                            participantName: participantName,
                             activity: chat.experience?.category || (chat.experience ? "Experience" : "Experience Unavailable"),
                             avatar: chat.experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1507525428034-b723cf961d3e",
                             unread: false,
@@ -86,10 +87,23 @@ const MessagesPage = () => {
                 const existingIds = new Set(currentMessages.map(msg => msg.id));
                 const newMessages = incomingMessages.filter(msg => !existingIds.has(msg.id));
                 
-                return newMessages.length > 0 ? {
-                    ...prev,
-                    [selectedChat]: [...currentMessages, ...newMessages]
-                } : prev;
+                if (newMessages.length > 0) {
+                    // Update last message in conversations list
+                    const lastMessage = newMessages[newMessages.length - 1];
+                    setConversations(prevConversations => 
+                        prevConversations.map(conv => 
+                            conv.id === selectedChat 
+                                ? { ...conv, lastMessage: lastMessage.text }
+                                : conv
+                        )
+                    );
+                    
+                    return {
+                        ...prev,
+                        [selectedChat]: [...currentMessages, ...newMessages]
+                    };
+                }
+                return prev;
             });
             
             // Clear incoming messages after processing
@@ -123,6 +137,18 @@ const MessagesPage = () => {
                     ...prev,
                     [chatId]: formattedMessages
                 }));
+                
+                // Update last message in conversations list if messages exist
+                if (formattedMessages.length > 0) {
+                    const lastMessage = formattedMessages[formattedMessages.length - 1];
+                    setConversations(prevConversations => 
+                        prevConversations.map(conv => 
+                            conv.id === chatId 
+                                ? { ...conv, lastMessage: lastMessage.text }
+                                : conv
+                        )
+                    );
+                }
             } else {
                 console.error('Failed to load messages for chat', chatId);
             }
@@ -188,6 +214,15 @@ const MessagesPage = () => {
                     
                     // Only add if not already exists (prevent duplicates)
                     if (!existingIds.has(formattedMessage.id)) {
+                        // Update last message in conversations list
+                        setConversations(prevConversations => 
+                            prevConversations.map(conv => 
+                                conv.id === selectedChat 
+                                    ? { ...conv, lastMessage: formattedMessage.text }
+                                    : conv
+                            )
+                        );
+                        
                         return {
                             ...prev,
                             [selectedChat]: [...currentMessages, formattedMessage]
