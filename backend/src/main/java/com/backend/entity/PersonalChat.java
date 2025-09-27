@@ -38,6 +38,14 @@ public class PersonalChat {
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "tripChat", "sender"})
     private List<Message> messages;
 
+    // Transient field for last message content
+    @Transient
+    private String lastMessage;
+
+    // Transient field for last message timestamp
+    @Transient
+    private LocalDateTime lastMessageTime;
+
     public Long getPersonalChatId() { return personalChatId; }
     public void setPersonalChatId(Long personalChatId) { this.personalChatId = personalChatId; }
     public Experience getExperience() { return experience; }
@@ -50,4 +58,8 @@ public class PersonalChat {
     public void setChatMembers(java.util.List<ChatMember> chatMembers) { this.chatMembers = chatMembers; }
     public java.util.List<Message> getMessages() { return messages; }
     public void setMessages(java.util.List<Message> messages) { this.messages = messages; }
+    public String getLastMessage() { return lastMessage; }
+    public void setLastMessage(String lastMessage) { this.lastMessage = lastMessage; }
+    public LocalDateTime getLastMessageTime() { return lastMessageTime; }
+    public void setLastMessageTime(LocalDateTime lastMessageTime) { this.lastMessageTime = lastMessageTime; }
 }

@@ -13,10 +13,12 @@ import org.springframework.web.socket.*;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class ChatWebSocketHandler implements WebSocketHandler {
@@ -25,6 +27,7 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     private final PersonalChatRepository personalChatRepository;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final UserNotificationWebSocketHandler userNotificationHandler;
     
     // Map to store active WebSocket sessions by chat ID
     private final Map<Long, Set<WebSocketSession>> chatSessions = new ConcurrentHashMap<>();
@@ -36,11 +39,13 @@ public class ChatWebSocketHandler implements WebSocketHandler {
             MessageRepository messageRepository,
             PersonalChatRepository personalChatRepository,
             UserRepository userRepository,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            UserNotificationWebSocketHandler userNotificationHandler) {
         this.messageRepository = messageRepository;
         this.personalChatRepository = personalChatRepository;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.userNotificationHandler = userNotificationHandler;
     }
 
     @Override
@@ -59,6 +64,7 @@ public class ChatWebSocketHandler implements WebSocketHandler {
     }
 
     @Override
+    @Transactional
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
         if (message instanceof TextMessage) {
             TextMessage textMessage = (TextMessage) message;
@@ -83,6 +89,36 @@ public class ChatWebSocketHandler implements WebSocketHandler {
                         
                         // Broadcast to all sessions in this chat
                         broadcastToChat(chatId, response);
+                        
+                        // Send notification to all users in this chat (for conversation list updates)
+                        // Gather necessary data within transaction scope to avoid lazy loading issues
+                        Optional<PersonalChat> personalChatOpt = personalChatRepository.findByIdWithExperienceAndMembers(chatId);
+                        if (personalChatOpt.isPresent()) {
+                            PersonalChat personalChat = personalChatOpt.get();
+                            
+                            // Get chat title
+                            String chatTitle = personalChat.getName();
+                            if (personalChat.getExperience() != null) {
+                                chatTitle = personalChat.getExperience().getTitle();
+                            }
+                            
+                            // Get member user IDs
+                            List<Long> memberUserIds = personalChat.getChatMembers().stream()
+                                .map(member -> member.getUser().getId())
+                                .toList();
+                            
+                            // Call notification handler with all data
+                            userNotificationHandler.notifyUsersOfNewMessage(
+                                chatId,
+                                savedMessage.getMessageId(),
+                                savedMessage.getContent(),
+                                savedMessage.getSender().getId(),
+                                savedMessage.getSender().getFirstName() + " " + savedMessage.getSender().getLastName(),
+                                savedMessage.getCreatedAt().toString(),
+                                chatTitle,
+                                memberUserIds
+                            );
+                        }
                     }
                 }
             } catch (Exception e) {

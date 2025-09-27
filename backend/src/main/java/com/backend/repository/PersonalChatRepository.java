@@ -1,6 +1,7 @@
 package com.backend.repository;
 
 import com.backend.entity.PersonalChat;
+import com.backend.entity.Message;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,4 +30,18 @@ public interface PersonalChatRepository extends JpaRepository<PersonalChat, Long
            "WHERE cm.user.id = :userId " +
            "ORDER BY pc.createdAt DESC")
     List<PersonalChat> findChatsByUserId(@Param("userId") Long userId);
+    
+    @Query("SELECT m FROM Message m WHERE m.personalChat.personalChatId = :chatId ORDER BY m.createdAt DESC")
+    List<Message> findLastMessageByChatId(@Param("chatId") Long chatId);
+    
+    @Query("SELECT m FROM Message m WHERE m.personalChat.personalChatId IN :chatIds AND m.messageId IN " +
+           "(SELECT MAX(m2.messageId) FROM Message m2 WHERE m2.personalChat.personalChatId = m.personalChat.personalChatId)")
+    List<Message> findLastMessagesForChats(@Param("chatIds") List<Long> chatIds);
+    
+    @Query("SELECT pc FROM PersonalChat pc " +
+           "LEFT JOIN FETCH pc.experience " +
+           "LEFT JOIN FETCH pc.chatMembers cm " +
+           "LEFT JOIN FETCH cm.user " +
+           "WHERE pc.personalChatId = :chatId")
+    Optional<PersonalChat> findByIdWithExperienceAndMembers(@Param("chatId") Long chatId);
 }

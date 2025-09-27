@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import useWebSocket from '../hooks/useWebSocket';
+import useChatNotifications from '../hooks/useChatNotifications';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConversationList from '../components/messages/ConversationList';
@@ -26,6 +27,9 @@ const MessagesPage = () => {
     // WebSocket integration
     const currentUserId = user?.id || user?.userId;
     const { isConnected, sendMessage: sendWebSocketMessage, incomingMessages, clearIncomingMessages } = useWebSocket(selectedChat, currentUserId);
+    
+    // Chat notifications for conversation list updates
+    const { chatNotifications, clearChatNotifications } = useChatNotifications(currentUserId);
 
     // Load user chats on component mount
     useEffect(() => {
@@ -53,7 +57,7 @@ const MessagesPage = () => {
                         return {
                             id: chat.personalChatId,
                             title: chat.experience?.title || chat.name || "Chat with Guide",
-                            lastMessage: "Start chatting...", // TODO: Get last message
+                            lastMessage: chat.lastMessage || "Start chatting...",
                             timestamp: new Date(chat.createdAt).toLocaleDateString(),
                             participants: `You & ${participantName}`,
                             participantName: participantName,
@@ -169,6 +173,31 @@ const MessagesPage = () => {
             }
         }
     }, [searchParams, conversations]);
+    
+    // Handle incoming chat notifications for conversation list updates
+    useEffect(() => {
+        if (chatNotifications.length > 0) {
+            chatNotifications.forEach(notification => {
+                if (notification.type === 'NEW_MESSAGE') {
+                    // Update the conversation list with the new last message
+                    setConversations(prevConversations => 
+                        prevConversations.map(conv => 
+                            conv.id === notification.chatId 
+                                ? { 
+                                    ...conv, 
+                                    lastMessage: notification.content,
+                                    timestamp: new Date().toLocaleDateString() 
+                                }
+                                : conv
+                        )
+                    );
+                }
+            });
+            
+            // Clear processed notifications
+            clearChatNotifications();
+        }
+    }, [chatNotifications, clearChatNotifications]);
 
     // Handle sending a new message
     const handleSendMessage = async () => {
