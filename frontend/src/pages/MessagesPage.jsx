@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import useWebSocket from '../hooks/useWebSocket';
 import useChatNotifications from '../hooks/useChatNotifications';
+import { unreadCountManager } from '../utils/unreadCountManager';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import ConversationList from '../components/messages/ConversationList';
@@ -197,6 +198,9 @@ const MessagesPage = () => {
                     // If notification is for the currently selected chat, automatically mark as read
                     if (notification.chatId === selectedChat) {
                         markChatAsRead(notification.chatId);
+                    } else {
+                        // For other chats, notify that unread count has changed
+                        unreadCountManager.notifyCountChanged();
                     }
                 }
             });
@@ -318,6 +322,9 @@ const MessagesPage = () => {
                             : conv
                     )
                 );
+                
+                // Notify that unread count has changed
+                unreadCountManager.notifyCountChanged();
             }
         } catch (error) {
             console.error('Error marking chat as read:', error);
