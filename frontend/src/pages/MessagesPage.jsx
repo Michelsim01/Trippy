@@ -198,10 +198,8 @@ const MessagesPage = () => {
                     // If notification is for the currently selected chat, automatically mark as read
                     if (notification.chatId === selectedChat) {
                         markChatAsRead(notification.chatId);
-                    } else {
-                        // For other chats, notify that unread count has changed
-                        unreadCountManager.notifyCountChanged();
                     }
+                    // Note: Global navbar update is now handled in App.jsx
                 }
             });
             
