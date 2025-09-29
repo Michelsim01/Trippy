@@ -230,23 +230,6 @@ const CalendarPage = () => {
         return `${startDate} ${startTime} - ${endDate} ${endTime}`;
     };
 
-    const formatEventDate = (dateTime) => {
-        const date = new Date(dateTime);
-        return date.toLocaleDateString('en-US', {
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
-
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: 'USD'
-        }).format(price);
-    };
-
     // Utility function to check if event is cancelled
     const isEventCancelled = (event) => {
         return event.status === 'CANCELLED';
@@ -652,38 +635,38 @@ const CalendarPage = () => {
     };
 
     // Get events for the left panel based on current view
-const getLeftPanelEvents = () => {
-    if (calendarView === 'day') {
-        return getCurrentDayEvents();
-    } else if (calendarView === 'week') {
-        const weekDays = generateWeekDays();
-        const startDate = weekDays[0].date;
-        const endDate = new Date(weekDays[6].date);
-        endDate.setHours(23, 59, 59, 999); // Set to end of day
+    const getLeftPanelEvents = () => {
+        if (calendarView === 'day') {
+            return getCurrentDayEvents();
+        } else if (calendarView === 'week') {
+            const weekDays = generateWeekDays();
+            const startDate = weekDays[0].date;
+            const endDate = new Date(weekDays[6].date);
+            endDate.setHours(23, 59, 59, 999); // Set to end of day
 
-        return filteredEvents.filter(event => {
-            const eventStart = new Date(event.startDateTime);
-            const eventEnd = new Date(event.endDateTime);
-            
-            // Include if event starts, ends, or spans through the week period
-            return eventStart <= endDate && eventEnd >= startDate;
-        });
-    } else {
-        // Month view - get all events that overlap with the current month
-        const year = currentDate.getFullYear();
-        const month = currentDate.getMonth();
-        const monthStart = new Date(year, month, 1);
-        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+            return filteredEvents.filter(event => {
+                const eventStart = new Date(event.startDateTime);
+                const eventEnd = new Date(event.endDateTime);
 
-        return filteredEvents.filter(event => {
-            const eventStart = new Date(event.startDateTime);
-            const eventEnd = new Date(event.endDateTime);
-            
-            // Include if event starts, ends, or spans through the current month
-            return eventStart <= monthEnd && eventEnd >= monthStart;
-        });
-    }
-};
+                // Include if event starts, ends, or spans through the week period
+                return eventStart <= endDate && eventEnd >= startDate;
+            });
+        } else {
+            // Month view - get all events that overlap with the current month
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const monthStart = new Date(year, month, 1);
+            const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
+
+            return filteredEvents.filter(event => {
+                const eventStart = new Date(event.startDateTime);
+                const eventEnd = new Date(event.endDateTime);
+
+                // Include if event starts, ends, or spans through the current month
+                return eventStart <= monthEnd && eventEnd >= monthStart;
+            });
+        }
+    };
 
     // Get color based on event type and state
     const getEventColor = (userRole, isPast, isCancelled = false) => {
@@ -1520,11 +1503,6 @@ const getLeftPanelEvents = () => {
                                                                                         <p className="text-xs opacity-75 mb-1 transition-opacity duration-300 group-hover:opacity-100" style={{ color: '#000000' }}>
                                                                                             📍 {event.location}
                                                                                         </p>
-                                                                                        {position.height > 120 && (
-                                                                                            <p className="text-xs opacity-75 transition-opacity duration-300 group-hover:opacity-100" style={{ color: '#000000' }}>
-                                                                                                💲 {formatPrice(event.price)}
-                                                                                            </p>
-                                                                                        )}
                                                                                     </>
                                                                                 )}
                                                                                 {isCancelled && (
@@ -1898,11 +1876,6 @@ const getLeftPanelEvents = () => {
                                                                         <p className="text-neutrals-4 mt-0.5 transition-opacity duration-200 group-hover:opacity-100" style={{ fontSize: '9px' }}>
                                                                             {position.startTime} - {position.endTime}
                                                                         </p>
-                                                                        {mobileHeight > 60 && event.price && (
-                                                                            <p className="text-neutrals-3 mt-1 transition-opacity duration-200 group-hover:opacity-100" style={{ fontSize: '9px' }}>
-                                                                                {formatPrice(event.price)}
-                                                                            </p>
-                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -2030,7 +2003,6 @@ const getLeftPanelEvents = () => {
                                                         )}
                                                     </div>
                                                     <p className="text-xs text-neutrals-4 mb-1">
-                                                        {formatEventDate(event.startDateTime)}
                                                         {event.isMultiDay && (
                                                             <span className="ml-2 text-blue-600">Multi-day</span>
                                                         )}
