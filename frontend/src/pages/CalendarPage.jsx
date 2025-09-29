@@ -1,16 +1,3 @@
-/**
- * Enhanced CalendarPage Component
- * 
- * Features:
- * 1. Visual indication for cancelled bookings - Events with status 'cancelled' display with strikethrough text and reduced opacity
- * 2. Multi-day event support - Events spanning multiple days appear as continuous bars in month/week views
- * 3. Overlapping event handling - Events at the same time are positioned side-by-side in day view to prevent visual overlap
- * 4. Full title display - Event titles wrap to multiple lines instead of truncating, so users can see the complete title
- * 
- * The component maintains existing functionality while adding these visual enhancements across all view types (Month/Week/Day).
- * Calendar cell heights have been increased to accommodate multi-line event titles.
- */
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Crown, Ticket, Eye, Calendar, Clock } from 'lucide-react';
@@ -73,31 +60,68 @@ const CalendarPage = () => {
             const year = currentDate.getFullYear();
             const month = currentDate.getMonth() + 1;
 
+            // Fetch events for current month AND adjacent months to catch spanning events
+            const currentMonthData = await calendarApi.getUserMonthlyEvents(userId, year, month);
 
-            // Debug: Check user's created experiences
-            if (isTourGuide && userId) {
-                try {
-                    const expResponse = await fetch(`http://localhost:8080/api/experiences/guide/${userId}`, {
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    const experiences = await expResponse.json();
-                } catch (expError) {
-                }
-            }
+            // Fetch previous month to catch events that end in current month
+            const prevMonth = month === 1 ? 12 : month - 1;
+            const prevYear = month === 1 ? year - 1 : year;
+            const prevMonthData = await calendarApi.getUserMonthlyEvents(userId, prevYear, prevMonth);
 
-            const data = await calendarApi.getUserMonthlyEvents(userId, year, month);
+            // Fetch next month to catch events that start in current month but end in next
+            const nextMonth = month === 12 ? 1 : month + 1;
+            const nextYear = month === 12 ? year + 1 : year;
+            const nextMonthData = await calendarApi.getUserMonthlyEvents(userId, nextYear, nextMonth);
 
+            if (currentMonthData.success) {
+                // Combine all events and filter for current month relevance
+                const allParticipantEvents = [
+                    ...(currentMonthData.participantEvents || []),
+                    ...(prevMonthData.success ? prevMonthData.participantEvents || [] : []),
+                    ...(nextMonthData.success ? nextMonthData.participantEvents || [] : [])
+                ];
 
-            if (data.success) {
+                const allGuideEvents = [
+                    ...(currentMonthData.guideEvents || []),
+                    ...(prevMonthData.success ? prevMonthData.guideEvents || [] : []),
+                    ...(nextMonthData.success ? nextMonthData.guideEvents || [] : [])
+                ];
+
+                // Filter events that are relevant to current month
+                const currentMonthStart = new Date(year, month - 1, 1);
+                const currentMonthEnd = new Date(year, month, 0, 23, 59, 59, 999);
+
+                const relevantParticipantEvents = allParticipantEvents.filter(event => {
+                    const eventStart = new Date(event.startDateTime);
+                    const eventEnd = new Date(event.endDateTime);
+
+                    // Include if event starts, ends, or spans through current month
+                    return (eventStart <= currentMonthEnd && eventEnd >= currentMonthStart);
+                });
+
+                const relevantGuideEvents = allGuideEvents.filter(event => {
+                    const eventStart = new Date(event.startDateTime);
+                    const eventEnd = new Date(event.endDateTime);
+
+                    // Include if event starts, ends, or spans through current month
+                    return (eventStart <= currentMonthEnd && eventEnd >= currentMonthStart);
+                });
+
+                // Remove duplicates by event ID
+                const uniqueParticipantEvents = relevantParticipantEvents.filter((event, index, self) =>
+                    index === self.findIndex(e => e.id === event.id)
+                );
+
+                const uniqueGuideEvents = relevantGuideEvents.filter((event, index, self) =>
+                    index === self.findIndex(e => e.id === event.id)
+                );
+
                 setEvents({
-                    participantEvents: data.participantEvents || [],
-                    guideEvents: data.guideEvents || []
+                    participantEvents: uniqueParticipantEvents,
+                    guideEvents: uniqueGuideEvents
                 });
             } else {
-                setError(data.error || 'Failed to fetch calendar data');
+                setError(currentMonthData.error || 'Failed to fetch calendar data');
             }
         } catch (err) {
             console.error('Error fetching calendar data:', err);
@@ -314,9 +338,8 @@ const CalendarPage = () => {
 
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - firstDay.getDay());
 
+        // Only show current month days, no adjacent month dates
         const days = [];
         const eventsByDate = {};
 
@@ -325,44 +348,81 @@ const CalendarPage = () => {
             if (isMultiDayEvent(event)) {
                 const spanDates = getEventDateSpan(event);
                 spanDates.forEach((date, index) => {
-                    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                    // Only include dates that belong to current month
+                    if (date.getMonth() === month && date.getFullYear() === year) {
+                        const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
 
-                    // Add metadata for multi-day display
-                    const eventWithMeta = {
-                        ...event,
-                        isMultiDay: true,
-                        isFirstDay: index === 0,
-                        isLastDay: index === spanDates.length - 1,
-                        dayIndex: index,
-                        totalDays: spanDates.length,
-                        spanId: `${event.id}-span-${index}`
-                    };
-                    eventsByDate[dateKey].push(eventWithMeta);
+                        // Add metadata for multi-day display
+                        const eventWithMeta = {
+                            ...event,
+                            isMultiDay: true,
+                            isFirstDay: index === 0,
+                            isLastDay: index === spanDates.length - 1,
+                            dayIndex: index,
+                            totalDays: spanDates.length,
+                            spanId: `${event.id}-span-${index}`,
+                            // Add flags to indicate if event continues beyond visible month
+                            continuesFromPrevMonth: index === 0 && date > new Date(event.startDateTime),
+                            continuesToNextMonth: index === spanDates.length - 1 && date < new Date(event.endDateTime)
+                        };
+                        eventsByDate[dateKey].push(eventWithMeta);
+                    }
                 });
             } else {
                 const eventDate = new Date(event.startDateTime);
-                const dateKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-                if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
-                eventsByDate[dateKey].push({ ...event, isMultiDay: false });
+                // Only include events that belong to current month
+                if (eventDate.getMonth() === month && eventDate.getFullYear() === year) {
+                    const dateKey = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+                    if (!eventsByDate[dateKey]) eventsByDate[dateKey] = [];
+                    eventsByDate[dateKey].push({ ...event, isMultiDay: false });
+                }
             }
         });
 
-        for (let i = 0; i < 42; i++) {
-            const day = new Date(startDate);
-            day.setDate(startDate.getDate() + i);
+        // Calculate how many days we need to show for a clean grid
+        const totalDaysInMonth = lastDay.getDate();
+        const firstDayOfWeek = firstDay.getDay();
 
-            const dateKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+        // Add empty cells for days before month starts
+        for (let i = 0; i < firstDayOfWeek; i++) {
+            days.push({
+                date: null,
+                day: null,
+                isCurrentMonth: false,
+                isToday: false,
+                events: [],
+                isEmpty: true
+            });
+        }
+
+        // Add all days of current month
+        for (let day = 1; day <= totalDaysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const dayEvents = eventsByDate[dateKey] || [];
-            const isCurrentMonth = day.getMonth() === month;
-            const isToday = day.toDateString() === new Date().toDateString();
+            const isToday = date.toDateString() === new Date().toDateString();
 
             days.push({
-                date: day,
-                day: day.getDate(),
-                isCurrentMonth,
+                date: date,
+                day: day,
+                isCurrentMonth: true,
                 isToday,
-                events: dayEvents
+                events: dayEvents,
+                isEmpty: false
+            });
+        }
+
+        // Add empty cells to complete the grid (make it 6 weeks = 42 cells)
+        const remainingCells = 42 - days.length;
+        for (let i = 0; i < remainingCells; i++) {
+            days.push({
+                date: null,
+                day: null,
+                isCurrentMonth: false,
+                isToday: false,
+                events: [],
+                isEmpty: true
             });
         }
 
@@ -592,31 +652,38 @@ const CalendarPage = () => {
     };
 
     // Get events for the left panel based on current view
-    const getLeftPanelEvents = () => {
-        if (calendarView === 'day') {
-            return getCurrentDayEvents();
-        } else if (calendarView === 'week') {
-            const weekDays = generateWeekDays();
-            const startDate = weekDays[0].date;
-            const endDate = weekDays[6].date;
+const getLeftPanelEvents = () => {
+    if (calendarView === 'day') {
+        return getCurrentDayEvents();
+    } else if (calendarView === 'week') {
+        const weekDays = generateWeekDays();
+        const startDate = weekDays[0].date;
+        const endDate = new Date(weekDays[6].date);
+        endDate.setHours(23, 59, 59, 999); // Set to end of day
 
-            return filteredEvents.filter(event => {
-                const eventDate = new Date(event.startDateTime);
-                return eventDate >= startDate && eventDate <= endDate;
-            });
-        } else {
-            // Month view - get all events for the current month
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const firstDay = new Date(year, month, 1);
-            const lastDay = new Date(year, month + 1, 0);
+        return filteredEvents.filter(event => {
+            const eventStart = new Date(event.startDateTime);
+            const eventEnd = new Date(event.endDateTime);
+            
+            // Include if event starts, ends, or spans through the week period
+            return eventStart <= endDate && eventEnd >= startDate;
+        });
+    } else {
+        // Month view - get all events that overlap with the current month
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const monthStart = new Date(year, month, 1);
+        const monthEnd = new Date(year, month + 1, 0, 23, 59, 59, 999);
 
-            return filteredEvents.filter(event => {
-                const eventDate = new Date(event.startDateTime);
-                return eventDate >= firstDay && eventDate <= lastDay;
-            });
-        }
-    };
+        return filteredEvents.filter(event => {
+            const eventStart = new Date(event.startDateTime);
+            const eventEnd = new Date(event.endDateTime);
+            
+            // Include if event starts, ends, or spans through the current month
+            return eventStart <= monthEnd && eventEnd >= monthStart;
+        });
+    }
+};
 
     // Get color based on event type and state
     const getEventColor = (userRole, isPast, isCancelled = false) => {
@@ -936,7 +1003,7 @@ const CalendarPage = () => {
                                                             </div>
                                                         ) : (
                                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                                                <path strokeLineCap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                                                             </svg>
                                                         )}
                                                     </button>
@@ -960,6 +1027,18 @@ const CalendarPage = () => {
                                                 {/* Calendar days */}
                                                 <div className="grid grid-cols-7 gap-1 transition-all duration-300 min-w-0">
                                                     {generateCalendarDays().map((dayInfo, i) => {
+                                                        // Handle empty cells
+                                                        if (dayInfo.isEmpty) {
+                                                            return (
+                                                                <div
+                                                                    key={i}
+                                                                    className="min-h-[100px] lg:min-h-[140px] p-1 lg:p-2 bg-neutrals-8"
+                                                                >
+                                                                    {/* Empty cell */}
+                                                                </div>
+                                                            );
+                                                        }
+
                                                         const dayKey = `${dayInfo.date.getFullYear()}-${dayInfo.date.getMonth()}-${dayInfo.date.getDate()}`;
                                                         const isExpanded = isDayExpanded(dayKey);
                                                         const eventsToShow = isExpanded ? dayInfo.events : dayInfo.events.slice(0, 2);
@@ -967,11 +1046,9 @@ const CalendarPage = () => {
                                                         return (
                                                             <div
                                                                 key={i}
-                                                                className={`min-h-[100px] lg:min-h-[140px] p-1 lg:p-2 border border-neutrals-7 transition-all duration-200 overflow-hidden ${dayInfo.isCurrentMonth ? 'bg-white hover:bg-neutrals-8' : 'bg-neutrals-8'
-                                                                    } ${dayInfo.isToday ? 'bg-green-50 ring-2 ring-green-500 border-green-500' : ''} ${isExpanded ? 'min-h-auto' : ''}`}
+                                                                className={`min-h-[100px] lg:min-h-[140px] p-1 lg:p-2 border border-neutrals-7 transition-all duration-200 overflow-hidden bg-white hover:bg-neutrals-8 ${dayInfo.isToday ? 'bg-green-50 ring-2 ring-green-500 border-green-500' : ''} ${isExpanded ? 'min-h-auto' : ''}`}
                                                             >
-                                                                <div className={`text-sm mb-1 ${dayInfo.isCurrentMonth ? 'text-neutrals-1' : 'text-neutrals-5'
-                                                                    } ${dayInfo.isToday ? 'font-bold text-green-700' : ''}`}>
+                                                                <div className={`text-sm mb-1 text-neutrals-1 ${dayInfo.isToday ? 'font-bold text-green-700' : ''}`}>
                                                                     {dayInfo.day}
                                                                 </div>
                                                                 <div className="space-y-1">
@@ -985,10 +1062,12 @@ const CalendarPage = () => {
                                                                                 key={event.spanId || event.id}
                                                                                 onClick={() => handleEventClick(event)}
                                                                                 className={`text-xs p-1 rounded leading-tight overflow-hidden flex items-center gap-1 cursor-pointer transition-all duration-200 ease-in-out ${event.isMultiDay ? (
-                                                                                        event.isFirstDay ? 'rounded-r-none' :
-                                                                                            event.isLastDay ? 'rounded-l-none' :
-                                                                                                'rounded-none'
-                                                                                    ) : ''
+                                                                                    event.continuesFromPrevMonth ? 'rounded-l-none border-l-2 border-dashed' :
+                                                                                        event.continuesToNextMonth ? 'rounded-r-none border-r-2 border-dashed' :
+                                                                                            event.isFirstDay ? 'rounded-r-none' :
+                                                                                                event.isLastDay ? 'rounded-l-none' :
+                                                                                                    'rounded-none'
+                                                                                ) : ''
                                                                                     }`}
                                                                                 title={`${event.title} - ${event.userRole === 'guide' ? 'Leading' : 'Participating'}${isCancelled ? ' (Cancelled)' : ''
                                                                                     }${event.isMultiDay ? ` (Day ${event.dayIndex + 1}/${event.totalDays})` : ''}`}
@@ -999,13 +1078,13 @@ const CalendarPage = () => {
                                                                                     overflowWrap: 'break-word',
                                                                                     whiteSpace: 'normal',
                                                                                     backgroundColor: `${eventColor}20`,
-                                                                                    borderLeft: event.isFirstDay || !event.isMultiDay ? `3px solid ${eventColor}` : 'none',
-                                                                                    borderRight: event.isLastDay || !event.isMultiDay ? 'none' : `1px solid ${eventColor}`,
+                                                                                    borderLeft: (event.isFirstDay || !event.isMultiDay) && !event.continuesFromPrevMonth ? `3px solid ${eventColor}` : 'none',
+                                                                                    borderRight: (event.isLastDay || !event.isMultiDay) && !event.continuesToNextMonth ? 'none' : `1px solid ${eventColor}`,
                                                                                     color: '#000000',
                                                                                     textDecoration: isCancelled ? 'line-through' : 'none',
                                                                                     opacity: isCancelled ? 0.7 : 1,
-                                                                                    marginLeft: event.isMultiDay && !event.isFirstDay ? '-1px' : '0',
-                                                                                    marginRight: event.isMultiDay && !event.isLastDay ? '-1px' : '0'
+                                                                                    marginLeft: event.isMultiDay && !event.isFirstDay && !event.continuesFromPrevMonth ? '-1px' : '0',
+                                                                                    marginRight: event.isMultiDay && !event.isLastDay && !event.continuesToNextMonth ? '-1px' : '0'
                                                                                 }}
                                                                                 onMouseEnter={(e) => {
                                                                                     // Highlight all parts of multi-day event on hover
@@ -1040,8 +1119,11 @@ const CalendarPage = () => {
                                                                                 }}
                                                                                 data-event-id={event.id}
                                                                             >
-                                                                                {(event.isFirstDay || !event.isMultiDay) && (
+                                                                                {((event.isFirstDay || !event.isMultiDay) && !event.continuesFromPrevMonth) && (
                                                                                     <EventIcon size={10} className="flex-shrink-0 mt-0.5" color={eventColor} />
+                                                                                )}
+                                                                                {event.continuesFromPrevMonth && (
+                                                                                    <span className="text-xs opacity-60">...</span>
                                                                                 )}
                                                                                 <span className={`${isCancelled ? 'line-through' : ''}`} style={{
                                                                                     wordBreak: 'break-word',
@@ -1174,10 +1256,10 @@ const CalendarPage = () => {
                                                                         <div
                                                                             key={event.spanId || event.id}
                                                                             className={`p-2 rounded text-xs flex items-start gap-1 cursor-pointer transition-all duration-200 ease-in-out ${event.isMultiDay ? (
-                                                                                    event.isFirstDay ? 'rounded-r-none' :
-                                                                                        event.isLastDay ? 'rounded-l-none' :
-                                                                                            'rounded-none'
-                                                                                ) : ''
+                                                                                event.isFirstDay ? 'rounded-r-none' :
+                                                                                    event.isLastDay ? 'rounded-l-none' :
+                                                                                        'rounded-none'
+                                                                            ) : ''
                                                                                 }`}
                                                                             onClick={() => handleEventClick(event)}
                                                                             style={{
