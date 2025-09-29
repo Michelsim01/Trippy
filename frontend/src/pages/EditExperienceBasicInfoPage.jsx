@@ -25,7 +25,12 @@ export default function EditExperienceBasicInfoPage() {
     isFieldRestricted,
     loadExistingExperience,
     saveCurrentChanges,
-    savePartialChanges
+    savePartialChanges,
+    // New booking status functionality
+    realBookingStatus,
+    useRealBookingData,
+    loadBookingStatus,
+    toggleBookingDataSource
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -77,6 +82,16 @@ export default function EditExperienceBasicInfoPage() {
           console.error('Failed to load experience data:', error);
         }
       }
+
+      // Load booking status if in edit mode
+      if (id && isEditMode) {
+        try {
+          await loadBookingStatus(id);
+        } catch (error) {
+          console.error('Failed to load booking status:', error);
+        }
+      }
+
       setIsLoading(false);
     };
     loadData();

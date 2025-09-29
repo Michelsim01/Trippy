@@ -20,7 +20,14 @@ export default function EditExperienceAvailabilityPage() {
     toggleBookings,
     isFieldRestricted,
     saveCurrentChanges,
-    loadExistingExperience
+    loadExistingExperience,
+    // New booking status functionality
+    realBookingStatus,
+    scheduleBookingStatuses,
+    useRealBookingData,
+    loadBookingStatus,
+    isScheduleEditable,
+    toggleBookingDataSource
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -51,11 +58,21 @@ export default function EditExperienceAvailabilityPage() {
           console.error('Failed to load experience data:', error);
         }
       }
+
+      // Load booking status if in edit mode
+      if (id && isEditMode) {
+        try {
+          await loadBookingStatus(id);
+        } catch (error) {
+          console.error('Failed to load booking status:', error);
+        }
+      }
+
       setIsLoading(false);
     };
 
     initializeData();
-  }, [id, isEditMode, experienceId, loadExistingExperience]);
+  }, [id, isEditMode, experienceId, loadExistingExperience, loadBookingStatus]);
 
   // Initialize master schedule from context data
   useEffect(() => {
@@ -73,11 +90,10 @@ export default function EditExperienceAvailabilityPage() {
   });
 
 
-  // Check if schedule can be edited/deleted
-  const isScheduleEditable = (schedule) => {
-    // Red status: has bookings or mock bookings enabled
-    // Green status: editable
-    return !hasBookings && !(schedule.hasBookings || false);
+  // Check if schedule can be edited/deleted (use new context method)
+  const checkScheduleEditable = (schedule) => {
+    // Use the context method which handles both real and mock booking data
+    return isScheduleEditable(schedule.scheduleId || schedule.id);
   };
 
   // Calculate end time from start time and duration
@@ -333,6 +349,77 @@ export default function EditExperienceAvailabilityPage() {
             </div>
           </div>
 
+          {/* Booking Data Source Toggle */}
+          <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Data Source</h3>
+                <p className="text-neutrals-4 text-sm">
+                  Choose between simulated booking data or real database data for testing field restrictions.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-neutrals-3">Mock Data</span>
+                <button
+                  onClick={toggleBookingDataSource}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    useRealBookingData ? 'bg-blue-600' : 'bg-neutrals-5'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      useRealBookingData ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+                <span className="text-sm text-neutrals-3">Real Data</span>
+              </div>
+            </div>
+
+            {/* Show current status */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-medium text-neutrals-2">Current Status:</h4>
+                  <p className="text-sm text-neutrals-4">
+                    {useRealBookingData ? 'Using real booking data from database' : 'Using simulated booking data'}
+                  </p>
+                </div>
+                <div className="text-right">
+                  {useRealBookingData && realBookingStatus ? (
+                    <div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        realBookingStatus.hasActiveBookings
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {realBookingStatus.hasActiveBookings ? 'Has Active Bookings' : 'No Active Bookings'}
+                      </span>
+                      <p className="text-xs text-neutrals-4 mt-1">
+                        Global fields: {realBookingStatus.restrictGlobalFields ? 'Restricted' : 'Editable'}
+                      </p>
+                    </div>
+                  ) : !useRealBookingData ? (
+                    <div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        hasBookings
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {hasBookings ? 'Mock Bookings ON' : 'Mock Bookings OFF'}
+                      </span>
+                      <p className="text-xs text-neutrals-4 mt-1">
+                        Global fields: {hasBookings ? 'Restricted' : 'Editable'}
+                      </p>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-neutrals-4">Loading real data...</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Master Schedule Settings */}
           <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
             <div className="mb-6">
@@ -433,7 +520,7 @@ export default function EditExperienceAvailabilityPage() {
             ) : (
               <div className="space-y-4">
                 {sortedSchedules.map((schedule, index) => {
-                  const isEditable = isScheduleEditable(schedule);
+                  const isEditable = checkScheduleEditable(schedule);
                   return (
                     <div
                       key={schedule.scheduleId || schedule.id || index}

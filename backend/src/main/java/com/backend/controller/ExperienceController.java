@@ -13,6 +13,7 @@ import com.backend.repository.BookingRepository;
 import com.backend.repository.PersonalChatRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.service.ExperienceService;
+import com.backend.entity.BookingStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -181,8 +182,7 @@ public class ExperienceController {
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "success", false,
-                        "message", "Invalid experience ID"
-                ));
+                        "message", "Invalid experience ID"));
             }
 
             // Check if experience exists
@@ -200,8 +200,7 @@ public class ExperienceController {
             if (guide == null || !guide.getEmail().equals(userEmail)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
                         "success", false,
-                        "message", "You are not authorized to delete this experience"
-                ));
+                        "message", "You are not authorized to delete this experience"));
             }
 
             // Check if experience has any bookings
@@ -209,15 +208,14 @@ public class ExperienceController {
             if (hasBookings) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
                         "success", false,
-                        "message", "Cannot delete experience with existing bookings"
-                ));
+                        "message", "Cannot delete experience with existing bookings"));
             }
 
             // Nullify experience references in personal chats to preserve chat history
             List<com.backend.entity.PersonalChat> relatedChats = personalChatRepository.findAll()
-                .stream()
-                .filter(chat -> chat.getExperience() != null && chat.getExperience().getExperienceId().equals(id))
-                .collect(Collectors.toList());
+                    .stream()
+                    .filter(chat -> chat.getExperience() != null && chat.getExperience().getExperienceId().equals(id))
+                    .collect(Collectors.toList());
 
             for (com.backend.entity.PersonalChat chat : relatedChats) {
                 // Preserve the original experience title before nullifying the reference
@@ -233,14 +231,12 @@ public class ExperienceController {
 
             return ResponseEntity.ok(Map.of(
                     "success", true,
-                    "message", "Experience deleted successfully"
-            ));
+                    "message", "Experience deleted successfully"));
 
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
-                    "message", "Failed to delete experience: " + e.getMessage()
-            ));
+                    "message", "Failed to delete experience: " + e.getMessage()));
         }
     }
 
@@ -275,7 +271,8 @@ public class ExperienceController {
 
     @GetMapping("/{id}/schedules")
     public List<Map<String, Object>> getSchedulesByExperienceId(@PathVariable Long id) {
-        List<ExperienceSchedule> schedules = experienceScheduleRepository.findByExperience_ExperienceIdOrderByStartDateTimeAsc(id);
+        List<ExperienceSchedule> schedules = experienceScheduleRepository
+                .findByExperience_ExperienceIdOrderByStartDateTimeAsc(id);
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (ExperienceSchedule schedule : schedules) {
@@ -391,6 +388,92 @@ public class ExperienceController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
+    // Booking status endpoints for edit experience restrictions
+    @GetMapping("/{id}/booking-status")
+    public ResponseEntity<Map<String, Object>> getExperienceBookingStatus(@PathVariable Long id) {
+        try {
+            // Check if experience exists
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check for active bookings (CONFIRMED and COMPLETED only)
+            List<BookingStatus> activeStatuses = List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED);
+
+            // Get all schedules for this experience
+            List<ExperienceSchedule> schedules = experienceScheduleRepository
+                    .findByExperience_ExperienceIdOrderByStartDateTimeAsc(id);
+
+            boolean hasActiveBookings = false;
+            for (ExperienceSchedule schedule : schedules) {
+                if (!bookingRepository.findByScheduleIdAndStatusIn(schedule.getScheduleId(), activeStatuses).isEmpty()) {
+                    hasActiveBookings = true;
+                    break;
+                }
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("experienceId", id);
+            response.put("hasActiveBookings", hasActiveBookings);
+            response.put("restrictGlobalFields", hasActiveBookings); // price, country, participantsAllowed
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to check booking status: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{id}/schedules/booking-status")
+    public ResponseEntity<Map<String, Object>> getScheduleBookingStatuses(@PathVariable Long id) {
+        try {
+            // Check if experience exists
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Get all schedules for this experience
+            List<ExperienceSchedule> schedules = experienceScheduleRepository
+                    .findByExperience_ExperienceIdOrderByStartDateTimeAsc(id);
+
+            // Check for active bookings (CONFIRMED and COMPLETED only)
+            List<BookingStatus> activeStatuses = List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED);
+
+            List<Map<String, Object>> scheduleStatuses = new ArrayList<>();
+            boolean hasAnyActiveBookings = false;
+
+            for (ExperienceSchedule schedule : schedules) {
+                boolean hasActiveBookings = !bookingRepository
+                        .findByScheduleIdAndStatusIn(schedule.getScheduleId(), activeStatuses).isEmpty();
+
+                if (hasActiveBookings) {
+                    hasAnyActiveBookings = true;
+                }
+
+                Map<String, Object> scheduleStatus = new HashMap<>();
+                scheduleStatus.put("scheduleId", schedule.getScheduleId());
+                scheduleStatus.put("startDateTime", schedule.getStartDateTime());
+                scheduleStatus.put("endDateTime", schedule.getEndDateTime());
+                scheduleStatus.put("hasActiveBookings", hasActiveBookings);
+                scheduleStatus.put("canEdit", !hasActiveBookings);
+                scheduleStatus.put("canDelete", !hasActiveBookings);
+
+                scheduleStatuses.add(scheduleStatus);
+            }
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("experienceId", id);
+            response.put("schedules", scheduleStatuses);
+            response.put("hasAnyActiveBookings", hasAnyActiveBookings);
+            response.put("restrictGlobalFields", hasAnyActiveBookings); // price, country, participantsAllowed
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                    "error", "Failed to check schedule booking statuses: " + e.getMessage()));
         }
     }
 
