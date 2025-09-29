@@ -3,9 +3,6 @@ import { Star, Trash2, Edit3 } from 'lucide-react';
 import { useReviews } from '../../contexts/ReviewContext';
 import LikeButton from '../reviews/LikeButton';
 
-<<<<<<< Updated upstream
-const MyReviewsTab = ({ touristReviews }) => {
-=======
 const MyReviewsTab = ({ touristReviews, loading }) => {
     const { deleteReview, loading: reviewLoading } = useReviews();
 
@@ -27,7 +24,6 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
         }
     };
 
->>>>>>> Stashed changes
     const renderStars = (rating) => {
         return Array.from({ length: 5 }, (_, i) => (
             <Star
@@ -36,6 +32,14 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
             />
         ));
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center py-8">
+                <div className="text-neutrals-4">Loading reviews...</div>
+            </div>
+        );
+    }
 
     return (
         <div>
@@ -52,7 +56,6 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                     </select>
                 </div>
             </div>
-<<<<<<< Updated upstream
             
             <div className="space-y-4">
                 {touristReviews.map((review) => (
@@ -83,8 +86,13 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                                         <button className="btn btn-outline-accent btn-sm">
                                             Delete
                                         </button>
-=======
-
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ))}
+            </div>
             {touristReviews.length === 0 ? (
                 <div className="text-center py-8 bg-gray-50 rounded-lg">
                     <div className="text-gray-400 mb-2">
@@ -139,16 +147,15 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                                                 Delete
                                             </button>
                                         </div>
->>>>>>> Stashed changes
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
-};
+}
 
 export default MyReviewsTab;

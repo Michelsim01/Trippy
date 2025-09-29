@@ -276,4 +276,19 @@ public class PersonalChatController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+    
+    @GetMapping("/user/{userId}/unread-count")
+    public ResponseEntity<Integer> getTotalUnreadCount(@PathVariable Long userId) {
+        try {
+            List<ChatUnreadCount> unreadCounts = chatUnreadCountRepository.findByUserId(userId);
+            Integer totalUnread = unreadCounts.stream()
+                .mapToInt(ChatUnreadCount::getUnreadCount)
+                .sum();
+            
+            return ResponseEntity.ok(totalUnread);
+        } catch (Exception e) {
+            System.err.println("Error getting total unread count for user " + userId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

@@ -1,36 +1,43 @@
 package com.backend.controller;
 
 import com.backend.entity.Review;
-<<<<<<< Updated upstream
-import com.backend.repository.ReviewRepository;
-=======
-import com.backend.entity.ReviewLike;
 import com.backend.entity.Booking;
 import com.backend.entity.User;
 import com.backend.entity.Experience;
 import com.backend.entity.TripPoints;
 import com.backend.repository.ReviewRepository;
+import com.backend.entity.ReviewLike;
+import com.backend.entity.Booking;
+import com.backend.entity.User;
+import com.backend.entity.Experience;
+import com.backend.entity.TripPoints;
+import com.backend.repository.BookingRepository;
+import com.backend.repository.UserRepository;
+import com.backend.repository.ExperienceRepository;
+import com.backend.service.TripPointsService;
 import com.backend.repository.ReviewLikeRepository;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.ExperienceRepository;
 import com.backend.service.TripPointsService;
->>>>>>> Stashed changes
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reviews")
+@CrossOrigin(origins = "http://localhost:5173")
 public class ReviewController {
     @Autowired
     private ReviewRepository reviewRepository;
-
-<<<<<<< Updated upstream
-=======
+    
     @Autowired
     private BookingRepository bookingRepository;
 
@@ -46,7 +53,6 @@ public class ReviewController {
     @Autowired
     private ReviewLikeRepository reviewLikeRepository;
 
->>>>>>> Stashed changes
     @GetMapping
     public ResponseEntity<List<Review>> getAllReviews() {
         try {
@@ -77,8 +83,6 @@ public class ReviewController {
         }
     }
 
-<<<<<<< Updated upstream
-=======
     @GetMapping("/user/{userId}")
     public ResponseEntity<?> getUserReviews(@PathVariable Long userId) {
         try {
@@ -98,7 +102,6 @@ public class ReviewController {
                 reviewMap.put("tripPointsEarned", review.getTripPointsEarned());
                 reviewMap.put("createdAt", review.getCreatedAt());
                 reviewMap.put("updatedAt", review.getUpdatedAt());
-                reviewMap.put("likeCount", review.getLikeCount() != null ? review.getLikeCount() : 0);
 
                 // Add experience info safely
                 if (review.getExperience() != null) {
@@ -149,7 +152,6 @@ public class ReviewController {
                 reviewMap.put("tripPointsEarned", review.getTripPointsEarned());
                 reviewMap.put("createdAt", review.getCreatedAt());
                 reviewMap.put("updatedAt", review.getUpdatedAt());
-                reviewMap.put("likeCount", review.getLikeCount() != null ? review.getLikeCount() : 0);
 
                 // Add reviewer info safely
                 if (review.getReviewer() != null) {
@@ -273,18 +275,84 @@ public class ReviewController {
         }
     }
 
->>>>>>> Stashed changes
     @PostMapping
-    public ResponseEntity<Review> createReview(@RequestBody Review review) {
+    public ResponseEntity<?> createReview(@RequestBody Map<String, Object> reviewData) {
         try {
-            if (review == null) {
-                return ResponseEntity.badRequest().build();
+            System.out.println("DEBUG: Received review data: " + reviewData);
+
+            // Validate required fields
+            if (reviewData == null ||
+                !reviewData.containsKey("bookingId") ||
+                !reviewData.containsKey("reviewerId") ||
+                !reviewData.containsKey("rating")) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Missing required fields: bookingId, reviewerId, rating"));
             }
+
+            // Extract data
+            Long bookingId = Long.valueOf(reviewData.get("bookingId").toString());
+            Long reviewerId = Long.valueOf(reviewData.get("reviewerId").toString());
+            Integer rating = Integer.valueOf(reviewData.get("rating").toString());
+            String title = (String) reviewData.get("title");
+            String comment = (String) reviewData.get("comment");
+
+            // Validate rating range
+            if (rating < 1 || rating > 5) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Rating must be between 1 and 5"));
+            }
+
+            // Fetch required entities
+            Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+            if (!bookingOpt.isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Booking not found"));
+            }
+
+            Optional<User> reviewerOpt = userRepository.findById(reviewerId);
+            if (!reviewerOpt.isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Reviewer not found"));
+            }
+
+            Booking booking = bookingOpt.get();
+            User reviewer = reviewerOpt.get();
+
+            // Get experience from booking
+            Experience experience = booking.getExperienceSchedule().getExperience();
+            if (experience == null) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Experience not found for this booking"));
+            }
+
+            // Verify booking is completed
+            if (!"COMPLETED".equals(booking.getStatus().toString())) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Can only review completed bookings"));
+            }
+
+            // Check if review already exists for this booking
+            if (reviewRepository.existsByBooking_BookingId(bookingId)) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Review already exists for this booking"));
+            }
+
+            // Calculate TripPoints based on booking total amount (rounded down to whole number)
+            Integer pointsToAward = booking.getTotalAmount().intValue(); // This automatically rounds down
             
+            // Create new review
+            Review review = new Review();
+            review.setBooking(booking);
+            review.setReviewer(reviewer);
+            review.setExperience(experience);
+            review.setRating(rating);
+            review.setTitle(title);
+            review.setComment(comment);
+            review.setTripPointsEarned(pointsToAward); // Points based on booking amount
+            review.setCreatedAt(LocalDateTime.now());
+            review.setUpdatedAt(LocalDateTime.now());
+
             Review savedReview = reviewRepository.save(review);
-<<<<<<< Updated upstream
-            return ResponseEntity.status(HttpStatus.CREATED).body(savedReview);
-=======
 
             System.out.println("DEBUG: Successfully created review with ID: " + savedReview.getReviewId());
             System.out.println("DEBUG: Booking total amount: $" + booking.getTotalAmount() + ", Points to award: " + pointsToAward);
@@ -311,15 +379,15 @@ public class ReviewController {
             response.put("comment", savedReview.getComment());
             response.put("tripPointsEarned", savedReview.getTripPointsEarned());
             response.put("createdAt", savedReview.getCreatedAt());
-            response.put("likeCount", savedReview.getLikeCount() != null ? savedReview.getLikeCount() : 0);
             response.put("success", true);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
->>>>>>> Stashed changes
         } catch (Exception e) {
             System.err.println("Error creating review: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to create review: " + e.getMessage()));
         }
     }
 

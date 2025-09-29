@@ -161,26 +161,6 @@ export const checkoutService = {
     }
   },
 
-  /**
-   * Get booking details by confirmation code
-   * GET /api/bookings/confirmation/{confirmationCode}
-   */
-  async getBookingByConfirmationCode(confirmationCode) {
-    try {
-      const response = await api.get(`/api/bookings/confirmation/${confirmationCode}`)
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to get booking details',
-        data: error.response?.data
-      }
-    }
-  },
-
   // ================================
   // PRICING CALCULATIONS
   // ================================

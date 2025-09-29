@@ -1,12 +1,15 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { FormDataProvider } from './contexts/FormDataContext'
+import useChatNotifications from './hooks/useChatNotifications'
+import { unreadCountManager } from './utils/unreadCountManager'
 import { UserProvider } from './contexts/UserContext'
 import { CheckoutProvider } from './contexts/CheckoutContext'
 import { TripPointsProvider } from './contexts/TripPointsContext'
+import { ReviewProvider } from './contexts/ReviewContext'
 import WelcomePage from './pages/WelcomePage'
 import SignUpPage from './pages/SignUpPage'
 import SignInPage from './pages/SignInPage'
@@ -44,6 +47,7 @@ import KycSubmittedPage from './pages/KycSubmittedPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
+import WriteReviewPage from './pages/WriteReviewPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -54,8 +58,25 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
 
 // AppRoutes component that uses authentication context
 function AppRoutes() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
+  
+  // Global chat notifications for navbar badge updates on all pages
+  const { chatNotifications, clearChatNotifications } = useChatNotifications(user?.id || user?.userId)
 
+  // Handle global chat notifications for navbar badge updates
+  useEffect(() => {
+    if (chatNotifications.length > 0) {
+      chatNotifications.forEach(notification => {
+        if (notification.type === 'NEW_MESSAGE') {
+          // Notify navbar to update unread count
+          unreadCountManager.notifyCountChanged();
+        }
+      });
+      
+      // Clear processed notifications
+      clearChatNotifications();
+    }
+  }, [chatNotifications, clearChatNotifications]);
 
   // Show loading spinner while checking authentication
   if (isLoading) {
@@ -243,6 +264,12 @@ function AppRoutes() {
         )}
       />
 
+          {/* Write Review Page */}
+          <Route
+            path="/write-review/:bookingId"
+            element={!isAuthenticated ? <Navigate to="/" replace /> : <WriteReviewPage />}
+          />
+
       {/* Error Pages */}
       <Route
         path="/404"
@@ -268,11 +295,13 @@ export default function App() {
           <UserProvider>
             <FormDataProvider>
               <TripPointsProvider>
-                <Elements stripe={stripePromise}>
-                  <div className="App">
-                    <AppRoutes />
-                  </div>
-                </Elements>
+                <ReviewProvider>
+                  <Elements stripe={stripePromise}>
+                    <div className="App">
+                      <AppRoutes />
+                    </div>
+                  </Elements>
+                </ReviewProvider>
               </TripPointsProvider>
             </FormDataProvider>
           </UserProvider>

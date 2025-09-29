@@ -13,7 +13,7 @@ import StripeCardForm from '../components/checkout/StripeCardForm';
 
 export default function CheckoutPaymentPage() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   const {
     experienceData,
@@ -39,6 +39,48 @@ export default function CheckoutPaymentPage() {
       setError('Missing checkout information. Please return to the contact page.');
     }
   }, [experienceData, scheduleData, booking, setError]);
+
+  const successfulPaymentNotification = async () => {
+    try {
+      const userId = user?.id;
+      if (!userId) {
+        console.log('No user ID available for notification');
+        return;
+      }
+      console.log('Sending payment notification for userId:', userId);
+      const notificationPayload = {
+        title: 'Booking Confirmed',
+        message: `Your payment for ${experienceData?.title} has been processed successfully. Your booking is confirmed. Booking ID: ${booking?.bookingId}.`,
+        userId: userId,
+        type: 'BOOKING_CONFIRMATION',
+      };
+      console.log('Payment notification payload:', notificationPayload);
+
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(notificationPayload),
+      });
+
+      console.log('Payment notification response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Payment notification error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Payment notification sent successfully:', data);
+    }
+    catch (error) {
+      console.error('Error sending payment notification:', error);
+    }
+  };
 
   const handlePayment = async () => {
     try {
@@ -85,7 +127,8 @@ export default function CheckoutPaymentPage() {
       // Store successful transaction
       setTransaction(paymentResult.data);
 
-      // Navigate to completion page
+      await successfulPaymentNotification();
+
       navigate('/checkout/complete');
     } catch (e) {
       setError(e.message || 'An unexpected error occurred during payment processing');

@@ -40,14 +40,9 @@ const NotificationsPage = () => {
 
     const tabs = [
         { id: 'user', label: 'User' },
-        { id: 'messages', label: 'Messages' },
         { id: 'tours', label: 'Tours' },
         { id: 'reviews', label: 'Reviews' }
     ];
-
-    const hasUnread = (tabId) => {
-        return categorizedNotifications[tabId]?.some(n => !n.isRead);
-    };
 
     const getTypeLabel = (type) => {
         const typeLabels = {

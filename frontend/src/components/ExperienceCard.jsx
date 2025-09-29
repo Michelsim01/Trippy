@@ -180,7 +180,7 @@ const ExperienceCard = ({
                     >
                         <Edit size={20} className="text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" />
                         {/* Tooltip on hover */}
-                        <span className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                        <span className="absolute left-1/2 top-full -translate-x-1/2 mt-2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
                             Edit
                         </span>
                     </button>
@@ -203,7 +203,7 @@ const ExperienceCard = ({
                             <Trash2 size={20} className="text-neutrals-1 group-hover:text-red-500 transition-colors duration-200" />
                         )}
                         {/* Tooltip on hover */}
-                        <span className="absolute left-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-red-500 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                        <span className="absolute left-1/2 top-full -translate-x-1/2 mt-2 px-2 py-1 bg-red-500 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
                             {isDeleting ? 'Deleting...' : 'Delete'}
                         </span>
                     </button>
@@ -235,7 +235,7 @@ const ExperienceCard = ({
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                         </svg>
                         {/* Tooltip on hover */}
-                        <span className="absolute right-12 top-1/2 -translate-y-1/2 px-2 py-1 bg-primary-1 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                        <span className="absolute left-1/2 top-full -translate-x-1/2 mt-2 px-2 py-1 bg-primary-4 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
                             Earnings
                         </span>
                     </button>

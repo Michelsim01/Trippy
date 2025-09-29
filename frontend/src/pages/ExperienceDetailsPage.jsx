@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFormData } from '../contexts/FormDataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { useReviews } from '../contexts/ReviewContext';
 import { formatScheduleDisplay, formatDuration } from '../utils/experienceHelpers';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -11,18 +12,32 @@ import ExperienceGallery from '../components/experience-details/ExperienceGaller
 import ExperienceContent from '../components/experience-details/ExperienceContent';
 import BookingWidget from '../components/experience-details/BookingWidget';
 import HostProfile from '../components/experience-details/HostProfile';
+import ReviewCard from '../components/reviews/ReviewCard';
+import ReviewStats from '../components/reviews/ReviewStats';
 
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { formData, updateFormData } = useFormData();
+  const {
+    getExperienceReviews,
+    getReviewStats,
+    loadExperienceReviews,
+    loadReviewStats,
+    loading: reviewsLoading
+  } = useReviews();
 
   // Core data states
   const [experienceData, setExperienceData] = useState(null);
   const [mediaData, setMediaData] = useState([]);
   const [itinerariesData, setItinerariesData] = useState([]);
   const [schedulesData, setSchedulesData] = useState([]);
+
+  // Review states
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [showAllReviews, setShowAllReviews] = useState(false);
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -69,6 +84,27 @@ const ExperienceDetailsPage = () => {
 
     checkWishlistStatus();
   }, [user, id]);
+
+  // Load reviews and stats when experience loads
+  useEffect(() => {
+    if (id && experienceData) {
+      const loadReviews = async () => {
+        try {
+          const [reviewsData, statsData] = await Promise.all([
+            loadExperienceReviews(id),
+            loadReviewStats(id)
+          ]);
+
+          setReviews(reviewsData || []);
+          setReviewStats(statsData);
+        } catch (error) {
+          console.error('Error loading reviews:', error);
+        }
+      };
+
+      loadReviews();
+    }
+  }, [id, experienceData, loadExperienceReviews, loadReviewStats]);
 
   // Keyboard support for modals
   useEffect(() => {
@@ -269,33 +305,10 @@ const ExperienceDetailsPage = () => {
     ];
   }
 
-  // Mock reviews data
-  const reviews = [
-    {
-      id: 1,
-      name: 'Samson Heathcote',
-      rating: 5,
-      comment: 'We had the most spectacular view. Unfortunately it was very hot in the room from 2-830 pm due to no air conditioning and no shade.',
-      timeAgo: 'about 1 hour ago',
-      avatar: 'http://localhost:3845/assets/5b2da3c4f1fe1e54e1660b1f2dbb1b9db0a7edfa.png'
-    },
-    {
-      id: 2,
-      name: 'Sarah Johnson',
-      rating: 5,
-      comment: 'Amazing food tour! Our guide was incredibly knowledgeable and took us to places we never would have found on our own.',
-      timeAgo: 'about 2 hours ago',
-      avatar: 'http://localhost:3845/assets/abaa1902a5b21cb97c07d76b1c3467c83aa100ab.png'
-    },
-    {
-      id: 3,
-      name: 'Mike Chen',
-      rating: 4,
-      comment: 'Great variety of food and excellent service. The local insights were invaluable.',
-      timeAgo: 'about 3 hours ago',
-      avatar: 'http://localhost:3845/assets/e58cbf84a937d190296bbe7304653e0c9568e4ce.png'
-    }
-  ];
+  // Calculate review display data
+  const averageRating = reviewStats?.averageRating || 0;
+  const totalReviews = reviews.length;
+  const displayReviews = showAllReviews ? reviews : reviews.slice(0, 3);
 
   const relatedTours = [
     {
@@ -379,6 +392,8 @@ const ExperienceDetailsPage = () => {
                 displayData={displayData}
                 isWishlisted={isWishlisted}
                 handleWishlistToggle={handleWishlistToggle}
+                averageRating={averageRating}
+                totalReviews={totalReviews}
                 isMobile={false}
               />
 
@@ -418,6 +433,8 @@ const ExperienceDetailsPage = () => {
                     setSelectedSchedule={setSelectedSchedule}
                     setShowAllSchedules={setShowAllSchedules}
                     reviews={reviews}
+                    averageRating={averageRating}
+                    totalReviews={totalReviews}
                     isMobile={false}
                     onChatWithGuide={handleChatWithGuide}
                   />
@@ -427,57 +444,73 @@ const ExperienceDetailsPage = () => {
 
             {/* Reviews Section */}
             <div className="max-w-7xl mx-auto px-10 mt-16">
-              <div className="mb-8">
-                <h2 className="text-2xl font-semibold text-neutrals-2 mb-2" style={{ fontFamily: 'Poppins' }}>
-                  Reviews
-                </h2>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    <span className="text-4xl font-bold text-neutrals-2">{displayData && displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <svg key={i} className="w-5 h-5 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="text-neutrals-4">Based on {displayData && displayData.totalReviews || 256} reviews</span>
+              <div className="grid lg:grid-cols-3 gap-8">
+                {/* Review Statistics */}
+                <div className="lg:col-span-1">
+                  <ReviewStats
+                    stats={reviewStats}
+                    totalReviews={totalReviews}
+                    averageRating={averageRating}
+                    loading={reviewsLoading}
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-6 mb-8">
-                {reviews.map((review) => (
-                  <div key={review.id} className="border-b border-neutrals-6 pb-6">
-                    <div className="flex gap-4">
-                      <img
-                        src={review.avatar}
-                        alt={review.name}
-                        className="w-12 h-12 rounded-full object-cover"
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-neutrals-2">{review.name}</h4>
-                          <div className="flex">
-                            {[...Array(review.rating)].map((_, i) => (
-                              <svg key={i} className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                              </svg>
-                            ))}
+                {/* Reviews List */}
+                <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-2xl font-semibold text-neutrals-2" style={{ fontFamily: 'Poppins' }}>
+                      Reviews ({totalReviews})
+                    </h2>
+
+                    {reviews.length > 3 && (
+                      <button
+                        onClick={() => setShowAllReviews(!showAllReviews)}
+                        className="text-primary-1 font-medium hover:text-primary-1/80 transition-colors"
+                      >
+                        {showAllReviews ? 'Show Less' : `View All ${totalReviews} Reviews`}
+                      </button>
+                    )}
+                  </div>
+
+                  {reviewsLoading ? (
+                    <div className="space-y-4">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="animate-pulse">
+                          <div className="flex space-x-4">
+                            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+                            <div className="flex-1 space-y-2 py-1">
+                              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                              <div className="space-y-1">
+                                <div className="h-3 bg-gray-200 rounded"></div>
+                                <div className="h-3 bg-gray-200 rounded w-5/6"></div>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <p className="text-neutrals-3 mb-2" style={{ fontSize: '14px', lineHeight: '24px' }}>
-                          {review.comment}
-                        </p>
-                        <div className="flex items-center gap-4 text-xs text-neutrals-4">
-                          <span>{review.timeAgo}</span>
-                          <button className="font-semibold text-neutrals-2 hover:text-primary-1">Like</button>
-                          <button className="font-semibold text-neutrals-2 hover:text-primary-1">Reply</button>
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  </div>
-                ))}
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                      <div className="text-gray-400 mb-2">
+                        <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">No reviews yet</h3>
+                      <p className="text-gray-500">Be the first to share your experience!</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {displayReviews.map((review) => (
+                        <ReviewCard
+                          key={review.reviewId}
+                          review={review}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -567,6 +600,8 @@ const ExperienceDetailsPage = () => {
               displayData={displayData}
               isWishlisted={isWishlisted}
               handleWishlistToggle={handleWishlistToggle}
+              averageRating={averageRating}
+              totalReviews={totalReviews}
               isMobile={true}
             />
 
@@ -606,6 +641,8 @@ const ExperienceDetailsPage = () => {
                 setSelectedSchedule={setSelectedSchedule}
                 setShowAllSchedules={setShowAllSchedules}
                 reviews={reviews}
+                averageRating={averageRating}
+                totalReviews={totalReviews}
                 isMobile={true}
                 onChatWithGuide={handleChatWithGuide}
               />
@@ -615,57 +652,69 @@ const ExperienceDetailsPage = () => {
           {/* Mobile Reviews Section */}
           <div className="px-4 mt-8">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-neutrals-2 mb-2" style={{ fontFamily: 'Poppins' }}>
-                Reviews
-              </h2>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold text-neutrals-2">{displayData && displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}</span>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <svg key={i} className="w-4 h-4 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                </div>
-                <span className="text-neutrals-4 text-sm">Based on {displayData && displayData.totalReviews || 256} reviews</span>
+              <ReviewStats
+                stats={reviewStats}
+                totalReviews={totalReviews}
+                averageRating={averageRating}
+                loading={reviewsLoading}
+                className="mb-6"
+              />
+
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold text-neutrals-2" style={{ fontFamily: 'Poppins' }}>
+                  Reviews ({totalReviews})
+                </h2>
+
+                {reviews.length > 2 && (
+                  <button
+                    onClick={() => setShowAllReviews(!showAllReviews)}
+                    className="text-primary-1 font-medium text-sm hover:text-primary-1/80 transition-colors"
+                  >
+                    {showAllReviews ? 'Show Less' : 'View All'}
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="space-y-4 mb-6">
-              {reviews.map((review) => (
-                <div key={review.id} className="border-b border-neutrals-6 pb-4">
-                  <div className="flex gap-3">
-                    <img
-                      src={review.avatar}
-                      alt={review.name}
-                      className="w-10 h-10 rounded-full object-cover"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium text-neutrals-2 text-sm">{review.name}</h4>
-                        <div className="flex">
-                          {[...Array(review.rating)].map((_, i) => (
-                            <svg key={i} className="w-3 h-3 text-primary-2" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
+            {reviewsLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map(i => (
+                  <div key={i} className="animate-pulse">
+                    <div className="flex space-x-3">
+                      <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                      <div className="flex-1 space-y-2 py-1">
+                        <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                        <div className="h-2 bg-gray-200 rounded w-1/2"></div>
+                        <div className="space-y-1">
+                          <div className="h-2 bg-gray-200 rounded"></div>
+                          <div className="h-2 bg-gray-200 rounded w-4/5"></div>
                         </div>
-                      </div>
-                      <p className="text-neutrals-3 mb-2 text-sm leading-relaxed">
-                        {review.comment}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-neutrals-4">
-                        <span>{review.timeAgo}</span>
-                        <button className="font-semibold text-neutrals-2 hover:text-primary-1">Like</button>
-                        <button className="font-semibold text-neutrals-2 hover:text-primary-1">Reply</button>
                       </div>
                     </div>
                   </div>
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg">
+                <div className="text-gray-400 mb-2">
+                  <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                  </svg>
                 </div>
-              ))}
-            </div>
+                <h3 className="text-base font-medium text-gray-900 mb-1">No reviews yet</h3>
+                <p className="text-sm text-gray-500">Be the first to share your experience!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {(showAllReviews ? reviews : reviews.slice(0, 2)).map((review) => (
+                  <ReviewCard
+                    key={review.reviewId}
+                    review={review}
+                    className="text-sm"
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Mobile Host Profile */}
