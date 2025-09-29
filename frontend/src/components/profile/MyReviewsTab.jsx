@@ -1,12 +1,38 @@
 import React from 'react';
-import { Star } from 'lucide-react';
+import { Star, Trash2, Edit3 } from 'lucide-react';
+import { useReviews } from '../../contexts/ReviewContext';
+import LikeButton from '../reviews/LikeButton';
 
+<<<<<<< Updated upstream
 const MyReviewsTab = ({ touristReviews }) => {
+=======
+const MyReviewsTab = ({ touristReviews, loading }) => {
+    const { deleteReview, loading: reviewLoading } = useReviews();
+
+    const handleDeleteReview = async (reviewId) => {
+        if (!window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const result = await deleteReview(reviewId);
+            if (result.success) {
+                // Review deleted successfully - the context will update the UI
+            } else {
+                alert('Failed to delete review: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            alert('Failed to delete review. Please try again.');
+        }
+    };
+
+>>>>>>> Stashed changes
     const renderStars = (rating) => {
         return Array.from({ length: 5 }, (_, i) => (
-            <Star 
-                key={i} 
-                className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-primary-2 fill-current' : 'text-neutrals-5'}`} 
+            <Star
+                key={i}
+                className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-primary-2 fill-current' : 'text-neutrals-5'}`}
             />
         ));
     };
@@ -26,6 +52,7 @@ const MyReviewsTab = ({ touristReviews }) => {
                     </select>
                 </div>
             </div>
+<<<<<<< Updated upstream
             
             <div className="space-y-4">
                 {touristReviews.map((review) => (
@@ -56,6 +83,63 @@ const MyReviewsTab = ({ touristReviews }) => {
                                         <button className="btn btn-outline-accent btn-sm">
                                             Delete
                                         </button>
+=======
+
+            {touristReviews.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-lg">
+                    <div className="text-gray-400 mb-2">
+                        <svg className="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                        </svg>
+                    </div>
+                    <h3 className="text-base font-medium text-gray-900 mb-1">No reviews yet</h3>
+                    <p className="text-sm text-gray-500">Your reviews will appear here once you leave feedback on experiences.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {touristReviews.map((review) => (
+                        <div key={review.id} className="bg-white rounded-lg p-4 shadow-sm">
+                            <div className="flex items-start gap-4">
+                                <img
+                                    src={review.avatar}
+                                    alt={review.tourGuide}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                />
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div>
+                                            <h4 className="font-semibold text-neutrals-1">Tour Guide: {review.tourGuide}</h4>
+                                            <p className="text-xs text-neutrals-4">{review.tourName}</p>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            {renderStars(review.rating)}
+                                        </div>
+                                    </div>
+                                    <p className="text-neutrals-3 text-sm mb-3">{review.comment}</p>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-xs text-neutrals-4">{review.timeAgo}</span>
+                                            <LikeButton
+                                                reviewId={review.reviewId || review.id}
+                                                initialLikeCount={review.likeCount || 0}
+                                                className="text-xs"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button className="btn btn-outline-info btn-sm">
+                                                <Edit3 className="w-3 h-3 mr-1" />
+                                                Edit
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteReview(review.id)}
+                                                disabled={reviewLoading}
+                                                className="btn btn-outline-accent btn-sm"
+                                            >
+                                                <Trash2 className="w-3 h-3 mr-1" />
+                                                Delete
+                                            </button>
+                                        </div>
+>>>>>>> Stashed changes
                                     </div>
                                 </div>
                             </div>

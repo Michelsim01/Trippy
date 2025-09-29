@@ -129,6 +129,7 @@ public class BookingController {
     }
 
     /**
+<<<<<<< Updated upstream
      * Get booking details by confirmation code
      * 
      * @param confirmationCode the confirmation code of the booking
@@ -157,6 +158,8 @@ public class BookingController {
     }
 
     /**
+=======
+>>>>>>> Stashed changes
      * Get all bookings for a user by email
      * 
      * @param email the email address of the user

@@ -87,6 +87,7 @@ export const VALID_ROUTES = [
     '/wishlist',
     '/messages',
     '/blog',
+    '/my-bookings',
     '/create-experience',
     '/create-experience/basic-info',
     '/create-experience/details',
