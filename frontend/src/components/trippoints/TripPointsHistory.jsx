@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Star, Target, Gift, Plus, Minus, Calendar, TrendingUp } from 'lucide-react';
 import tripPointsService from '../../services/tripPointsService';
 
@@ -6,6 +7,7 @@ const TripPointsHistory = ({ userId }) => {
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTransactionHistory();
@@ -161,6 +163,20 @@ const TripPointsHistory = ({ userId }) => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">
                       {getTransactionDescription(transaction)}
+                      {transaction.transactionType === 'REVIEW' && transaction.experience?.title && (
+                        <>
+                          <span className="text-neutrals-4"> · </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/experience/${transaction.experience.experienceId}`);
+                            }}
+                            className="text-primary-1 hover:underline"
+                          >
+                            {transaction.experience.title}
+                          </button>
+                        </>
+                      )}
                     </p>
                     <div className="flex items-center space-x-2 mt-1">
                       <Calendar className="w-3 h-3 text-gray-400" />

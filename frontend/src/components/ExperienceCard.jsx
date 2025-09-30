@@ -295,23 +295,7 @@ const ExperienceCard = ({
                         </div>
                         <div className="flex items-center gap-1">
                             <span style={{ filter: 'grayscale(1)', opacity: 0.7 }}>👤</span>
-                            <span>
-                                {(() => {
-                                    // Show total participants from schedules if available
-                                    if (schedules && schedules.length > 0) {
-                                        const totalSpots = schedules.reduce((sum, schedule) => sum + (schedule.availableSpots || 0), 0);
-                                        return totalSpots;
-                                    }
-                                    // Show participantsAllowed if available
-                                    else if (cardData.participantsAllowed) {
-                                        return cardData.participantsAllowed;
-                                    }
-                                    // Default fallback
-                                    else {
-                                        return 40;
-                                    }
-                                })()}
-                            </span>
+                            <span>{cardData.participantsAllowed}</span>
                         </div>
                     </div>
                     <div className="flex items-center gap-1">
