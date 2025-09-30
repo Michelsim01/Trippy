@@ -387,8 +387,8 @@ const BookingWidget = ({
           <div className="space-y-1">
             <p><strong>Free Cancellation:</strong> 24 hours after purchase</p>
             <p><strong>7+ days before:</strong> Full refund (minus service fee)</p>
-            <p><strong>3-6 days before:</strong> 50% refund</p>
-            <p><strong>Less than 48 hours:</strong> Non-refundable</p>
+            <p><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+            <p><strong>Less than 3 days:</strong> Non-refundable</p>
           </div>
         </div>
       )}

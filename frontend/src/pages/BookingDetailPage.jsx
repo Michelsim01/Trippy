@@ -51,6 +51,7 @@ const BookingDetailPage = () => {
                     status: data.status,
                     numberOfParticipants: data.numberOfParticipants,
                     totalAmount: data.totalAmount,
+                    serviceFee: data.serviceFee,
                     bookingDate: data.bookingDate,
                     cancellationReason: data.cancellationReason,
                     cancelledAt: data.cancelledAt,
@@ -211,6 +212,59 @@ const BookingDetailPage = () => {
 
     // Check if cancellation is allowed
     const canCancel = booking.status === 'CONFIRMED' || booking.status === 'PENDING';
+
+    // Calculate refund amount based on cancellation policy
+    const calculateRefund = () => {
+        if (!booking || !booking.bookingDate || !booking.experienceSchedule?.startDateTime) {
+            return { amount: 0, policy: 'Unable to calculate', explanation: 'Missing booking data' };
+        }
+
+        const now = new Date();
+        const bookingCreated = new Date(booking.bookingDate);
+        const experienceStart = new Date(booking.experienceSchedule.startDateTime);
+
+        // Calculate hours since booking was created
+        const hoursFromBooking = (now - bookingCreated) / (1000 * 60 * 60);
+
+        // Calculate days until experience starts
+        const hoursToExperience = (experienceStart - now) / (1000 * 60 * 60);
+        const daysToExperience = hoursToExperience / 24;
+
+        const totalAmount = booking.totalAmount || 0;
+        const serviceFee = booking.serviceFee || 0;
+
+        // Free cancellation: Within 24 hours of booking
+        if (hoursFromBooking <= 24) {
+            return {
+                amount: totalAmount,
+                policy: 'Free Cancellation',
+                explanation: 'Full refund (within 24 hours of purchase)'
+            };
+        }
+
+        // Standard cancellation policies based on time until experience
+        if (daysToExperience >= 7) {
+            return {
+                amount: totalAmount - serviceFee,
+                policy: '7+ Days Before',
+                explanation: 'Full refund minus service fee'
+            };
+        } else if (daysToExperience >= 3) {
+            return {
+                amount: (totalAmount * 0.5) - serviceFee,
+                policy: '3-6 Days Before',
+                explanation: '50% refund minus service fee'
+            };
+        } else {
+            return {
+                amount: 0,
+                policy: 'Less than 3 Days',
+                explanation: 'Non-refundable'
+            };
+        }
+    };
+
+    const refundInfo = calculateRefund();
 
     // Handle show listing navigation
     const handleShowListing = () => {
@@ -415,6 +469,36 @@ const BookingDetailPage = () => {
                                     <div className="space-y-4">
                                         <h4 className="font-medium text-neutrals-2">Cancel Booking</h4>
 
+                                        {/* Refund Summary */}
+                                        <div className="bg-neutrals-7 rounded-lg p-4 border border-neutrals-6">
+                                            <h5 className="text-sm font-medium text-neutrals-2 mb-3">Refund Summary</h5>
+                                            <div className="space-y-2 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutrals-4">Policy Applied:</span>
+                                                    <span className="text-neutrals-2 font-medium">{refundInfo.policy}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutrals-4">Original Amount:</span>
+                                                    <span className="text-neutrals-2">{formatPrice(booking.totalAmount)}</span>
+                                                </div>
+                                                {refundInfo.policy !== 'Free Cancellation' && refundInfo.amount > 0 && (
+                                                    <div className="flex justify-between">
+                                                        <span className="text-neutrals-4">Service Fee:</span>
+                                                        <span className="text-neutrals-2">-{formatPrice(booking.serviceFee)}</span>
+                                                    </div>
+                                                )}
+                                                <div className="pt-2 border-t border-neutrals-6">
+                                                    <div className="flex justify-between">
+                                                        <span className="font-medium text-neutrals-2">Refund Amount:</span>
+                                                        <span className={`font-bold text-lg ${refundInfo.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                                            {formatPrice(Math.max(0, refundInfo.amount))}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-neutrals-4 mt-2 italic">{refundInfo.explanation}</p>
+                                            </div>
+                                        </div>
+
                                         {/* Cancellation Reason */}
                                         <div>
                                             <label className="block text-sm font-medium text-neutrals-2 mb-2">
@@ -478,7 +562,7 @@ const BookingDetailPage = () => {
                                     <div className="text-center py-4">
                                         <p className="text-neutrals-4 text-sm">
                                             {booking.status === 'CANCELLED'
-                                                ? 'This booking has been cancelled.'
+                                                ? 'This booking has been cancelled and your refund will be shortly processed.'
                                                 : 'This booking cannot be cancelled.'
                                             }
                                         </p>
@@ -490,9 +574,9 @@ const BookingDetailPage = () => {
                                     <h4 className="font-medium text-neutrals-2 mb-2">Cancellation Policy</h4>
                                     <div className="text-xs text-neutrals-4 space-y-1">
                                         <p><strong>Free:</strong> 24 hours after purchase</p>
-                                        <p><strong>7+ days:</strong> Full refund (minus service fee)</p>
-                                        <p><strong>3-6 days:</strong> 50% refund</p>
-                                        <p><strong>&lt;48 hours:</strong> Non-refundable</p>
+                                        <p><strong>7+ days before:</strong> Full refund (minus service fee)</p>
+                                        <p><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+                                        <p><strong>&lt;3 days:</strong> Non-refundable</p>
                                     </div>
                                 </div>
                             </div>
