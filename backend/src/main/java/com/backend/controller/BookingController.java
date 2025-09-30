@@ -7,9 +7,14 @@ import com.backend.entity.Booking;
 import com.backend.entity.BookingStatus;
 import com.backend.entity.ExperienceSchedule;
 import com.backend.entity.Transaction;
+import com.backend.entity.Notification;
+import com.backend.entity.NotificationType;
+import com.backend.entity.User;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.TransactionRepository;
+import com.backend.repository.NotificationRepository;
+import com.backend.repository.UserRepository;
 import com.backend.service.BookingService;
 import com.backend.service.PaymentService;
 import jakarta.validation.Valid;
@@ -46,6 +51,12 @@ public class BookingController {
 
     @Autowired
     private ExperienceScheduleRepository experienceScheduleRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     // ================================
     // BOOKING MANAGEMENT METHODS
@@ -479,6 +490,29 @@ public class BookingController {
                 booking.setUpdatedAt(LocalDateTime.now());
                 bookingRepository.save(booking);
                 updatedCount++;
+
+                // Send review request notification to each participant
+                try {
+                    User traveler = booking.getTraveler();
+                    if (traveler != null) {
+                        Notification notification = new Notification();
+                        notification.setTitle("Review Request");
+                        notification.setMessage(String.format(
+                            "Your tour '%s' has been completed! Please go to my bookings page to leave a review. You will earn trippoints for your feedback.",
+                            schedule.getExperience().getTitle()
+                        ));
+                        notification.setUser(traveler);
+                        notification.setType(NotificationType.REVIEW_REQUEST);
+                        notification.setCreatedAt(LocalDateTime.now());
+                        notification.setIsRead(false);
+                        
+                        notificationRepository.save(notification);
+                        System.out.println("Sent review request notification to user ID: " + traveler.getId());
+                    }
+                } catch (Exception notificationError) {
+                    System.err.println("Error sending notification for booking " + booking.getBookingId() + ": " + notificationError.getMessage());
+                    // Continue processing other bookings even if notification fails
+                }
             }
 
             Map<String, Object> response = new HashMap<>();
@@ -486,6 +520,7 @@ public class BookingController {
             response.put("message", "Timeslot completed successfully");
             response.put("updatedBookingsCount", updatedCount);
             response.put("scheduleId", scheduleId);
+            response.put("notificationsSent", updatedCount); // Number of notifications sent
 
             return ResponseEntity.ok(response);
 
@@ -493,6 +528,45 @@ public class BookingController {
             System.err.println("Error completing timeslot " + scheduleId + ": " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+     * Get all participants (user IDs) for a specific schedule
+     * 
+     * @param scheduleId the ID of the experience schedule
+     * @return List of user IDs who have bookings for this schedule
+     */
+    @GetMapping("/schedule/{scheduleId}/participants")
+    public ResponseEntity<Map<String, Object>> getScheduleParticipants(@PathVariable Long scheduleId) {
+        try {
+            if (scheduleId == null || scheduleId <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid schedule ID"));
+            }
+
+            // Find all bookings for this schedule (both CONFIRMED and COMPLETED)
+            List<BookingStatus> activeStatuses = List.of(BookingStatus.CONFIRMED, BookingStatus.COMPLETED);
+            List<Booking> bookings = bookingRepository.findByScheduleIdAndStatusIn(scheduleId, activeStatuses);
+
+            // Extract unique user IDs
+            List<Long> participantIds = bookings.stream()
+                .map(booking -> booking.getTraveler().getId())
+                .distinct()
+                .collect(Collectors.toList());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("scheduleId", scheduleId);
+            response.put("participantIds", participantIds);
+            response.put("totalParticipants", participantIds.size());
+            response.put("totalBookings", bookings.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error retrieving participants for schedule " + scheduleId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to retrieve participants", "success", false));
         }
     }
 
