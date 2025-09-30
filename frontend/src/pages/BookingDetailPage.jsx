@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, Users as UsersChat } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -378,15 +378,6 @@ const BookingDetailPage = () => {
                                 {/* Chat Buttons - For CONFIRMED and COMPLETED bookings */}
                                 {(booking.status === 'CONFIRMED' || booking.status === 'COMPLETED') && (
                                     <div className="space-y-3 mb-6">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => navigate('/messages')}
-                                            className="w-full flex items-center justify-center gap-2"
-                                        >
-                                            <MessageCircle className="w-4 h-4" />
-                                            Chat with Guide
-                                        </Button>
                                         <Button
                                             variant="outline"
                                             size="sm"
