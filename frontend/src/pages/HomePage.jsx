@@ -239,7 +239,7 @@ const HomePage = () => {
                         title: exp.title,
                         location: exp.location,
                         price: exp.price,
-                        averageRating: exp.averageRating || 4.9,
+                        averageRating: exp.averageRating,
                         imageUrl: imageUrl,
                         shortDescription: exp.shortDescription,
                         duration: exp.duration,

@@ -83,14 +83,14 @@ export const userService = {
   async getUserStats(userId) {
     try {
       const response = await api.get(`/api/users/${userId}/stats`)
-      
+
       return {
         success: true,
         data: response.data,
       }
     } catch (error) {
       let errorMessage = 'Failed to fetch user statistics'
-      
+
       if (error.response?.status === 401) {
         errorMessage = 'Authentication required'
       } else if (error.response?.status === 404) {
@@ -104,7 +104,41 @@ export const userService = {
       } else if (error.message) {
         errorMessage = error.message
       }
-      
+
+      return {
+        success: false,
+        error: errorMessage,
+        status: error.response?.status
+      }
+    }
+  },
+
+  // Get guide statistics (for tour guides)
+  async getGuideStats(userId) {
+    try {
+      const response = await api.get(`/api/users/${userId}/guide-stats`)
+
+      return {
+        success: true,
+        data: response.data,
+      }
+    } catch (error) {
+      let errorMessage = 'Failed to fetch guide statistics'
+
+      if (error.response?.status === 401) {
+        errorMessage = 'Authentication required'
+      } else if (error.response?.status === 404) {
+        errorMessage = 'User not found'
+      } else if (error.response?.data) {
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message
+        }
+      } else if (error.message) {
+        errorMessage = error.message
+      }
+
       return {
         success: false,
         error: errorMessage,
