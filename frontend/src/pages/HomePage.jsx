@@ -246,7 +246,8 @@ const HomePage = () => {
                         category: exp.category,
                         status: exp.status,
                         totalReviews: exp.totalReviews,
-                        participantsAllowed: exp.participantsAllowed || 20
+                        // Use the API field as-is. Backend (Jackson) should send camelCase: participantsAllowed
+                        participantsAllowed: exp.participantsAllowed
                     };
                 });
 

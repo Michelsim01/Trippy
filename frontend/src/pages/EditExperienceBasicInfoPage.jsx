@@ -20,8 +20,6 @@ export default function EditExperienceBasicInfoPage() {
     categoryMapping,
     isEditMode,
     experienceId: contextExperienceId,
-    hasBookings,
-    toggleBookings,
     isFieldRestricted,
     loadExistingExperience,
     saveCurrentChanges,
@@ -318,53 +316,6 @@ export default function EditExperienceBasicInfoPage() {
           {/* Main Content - Centered with max width */}
           <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
 
-            {/* Booking Toggle Section */}
-            <div className="bg-white rounded-xl p-6 mb-6 border border-neutrals-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Status</h3>
-                  <p className="text-sm text-neutrals-3">
-                    Toggle this to simulate whether this experience has existing bookings.
-                    When enabled, certain fields will be restricted to prevent conflicts with existing bookings.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <span className={`text-sm ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
-                    No Bookings
-                  </span>
-                  <button
-                    onClick={toggleBookings}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
-                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        hasBookings ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-sm ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
-                    Has Bookings
-                  </span>
-                </div>
-              </div>
-
-              {hasBookings && (
-                <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="flex items-start space-x-2">
-                    <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium text-orange-800">Restricted Fields</p>
-                      <p className="text-sm text-orange-700 mt-1">
-                        Price, dates, country, and max participants cannot be modified when bookings exist to prevent conflicts.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
             <ProgressSteps currentStep={1} />
 
             {/* Two Column Layout */}
@@ -563,51 +514,6 @@ export default function EditExperienceBasicInfoPage() {
 
         <main className="w-full">
           <div className="py-10" style={{paddingLeft: '20px', paddingRight: '20px'}}>
-            {/* Booking Toggle Section */}
-            <div className="bg-white rounded-xl p-4 mb-6 border border-neutrals-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-base font-semibold text-neutrals-1 mb-2">Booking Status</h3>
-                  <p className="text-xs text-neutrals-3">
-                    Toggle to simulate whether this experience has existing bookings.
-                  </p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className={`text-xs ${hasBookings ? 'text-neutrals-3' : 'text-neutrals-1 font-medium'}`}>
-                    No Bookings
-                  </span>
-                  <button
-                    onClick={toggleBookings}
-                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-1 focus:ring-offset-2 ${
-                      hasBookings ? 'bg-primary-1' : 'bg-neutrals-6'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                        hasBookings ? 'translate-x-5' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                  <span className={`text-xs ${hasBookings ? 'text-neutrals-1 font-medium' : 'text-neutrals-3'}`}>
-                    Has Bookings
-                  </span>
-                </div>
-              </div>
-
-              {hasBookings && (
-                <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                  <div className="flex items-start space-x-2">
-                    <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-xs font-medium text-orange-800">Restricted Fields</p>
-                      <p className="text-xs text-orange-700 mt-1">
-                        Price, dates, country, and max participants cannot be modified when bookings exist.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Title and Progress */}
             <div className="mb-10">

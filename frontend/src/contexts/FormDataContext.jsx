@@ -17,7 +17,8 @@ export const FormDataProvider = ({ children }) => {
   // Edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
   const [experienceId, setExperienceId] = useState(null);
-  const [hasBookings, setHasBookings] = useState(false); // Mock bookings state
+  const [realBookingStatus, setRealBookingStatus] = useState(null); // Real booking status from API
+  const [scheduleBookingStatuses, setScheduleBookingStatuses] = useState([]); // Per-schedule booking status
 
   const [formData, setFormData] = useState({
     // Step 1: Basic Info - matching Experience entity fields
@@ -185,6 +186,9 @@ export const FormDataProvider = ({ children }) => {
       }
 
       console.log('Loaded experience data for editing:', experienceData);
+
+      // Always load booking status when loading experience for editing
+      await loadBookingStatus(id);
     } catch (error) {
       console.error('Error loading experience data:', error);
       alert('Failed to load experience data for editing');
@@ -194,20 +198,54 @@ export const FormDataProvider = ({ children }) => {
   const exitEditMode = () => {
     setIsEditMode(false);
     setExperienceId(null);
-    setHasBookings(false);
+    setRealBookingStatus(null);
+    setScheduleBookingStatuses([]);
     clearFormData();
   };
 
-  const toggleBookings = () => {
-    setHasBookings(!hasBookings);
+  // Load real booking status from database
+  const loadBookingStatus = async (id) => {
+    try {
+      const [experienceStatus, scheduleStatuses] = await Promise.all([
+        experienceApi.getExperienceBookingStatus(id),
+        experienceApi.getScheduleBookingStatuses(id)
+      ]);
+
+      setRealBookingStatus(experienceStatus);
+      setScheduleBookingStatuses(scheduleStatuses.schedules || []);
+
+      console.log('Loaded real booking status:', { experienceStatus, scheduleStatuses });
+    } catch (error) {
+      console.error('Error loading booking status:', error);
+      // Fallback to mock data if API fails
+      setRealBookingStatus({ hasActiveBookings: false, restrictGlobalFields: false });
+      setScheduleBookingStatuses([]);
+    }
   };
 
   // Check if a field is restricted due to existing bookings
   const isFieldRestricted = (fieldName) => {
-    if (!isEditMode || !hasBookings) return false;
+    if (!isEditMode) return false;
 
     const restrictedFields = ['price', 'startDateTime', 'endDateTime', 'country', 'participantsAllowed', 'availability'];
-    return restrictedFields.includes(fieldName);
+
+    if (!restrictedFields.includes(fieldName)) return false;
+
+    // Use real booking data
+    return realBookingStatus?.restrictGlobalFields || false;
+  };
+
+  // Check if a specific schedule can be edited
+  const isScheduleEditable = (scheduleId) => {
+    if (!isEditMode) return true;
+
+    // Use real booking data
+    if (scheduleBookingStatuses.length > 0) {
+      const scheduleStatus = scheduleBookingStatuses.find(s => s.scheduleId === scheduleId);
+      return scheduleStatus ? scheduleStatus.canEdit : true;
+    }
+
+    return true; // Default to editable if no booking status data
   };
 
   // Save partial changes (for page-specific saves during edit flow)
@@ -427,13 +465,16 @@ export const FormDataProvider = ({ children }) => {
       // Edit mode properties and methods
       isEditMode,
       experienceId,
-      hasBookings,
       loadExistingExperience,
       exitEditMode,
-      toggleBookings,
       isFieldRestricted,
       saveCurrentChanges,
-      savePartialChanges
+      savePartialChanges,
+      // Booking status functionality
+      realBookingStatus,
+      scheduleBookingStatuses,
+      loadBookingStatus,
+      isScheduleEditable
     }}>
       {children}
     </FormDataContext.Provider>

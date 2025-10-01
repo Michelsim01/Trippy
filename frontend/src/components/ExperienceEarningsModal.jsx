@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
+import swal from 'sweetalert2';
 
 const ExperienceEarningsModal = ({
     isOpen,
@@ -109,7 +110,11 @@ const ExperienceEarningsModal = ({
                 }
             }
 
-            alert(`Timeslot completed successfully! ${result.updatedBookingsCount} booking(s) updated.`);
+            swal.fire({
+                icon: 'success',
+                title: 'Timeslot Completed',
+                text: `Review request notifications sent to participants.`,
+            });
 
         } catch (error) {
             console.error('Error completing timeslot:', error);
@@ -316,6 +321,7 @@ const ExperienceEarningsModal = ({
                             <ul className="list-disc list-inside text-sm text-neutrals-2 mb-4 space-y-1">
                                 <li>Move all confirmed bookings to "Paid Out" status</li>
                                 <li>Release earnings for payout processing</li>
+                                <li>Send review request notifications to all participants</li>
                                 <li>Cannot be undone</li>
                             </ul>
 

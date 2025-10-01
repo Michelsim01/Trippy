@@ -16,11 +16,13 @@ export default function EditExperienceAvailabilityPage() {
     updateFormData,
     isEditMode,
     experienceId,
-    hasBookings,
-    toggleBookings,
     isFieldRestricted,
     saveCurrentChanges,
-    loadExistingExperience
+    loadExistingExperience,
+    // Booking status functionality
+    realBookingStatus,
+    scheduleBookingStatuses,
+    isScheduleEditable
   } = useFormData();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -73,11 +75,10 @@ export default function EditExperienceAvailabilityPage() {
   });
 
 
-  // Check if schedule can be edited/deleted
-  const isScheduleEditable = (schedule) => {
-    // Red status: has bookings or mock bookings enabled
-    // Green status: editable
-    return !hasBookings && !(schedule.hasBookings || false);
+  // Check if schedule can be edited/deleted (use new context method)
+  const checkScheduleEditable = (schedule) => {
+    // Use the context method which handles both real and mock booking data
+    return isScheduleEditable(schedule.scheduleId || schedule.id);
   };
 
   // Calculate end time from start time and duration
@@ -305,33 +306,7 @@ export default function EditExperienceAvailabilityPage() {
             <p className="text-neutrals-4">Manage your experience schedules and time slots</p>
           </div>
 
-          {/* Mock Bookings Toggle */}
-          <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-neutrals-1 mb-2">Booking Status</h3>
-                <p className="text-neutrals-4 text-sm">
-                  Toggle this to simulate whether this experience has existing bookings. When enabled, certain fields will be restricted to prevent conflicts with existing bookings.
-                </p>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-neutrals-3">No Bookings</span>
-                <button
-                  onClick={toggleBookings}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    hasBookings ? 'bg-primary-1' : 'bg-neutrals-5'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      hasBookings ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className="text-sm text-neutrals-3">Has Bookings</span>
-              </div>
-            </div>
-          </div>
+
 
           {/* Master Schedule Settings */}
           <div className="bg-white rounded-2xl border border-neutrals-6 p-6 mb-6">
@@ -433,7 +408,7 @@ export default function EditExperienceAvailabilityPage() {
             ) : (
               <div className="space-y-4">
                 {sortedSchedules.map((schedule, index) => {
-                  const isEditable = isScheduleEditable(schedule);
+                  const isEditable = checkScheduleEditable(schedule);
                   return (
                     <div
                       key={schedule.scheduleId || schedule.id || index}

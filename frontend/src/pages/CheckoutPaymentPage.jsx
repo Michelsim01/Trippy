@@ -47,14 +47,12 @@ export default function CheckoutPaymentPage() {
         console.log('No user ID available for notification');
         return;
       }
-      console.log('Sending payment notification for userId:', userId);
       const notificationPayload = {
         title: 'Booking Confirmed',
-        message: `Your payment for ${experienceData?.title} has been processed successfully. Your booking is confirmed. Booking ID: ${booking?.bookingId}.`,
+        message: `Your payment for ${experienceData?.title} has been processed successfully. Your booking is confirmed. Confirmation Code: ${booking?.confirmationCode}.`,
         userId: userId,
         type: 'BOOKING_CONFIRMATION',
       };
-      console.log('Payment notification payload:', notificationPayload);
 
       const token = localStorage.getItem('token');
       const response = await fetch(`http://localhost:8080/api/notifications`, {
@@ -65,8 +63,6 @@ export default function CheckoutPaymentPage() {
         },
         body: JSON.stringify(notificationPayload),
       });
-
-      console.log('Payment notification response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();

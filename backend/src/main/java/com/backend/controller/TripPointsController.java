@@ -2,6 +2,8 @@ package com.backend.controller;
 
 import com.backend.entity.TripPoints;
 import com.backend.service.TripPointsService;
+import com.backend.repository.ReviewRepository;
+import com.backend.entity.Review;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +20,9 @@ public class TripPointsController {
 
     @Autowired
     private TripPointsService tripPointsService;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     /**
      * Get all TripPoints transactions
@@ -78,9 +83,41 @@ public class TripPointsController {
      * Get user's TripPoints transaction history
      */
     @GetMapping("/user/{userId}/history")
-    public ResponseEntity<List<TripPoints>> getTripPointsHistory(@PathVariable Long userId) {
+    public ResponseEntity<List<Map<String, Object>>> getTripPointsHistory(@PathVariable Long userId) {
         List<TripPoints> history = tripPointsService.getTripPointsHistory(userId);
-        return ResponseEntity.ok(history);
+
+        List<Map<String, Object>> response = history.stream().map(tx -> {
+            Map<String, Object> txMap = new java.util.HashMap<>();
+            txMap.put("pointsId", tx.getPointsId());
+            txMap.put("userId", userId);
+            txMap.put("transactionType", tx.getTransactionType());
+            txMap.put("pointsChange", tx.getPointsChange());
+            txMap.put("pointsBalanceAfter", tx.getPointsBalanceAfter());
+            txMap.put("referenceId", tx.getReferenceId());
+            txMap.put("createdAt", tx.getCreatedAt());
+
+            // Enrich REVIEW transactions with experience info via review reference
+            if (tx.getTransactionType() != null 
+                && tx.getTransactionType().name().equals("REVIEW")
+                && tx.getReferenceId() != null) {
+                try {
+                    Review review = reviewRepository.findById(tx.getReferenceId()).orElse(null);
+                    if (review != null && review.getExperience() != null) {
+                        Map<String, Object> exp = new java.util.HashMap<>();
+                        exp.put("experienceId", review.getExperience().getExperienceId());
+                        exp.put("title", review.getExperience().getTitle());
+                        exp.put("location", review.getExperience().getLocation());
+                        txMap.put("experience", exp);
+                    }
+                } catch (Exception ignore) {
+                    // keep base fields if enrichment fails
+                }
+            }
+
+            return txMap;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
     /**

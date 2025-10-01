@@ -102,8 +102,8 @@ export default function CreateExperiencePricingPage() {
                       <div className="text-sm text-neutrals-2">
                         <p className="mb-2"><strong>Free Cancellation:</strong> 24 hours after purchase for full refund</p>
                         <p className="mb-2"><strong>7+ days before:</strong> Full refund (minus service fee)</p>
-                        <p className="mb-2"><strong>3-6 days before:</strong> 50% refund</p>
-                        <p className="mb-2"><strong>Less than 48 hours:</strong> Non-refundable</p>
+                        <p className="mb-2"><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+                        <p className="mb-2"><strong>Less than 3 days:</strong> Non-refundable</p>
                         <p><strong>No-shows:</strong> Non-refundable</p>
                       </div>
                     </div>
@@ -206,8 +206,8 @@ export default function CreateExperiencePricingPage() {
                   <div className="text-xs text-neutrals-2">
                     <p className="mb-1"><strong>Free Cancellation:</strong> 24 hours after purchase for full refund</p>
                     <p className="mb-1"><strong>7+ days before:</strong> Full refund (minus service fee)</p>
-                    <p className="mb-1"><strong>3-6 days before:</strong> 50% refund</p>
-                    <p className="mb-1"><strong>Less than 48 hours:</strong> Non-refundable</p>
+                    <p className="mb-1"><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+                    <p className="mb-1"><strong>Less than 3 days:</strong> Non-refundable</p>
                     <p><strong>No-shows:</strong> Non-refundable</p>
                   </div>
                 </div>

@@ -289,6 +289,58 @@ export const experienceApi = {
       console.error('Delete experience API error:', error);
       throw error; // Re-throw to preserve the specific error message
     }
+  },
+
+  /**
+   * Gets booking status for an experience to determine field restrictions
+   * @param {number} experienceId - ID of the experience
+   * @returns {Promise<Object>} Booking status data
+   */
+  getExperienceBookingStatus: async (experienceId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/booking-status`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Get experience booking status API error:', error);
+      throw new Error(`Failed to get booking status: ${error.message}`);
+    }
+  },
+
+  /**
+   * Gets booking status for all schedules of an experience
+   * @param {number} experienceId - ID of the experience
+   * @returns {Promise<Object>} Schedule booking statuses data
+   */
+  getScheduleBookingStatuses: async (experienceId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/experiences/${experienceId}/schedules/booking-status`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Get schedule booking statuses API error:', error);
+      throw new Error(`Failed to get schedule booking statuses: ${error.message}`);
+    }
   }
 };
 
