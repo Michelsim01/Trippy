@@ -49,7 +49,7 @@ const MyToursPage = () => {
                     title: experience.title,
                     location: experience.location,
                     price: experience.price,
-                    rating: experience.averageRating || 0,
+                    averageRating: experience.averageRating || 0,
                     imageUrl: experience.coverPhotoUrl,
                     status: experience.status,
                     shortDescription: experience.shortDescription,
@@ -179,8 +179,8 @@ const MyToursPage = () => {
         return sum + tourSchedules.reduce((scheduleSum, schedule) => scheduleSum + (schedule.bookedSpots || 0), 0)
     }, 0)
 
-    const averageRating = tours.filter(t => t.rating > 0).length > 0
-        ? (tours.reduce((sum, tour) => sum + tour.rating, 0) / tours.filter(t => t.rating > 0).length).toFixed(1)
+    const averageRating = tours.filter(t => t.averageRating > 0).length > 0
+        ? (tours.reduce((sum, tour) => sum + tour.averageRating, 0) / tours.filter(t => t.averageRating > 0).length).toFixed(1)
         : '0.0'
 
     return (
