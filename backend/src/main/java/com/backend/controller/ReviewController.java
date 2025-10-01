@@ -6,6 +6,16 @@ import com.backend.entity.User;
 import com.backend.entity.Experience;
 import com.backend.entity.TripPoints;
 import com.backend.repository.ReviewRepository;
+import com.backend.entity.ReviewLike;
+import com.backend.entity.Booking;
+import com.backend.entity.User;
+import com.backend.entity.Experience;
+import com.backend.entity.TripPoints;
+import com.backend.repository.BookingRepository;
+import com.backend.repository.UserRepository;
+import com.backend.repository.ExperienceRepository;
+import com.backend.service.TripPointsService;
+import com.backend.repository.ReviewLikeRepository;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.ExperienceRepository;
@@ -27,7 +37,7 @@ import java.util.stream.Collectors;
 public class ReviewController {
     @Autowired
     private ReviewRepository reviewRepository;
-
+    
     @Autowired
     private BookingRepository bookingRepository;
 
@@ -39,6 +49,9 @@ public class ReviewController {
 
     @Autowired
     private TripPointsService tripPointsService;
+
+    @Autowired
+    private ReviewLikeRepository reviewLikeRepository;
 
     @GetMapping
     public ResponseEntity<List<Review>> getAllReviews() {
@@ -365,7 +378,7 @@ public class ReviewController {
             response.put("title", savedReview.getTitle());
             response.put("comment", savedReview.getComment());
             response.put("tripPointsEarned", savedReview.getTripPointsEarned());
-            response.put("createdAt", savedReview.getCreatedAt());
+            response.put("createdAt", savedReview.getCreatedAt().toString());
             response.put("success", true);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -418,6 +431,134 @@ public class ReviewController {
         } catch (Exception e) {
             System.err.println("Error deleting review with ID " + id + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/{reviewId}/like")
+    public ResponseEntity<?> likeReview(@PathVariable Long reviewId, @RequestParam Long userId) {
+        try {
+            if (reviewId == null || reviewId <= 0 || userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid review ID or user ID"));
+            }
+
+            // Check if review exists
+            Optional<Review> reviewOpt = reviewRepository.findById(reviewId);
+            if (!reviewOpt.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check if user exists
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (!userOpt.isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "User not found"));
+            }
+
+            // Check if user already liked this review
+            Optional<ReviewLike> existingLike = reviewLikeRepository.findByReviewIdAndUserId(reviewId, userId);
+            if (existingLike.isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "User has already liked this review"));
+            }
+
+            // Create new like
+            ReviewLike reviewLike = new ReviewLike();
+            reviewLike.setReview(reviewOpt.get());
+            reviewLike.setUser(userOpt.get());
+            reviewLikeRepository.save(reviewLike);
+
+            // Update like count on review
+            Review review = reviewOpt.get();
+            Integer currentLikeCount = review.getLikeCount();
+            if (currentLikeCount == null) {
+                currentLikeCount = 0;
+            }
+            review.setLikeCount(currentLikeCount + 1);
+            reviewRepository.save(review);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("likeCount", review.getLikeCount());
+            response.put("message", "Review liked successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error liking review " + reviewId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to like review: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{reviewId}/like")
+    public ResponseEntity<?> unlikeReview(@PathVariable Long reviewId, @RequestParam Long userId) {
+        try {
+            if (reviewId == null || reviewId <= 0 || userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid review ID or user ID"));
+            }
+
+            // Check if review exists
+            Optional<Review> reviewOpt = reviewRepository.findById(reviewId);
+            if (!reviewOpt.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check if like exists
+            Optional<ReviewLike> existingLike = reviewLikeRepository.findByReviewIdAndUserId(reviewId, userId);
+            if (!existingLike.isPresent()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "User has not liked this review"));
+            }
+
+            // Remove like
+            reviewLikeRepository.delete(existingLike.get());
+
+            // Update like count on review
+            Review review = reviewOpt.get();
+            Integer currentLikeCount = review.getLikeCount();
+            if (currentLikeCount == null) {
+                currentLikeCount = 0;
+            }
+            review.setLikeCount(Math.max(0, currentLikeCount - 1));
+            reviewRepository.save(review);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("likeCount", review.getLikeCount());
+            response.put("message", "Review unliked successfully");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error unliking review " + reviewId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to unlike review: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/{reviewId}/like-status")
+    public ResponseEntity<?> getLikeStatus(@PathVariable Long reviewId, @RequestParam Long userId) {
+        try {
+            if (reviewId == null || reviewId <= 0 || userId == null || userId <= 0) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid review ID or user ID"));
+            }
+
+            // Check if user has liked this review
+            boolean hasLiked = reviewLikeRepository.findByReviewIdAndUserId(reviewId, userId).isPresent();
+
+            // Get current like count
+            Long likeCount = reviewLikeRepository.countByReviewId(reviewId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("hasLiked", hasLiked);
+            response.put("likeCount", likeCount);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error getting like status for review " + reviewId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to get like status: " + e.getMessage()));
         }
     }
 }

@@ -142,6 +142,37 @@ public class BookingController {
     }
 
     /**
+<<<<<<< Updated upstream
+     * Get booking details by confirmation code
+     * 
+     * @param confirmationCode the confirmation code of the booking
+     * @return BookingResponseDTO with complete booking information
+     */
+    @GetMapping("/confirmation/{confirmationCode}")
+    public ResponseEntity<BookingResponseDTO> getBookingByConfirmationCode(@PathVariable String confirmationCode) {
+        try {
+            // Enhanced validation for confirmation code format
+            if (!isValidConfirmationCodeFormat(confirmationCode)) {
+                System.err.println("Invalid confirmation code format: " + confirmationCode);
+                return ResponseEntity.badRequest().build();
+            }
+
+            BookingResponseDTO booking = bookingService.getBookingByConfirmationCode(confirmationCode);
+            return ResponseEntity.ok(booking);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Booking not found: " + e.getMessage());
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            System.err.println(
+                    "Error retrieving booking with confirmation code " + confirmationCode + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    /**
+=======
+>>>>>>> Stashed changes
      * Get all bookings for a user by email
      * 
      * @param email the email address of the user

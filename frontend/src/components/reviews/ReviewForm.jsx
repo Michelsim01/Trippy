@@ -170,7 +170,7 @@ const ReviewForm = ({
       } else {
         result = await createReview(reviewData);
       }
-
+      console.log('🚀 Review submission result:', result);
       if (result.success) {
         // Handle photo uploads if any new photos
         if (formData.photos.length > 0) {
@@ -180,15 +180,12 @@ const ReviewForm = ({
 
         setSubmitStatus('success');
 
-        // Call success callback
-        if (onSubmit) {
-          onSubmit(result.data);
-        }
-
-        // Auto close after success
+        // Call success callback with a slight delay to ensure UI updates
         setTimeout(() => {
-          if (onCancel) onCancel();
-        }, 2000);
+          if (onSubmit) {
+            onSubmit(result.data);
+          }
+        }, 500);
 
       } else {
         setSubmitStatus('error');

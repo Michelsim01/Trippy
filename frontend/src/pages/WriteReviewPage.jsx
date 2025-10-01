@@ -9,7 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 const WriteReviewPage = () => {
   const { bookingId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [booking, setBooking] = useState(null);
@@ -52,7 +52,20 @@ const WriteReviewPage = () => {
         }
 
         setBooking(bookingData);
-        setExperience(bookingData.experienceSchedule?.experience);
+
+        // Construct experience object from flattened BookingResponseDTO
+        const experienceData = {
+          experienceId: bookingData.experienceId,
+          title: bookingData.experienceTitle,
+          shortDescription: bookingData.experienceDescription,
+          location: bookingData.experienceLocation,
+          country: bookingData.experienceCountry,
+          price: bookingData.experiencePrice,
+          coverPhotoUrl: bookingData.experienceCoverPhotoUrl,
+          importantInfo: bookingData.experienceImportantInfo
+        };
+
+        setExperience(experienceData);
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message);
@@ -65,10 +78,24 @@ const WriteReviewPage = () => {
   }, [bookingId, user?.id]);
 
   const handleReviewSubmit = (reviewData) => {
-    // Show success and redirect to My Bookings
-    navigate('/my-bookings', {
+    // Use trip points from the review response, fallback to 10
+    const tripPointsEarned = reviewData?.tripPointsEarned || 10;
+
+    console.log('User ID:', user?.id);
+    console.log('User:', user);
+    console.log('Is Authenticated:', isAuthenticated);
+    console.log('Booking:', booking);
+    console.log('Experience:', experience);
+    console.log('Review Data:', reviewData);
+    console.log('Trip Points Earned:', tripPointsEarned);
+    console.log('Navigate to:', `/profile/${user?.id}`);
+    console.log('State:', {
+      message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
+    });
+    // Show success and redirect to profile reviews tab to show the new review
+    navigate(`/profile/${user?.id}`, {
       state: {
-        message: 'Review submitted successfully! You earned 10 TripPoints.'
+        message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
       }
     });
   };
@@ -81,7 +108,7 @@ const WriteReviewPage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar
-          isAuthenticated={true}
+          isAuthenticated={isAuthenticated}
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
@@ -90,7 +117,7 @@ const WriteReviewPage = () => {
           isOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           variant="desktop"
-          isAuthenticated={true}
+          isAuthenticated={isAuthenticated}
         />
 
         <div className="max-w-4xl mx-auto py-8 px-4">
@@ -106,7 +133,7 @@ const WriteReviewPage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar
-          isAuthenticated={true}
+          isAuthenticated={isAuthenticated}
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setSidebarOpen(true)}
         />
@@ -115,7 +142,7 @@ const WriteReviewPage = () => {
           isOpen={isSidebarOpen}
           onClose={() => setSidebarOpen(false)}
           variant="desktop"
-          isAuthenticated={true}
+          isAuthenticated={isAuthenticated}
         />
 
         <div className="max-w-4xl mx-auto py-8 px-4">
@@ -151,7 +178,7 @@ const WriteReviewPage = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar
-        isAuthenticated={true}
+        isAuthenticated={isAuthenticated}
         isSidebarOpen={isSidebarOpen}
         onToggleSidebar={() => setSidebarOpen(true)}
       />
@@ -160,7 +187,7 @@ const WriteReviewPage = () => {
         isOpen={isSidebarOpen}
         onClose={() => setSidebarOpen(false)}
         variant="desktop"
-        isAuthenticated={true}
+        isAuthenticated={isAuthenticated}
       />
 
       <div className="max-w-4xl mx-auto py-8 px-4">

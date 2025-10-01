@@ -223,5 +223,56 @@ export const reviewService = {
         error: error.response?.data?.message || error.message || 'Failed to report review'
       };
     }
+  },
+
+  // Like a review
+  async likeReview(reviewId, userId) {
+    try {
+      const response = await api.post(`/reviews/${reviewId}/like?userId=${userId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error liking review:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to like review'
+      };
+    }
+  },
+
+  // Unlike a review
+  async unlikeReview(reviewId, userId) {
+    try {
+      const response = await api.delete(`/reviews/${reviewId}/like?userId=${userId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error unliking review:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to unlike review'
+      };
+    }
+  },
+
+  // Get like status for a review
+  async getLikeStatus(reviewId, userId) {
+    try {
+      const response = await api.get(`/reviews/${reviewId}/like-status?userId=${userId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error getting like status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to get like status'
+      };
+    }
   }
 };

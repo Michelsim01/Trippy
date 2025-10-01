@@ -91,20 +91,22 @@ const ReviewStats = ({
           const percentage = getRatingPercentage(count);
 
           return (
-            <div key={rating} className="flex items-center space-x-3">
-              <div className="flex items-center space-x-1 w-12">
-                <span className="text-sm font-medium text-gray-700">{rating}</span>
-                <StarRating rating={1} size="sm" />
+            <div key={rating} className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2 min-w-fit">
+                <span className="text-sm font-medium text-gray-700 w-3">{rating}</span>
+                <div className="flex-shrink-0">
+                  <StarRating rating={rating} size="sm" />
+                </div>
               </div>
 
-              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden mx-3">
                 <div
                   className="h-full bg-yellow-400 transition-all duration-500 ease-out"
                   style={{ width: `${percentage}%` }}
                 />
               </div>
 
-              <div className="w-12 text-right">
+              <div className="w-8 text-right flex-shrink-0">
                 <span className="text-sm text-gray-600">{count}</span>
               </div>
             </div>
