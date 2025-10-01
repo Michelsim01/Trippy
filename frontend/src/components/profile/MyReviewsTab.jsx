@@ -1,29 +1,9 @@
 import React, { useState, useMemo } from 'react';
-import { Star, Trash2, Edit3 } from 'lucide-react';
-import { useReviews } from '../../contexts/ReviewContext';
+import { Star } from 'lucide-react';
 import LikeButton from '../reviews/LikeButton';
 
 const MyReviewsTab = ({ touristReviews, loading }) => {
-    const { deleteReview, loading: reviewLoading } = useReviews();
     const [sortOption, setSortOption] = useState('newest');
-
-    const handleDeleteReview = async (reviewId) => {
-        if (!window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            const result = await deleteReview(reviewId);
-            if (result.success) {
-                // Review deleted successfully - the context will update the UI
-            } else {
-                alert('Failed to delete review: ' + (result.error || 'Unknown error'));
-            }
-        } catch (error) {
-            console.error('Error deleting review:', error);
-            alert('Failed to delete review. Please try again.');
-        }
-    };
 
     // Sort reviews based on selected option
     const sortedReviews = useMemo(() => {
@@ -125,20 +105,6 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                                                 initialLikeCount={review.likeCount || 0}
                                                 className="text-xs"
                                             />
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <button className="btn btn-outline-info btn-sm">
-                                                <Edit3 className="w-3 h-3 mr-1" />
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteReview(review.id)}
-                                                disabled={reviewLoading}
-                                                className="btn btn-outline-accent btn-sm"
-                                            >
-                                                <Trash2 className="w-3 h-3 mr-1" />
-                                                Delete
-                                            </button>
                                         </div>
                                     </div>
                                 </div>

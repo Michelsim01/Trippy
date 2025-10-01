@@ -24,12 +24,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.stream.Collectors;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.UUID;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -122,6 +132,32 @@ public class ReviewController {
                     reviewMap.put("booking", bookingMap);
                 }
 
+                // Add photos if available
+                if (review.getPhotos() != null && !review.getPhotos().trim().isEmpty()) {
+                    try {
+                        String photosJson = review.getPhotos();
+                        ObjectMapper objectMapper = new ObjectMapper();
+
+                        // First try to parse as a list of URLs directly
+                        List<String> photoUrls = objectMapper.readValue(photosJson, new TypeReference<List<String>>() {});
+
+                        // Convert to the format expected by frontend
+                        List<Map<String, String>> photoList = new ArrayList<>();
+                        for (String url : photoUrls) {
+                            if (url != null && !url.trim().isEmpty()) {
+                                Map<String, String> photo = new HashMap<>();
+                                photo.put("url", url.trim());
+                                photoList.add(photo);
+                            }
+                        }
+                        reviewMap.put("photos", photoList);
+                    } catch (Exception e) {
+                        // If parsing fails, try legacy parsing or skip photos
+                        System.err.println("Error parsing photos for review " + review.getReviewId() + ": " + e.getMessage());
+                        System.err.println("Photos JSON: " + review.getPhotos());
+                    }
+                }
+
                 return reviewMap;
             }).collect(Collectors.toList());
 
@@ -163,6 +199,32 @@ public class ReviewController {
                     reviewMap.put("reviewer", reviewerMap);
                 }
 
+                // Add photos if available
+                if (review.getPhotos() != null && !review.getPhotos().trim().isEmpty()) {
+                    try {
+                        String photosJson = review.getPhotos();
+                        ObjectMapper objectMapper = new ObjectMapper();
+
+                        // First try to parse as a list of URLs directly
+                        List<String> photoUrls = objectMapper.readValue(photosJson, new TypeReference<List<String>>() {});
+
+                        // Convert to the format expected by frontend
+                        List<Map<String, String>> photoList = new ArrayList<>();
+                        for (String url : photoUrls) {
+                            if (url != null && !url.trim().isEmpty()) {
+                                Map<String, String> photo = new HashMap<>();
+                                photo.put("url", url.trim());
+                                photoList.add(photo);
+                            }
+                        }
+                        reviewMap.put("photos", photoList);
+                    } catch (Exception e) {
+                        // If parsing fails, try legacy parsing or skip photos
+                        System.err.println("Error parsing photos for review " + review.getReviewId() + ": " + e.getMessage());
+                        System.err.println("Photos JSON: " + review.getPhotos());
+                    }
+                }
+
                 return reviewMap;
             }).collect(Collectors.toList());
 
@@ -171,6 +233,111 @@ public class ReviewController {
             System.err.println("Error retrieving reviews for experience " + experienceId + ": " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to fetch experience reviews: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/user/{userId}/received")
+    public ResponseEntity<?> getReceivedReviews(@PathVariable Long userId,
+                                               @RequestParam(defaultValue = "newest") String sortBy) {
+        try {
+            if (userId == null || userId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            // Find all experiences created by this user
+            List<Experience> userExperiences = experienceRepository.findByGuide_Id(userId);
+
+            if (userExperiences.isEmpty()) {
+                return ResponseEntity.ok(new ArrayList<>());
+            }
+
+            // Get all experience IDs
+            List<Long> experienceIds = userExperiences.stream()
+                .map(Experience::getExperienceId)
+                .collect(Collectors.toList());
+
+            // Find all reviews for these experiences
+            List<Review> reviews = reviewRepository.findByExperience_ExperienceIdIn(experienceIds);
+
+            // Sort reviews based on sortBy parameter
+            switch (sortBy.toLowerCase()) {
+                case "oldest":
+                    reviews.sort((r1, r2) -> r1.getCreatedAt().compareTo(r2.getCreatedAt()));
+                    break;
+                case "highest":
+                    reviews.sort((r1, r2) -> r2.getRating().compareTo(r1.getRating()));
+                    break;
+                case "newest":
+                default:
+                    reviews.sort((r1, r2) -> r2.getCreatedAt().compareTo(r1.getCreatedAt()));
+                    break;
+            }
+
+            // Create safe response objects to avoid lazy loading issues
+            List<Map<String, Object>> safeReviews = reviews.stream().map(review -> {
+                Map<String, Object> reviewMap = new HashMap<>();
+                reviewMap.put("reviewId", review.getReviewId());
+                reviewMap.put("rating", review.getRating());
+                reviewMap.put("title", review.getTitle());
+                reviewMap.put("comment", review.getComment());
+                reviewMap.put("tripPointsEarned", review.getTripPointsEarned());
+                reviewMap.put("createdAt", review.getCreatedAt());
+                reviewMap.put("updatedAt", review.getUpdatedAt());
+                reviewMap.put("likeCount", review.getLikeCount() != null ? review.getLikeCount() : 0);
+
+                // Add reviewer info safely
+                if (review.getReviewer() != null) {
+                    Map<String, Object> reviewerMap = new HashMap<>();
+                    reviewerMap.put("userId", review.getReviewer().getId());
+                    reviewerMap.put("firstName", review.getReviewer().getFirstName());
+                    reviewerMap.put("lastName", review.getReviewer().getLastName());
+                    reviewerMap.put("profileImageUrl", review.getReviewer().getProfileImageUrl());
+                    reviewMap.put("reviewer", reviewerMap);
+                }
+
+                // Add experience info safely
+                if (review.getExperience() != null) {
+                    Map<String, Object> experienceMap = new HashMap<>();
+                    experienceMap.put("experienceId", review.getExperience().getExperienceId());
+                    experienceMap.put("title", review.getExperience().getTitle());
+                    experienceMap.put("location", review.getExperience().getLocation());
+                    experienceMap.put("country", review.getExperience().getCountry());
+                    experienceMap.put("coverPhotoUrl", review.getExperience().getCoverPhotoUrl());
+                    reviewMap.put("experience", experienceMap);
+                }
+
+                // Add photos if available
+                if (review.getPhotos() != null && !review.getPhotos().trim().isEmpty()) {
+                    try {
+                        String photosJson = review.getPhotos();
+                        ObjectMapper objectMapper = new ObjectMapper();
+
+                        // Parse as a list of URLs
+                        List<String> photoUrls = objectMapper.readValue(photosJson, new TypeReference<List<String>>() {});
+
+                        // Convert to the format expected by frontend
+                        List<Map<String, String>> photoList = new ArrayList<>();
+                        for (String url : photoUrls) {
+                            if (url != null && !url.trim().isEmpty()) {
+                                Map<String, String> photo = new HashMap<>();
+                                photo.put("url", url.trim());
+                                photoList.add(photo);
+                            }
+                        }
+                        reviewMap.put("photos", photoList);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing photos for review " + review.getReviewId() + ": " + e.getMessage());
+                    }
+                }
+
+                return reviewMap;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(safeReviews);
+        } catch (Exception e) {
+            System.err.println("Error retrieving received reviews for user " + userId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to fetch received reviews: " + e.getMessage()));
         }
     }
 
@@ -575,6 +742,97 @@ public class ReviewController {
         }
     }
 
+    @PostMapping("/{reviewId}/photos")
+    public ResponseEntity<?> uploadReviewPhotos(@PathVariable Long reviewId, @RequestParam("photos") MultipartFile[] photos) {
+        try {
+            if (reviewId == null || reviewId <= 0) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Invalid review ID"));
+            }
+
+            if (photos == null || photos.length == 0) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "No photos provided"));
+            }
+
+            // Check if review exists
+            Optional<Review> reviewOpt = reviewRepository.findById(reviewId);
+            if (!reviewOpt.isPresent()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Validate photos
+            List<String> allowedTypes = List.of("image/jpeg", "image/png", "image/webp");
+            long maxFileSize = 5 * 1024 * 1024; // 5MB
+            int maxPhotos = 5;
+
+            if (photos.length > maxPhotos) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Maximum " + maxPhotos + " photos allowed"));
+            }
+
+            for (MultipartFile photo : photos) {
+                if (!allowedTypes.contains(photo.getContentType())) {
+                    return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Only JPEG, PNG, and WebP images are allowed"));
+                }
+
+                if (photo.getSize() > maxFileSize) {
+                    return ResponseEntity.badRequest()
+                        .body(Map.of("error", "Photos must be less than 5MB each"));
+                }
+            }
+
+            // Create directory if it doesn't exist
+            Path uploadDir = Paths.get("uploads/reviews");
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+
+            // Save photos and collect URLs
+            List<String> photoUrls = new ArrayList<>();
+            for (MultipartFile photo : photos) {
+                // Generate unique filename
+                String originalFilename = photo.getOriginalFilename();
+                String fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                String uniqueFilename = "review_" + reviewId + "_" + UUID.randomUUID().toString() + fileExtension;
+
+                Path filePath = uploadDir.resolve(uniqueFilename);
+                Files.copy(photo.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+                // Store full URL for frontend access
+                String photoUrl = "http://localhost:8080/uploads/reviews/" + uniqueFilename;
+                photoUrls.add(photoUrl);
+            }
+
+            // Update review with photo URLs using proper JSON serialization
+            Review review = reviewOpt.get();
+            ObjectMapper objectMapper = new ObjectMapper();
+            String photosJson = objectMapper.writeValueAsString(photoUrls);
+            review.setPhotos(photosJson);
+            reviewRepository.save(review);
+
+            // Create response
+            Map<String, Object> response = new HashMap<>();
+            response.put("reviewId", reviewId);
+            response.put("photoUrls", photoUrls);
+            response.put("uploadedCount", photos.length);
+            response.put("success", true);
+            response.put("message", "Photos uploaded successfully");
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            System.err.println("Error uploading photos for review " + reviewId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to upload photos: " + e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("Error uploading photos for review " + reviewId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "Failed to upload photos: " + e.getMessage()));
+        }
+    }
+    
     /**
      * Helper method to update experience rating statistics after a review is created
      * Increments totalStars, totalReviews, and recalculates averageRating

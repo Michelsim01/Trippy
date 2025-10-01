@@ -166,19 +166,19 @@ const ProfilePage = () => {
         }
     };
 
-    const fetchUserReviews = async (userId) => {
+    const fetchReceivedReviews = async (userId, sortBy = 'newest') => {
         setReviewsLoading(true);
         try {
-            const response = await reviewService.getUserReviews(userId);
+            const response = await reviewService.getReceivedReviews(userId, sortBy);
             if (response.success) {
-                setUserReviews(response.data);
+                setExperienceReviews(response.data);
             } else {
-                console.error('Failed to fetch user reviews:', response.error);
-                setUserReviews([]);
+                console.error('Failed to fetch received reviews:', response.error);
+                setExperienceReviews([]);
             }
         } catch (error) {
-            console.error('Error fetching user reviews:', error);
-            setUserReviews([]);
+            console.error('Error fetching received reviews:', error);
+            setExperienceReviews([]);
         } finally {
             setReviewsLoading(false);
         }
@@ -243,10 +243,10 @@ const ProfilePage = () => {
     }, [userData, user?.id]);
 
     useEffect(() => {
-        if (id) {
-            fetchUserReviews(parseInt(id));
+        if (id && userData && currentRole === UserRole.TOUR_GUIDE) {
+            fetchReceivedReviews(parseInt(id));
         }
-    }, [id]);
+    }, [id, userData, currentRole]);
 
     // Reset active tab when tabs change (when switching between profiles)
     useEffect(() => {
@@ -328,7 +328,17 @@ const ProfilePage = () => {
                     onTourDeleted={handleTourDeleted}
                 />;
             case 'Reviews':
-                return <ReviewsTab reviews={experienceReviews} loading={reviewsLoading} />;
+                return (
+                    <ReviewsTab
+                        reviews={experienceReviews}
+                        loading={reviewsLoading}
+                        onSortChange={(sortBy) => {
+                            if (id && userData && currentRole === UserRole.TOUR_GUIDE) {
+                                fetchReceivedReviews(parseInt(id), sortBy);
+                            }
+                        }}
+                    />
+                );
             case 'TripPoints':
                 return (
                     <div className="space-y-6">

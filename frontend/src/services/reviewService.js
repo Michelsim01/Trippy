@@ -274,5 +274,22 @@ export const reviewService = {
         error: error.response?.data?.error || error.message || 'Failed to get like status'
       };
     }
+  },
+
+  // Get reviews received on user's experiences (for tour guides)
+  async getReceivedReviews(userId, sortBy = 'newest') {
+    try {
+      const response = await api.get(`/reviews/user/${userId}/received?sortBy=${sortBy}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching received reviews:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to fetch received reviews'
+      };
+    }
   }
 };

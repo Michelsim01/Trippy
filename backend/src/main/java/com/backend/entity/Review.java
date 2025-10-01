@@ -51,6 +51,9 @@ public class Review {
 
     private Integer likeCount = 0;
 
+    @Column(length = 2000)
+    private String photos; // JSON string of photo URLs
+
     public Long getReviewId() { return reviewId; }
     public void setReviewId(Long reviewId) { this.reviewId = reviewId; }
     public Booking getBooking() { return booking; }
@@ -75,4 +78,6 @@ public class Review {
     public void setLikes(Set<ReviewLike> likes) { this.likes = likes; }
     public Integer getLikeCount() { return likeCount; }
     public void setLikeCount(Integer likeCount) { this.likeCount = likeCount; }
+    public String getPhotos() { return photos; }
+    public void setPhotos(String photos) { this.photos = photos; }
 }

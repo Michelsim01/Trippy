@@ -18,4 +18,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // Find review by booking (should be unique)
     Review findByBooking_BookingId(Long bookingId);
+
+    // Find reviews by multiple experience IDs (for getting reviews received on user's experiences)
+    List<Review> findByExperience_ExperienceIdIn(List<Long> experienceIds);
 }
