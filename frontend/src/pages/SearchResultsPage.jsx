@@ -33,7 +33,7 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
             title: exp.title,
             location: exp.location,
             price: exp.price, // This is the key field that was missing!
-            rating: exp.averageRating || 4.9,
+            averageRating: exp.averageRating || 4.9,
             imageUrl: imageUrl,
             shortDescription: exp.shortDescription,
             duration: exp.duration,
@@ -215,7 +215,7 @@ const SearchResultsPage = () => {
 
             // Review score filter
             if (filters.reviewScores.length > 0) {
-                const roundedRating = Math.round(experience.rating);
+                const roundedRating = Math.round(experience.averageRating);
                 if (!filters.reviewScores.includes(roundedRating)) {
                     return false;
                 }
@@ -243,7 +243,7 @@ const SearchResultsPage = () => {
             firstExperience: sorted[0] ? {
                 title: sorted[0].title,
                 price: sorted[0].price,
-                rating: sorted[0].rating,
+                averageRating: sorted[0].averageRating,
                 reviewCount: sorted[0].reviewCount,
                 durationHours: sorted[0].durationHours
             } : null
@@ -256,8 +256,8 @@ const SearchResultsPage = () => {
             case 'trustiest':
                 return sorted.sort((a, b) => {
                     // Calculate trust score (weighted combination of rating and review count)
-                    const trustScoreA = ((a.rating || 0) * 0.7) + (Math.min((a.reviewCount || 0) / 100, 3) * 0.3);
-                    const trustScoreB = ((b.rating || 0) * 0.7) + (Math.min((b.reviewCount || 0) / 100, 3) * 0.3);
+                    const trustScoreA = ((a.averageRating || 0) * 0.7) + (Math.min((a.reviewCount || 0) / 100, 3) * 0.3);
+                    const trustScoreB = ((b.averageRating || 0) * 0.7) + (Math.min((b.reviewCount || 0) / 100, 3) * 0.3);
                     
                     if (Math.abs(trustScoreA - trustScoreB) < 0.01) {
                         // If trust scores are very close, prioritize more reviews
@@ -377,7 +377,7 @@ const SearchResultsPage = () => {
                         location: exp.location,
                         originalPrice: null, // No discount, so no original price
                         price: exp.price ? parseFloat(exp.price) : 99, // Use 'price' field that ExperienceCard expects, default to $99 if no price
-                        rating: exp.averageRating ? parseFloat(exp.averageRating) : 4.5,
+                        averageRating: exp.averageRating || 4.9,
                         reviewCount: exp.totalReviews || 0,
                         duration: exp.duration ? `${exp.duration} hours` : "Multi-day",
                         durationHours: exp.duration ? parseFloat(exp.duration) : 48,
@@ -440,7 +440,7 @@ const SearchResultsPage = () => {
             sortedCount: sorted.length,
             sortedTitles: sorted.map(exp => exp.title),
             sortedPrices: sorted.map(exp => exp.price),
-            sortedRatings: sorted.map(exp => exp.rating)
+            sortedRatings: sorted.map(exp => exp.averageRating)
         });
         setFilteredResults(sorted);
     }, [searchResults, filters, sortBy, selectedCategory, schedules]);
