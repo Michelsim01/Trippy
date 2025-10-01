@@ -207,7 +207,7 @@ const BookingWidget = ({
             {displayData.averageRating ? Number(displayData.averageRating).toFixed(1) : '4.8'}
           </span>
           <span className={`${isMobile ? 'text-xs' : 'text-sm'} text-neutrals-4`}>
-            ({displayData.totalReviews || 256} reviews)
+            ({displayData.totalReviews || 0} reviews)
           </span>
         </div>
 

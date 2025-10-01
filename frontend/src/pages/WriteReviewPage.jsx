@@ -53,6 +53,36 @@ const WriteReviewPage = () => {
 
         setBooking(bookingData);
         setRawExperienceData(bookingData);
+
+        // Construct experience object from flattened BookingResponseDTO
+        const experienceData = {
+          experienceId: bookingData.experienceId,
+          title: bookingData.experienceTitle,
+          shortDescription: bookingData.experienceDescription,
+          location: bookingData.experienceLocation,
+          country: bookingData.experienceCountry,
+          price: bookingData.experiencePrice,
+          coverPhotoUrl: bookingData.experienceCoverPhotoUrl,
+          importantInfo: bookingData.experienceImportantInfo
+        };
+
+        // Fetch complete experience data to get the tour guide's user ID
+        const experienceResponse = await fetch(`http://localhost:8080/api/experiences/${bookingData.experienceId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (experienceResponse.ok) {
+          const completeExperienceData = await experienceResponse.json();
+          experienceData.guideId = completeExperienceData.guide.userId;
+          console.log('🔍 Complete experience data received:', completeExperienceData);
+        } else {
+          console.warn('⚠️ Could not fetch complete experience data for guide ID');
+        }
+
+        setExperience(experienceData);
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message);
@@ -81,148 +111,204 @@ const WriteReviewPage = () => {
   }, [rawExperienceData]);
 
   const handleReviewSubmit = (reviewData) => {
-    // Use trip points from the review response, fallback to 10
-    const tripPointsEarned = reviewData?.tripPointsEarned || 10;
+    // Function to send notification
+    const sendNotification = async (notificationData) => {
+      try {
+        console.log('Sending notification:', notificationData);
 
-    console.log('User ID:', user?.id);
-    console.log('User:', user);
-    console.log('Is Authenticated:', isAuthenticated);
-    console.log('Booking:', booking);
-    console.log('Experience:', experience);
-    console.log('Review Data:', reviewData);
-    console.log('Trip Points Earned:', tripPointsEarned);
-    console.log('Navigate to:', `/profile/${user?.id}`);
-    console.log('State:', {
-      message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
-    });
-    // Show success and redirect to profile reviews tab to show the new review
-    navigate(`/profile/${user?.id}`, {
-      state: {
-        message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
+        const token = localStorage.getItem('token');
+        const response = await fetch(`http://localhost:8080/api/notifications`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify(notificationData),
+        });
+
+        console.log('Notification response status:', response.status);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Notification error response:', errorText);
+          throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+        }
+
+        const data = await response.json();
+        console.log('Notification sent successfully:', data);
+        return data;
+      } catch (error) {
+        console.error('Error sending notification:', error);
+        throw error;
       }
-    });
-  };
+    };
 
-  const handleCancel = () => {
-    navigate(-1); // Go back to previous page
-  };
+    const handleReviewSubmit = async (reviewData) => {
+      // Use trip points from the review response, fallback to 10
+      const tripPointsEarned = reviewData?.tripPointsEarned || 10;
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar
-          isAuthenticated={isAuthenticated}
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setSidebarOpen(true)}
-        />
+      try {
+        // Send notifications after successful review submission
+        const notifications = [];
 
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          variant="desktop"
-          isAuthenticated={isAuthenticated}
-        />
+        // 1. Notification to the user who submitted the review (reviewer)
+        const reviewerNotification = {
+          title: 'Review Submitted Successfully',
+          message: `Your review for "${experience?.title}" has been submitted. You earned ${tripPointsEarned} TripPoints!`,
+          userId: user?.id,
+          type: 'REVIEW_REQUEST',
+        };
+        notifications.push(sendNotification(reviewerNotification));
+        console.log('Experience data for reviewer notification:', experience);
+        // 2. Notification to the tour guide who got reviewed
+        if (experience?.guideId && experience.guideId !== user?.id) {
+          const guideNotification = {
+            title: 'New Review Received',
+            message: `You received a new ${reviewData?.rating}-star review for "${experience?.title}"`,
+            userId: experience.guideId,
+            type: 'REVIEW_REQUEST',
+          };
+          notifications.push(sendNotification(guideNotification));
+        } else {
+          console.warn('⚠️ Could not send notification to guide: guideId not found or same as reviewer');
+        }
 
-        <div className="max-w-4xl mx-auto py-8 px-4">
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-1 border-t-transparent"></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+        // Wait for all notifications to complete
+        await Promise.allSettled(notifications);
+        console.log('✅ All notifications processed');
 
-  if (error || !booking || !experience) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar
-          isAuthenticated={isAuthenticated}
-          isSidebarOpen={isSidebarOpen}
-          onToggleSidebar={() => setSidebarOpen(true)}
-        />
+      } catch (error) {
+        console.error('❌ Error sending notifications:', error);
+      }
 
-        <Sidebar
-          isOpen={isSidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          variant="desktop"
-          isAuthenticated={isAuthenticated}
-        />
+      // Show success and redirect to profile reviews tab to show the new review
+      navigate(`/profile/${user?.id}`, {
+        state: {
+          message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
+        }
+      });
+    };
 
-        <div className="max-w-4xl mx-auto py-8 px-4">
-          <button
-            onClick={() => navigate('/my-bookings')}
-            className="flex items-center text-primary-1 hover:text-primary-1/80 transition-colors mb-6"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to My Bookings
-          </button>
+    const handleCancel = () => {
+      navigate(-1); // Go back to previous page
+    };
 
-          <div className="bg-white rounded-lg p-8 shadow-sm border border-red-200">
-            <div className="text-center">
-              <div className="text-red-600 text-lg font-semibold mb-2">
-                Unable to Load Review Form
-              </div>
-              <p className="text-gray-600 mb-4">
-                {error || 'Booking or experience data could not be found.'}
-              </p>
-              <button
-                onClick={() => navigate('/my-bookings')}
-                className="bg-primary-1 text-white px-6 py-2 rounded-md hover:bg-primary-1/90 transition-colors"
-              >
-                Return to My Bookings
-              </button>
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Navbar
+            isAuthenticated={isAuthenticated}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setSidebarOpen(true)}
+          />
+
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            variant="desktop"
+            isAuthenticated={isAuthenticated}
+          />
+
+          <div className="max-w-4xl mx-auto py-8 px-4">
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-1 border-t-transparent"></div>
             </div>
           </div>
         </div>
+      );
+    }
+
+    if (error || !booking || !experience) {
+      return (
+        <div className="min-h-screen bg-gray-50">
+          <Navbar
+            isAuthenticated={isAuthenticated}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setSidebarOpen(true)}
+          />
+
+          <Sidebar
+            isOpen={isSidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            variant="desktop"
+            isAuthenticated={isAuthenticated}
+          />
+
+          <div className="max-w-4xl mx-auto py-8 px-4">
+            <button
+              onClick={() => navigate('/my-bookings')}
+              className="flex items-center text-primary-1 hover:text-primary-1/80 transition-colors mb-6"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to My Bookings
+            </button>
+
+            <div className="bg-white rounded-lg p-8 shadow-sm border border-red-200">
+              <div className="text-center">
+                <div className="text-red-600 text-lg font-semibold mb-2">
+                  Unable to Load Review Form
+                </div>
+                <p className="text-gray-600 mb-4">
+                  {error || 'Booking or experience data could not be found.'}
+                </p>
+                <button
+                  onClick={() => navigate('/my-bookings')}
+                  className="bg-primary-1 text-white px-6 py-2 rounded-md hover:bg-primary-1/90 transition-colors"
+                >
+                  Return to My Bookings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar
+          isAuthenticated={isAuthenticated}
+          isSidebarOpen={isSidebarOpen}
+          onToggleSidebar={() => setSidebarOpen(true)}
+        />
+
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          variant="desktop"
+          isAuthenticated={isAuthenticated}
+        />
+
+        <div className="max-w-4xl mx-auto py-8 px-4">
+          {/* Header */}
+          <div className="mb-8">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center text-primary-1 hover:text-primary-1/80 transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </button>
+
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Write a Review
+            </h1>
+            <p className="text-gray-600">
+              Share your experience to help other travelers make informed decisions.
+            </p>
+          </div>
+
+          {/* Review Form */}
+          <ReviewForm
+            booking={booking}
+            experience={experience}
+            onSubmit={handleReviewSubmit}
+            onCancel={handleCancel}
+            isModal={false}
+          />
+        </div>
       </div>
     );
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <Navbar
-        isAuthenticated={isAuthenticated}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setSidebarOpen(true)}
-      />
-
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        variant="desktop"
-        isAuthenticated={isAuthenticated}
-      />
-
-      <div className="max-w-4xl mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center text-primary-1 hover:text-primary-1/80 transition-colors mb-4"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </button>
-
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Write a Review
-          </h1>
-          <p className="text-gray-600">
-            Share your experience to help other travelers make informed decisions.
-          </p>
-        </div>
-
-        {/* Review Form */}
-        <ReviewForm
-          booking={booking}
-          experience={experience}
-          onSubmit={handleReviewSubmit}
-          onCancel={handleCancel}
-          isModal={false}
-        />
-      </div>
-    </div>
-  );
-};
-
+  };
+}
 export default WriteReviewPage;

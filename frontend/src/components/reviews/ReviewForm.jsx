@@ -28,6 +28,7 @@ const ReviewForm = ({
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', null
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Photo handling
   const [previewPhotos, setPreviewPhotos] = useState(
@@ -234,10 +235,14 @@ const ReviewForm = ({
       <div className="bg-gray-50 rounded-lg p-4">
         <div className="flex space-x-3">
           <img
-            src={experience.coverImageUrl || '/default-experience.jpg'}
+            src={imageError ? '/default-experience.jpg' : (experience.coverImageUrl || '/default-experience.jpg')}
             alt={experience.title}
             className="w-16 h-16 rounded-lg object-cover"
-            onError={(e) => { e.target.src = '/default-experience.jpg'; }}
+            onError={() => {
+              if (!imageError) {
+                setImageError(true);
+              }
+            }}
           />
           <div className="flex-1">
             <h3 className="font-semibold text-gray-900">{experience.title}</h3>
