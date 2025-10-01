@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, Users, MapPin, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, MapPin, AlertCircle, DollarSign } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCheckout } from '../contexts/CheckoutContext';
 import Navbar from '../components/Navbar';
@@ -16,7 +16,6 @@ export default function CheckoutCompletePage() {
     booking,
     transaction,
     numberOfParticipants,
-    contactInfo,
     error: checkoutError
   } = useCheckout();
 
@@ -46,6 +45,10 @@ export default function CheckoutCompletePage() {
         setError('You are not authorized to view this booking');
         navigate(ROUTES.HOME);
         return;
+      }
+
+      if (booking) {
+        console.log('Booking object:', booking);
       }
     }
   }, [isAuthenticated, isLoading, experienceData, scheduleData, booking, transaction, user, navigate]);
@@ -101,10 +104,16 @@ export default function CheckoutCompletePage() {
     }
   };
 
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'SGD'
+    }).format(amount);
+  };
+
   // Constants
   const DEFAULT_COVER_IMAGE = '/images/default-experience-cover.jpg';
-  const DEFAULT_AVATAR = '/images/default-avatar.jpg';
-  const DEFAULT_RATING = 5.0;
   const ERROR_REDIRECT_DELAY = 3000; // 3 seconds
 
   // Routes
@@ -118,17 +127,12 @@ export default function CheckoutCompletePage() {
   const bookingData = experienceData && scheduleData ? {
     experience: {
       title: experienceData.title,
-      coverPhotoUrl: experienceData.coverPhotoUrl || experienceData.photoUrls?.[0] || DEFAULT_COVER_IMAGE,
-      guide: {
-        name: experienceData.hostName || experienceData.guide?.name || 'Host',
-        avatar: experienceData.hostAvatar || experienceData.guide?.avatar || DEFAULT_AVATAR,
-        rating: experienceData.rating || experienceData.guide?.rating || DEFAULT_RATING
-      }
+      coverPhotoUrl: experienceData.coverPhotoUrl || experienceData.photoUrls?.[0] || DEFAULT_COVER_IMAGE
     },
     date: formatDate(scheduleData.startDateTime),
     time: formatTime(scheduleData.startDateTime, scheduleData.endDateTime),
     guests: numberOfParticipants,
-    meetingPoint: scheduleData.meetingPoint || experienceData.meetingPoint || 'Meeting point TBD'
+    meetingPoint: scheduleData.meetingPoint || experienceData.meetingPoint || 'TBD'
   } : null;
 
   const handleChatWithGuide = () => {
@@ -238,27 +242,9 @@ export default function CheckoutCompletePage() {
 
                   {/* Experience Details */}
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-neutrals-1 mb-4">
+                    <h2 className="text-2xl font-bold text-neutrals-1 mb-6">
                       {bookingData.experience.title}
                     </h2>
-
-                    {/* Guide Info */}
-                    <div className="flex items-center gap-3 mb-6">
-                      <img
-                        src={bookingData.experience.guide.avatar}
-                        alt={bookingData.experience.guide.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                      <span className="text-lg font-medium text-neutrals-1">
-                        {bookingData.experience.guide.name}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <span className="text-yellow-500">★</span>
-                        <span className="text-lg font-medium text-neutrals-3">
-                          {bookingData.experience.guide.rating}
-                        </span>
-                      </div>
-                    </div>
 
                     {/* Booking Details */}
                     <div className="space-y-4 bg-neutrals-8 rounded-xl p-6">
@@ -291,6 +277,14 @@ export default function CheckoutCompletePage() {
                         <div>
                           <p className="text-sm font-medium text-neutrals-5 uppercase">Meeting Point</p>
                           <p className="text-lg font-semibold text-neutrals-1">{bookingData.meetingPoint}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <DollarSign className="w-6 h-6 text-neutrals-4" />
+                        <div>
+                          <p className="text-sm font-medium text-neutrals-5 uppercase">Total Paid</p>
+                          <p className="text-lg font-semibold text-neutrals-1">{formatCurrency(booking.totalAmount)}</p>
                         </div>
                       </div>
                     </div>
@@ -356,27 +350,9 @@ export default function CheckoutCompletePage() {
 
               {/* Experience Details */}
               <div className="mb-6">
-                <h2 className="text-lg font-bold text-neutrals-1 mb-4">
+                <h2 className="text-lg font-bold text-neutrals-1 mb-6">
                   {bookingData.experience.title}
                 </h2>
-
-                {/* Guide Info */}
-                <div className="flex items-center gap-3 mb-6">
-                  <img
-                    src={bookingData.experience.guide.avatar}
-                    alt={bookingData.experience.guide.name}
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                  <span className="text-base font-medium text-neutrals-1">
-                    {bookingData.experience.guide.name}
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <span className="text-yellow-500">★</span>
-                    <span className="text-base font-medium text-neutrals-3">
-                      {bookingData.experience.guide.rating}
-                    </span>
-                  </div>
-                </div>
 
                 {/* Booking Details */}
                 <div className="space-y-4 bg-neutrals-8 rounded-xl p-4">
@@ -409,6 +385,14 @@ export default function CheckoutCompletePage() {
                     <div>
                       <p className="text-xs font-medium text-neutrals-5 uppercase">Meeting Point</p>
                       <p className="text-sm font-semibold text-neutrals-1">{bookingData.meetingPoint}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <DollarSign className="w-5 h-5 text-neutrals-4" />
+                    <div>
+                      <p className="text-xs font-medium text-neutrals-5 uppercase">Total Paid</p>
+                      <p className="text-sm font-semibold text-neutrals-1">{formatCurrency(booking.totalAmount)}</p>
                     </div>
                   </div>
                 </div>
