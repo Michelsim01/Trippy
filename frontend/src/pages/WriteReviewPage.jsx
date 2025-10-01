@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -13,7 +13,7 @@ const WriteReviewPage = () => {
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [booking, setBooking] = useState(null);
-  const [experience, setExperience] = useState(null);
+  const [rawExperienceData, setRawExperienceData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -52,20 +52,7 @@ const WriteReviewPage = () => {
         }
 
         setBooking(bookingData);
-
-        // Construct experience object from flattened BookingResponseDTO
-        const experienceData = {
-          experienceId: bookingData.experienceId,
-          title: bookingData.experienceTitle,
-          shortDescription: bookingData.experienceDescription,
-          location: bookingData.experienceLocation,
-          country: bookingData.experienceCountry,
-          price: bookingData.experiencePrice,
-          coverPhotoUrl: bookingData.experienceCoverPhotoUrl,
-          importantInfo: bookingData.experienceImportantInfo
-        };
-
-        setExperience(experienceData);
+        setRawExperienceData(bookingData);
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message);
@@ -76,6 +63,22 @@ const WriteReviewPage = () => {
 
     fetchBookingDetails();
   }, [bookingId, user?.id]);
+
+  // Memoize experience object to prevent unnecessary re-renders
+  const experience = useMemo(() => {
+    if (!rawExperienceData) return null;
+
+    return {
+      experienceId: rawExperienceData.experienceId,
+      title: rawExperienceData.experienceTitle,
+      shortDescription: rawExperienceData.experienceDescription,
+      location: rawExperienceData.experienceLocation,
+      country: rawExperienceData.experienceCountry,
+      price: rawExperienceData.experiencePrice,
+      coverImageUrl: rawExperienceData.experienceCoverPhotoUrl,
+      importantInfo: rawExperienceData.experienceImportantInfo
+    };
+  }, [rawExperienceData]);
 
   const handleReviewSubmit = (reviewData) => {
     // Use trip points from the review response, fallback to 10
