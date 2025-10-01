@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFormData } from '../contexts/FormDataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -38,9 +38,34 @@ const ExperienceDetailsPage = () => {
   const [reviews, setReviews] = useState([]);
   const [reviewStats, setReviewStats] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
+  const [reviewSortOption, setReviewSortOption] = useState('newest');
 
   // Guide stats state
   const [guideStats, setGuideStats] = useState(null);
+
+  // Sorted reviews based on sort option
+  const sortedReviews = useMemo(() => {
+    if (!reviews || reviews.length === 0) return [];
+
+    const sorted = [...reviews].sort((a, b) => {
+      switch (reviewSortOption) {
+        case 'oldest':
+          return new Date(a.createdAt) - new Date(b.createdAt);
+        case 'highest':
+          // Sort by rating first (highest to lowest), then by newest if same rating
+          if (b.rating !== a.rating) {
+            return b.rating - a.rating;
+          }
+          // If same rating, sort by newest
+          return new Date(b.createdAt) - new Date(a.createdAt);
+        case 'newest':
+        default:
+          return new Date(b.createdAt) - new Date(a.createdAt);
+      }
+    });
+
+    return sorted;
+  }, [reviews, reviewSortOption]);
 
   // UI states
   const [loading, setLoading] = useState(false);
@@ -343,7 +368,7 @@ const ExperienceDetailsPage = () => {
   // Calculate review display data
   const averageRating = reviewStats?.averageRating || 0;
   const totalReviews = reviews.length;
-  const displayReviews = showAllReviews ? reviews : reviews.slice(0, 3);
+  const displayReviews = showAllReviews ? sortedReviews : sortedReviews.slice(0, 3);
 
   const relatedTours = [
     {
@@ -497,14 +522,31 @@ const ExperienceDetailsPage = () => {
                       Reviews ({totalReviews})
                     </h2>
 
-                    {reviews.length > 3 && (
-                      <button
-                        onClick={() => setShowAllReviews(!showAllReviews)}
-                        className="text-primary-1 font-medium hover:text-primary-1/80 transition-colors"
-                      >
-                        {showAllReviews ? 'Show Less' : `View All ${totalReviews} Reviews`}
-                      </button>
-                    )}
+                    <div className="flex items-center gap-4">
+                      {reviews.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-neutrals-4">Sort by:</span>
+                          <select
+                            className="text-sm border border-gray-300 rounded-md px-3 py-1 focus:ring-primary-1 focus:border-primary-1"
+                            value={reviewSortOption}
+                            onChange={(e) => setReviewSortOption(e.target.value)}
+                          >
+                            <option value="newest">Newest</option>
+                            <option value="oldest">Oldest</option>
+                            <option value="highest">Highest Rating</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {reviews.length > 3 && (
+                        <button
+                          onClick={() => setShowAllReviews(!showAllReviews)}
+                          className="text-primary-1 font-medium hover:text-primary-1/80 transition-colors"
+                        >
+                          {showAllReviews ? 'Show Less' : `View All ${totalReviews} Reviews`}
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {reviewsLoading ? (
@@ -695,18 +737,35 @@ const ExperienceDetailsPage = () => {
                 className="mb-6"
               />
 
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-neutrals-2" style={{ fontFamily: 'Poppins' }}>
-                  Reviews ({totalReviews})
-                </h2>
+              <div className="space-y-3 mb-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-neutrals-2" style={{ fontFamily: 'Poppins' }}>
+                    Reviews ({totalReviews})
+                  </h2>
 
-                {reviews.length > 2 && (
-                  <button
-                    onClick={() => setShowAllReviews(!showAllReviews)}
-                    className="text-primary-1 font-medium text-sm hover:text-primary-1/80 transition-colors"
-                  >
-                    {showAllReviews ? 'Show Less' : 'View All'}
-                  </button>
+                  {reviews.length > 2 && (
+                    <button
+                      onClick={() => setShowAllReviews(!showAllReviews)}
+                      className="text-primary-1 font-medium text-sm hover:text-primary-1/80 transition-colors"
+                    >
+                      {showAllReviews ? 'Show Less' : 'View All'}
+                    </button>
+                  )}
+                </div>
+
+                {reviews.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-neutrals-4">Sort by:</span>
+                    <select
+                      className="text-sm border border-gray-300 rounded-md px-2 py-1 focus:ring-primary-1 focus:border-primary-1"
+                      value={reviewSortOption}
+                      onChange={(e) => setReviewSortOption(e.target.value)}
+                    >
+                      <option value="newest">Newest</option>
+                      <option value="oldest">Oldest</option>
+                      <option value="highest">Highest Rating</option>
+                    </select>
+                  </div>
                 )}
               </div>
             </div>
@@ -741,7 +800,7 @@ const ExperienceDetailsPage = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {(showAllReviews ? reviews : reviews.slice(0, 2)).map((review) => (
+                {(showAllReviews ? sortedReviews : sortedReviews.slice(0, 2)).map((review) => (
                   <ReviewCard
                     key={review.reviewId}
                     review={review}

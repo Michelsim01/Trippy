@@ -155,16 +155,6 @@ const ReviewCard = ({
         </div>
       )}
 
-      {/* TripPoints Earned */}
-      {review.tripPointsEarned && review.tripPointsEarned > 0 && (
-        <div className="mb-4 inline-flex items-center px-2 py-1 bg-blue-50 rounded-full">
-          <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-          <span className="text-xs font-medium text-blue-700">
-            Earned {review.tripPointsEarned} TripPoints
-          </span>
-        </div>
-      )}
-
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center space-x-4">
@@ -173,17 +163,6 @@ const ReviewCard = ({
             initialLikeCount={review.likeCount || 0}
             className="text-sm"
           />
-
-          <button className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
-            <MessageCircle className="w-4 h-4" />
-            <span>Reply</span>
-          </button>
-        </div>
-
-        <div className="text-xs text-gray-400">
-          {review.updatedAt !== review.createdAt && (
-            <span>Edited</span>
-          )}
         </div>
       </div>
 
