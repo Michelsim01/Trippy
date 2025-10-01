@@ -11,7 +11,25 @@ import IntroductionTab from '../components/profile/IntroductionTab';
 import TourListTab from '../components/profile/TourListTab';
 import ReviewsTab from '../components/profile/ReviewsTab';
 import MyReviewsTab from '../components/profile/MyReviewsTab';
-import TripPointsHistory from '../components/trippoints/TripPointsHistory'
+import TripPointsHistory from '../components/trippoints/TripPointsHistory';
+
+// BlogsTab component (placeholder since it doesn't exist yet)
+const BlogsTab = ({ blogs }) => (
+    <div className="space-y-6">
+        <h3 className="text-2xl font-bold text-neutrals-1">Blogs</h3>
+        <div className="grid gap-6">
+            {blogs.map(blog => (
+                <div key={blog.id} className="border border-neutrals-6 rounded-lg p-4">
+                    <img src={blog.image} alt={blog.title} className="w-full h-48 object-cover rounded-lg mb-4" />
+                    <h4 className="text-lg font-semibold mb-2">{blog.title}</h4>
+                    <div className="text-sm text-neutrals-3">
+                        By {blog.author} • {blog.date} • {blog.views} views
+                    </div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 const ProfilePage = () => {
     const { id } = useParams();
@@ -166,21 +184,6 @@ const ProfilePage = () => {
         }
     };
 
-    const fetchExperienceReviews = async (experienceId) => {
-        try {
-            const response = await reviewService.getExperienceReviews(experienceId);
-            if (response.success) {
-                return response.data;
-            } else {
-                console.error('Failed to fetch experience reviews:', response.error);
-                return [];
-            }
-        } catch (error) {
-            console.error('Error fetching experience reviews:', error);
-            return [];
-        }
-    };
-
     const handleTourDeleted = (deletedTourId) => {
         // Remove the deleted tour from the userExperiences list
         setUserExperiences(prevExperiences =>
@@ -245,88 +248,47 @@ const ProfilePage = () => {
         }
     }, [id]);
 
+    // Reset active tab when tabs change (when switching between profiles)
+    useEffect(() => {
+        if (userData) {
+            const availableTabs = getTabsForViewingScenario();
+            if (!availableTabs.includes(activeTab)) {
+                setActiveTab('Introduction'); // Default to Introduction if current tab is not available
+            }
+        }
+    }, [userData, isOwnProfile, user?.canCreateExperiences, user?.kycStatus]);
+
     const isTourGuide = currentRole === UserRole.TOUR_GUIDE;
     const userName = userData?.firstName || (isTourGuide ? 'Farley' : 'Sarah');
     const backgroundImage = isTourGuide
         ? "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80"
         : "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80";
 
-    const tabs = isTourGuide 
-        ? ['Introduction', 'Tour list', 'Reviews', 'TripPoints', 'Blogs']
-        : ['Introduction', 'My reviews', 'TripPoints'];
-
-    const tourData = [
-        {
-            id: 1,
-            title: 'Venice, Rome & Milan',
-            subtitle: 'ADVENTURE',
-            price: '$549',
-            rating: 4.5,
-            duration: 'Jul 20 30 - Jul 30 20',
-            image: "https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-        },
-        {
-            id: 2,
-            title: 'Venice, Rome & Milan',
-            subtitle: 'ADVENTURE',
-            price: '$549',
-            rating: 4.8,
-            duration: 'Jul 20 30 - Jul 30 20',
-            image: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-        },
-        {
-            id: 3,
-            title: 'Venice, Rome & Milan',
-            subtitle: 'ADVENTURE',
-            price: '$549',
-            rating: 5.0,
-            duration: 'Jul 20 30 - Jul 30 20',
-            image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
+    // Determine tabs based on viewing scenario
+    const getTabsForViewingScenario = () => {
+        const currentUserIsTourGuide = user?.canCreateExperiences && user?.kycStatus === 'APPROVED';
+        const profileUserIsTourGuide = userData?.canCreateExperiences && userData?.kycStatus === 'APPROVED';
+        
+        if (isOwnProfile) {
+            if (currentUserIsTourGuide) {
+                // Case 2: logged in user is a tour guide viewing their own profile
+                return ['Introduction', 'Tour list', 'Reviews', 'TripPoints', 'Blogs'];
+            } else {
+                // Case 1: logged in user is a tourist viewing their own profile
+                return ['Introduction', 'TripPoints'];
+            }
+        } else {
+            if (profileUserIsTourGuide) {
+                // Case 4: any user viewing another tour guide profile
+                return ['Introduction', 'Tour list', 'Reviews', 'Blogs'];
+            } else {
+                // Case 3: any user viewing another tourist profile
+                return ['Introduction'];
+            }
         }
-    ];
+    };
 
-    const reviews = [
-        {
-            id: 1,
-            name: 'Samson Heathcote',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 4,
-            comment: 'We had the most spectacular view. Unfortunately, it was very hot in the room from 2-8pm pm due to no air conditioning and no shade.',
-            timeAgo: 'about 1 hour ago',
-            helpful: true
-        },
-        {
-            id: 2,
-            name: 'Samson Heathcote',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 4,
-            comment: 'We had the most spectacular view. Unfortunately, it was very hot',
-            timeAgo: 'about 1 hour ago',
-            helpful: true
-        },
-        {
-            id: 3,
-            name: 'Samson Heathcote',
-            avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-            rating: 4,
-            comment: 'We had the most spectacular view. Unfortunately, it was very hot in the room from 2-8pm pm due to no air conditioning and no shade.',
-            timeAgo: 'about 1 hour ago',
-            helpful: true
-        }
-    ];
-
-    // Transform user reviews for display
-    const touristReviews = userReviews.map(review => ({
-        id: review.reviewId,
-        tourGuide: review.experience?.title || 'Unknown Experience',
-        tourName: review.experience?.title || 'Unknown Tour',
-        avatar: review.experience?.coverPhotoUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80',
-        rating: review.rating,
-        comment: review.comment,
-        timeAgo: new Date(review.createdAt).toLocaleDateString(),
-        createdAt: review.createdAt,
-        tripPointsEarned: review.tripPointsEarned
-    }));
+    const tabs = getTabsForViewingScenario();
 
     const blogs = [
         {
@@ -373,8 +335,6 @@ const ProfilePage = () => {
                         <TripPointsHistory userId={id} />
                     </div>
                 );
-            case 'My reviews':
-                return <MyReviewsTab touristReviews={touristReviews} loading={reviewsLoading} />;
             case 'Blogs':
                 return <BlogsTab blogs={blogs} />;
             default:
