@@ -143,11 +143,6 @@ export const ReviewProvider = ({ children }) => {
         // Add to user reviews
         setUserReviews(prev => [response.data, ...prev]);
 
-        // Remove from pending reviews
-        setPendingReviews(prev =>
-          prev.filter(item => item.booking.bookingId !== reviewData.bookingId)
-        );
-
         // Clear stats cache for this experience to force reload
         setReviewStats(prev => {
           const updated = { ...prev };

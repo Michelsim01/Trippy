@@ -170,7 +170,7 @@ const ReviewForm = ({
       } else {
         result = await createReview(reviewData);
       }
-
+      console.log('🚀 Review submission result:', result);
       if (result.success) {
         // Handle photo uploads if any new photos
         if (formData.photos.length > 0) {
