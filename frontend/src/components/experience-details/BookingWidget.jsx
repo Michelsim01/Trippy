@@ -22,11 +22,13 @@ const formatScheduleDisplay = (schedule) => {
     if (isMultiDay) {
       const startDateStr = startDateTime.toLocaleDateString('en-US', {
         day: 'numeric',
-        month: 'short'
+        month: 'short',
+        year: 'numeric'
       });
       const endDateStr = endDateTime.toLocaleDateString('en-US', {
         day: 'numeric',
-        month: 'short'
+        month: 'short',
+        year: 'numeric'
       });
 
       return {
@@ -38,7 +40,8 @@ const formatScheduleDisplay = (schedule) => {
         dateText: startDateTime.toLocaleDateString('en-US', {
           weekday: 'long',
           day: 'numeric',
-          month: 'long'
+          month: 'long',
+          year: 'numeric'
         }),
         timeText: `${startDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${endDateTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`
       };
@@ -51,7 +54,8 @@ const formatScheduleDisplay = (schedule) => {
       dateText: new Date(schedule.date).toLocaleDateString('en-US', {
         weekday: 'long',
         day: 'numeric',
-        month: 'long'
+        month: 'long',
+        year: 'numeric'
       }),
       timeText: `${convertTo12Hr(schedule.startTime)} - ${convertTo12Hr(schedule.endTime)}`
     };

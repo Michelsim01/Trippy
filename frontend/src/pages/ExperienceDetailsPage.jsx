@@ -425,7 +425,6 @@ const ExperienceDetailsPage = () => {
                   <BookingWidget
                     displayData={displayData}
                     schedulesData={schedulesData}
-                    formatScheduleDisplay={formatScheduleDisplay}
                     formatDuration={formatDuration}
                     guests={guests}
                     setGuests={setGuests}
@@ -633,7 +632,6 @@ const ExperienceDetailsPage = () => {
               <BookingWidget
                 displayData={displayData}
                 schedulesData={schedulesData}
-                formatScheduleDisplay={formatScheduleDisplay}
                 formatDuration={formatDuration}
                 guests={guests}
                 setGuests={setGuests}

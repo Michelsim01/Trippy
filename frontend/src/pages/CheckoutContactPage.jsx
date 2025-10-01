@@ -348,13 +348,10 @@ export default function CheckoutContactPage() {
                       disabled={loading || isValidating || isCreatingBooking || Object.keys(validationErrors).length > 0}
                       className="w-full bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors text-lg shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                      {isValidating && (
+                      {isValidating && isCreatingBooking && (
                         <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       )}
-                      {isCreatingBooking && (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      )}
-                      {isValidating ? 'Validating...' : isCreatingBooking ? 'Creating Booking...' : 'Go to Payment'}
+                      {(isValidating  || isCreatingBooking) ? 'Creating Booking...' : 'Go to Payment'}
                     </button>
                   </div>
                 </div>
@@ -476,13 +473,10 @@ export default function CheckoutContactPage() {
                   disabled={loading || isValidating || isCreatingBooking || Object.keys(validationErrors).length > 0}
                   className="w-full bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {isValidating && (
+                  {isValidating && isCreatingBooking && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   )}
-                  {isCreatingBooking && (
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  )}
-                  {isValidating ? 'Validating...' : isCreatingBooking ? 'Creating Booking...' : 'Go to Payment'}
+                  {(isValidating || isCreatingBooking) ? 'Creating Booking...' : 'Go to Payment'}
                 </button>
               </div>
             </div>
