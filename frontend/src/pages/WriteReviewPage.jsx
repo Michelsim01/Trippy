@@ -65,6 +65,22 @@ const WriteReviewPage = () => {
           importantInfo: bookingData.experienceImportantInfo
         };
 
+        // Fetch complete experience data to get the tour guide's user ID
+        const experienceResponse = await fetch(`http://localhost:8080/api/experiences/${bookingData.experienceId}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (experienceResponse.ok) {
+          const completeExperienceData = await experienceResponse.json();
+          experienceData.guideId = completeExperienceData.guide.userId;
+          console.log('🔍 Complete experience data received:', completeExperienceData);
+        } else {
+          console.warn('⚠️ Could not fetch complete experience data for guide ID');
+        }
+
         setExperience(experienceData);
       } catch (err) {
         console.error('Error fetching booking:', err);
@@ -77,21 +93,76 @@ const WriteReviewPage = () => {
     fetchBookingDetails();
   }, [bookingId, user?.id]);
 
-  const handleReviewSubmit = (reviewData) => {
+  // Function to send notification
+  const sendNotification = async (notificationData) => {
+    try {
+      console.log('Sending notification:', notificationData);
+      
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:8080/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(notificationData),
+      });
+      
+      console.log('Notification response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Notification error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Notification sent successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      throw error;
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData) => {
     // Use trip points from the review response, fallback to 10
     const tripPointsEarned = reviewData?.tripPointsEarned || 10;
 
-    console.log('User ID:', user?.id);
-    console.log('User:', user);
-    console.log('Is Authenticated:', isAuthenticated);
-    console.log('Booking:', booking);
-    console.log('Experience:', experience);
-    console.log('Review Data:', reviewData);
-    console.log('Trip Points Earned:', tripPointsEarned);
-    console.log('Navigate to:', `/profile/${user?.id}`);
-    console.log('State:', {
-      message: `Review submitted successfully! You earned ${tripPointsEarned} TripPoints.`
-    });
+    try {
+      // Send notifications after successful review submission
+      const notifications = [];
+
+      // 1. Notification to the user who submitted the review (reviewer)
+      const reviewerNotification = {
+        title: 'Review Submitted Successfully',
+        message: `Your review for "${experience?.title}" has been submitted. You earned ${tripPointsEarned} TripPoints!`,
+        userId: user?.id,
+        type: 'REVIEW_REQUEST',
+      };
+      notifications.push(sendNotification(reviewerNotification));
+      console.log('Experience data for reviewer notification:', experience);
+      // 2. Notification to the tour guide who got reviewed
+      if (experience?.guideId && experience.guideId !== user?.id) {
+        const guideNotification = {
+          title: 'New Review Received',
+          message: `You received a new ${reviewData?.rating}-star review for "${experience?.title}"`,
+          userId: experience.guideId,
+          type: 'REVIEW_REQUEST',
+        };
+        notifications.push(sendNotification(guideNotification));
+      } else {
+        console.warn('⚠️ Could not send notification to guide: guideId not found or same as reviewer');
+      }
+
+      // Wait for all notifications to complete
+      await Promise.allSettled(notifications);
+      console.log('✅ All notifications processed');
+
+    } catch (error) {
+      console.error('❌ Error sending notifications:', error);
+    }
+
     // Show success and redirect to profile reviews tab to show the new review
     navigate(`/profile/${user?.id}`, {
       state: {
