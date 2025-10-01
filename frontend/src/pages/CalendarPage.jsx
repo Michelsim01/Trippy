@@ -899,6 +899,11 @@ const CalendarPage = () => {
 
                                                                         <div className="flex-1 min-w-0">
                                                                             <div className="flex items-center gap-2 mb-1">
+                                                                                <EventIcon
+                                                                                    size={16}
+                                                                                    className="flex-shrink-0"
+                                                                                    style={{ color: eventColor, minWidth: 16, minHeight: 16 }}
+                                                                                />
                                                                                 <h5 className={`font-semibold text-sm text-neutrals-1 leading-tight ${isCancelled ? 'line-through' : ''
                                                                                     }`} style={{
                                                                                         wordBreak: 'break-word',
@@ -908,10 +913,6 @@ const CalendarPage = () => {
                                                                                     }}>
                                                                                     {event.title}
                                                                                 </h5>
-                                                                                <EventIcon
-                                                                                    size={14}
-                                                                                    style={{ color: eventColor }}
-                                                                                />
                                                                                 {isCancelled && (
                                                                                     <span className="text-xs text-red-600 font-medium">CANCELLED</span>
                                                                                 )}

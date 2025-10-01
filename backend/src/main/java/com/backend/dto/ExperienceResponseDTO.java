@@ -10,8 +10,9 @@ public class ExperienceResponseDTO {
     private String shortDescription;
     private String location;
     private BigDecimal price;
-    private BigDecimal averageRating;
+    private BigDecimal totalStars;
     private Integer totalReviews;
+    private BigDecimal averageRating;
     private BigDecimal duration;
     private String coverPhotoUrl;
     private LocalDateTime createdAt;
@@ -26,8 +27,9 @@ public class ExperienceResponseDTO {
         this.shortDescription = experience.getShortDescription();
         this.location = experience.getLocation();
         this.price = experience.getPrice();
-        this.averageRating = experience.getAverageRating();
+        this.totalStars = experience.getTotalStars();
         this.totalReviews = experience.getTotalReviews();
+        this.averageRating = experience.getAverageRating();
         this.duration = experience.getDuration();
         this.coverPhotoUrl = experience.getCoverPhotoUrl();
         this.createdAt = experience.getCreatedAt();
@@ -53,11 +55,14 @@ public class ExperienceResponseDTO {
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
     
-    public BigDecimal getAverageRating() { return averageRating; }
-    public void setAverageRating(BigDecimal averageRating) { this.averageRating = averageRating; }
-    
+    public BigDecimal getTotalStars() { return totalStars; }
+    public void setTotalStars(BigDecimal totalStars) { this.totalStars = totalStars; }
+
     public Integer getTotalReviews() { return totalReviews; }
     public void setTotalReviews(Integer totalReviews) { this.totalReviews = totalReviews; }
+
+    public BigDecimal getAverageRating() { return averageRating; }
+    public void setAverageRating(BigDecimal averageRating) { this.averageRating = averageRating; }
     
     public BigDecimal getDuration() { return duration; }
     public void setDuration(BigDecimal duration) { this.duration = duration; }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Check, Flag, Edit, MessageCircle } from 'lucide-react';
+import { Star, Check, Flag, Edit } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { useTripPoints } from '../../contexts/TripPointsContext';
@@ -58,8 +58,14 @@ const ProfileCard = ({
                     }
                 }
 
-                // Always fetch stats
-                const statsResponse = await userService.getUserStats(userId);
+                // Fetch stats - use guide-stats for guides, regular stats for others
+                const currentUserData = propUserData || userResponse?.data;
+                const isGuide = currentUserData?.canCreateExperiences && currentUserData?.kycStatus === 'APPROVED';
+
+                const statsResponse = isGuide
+                    ? await userService.getGuideStats(userId)
+                    : await userService.getUserStats(userId);
+
                 if (statsResponse.success) {
                     setUserStats(statsResponse.data);
                 } else {
@@ -177,10 +183,10 @@ const ProfileCard = ({
                     <div className="flex items-center justify-center gap-2 mb-4">
                         <Star className="w-5 h-5 text-yellow-400 fill-current" />
                         <span className="text-lg font-semibold text-gray-900">
-                            {stats ? (stats.rating || 'N/A') : '...'}
+                            {stats ? (stats.averageRating || stats.rating || 'N/A') : '...'}
                         </span>
                         <span className="text-gray-500">
-                            ({stats ? (stats.reviewCount || 0) : 0} reviews)
+                            ({stats ? (stats.totalReviews || stats.reviewCount || 0) : 0} reviews)
                         </span>
                     </div>
                 )}
@@ -200,7 +206,7 @@ const ProfileCard = ({
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-3 mb-6">
-                {isCurrentUserProfile ? (
+                {isCurrentUserProfile && (
                     <button 
                         className="btn btn-primary btn-md gap-2"
                         onClick={() => {
@@ -210,11 +216,6 @@ const ProfileCard = ({
                         <Edit className="w-4 h-4" />
                         Edit Profile
                     </button>
-                ) : (
-                <button className="btn btn-outline-primary btn-md gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    Contact
-                </button>
                 )}
             </div>
 

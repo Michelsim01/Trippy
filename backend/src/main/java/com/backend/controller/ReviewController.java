@@ -523,7 +523,20 @@ public class ReviewController {
 
             System.out.println("DEBUG: Successfully created review with ID: " + savedReview.getReviewId());
             System.out.println("DEBUG: Booking total amount: $" + booking.getTotalAmount() + ", Points to award: " + pointsToAward);
-            
+
+            // Update experience rating statistics
+            try {
+                updateExperienceRatings(experience, rating);
+
+                // Update guide's average rating after updating experience rating
+                if (experience.getGuide() != null) {
+                    updateGuideAverageRating(experience.getGuide());
+                }
+            } catch (Exception e) {
+                System.err.println("WARNING: Failed to update experience ratings: " + e.getMessage());
+                // Don't fail the review creation if rating update fails
+            }
+
             // Award TripPoints for the review
             try {
                 TripPoints tripPointsTransaction = tripPointsService.awardPointsForReview(
@@ -818,5 +831,88 @@ public class ReviewController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Failed to upload photos: " + e.getMessage()));
         }
+    }
+    
+    /**
+     * Helper method to update experience rating statistics after a review is created
+     * Increments totalStars, totalReviews, and recalculates averageRating
+     */
+    private void updateExperienceRatings(Experience experience, Integer newRating) {
+        // Get current values or initialize to 0
+        java.math.BigDecimal currentTotalStars = experience.getTotalStars() != null
+            ? experience.getTotalStars()
+            : java.math.BigDecimal.ZERO;
+
+        Integer currentTotalReviews = experience.getTotalReviews() != null
+            ? experience.getTotalReviews()
+            : 0;
+
+        // Add the new rating to total stars
+        java.math.BigDecimal newTotalStars = currentTotalStars.add(java.math.BigDecimal.valueOf(newRating));
+
+        // Increment total reviews
+        Integer newTotalReviews = currentTotalReviews + 1;
+
+        // Calculate new average rating
+        java.math.BigDecimal newAverageRating = newTotalStars.divide(
+            java.math.BigDecimal.valueOf(newTotalReviews),
+            2,
+            java.math.RoundingMode.HALF_UP
+        );
+
+        // Update experience
+        experience.setTotalStars(newTotalStars);
+        experience.setTotalReviews(newTotalReviews);
+        experience.setAverageRating(newAverageRating);
+        experience.setUpdatedAt(LocalDateTime.now());
+
+        experienceRepository.save(experience);
+
+        System.out.println("DEBUG: Updated experience " + experience.getExperienceId() + " ratings - " +
+            "Total Stars: " + newTotalStars + ", " +
+            "Total Reviews: " + newTotalReviews + ", " +
+            "Average Rating: " + newAverageRating);
+    }
+
+    /**
+     * Helper method to update guide's average rating based on all their experiences
+     * Calculates the average of all experience ratings for this guide
+     * Only includes experiences with ratings > 0 (experiences with 0 are unrated)
+     */
+    private void updateGuideAverageRating(User guide) {
+        // Get all experiences for this guide
+        List<Experience> guideExperiences = experienceRepository.findByGuide_Id(guide.getId());
+
+        // Filter to only include experiences that have ratings (averageRating > 0)
+        // An experience with 0 rating is unrated (since users must give at least 1 star)
+        List<Experience> ratedExperiences = guideExperiences.stream()
+            .filter(exp -> exp.getAverageRating() != null &&
+                          exp.getAverageRating().compareTo(java.math.BigDecimal.ZERO) > 0)
+            .collect(java.util.stream.Collectors.toList());
+
+        if (ratedExperiences.isEmpty()) {
+            guide.setAverageRating(java.math.BigDecimal.ZERO);
+        } else {
+            // Calculate sum of all rated experience average ratings
+            java.math.BigDecimal sumOfAverageRatings = ratedExperiences.stream()
+                .map(Experience::getAverageRating)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+
+            // Calculate average (sum of experience ratings / number of rated experiences)
+            java.math.BigDecimal guideAverageRating = sumOfAverageRatings.divide(
+                java.math.BigDecimal.valueOf(ratedExperiences.size()),
+                2,
+                java.math.RoundingMode.HALF_UP
+            );
+
+            guide.setAverageRating(guideAverageRating);
+        }
+
+        guide.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(guide);
+
+        System.out.println("DEBUG: Updated guide " + guide.getId() + " average rating to " +
+            guide.getAverageRating() + " (based on " + ratedExperiences.size() +
+            " rated experiences out of " + guideExperiences.size() + " total)");
     }
 }

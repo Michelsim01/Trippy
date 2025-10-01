@@ -169,11 +169,11 @@ const MessagesPage = () => {
         const chatId = searchParams.get('chatId');
         if (chatId && conversations.length > 0) {
             const chatExists = conversations.find(conv => conv.id.toString() === chatId);
-            if (chatExists) {
+            if (chatExists && selectedChat !== parseInt(chatId)) {
                 setSelectedChat(parseInt(chatId));
             }
         }
-    }, [searchParams, conversations]);
+    }, [searchParams]);
     
     // Handle incoming chat notifications for conversation list updates
     useEffect(() => {

@@ -112,6 +112,7 @@ public class DataSeedingService {
             guide.setCanCreateExperiences(true);
             guide.setKycStatus(KycStatus.APPROVED);
             guide.setKycApprovedAt(LocalDateTime.now().minusDays(random.nextInt(180)));
+            guide.setAverageRating(BigDecimal.ZERO); // Will be calculated when reviews are created
             guide.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(365)));
             guide.setUpdatedAt(LocalDateTime.now());
 
@@ -140,6 +141,7 @@ public class DataSeedingService {
             traveler.setIsActive(true);
             traveler.setCanCreateExperiences(false);
             traveler.setKycStatus(KycStatus.NOT_STARTED);
+            traveler.setAverageRating(BigDecimal.ZERO); // Travelers don't have ratings, but initialize to 0
             traveler.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(365)));
             traveler.setUpdatedAt(LocalDateTime.now());
 
@@ -248,8 +250,9 @@ public class DataSeedingService {
             experience.setParticipantsAllowed((Integer) data[7]);
             experience.setCoverPhotoUrl((String) data[8]);
             experience.setStatus(ExperienceStatus.ACTIVE);
-            experience.setAverageRating(BigDecimal.valueOf(4.0 + random.nextDouble() * 1.0)); // 4.0-5.0
-            experience.setTotalReviews(random.nextInt(50) + 10); // 10-59 reviews
+            experience.setTotalStars(BigDecimal.ZERO); // Will be updated when reviews are created
+            experience.setTotalReviews(0); // Will be updated when reviews are created
+            experience.setAverageRating(BigDecimal.ZERO); // Will be calculated from totalStars/totalReviews
             experience.setHighlights(generateHighlights((String) data[0]));
             experience.setWhatIncluded(generateWhatIncluded());
             experience.setImportantInfo(generateImportantInfo());

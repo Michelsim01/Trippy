@@ -162,7 +162,7 @@ const WriteReviewPage = () => {
       // 1. Notification to the user who submitted the review (reviewer)
       const reviewerNotification = {
         title: 'Review Submitted Successfully',
-        message: `Your review for "${experience?.title}" has been submitted. You earned ${tripPointsEarned} TripPoints!`,
+        message: `Your review for '${experience?.title}' has been submitted. You earned ${tripPointsEarned} TripPoints!`,
         userId: user?.id,
         type: 'REVIEW_REQUEST',
       };
@@ -172,7 +172,7 @@ const WriteReviewPage = () => {
       if (experience?.guideId && experience.guideId !== user?.id) {
         const guideNotification = {
           title: 'New Review Received',
-          message: `You received a new ${reviewData?.rating}-star review for "${experience?.title}"`,
+          message: `You received a new ${reviewData?.rating}-star review for '${experience?.title}'`,
           userId: experience.guideId,
           type: 'REVIEW_REQUEST',
         };

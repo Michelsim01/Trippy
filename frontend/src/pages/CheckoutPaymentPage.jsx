@@ -49,7 +49,7 @@ export default function CheckoutPaymentPage() {
       }
       const notificationPayload = {
         title: 'Booking Confirmed',
-        message: `Your payment for ${experienceData?.title} has been processed successfully. Your booking is confirmed. Confirmation Code: ${booking?.confirmationCode}.`,
+        message: `Your payment for '${experienceData?.title}' has been processed successfully. Your booking is confirmed. Confirmation Code: ${booking?.confirmationCode}.`,
         userId: userId,
         type: 'BOOKING_CONFIRMATION',
       };
