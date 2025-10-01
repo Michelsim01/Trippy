@@ -39,6 +39,9 @@ const ExperienceDetailsPage = () => {
   const [reviewStats, setReviewStats] = useState(null);
   const [showAllReviews, setShowAllReviews] = useState(false);
 
+  // Guide stats state
+  const [guideStats, setGuideStats] = useState(null);
+
   // UI states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -105,6 +108,34 @@ const ExperienceDetailsPage = () => {
       loadReviews();
     }
   }, [id, experienceData, loadExperienceReviews, loadReviewStats]);
+
+  // Load guide stats when experience data loads
+  useEffect(() => {
+    if (experienceData?.guide?.userId) {
+      const loadGuideStats = async () => {
+        try {
+          const response = await fetch(
+            `http://localhost:8080/api/users/${experienceData.guide.userId}/guide-stats`,
+            {
+              headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (response.ok) {
+            const stats = await response.json();
+            setGuideStats(stats);
+          }
+        } catch (error) {
+          console.error('Error loading guide stats:', error);
+        }
+      };
+
+      loadGuideStats();
+    }
+  }, [experienceData]);
 
   // Keyboard support for modals
   useEffect(() => {
@@ -275,7 +306,11 @@ const ExperienceDetailsPage = () => {
   };
 
   // Use experienceData if available (from API), otherwise use formData (from context)
-  const displayData = experienceData;
+  // Merge experience data with guide stats
+  const displayData = experienceData ? {
+    ...experienceData,
+    guideStats: guideStats || null
+  } : null;
 
   // If no experience data and we have an ID, this means it wasn't found - redirect to 404
   if (id && !loading && !displayData) {

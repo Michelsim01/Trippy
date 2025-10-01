@@ -33,6 +33,9 @@ public class UserController {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private com.backend.repository.ExperienceRepository experienceRepository;
+
     private final String UPLOAD_DIR = "uploads/profilepicture/";
 
     @GetMapping
@@ -234,12 +237,56 @@ public class UserController {
     @GetMapping("/{id}/stats")
     public ResponseEntity<Map<String, Object>> getUserStats(@PathVariable Long id) {
         try {
-            // Mock user statistics - in real app, this would aggregate from database
+            Optional<User> userOpt = userRepository.findById(id);
+            if (!userOpt.isPresent()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "User not found");
+                return ResponseEntity.status(404).body(error);
+            }
+
+            User user = userOpt.get();
+
+            // User statistics
             Map<String, Object> stats = new HashMap<>();
-            stats.put("rating", 4.9);
-            stats.put("reviewCount", 256);
-            stats.put("totalExperiences", 42);
-            stats.put("completedBookings", 189);
+            stats.put("rating", user.getAverageRating() != null ? user.getAverageRating() : 0.0);
+            // TODO: Calculate from actual reviews written by user
+            // TODO: Calculate from actual experiences created by user
+            // TODO: Calculate from actual bookings made by user
+
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Internal server error");
+            error.put("message", e.getMessage());
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    @GetMapping("/{id}/guide-stats")
+    public ResponseEntity<Map<String, Object>> getGuideStats(@PathVariable Long id) {
+        try {
+            Optional<User> userOpt = userRepository.findById(id);
+            if (!userOpt.isPresent()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "User not found");
+                return ResponseEntity.status(404).body(error);
+            }
+
+            User user = userOpt.get();
+
+            // Calculate total reviews across all guide's experiences
+            List<com.backend.entity.Experience> guideExperiences =
+                experienceRepository.findByGuide_Id(id);
+
+            int totalReviews = guideExperiences.stream()
+                .mapToInt(exp -> exp.getTotalReviews() != null ? exp.getTotalReviews() : 0)
+                .sum();
+
+            // Guide statistics
+            Map<String, Object> stats = new HashMap<>();
+            stats.put("averageRating", user.getAverageRating() != null ? user.getAverageRating() : 0.0);
+            stats.put("totalReviews", totalReviews);
+            stats.put("totalExperiences", guideExperiences.size());
 
             return ResponseEntity.ok(stats);
         } catch (Exception e) {

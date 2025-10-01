@@ -79,7 +79,10 @@ public class User {
     
     @Column(name = "profile_image_url")
     private String profileImageUrl;
-    
+
+    @Column(name = "average_rating")
+    private java.math.BigDecimal averageRating;
+
     @Column(name = "is_email_verified", nullable = false)
     private Boolean isEmailVerified = false;
     
@@ -204,7 +207,15 @@ public class User {
     public void setProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
-    
+
+    public java.math.BigDecimal getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(java.math.BigDecimal averageRating) {
+        this.averageRating = averageRating;
+    }
+
     public Boolean getIsEmailVerified() {
         return isEmailVerified;
     }

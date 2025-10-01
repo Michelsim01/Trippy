@@ -61,11 +61,14 @@ public class Experience {
     @Enumerated(EnumType.STRING)
     private ExperienceStatus status;
 
-    @Column(name = "average_rating")
-    private BigDecimal averageRating;
+    @Column(name = "total_stars")
+    private BigDecimal totalStars;
 
     @Column(name = "total_reviews")
     private Integer totalReviews;
+
+    @Column(name = "average_rating")
+    private BigDecimal averageRating;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -240,12 +243,12 @@ public class Experience {
         this.status = status;
     }
 
-    public BigDecimal getAverageRating() {
-        return averageRating;
+    public BigDecimal getTotalStars() {
+        return totalStars;
     }
 
-    public void setAverageRating(BigDecimal averageRating) {
-        this.averageRating = averageRating;
+    public void setTotalStars(BigDecimal totalStars) {
+        this.totalStars = totalStars;
     }
 
     public Integer getTotalReviews() {
@@ -254,6 +257,14 @@ public class Experience {
 
     public void setTotalReviews(Integer totalReviews) {
         this.totalReviews = totalReviews;
+    }
+
+    public BigDecimal getAverageRating() {
+        return averageRating;
+    }
+
+    public void setAverageRating(BigDecimal averageRating) {
+        this.averageRating = averageRating;
     }
 
     public LocalDateTime getCreatedAt() {
