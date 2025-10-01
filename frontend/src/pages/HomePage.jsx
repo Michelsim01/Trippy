@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -35,9 +35,11 @@ const WelcomeBanner = () => {
 };
 
 const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange }) => {
+    const scrollContainerRef = useRef(null);
+
     // Use only real data from database
     const allExperiences = experiences || [];
-    
+
     // Debug: Log what DiscoverWeekly receives
     console.log('DiscoverWeekly - Received experiences:', experiences);
     console.log('DiscoverWeekly - Experiences length:', experiences?.length);
@@ -45,8 +47,8 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
     console.log('DiscoverWeekly - Error:', error);
 
     // Filter experiences by category
-    const displayExperiences = selectedCategory === 'ALL' 
-        ? allExperiences 
+    const displayExperiences = selectedCategory === 'ALL'
+        ? allExperiences
         : allExperiences.filter(exp => exp.category === selectedCategory);
 
     // Create a set of wishlisted experience IDs for quick lookup
@@ -128,10 +130,13 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
                     ))}
                 </div>
 
-                {/* Mobile Horizontal Scroll */}
+                {/* Mobile Horizontal Scroll Carousel */}
                 <div className="lg:hidden mb-10 w-full">
-                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide justify-start">
-                        {displayExperiences.slice(0, 4).map((experience) => (
+                    <div
+                        ref={scrollContainerRef}
+                        className="flex overflow-x-auto experience-carousel gap-6 p-4"
+                    >
+                        {displayExperiences.map((experience) => (
                             <ExperienceCard
                                 key={experience.experienceId || experience.id}
                                 experience={experience}
@@ -141,20 +146,6 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
                             />
                         ))}
                     </div>
-                </div>
-
-                {/* Navigation Arrows */}
-                <div className="flex items-center justify-center gap-4">
-                    <button className="p-2 rounded-full border-2 border-neutrals-6 hover:border-neutrals-4 transition-colors">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
-                    <button className="p-2 rounded-full border-2 border-neutrals-6 hover:border-neutrals-4 transition-colors">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    </button>
                 </div>
             </div>
         </div>
