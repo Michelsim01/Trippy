@@ -498,33 +498,6 @@ const MyToursPage = () => {
                         </div>
                     ) : (
                         <>
-                            {/* Quick Stats - Mobile */}
-                            <div className="mb-8 grid grid-cols-2 gap-4">
-                                <div className="bg-white p-4 rounded-lg border border-neutrals-6">
-                                    <div className="text-xl font-bold text-primary-1 mb-1">
-                                        {tours.length}
-                                    </div>
-                                    <div className="text-neutrals-4 text-xs">Total Tours</div>
-                                </div>
-                                <div className="bg-white p-4 rounded-lg border border-neutrals-6">
-                                    <div className="text-xl font-bold text-green-600 mb-1">
-                                        {tours.filter(t => t.status === 'ACTIVE').length}
-                                    </div>
-                                    <div className="text-neutrals-4 text-xs">Active Tours</div>
-                                </div>
-                                <div className="bg-white p-4 rounded-lg border border-neutrals-6">
-                                    <div className="text-xl font-bold text-blue-600 mb-1">
-                                        {totalBookings}
-                                    </div>
-                                    <div className="text-neutrals-4 text-xs">Total Bookings</div>
-                                </div>
-                                <div className="bg-white p-4 rounded-lg border border-neutrals-6">
-                                    <div className="text-xl font-bold text-yellow-600 mb-1">
-                                        {averageRating}
-                                    </div>
-                                    <div className="text-neutrals-4 text-xs">Average Rating</div>
-                                </div>
-                            </div>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {tours.map((tour) => (
                                     <ExperienceCard
