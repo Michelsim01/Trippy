@@ -25,12 +25,6 @@ const BookingCard = ({ booking }) => {
         navigate(`/write-review/${booking.bookingId}`);
     };
 
-    const handleEditReviewClick = (e) => {
-        e.stopPropagation(); // Prevent card click
-        // Navigate to edit review page (you can implement this later)
-        navigate(`/write-review/${booking.bookingId}?edit=true`);
-    };
-
     // Format booking date for display (handles both single day and multi-day)
     const formatBookingDate = (startDateTime, endDateTime) => {
         if (!startDateTime) return 'Date TBD';
@@ -179,13 +173,10 @@ const BookingCard = ({ booking }) => {
                     {booking.status === 'COMPLETED' && (
                         <div className="pt-2 border-t border-neutrals-6">
                             {hasWrittenReview ? (
-                                <button
-                                    onClick={handleEditReviewClick}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-sm font-medium"
-                                >
+                                <div className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 text-sm font-medium">
                                     <Edit className="w-4 h-4" />
                                     Review Written
-                                </button>
+                                </div>
                             ) : (
                                 <button
                                     onClick={handleReviewClick}
