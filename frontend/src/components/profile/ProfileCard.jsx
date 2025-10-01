@@ -3,6 +3,7 @@ import { Star, Check, Flag, Edit } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { useTripPoints } from '../../contexts/TripPointsContext';
+import { tripPointsService } from '../../services/tripPointsService';
 
 const UserRole = {
     TOURIST: 'tourist',
@@ -20,6 +21,7 @@ const ProfileCard = ({
     const [userStats, setUserStats] = useState(null);
     const [loading, setLoading] = useState(!propUserData);
     const [error, setError] = useState(null);
+    const [profileTripPoints, setProfileTripPoints] = useState(0);
     console.log('Current User:', currentUser.id);
     console.log('Profile User ID:', userId);
     const isCurrentUserProfile = (
@@ -32,6 +34,51 @@ const ProfileCard = ({
             setLoading(false);
         }
     }, [propUserData]);
+
+    // Fetch TripPoints for the profile user
+    const fetchProfileTripPoints = async () => {
+        if (!userId || !isAuthenticated) return;
+        
+        try {
+            const response = await tripPointsService.getUserPointsBalance(userId);
+            if (response.success) {
+                setProfileTripPoints(response.data.pointsBalance || 0);
+            } else {
+                console.warn('Failed to fetch profile TripPoints:', response.error);
+                setProfileTripPoints(0);
+            }
+        } catch (error) {
+            console.error('Error fetching profile TripPoints:', error);
+            setProfileTripPoints(0);
+        }
+    };
+
+    useEffect(() => {
+        fetchProfileTripPoints();
+    }, [userId, isAuthenticated]);
+
+    // Refresh TripPoints when component becomes visible (for remounting issue)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (!document.hidden && isCurrentUserProfile) {
+                fetchProfileTripPoints();
+            }
+        };
+
+        const handleFocus = () => {
+            if (isCurrentUserProfile) {
+                fetchProfileTripPoints();
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleFocus);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [isCurrentUserProfile]);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -197,7 +244,7 @@ const ProfileCard = ({
                         <div className="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
                             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                             <span className="text-sm font-medium text-blue-700">
-                                {currentBalance.toLocaleString()} TripPoints
+                                {profileTripPoints.toLocaleString()} TripPoints
                             </span>
                         </div>
                     </div>
