@@ -31,9 +31,6 @@ public class DataSeedingService {
     private WishlistItemRepository wishlistItemRepository;
 
     @Autowired
-    private ReviewRepository reviewRepository;
-
-    @Autowired
     private BookingRepository bookingRepository;
 
     @Autowired
@@ -70,9 +67,6 @@ public class DataSeedingService {
 
         // Create wishlist items
         createWishlistItems(users, experiences);
-
-        // Create reviews
-        createReviews(bookings, users);
 
         System.out.println("Database seeding completed successfully!");
         System.out.println("Created " + users.size() + " users");
@@ -506,47 +500,6 @@ public class DataSeedingService {
                 wishlistItem.setAddedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
 
                 wishlistItemRepository.save(wishlistItem);
-            }
-        }
-    }
-
-    private void createReviews(List<Booking> bookings, List<User> users) {
-        String[] reviewTexts = {
-                "Amazing experience! The guide was knowledgeable and friendly. Would definitely recommend!",
-                "Great value for money. Everything was well organized and the location was beautiful.",
-                "Had an incredible time! The activity was challenging but rewarding. Perfect for adventure seekers.",
-                "Excellent cultural experience. Learned so much about local traditions and customs.",
-                "Beautiful scenery and great photo opportunities. The guide made sure everyone felt safe.",
-                "Very professional service. All equipment was provided and in good condition.",
-                "Perfect for beginners! The instructor was patient and encouraging throughout.",
-                "Unforgettable experience! This will definitely be one of the highlights of our trip.",
-                "Well worth the price. The small group size made it feel very personal and special.",
-                "Great activity for families. Our kids loved every minute of it!"
-        };
-
-        // Create reviews for completed bookings (70% chance per booking)
-        for (Booking booking : bookings) {
-            if (booking.getStatus() == BookingStatus.COMPLETED && random.nextDouble() < 0.7) {
-                // Find a traveler user to be the reviewer (using contact email)
-                User reviewer = users.stream()
-                        .filter(user -> user.getEmail().equals(booking.getContactEmail()))
-                        .findFirst()
-                        .orElse(null);
-
-                if (reviewer != null) {
-                    Review review = new Review();
-                    review.setBooking(booking);
-                    review.setExperience(booking.getExperienceSchedule().getExperience());
-                    review.setReviewer(reviewer);
-                    review.setRating(3 + random.nextInt(3)); // 3-5 stars
-                    review.setComment(reviewTexts[random.nextInt(reviewTexts.length)]);
-                    review.setTripPointsEarned(review.getRating() * 10); // Points based on rating
-                    review.setCreatedAt(
-                            booking.getExperienceSchedule().getEndDateTime().plusDays(random.nextInt(7) + 1));
-                    review.setUpdatedAt(review.getCreatedAt());
-
-                    reviewRepository.save(review);
-                }
             }
         }
     }
