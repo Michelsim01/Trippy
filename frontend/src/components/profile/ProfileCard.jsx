@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Star, Check, Flag, Edit, MessageCircle } from 'lucide-react';
+import { Star, Check, Flag, Edit } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { useTripPoints } from '../../contexts/TripPointsContext';
@@ -206,7 +206,7 @@ const ProfileCard = ({
 
             {/* Action Buttons */}
             <div className="flex items-center justify-center gap-3 mb-6">
-                {isCurrentUserProfile ? (
+                {isCurrentUserProfile && (
                     <button 
                         className="btn btn-primary btn-md gap-2"
                         onClick={() => {
@@ -216,11 +216,6 @@ const ProfileCard = ({
                         <Edit className="w-4 h-4" />
                         Edit Profile
                     </button>
-                ) : (
-                <button className="btn btn-outline-primary btn-md gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    Contact
-                </button>
                 )}
             </div>
 
