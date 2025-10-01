@@ -335,7 +335,7 @@ export default function CheckoutCompletePage() {
                 <img
                   src={bookingData.experience.coverPhotoUrl}
                   alt={bookingData.experience.title}
-                  className="w-full h-48 object-cover rounded-xl"
+                  className="w-full object-contain rounded-xl"
                 />
               </div>
 
