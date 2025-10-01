@@ -116,10 +116,21 @@ const BookingWidget = ({
   guests,
   setGuests,
   setShowAllSchedules,
+  user,
   isMobile = false,
   onChatWithGuide
 }) => {
   const navigate = useNavigate();
+
+  // Check if current user is the guide of this experience
+  const isUserTheGuide = () => {
+    if (!user || !displayData || !displayData.guide) {
+      return false;
+    }
+    const userId = user.id || user.userId;
+    const guideId = displayData.guide.userId || displayData.guide.id;
+    return userId === guideId;
+  };
 
   // Helper function to get maximum allowed guests based on selected schedule
   const getMaxAllowedGuests = () => {
@@ -134,6 +145,12 @@ const BookingWidget = ({
   };
 
   const handleBookNow = () => {
+    // Prevent guides from booking their own experiences
+    if (isUserTheGuide()) {
+      alert('You cannot book your own experience.');
+      return;
+    }
+
     // Ensure a schedule is selected
     if (selectedSchedule === null) {
       alert('Please select a date and time to continue booking.');
@@ -363,27 +380,35 @@ const BookingWidget = ({
       {/* Book Now Button */}
       <button
         onClick={handleBookNow}
-        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${selectedSchedule === null
-          ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
-          : 'bg-primary-1 text-white hover:bg-opacity-90'
+        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
+          isUserTheGuide() || selectedSchedule === null
+            ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
+            : 'bg-primary-1 text-white hover:bg-opacity-90'
           } ${isMobile ? 'mb-0' : 'mb-4'}`}
-        disabled={selectedSchedule === null}
+        disabled={isUserTheGuide() || selectedSchedule === null}
         style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
       >
-        {selectedSchedule === null ? 'Select a date to book' : 'Book Now'}
+        {isUserTheGuide()
+          ? 'You cannot book your own experience'
+          : selectedSchedule === null
+            ? 'Select a date to book'
+            : 'Book Now'
+        }
       </button>
 
-      {/* Chat with Guide Button */}
-      <button
-        onClick={onChatWithGuide}
-        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} border-2 border-primary-1 text-primary-1 hover:bg-primary-1 hover:text-white ${isMobile ? 'mb-0' : 'mb-4'}`}
-        style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
-      >
-        <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-        </svg>
-        Chat with Guide
-      </button>
+      {/* Chat with Guide Button - Only show if user is not the guide */}
+      {!isUserTheGuide() && (
+        <button
+          onClick={onChatWithGuide}
+          className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} border-2 border-primary-1 text-primary-1 hover:bg-primary-1 hover:text-white ${isMobile ? 'mb-0' : 'mb-4'}`}
+          style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
+        >
+          <svg className="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Chat with Guide
+        </button>
+      )}
 
       {/* Standardized Cancellation Policy - Desktop only */}
       {!isMobile && (
