@@ -369,6 +369,7 @@ public class ExperienceController {
                 expMap.put("category", exp.getCategory());
                 expMap.put("status", exp.getStatus());
                 expMap.put("totalReviews", exp.getTotalReviews());
+                expMap.put("participantsAllowed", exp.getParticipantsAllowed());
                 expMap.put("createdAt", exp.getCreatedAt());
                 expMap.put("updatedAt", exp.getUpdatedAt());
 
