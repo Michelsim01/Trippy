@@ -1,24 +1,17 @@
 import React, { useState } from 'react';
-import { MessageCircle, Flag, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MessageCircle, Flag, MoreVertical } from 'lucide-react';
 import StarRating from './StarRating';
-import ReviewDeleteModal from './ReviewDeleteModal';
 import LikeButton from './LikeButton';
 import { useAuth } from '../../contexts/AuthContext';
-import { useReviews } from '../../contexts/ReviewContext';
 
 const ReviewCard = ({
   review,
   showExperience = false,
-  onEdit = null,
-  onDelete = null,
   onReport = null,
   className = ''
 }) => {
   const { user } = useAuth();
-  const { deleteReview, loading: reviewsLoading } = useReviews();
   const [showActions, setShowActions] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const isOwnReview = user?.id === review.reviewer?.id;
   const reviewerName = review.reviewer ?
@@ -27,6 +20,13 @@ const ReviewCard = ({
 
   const reviewerAvatar = review.reviewer?.profileImageUrl ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewerName)}&background=random`;
+
+  // Debug photos data
+  React.useEffect(() => {
+    if (review.photos) {
+      console.log('Review photos data for review', review.reviewId, ':', review.photos);
+    }
+  }, [review.photos, review.reviewId]);
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -51,38 +51,6 @@ const ReviewCard = ({
     }
   };
 
-  const handleDeleteClick = () => {
-    setShowActions(false);
-    setShowDeleteModal(true);
-  };
-
-  const handleConfirmDelete = async (reviewId) => {
-    setIsDeleting(true);
-    try {
-      const result = await deleteReview(reviewId);
-      if (result.success) {
-        setShowDeleteModal(false);
-        // Call parent callback if provided
-        if (onDelete) {
-          onDelete(reviewId, review);
-        }
-      } else {
-        // Handle error - could show a toast notification
-        console.error('Failed to delete review:', result.error);
-        alert('Failed to delete review. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error deleting review:', error);
-      alert('Failed to delete review. Please try again.');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setShowDeleteModal(false);
-  };
-
   return (
     <div className={`bg-white rounded-lg p-6 shadow-sm border border-gray-200 ${className}`}>
       {/* Header */}
@@ -105,43 +73,20 @@ const ReviewCard = ({
         <div className="flex items-center space-x-2">
           <StarRating rating={review.rating} size="sm" />
 
-          {/* Actions Menu */}
-          <div className="relative">
-            <button
-              onClick={() => setShowActions(!showActions)}
-              className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-              aria-label="Review actions"
-            >
-              <MoreVertical className="w-4 h-4 text-gray-500" />
-            </button>
+          {/* Actions Menu - Only show for others' reviews (Report option) */}
+          {!isOwnReview && (
+            <div className="relative">
+              <button
+                onClick={() => setShowActions(!showActions)}
+                className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                aria-label="Review actions"
+              >
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
 
-            {showActions && (
-              <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
-                <div className="py-1">
-                  {isOwnReview && onEdit && (
-                    <button
-                      onClick={() => {
-                        onEdit(review);
-                        setShowActions(false);
-                      }}
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <Edit className="w-4 h-4" />
-                      <span>Edit review</span>
-                    </button>
-                  )}
-
-                  {isOwnReview && (
-                    <button
-                      onClick={handleDeleteClick}
-                      className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span>Delete review</span>
-                    </button>
-                  )}
-
-                  {!isOwnReview && (
+              {showActions && (
+                <div className="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <div className="py-1">
                     <button
                       onClick={() => {
                         handleReport();
@@ -152,11 +97,11 @@ const ReviewCard = ({
                       <Flag className="w-4 h-4" />
                       <span>Report review</span>
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -191,11 +136,18 @@ const ReviewCard = ({
         <div className="mb-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {review.photos.slice(0, 6).map((photo, index) => (
-              <div key={index} className="aspect-square">
+              <div key={index} className="aspect-square relative">
                 <img
                   src={photo.url}
                   alt={`Review photo ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg"
+                  onError={(e) => {
+                    console.error('Failed to load review photo:', photo.url);
+                    e.target.style.display = 'none';
+                  }}
+                  onLoad={() => {
+                    console.log('Successfully loaded review photo:', photo.url);
+                  }}
                 />
                 {index === 5 && review.photos.length > 6 && (
                   <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
@@ -250,14 +202,6 @@ const ReviewCard = ({
         />
       )}
 
-      {/* Delete Confirmation Modal */}
-      <ReviewDeleteModal
-        isOpen={showDeleteModal}
-        review={review}
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-        isDeleting={isDeleting}
-      />
     </div>
   );
 };

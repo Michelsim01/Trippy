@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useReviews } from '../contexts/ReviewContext';
-import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat, Star, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat, Star } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -13,7 +13,7 @@ const BookingDetailPage = () => {
     const { bookingId } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { hasReviewForBooking, deleteReview, userReviews } = useReviews();
+    const { hasReviewForBooking, userReviews } = useReviews();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [booking, setBooking] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -104,35 +104,7 @@ const BookingDetailPage = () => {
         navigate(`/write-review/${booking.bookingId}`);
     };
 
-    const handleEditReviewClick = () => {
-        navigate(`/write-review/${booking.bookingId}?edit=true`);
-    };
 
-    const handleDeleteReview = async () => {
-        if (!window.confirm('Are you sure you want to delete your review? This action cannot be undone.')) {
-            return;
-        }
-
-        try {
-            // Find the review for this booking
-            const review = userReviews.find(r => r.booking?.bookingId === booking.bookingId);
-            if (!review) {
-                alert('Review not found.');
-                return;
-            }
-
-            const result = await deleteReview(review.reviewId);
-            if (result.success) {
-                // Review deleted successfully - the context will update hasWrittenReview
-                setHasWrittenReview(false);
-            } else {
-                alert('Failed to delete review: ' + (result.error || 'Unknown error'));
-            }
-        } catch (error) {
-            console.error('Error deleting review:', error);
-            alert('Failed to delete review. Please try again.');
-        }
-    };
 
     if (loading) {
         return (
@@ -503,26 +475,6 @@ const BookingDetailPage = () => {
                                                 <div className="flex items-center gap-2 text-green-700 bg-green-50 border border-green-200 rounded-lg p-3">
                                                     <Star className="w-5 h-5 fill-current" />
                                                     <span className="text-sm font-medium">Review submitted!</span>
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="md"
-                                                        onClick={handleEditReviewClick}
-                                                        className="flex-1 flex items-center justify-center gap-2"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                        Edit Review
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="md"
-                                                        onClick={handleDeleteReview}
-                                                        className="flex-1 flex items-center justify-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                        Delete Review
-                                                    </Button>
                                                 </div>
                                             </div>
                                         ) : (

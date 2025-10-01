@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -13,9 +13,10 @@ const WriteReviewPage = () => {
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [booking, setBooking] = useState(null);
-  const [experience, setExperience] = useState(null);
+  const [rawBookingData, setRawBookingData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [hasExistingReview, setHasExistingReview] = useState(false);
 
   // Fetch booking details
   useEffect(() => {
@@ -53,18 +54,6 @@ const WriteReviewPage = () => {
 
         setBooking(bookingData);
 
-        // Construct experience object from flattened BookingResponseDTO
-        const experienceData = {
-          experienceId: bookingData.experienceId,
-          title: bookingData.experienceTitle,
-          shortDescription: bookingData.experienceDescription,
-          location: bookingData.experienceLocation,
-          country: bookingData.experienceCountry,
-          price: bookingData.experiencePrice,
-          coverPhotoUrl: bookingData.experienceCoverPhotoUrl,
-          importantInfo: bookingData.experienceImportantInfo
-        };
-
         // Fetch complete experience data to get the tour guide's user ID
         const experienceResponse = await fetch(`http://localhost:8080/api/experiences/${bookingData.experienceId}`, {
           headers: {
@@ -75,13 +64,33 @@ const WriteReviewPage = () => {
 
         if (experienceResponse.ok) {
           const completeExperienceData = await experienceResponse.json();
-          experienceData.guideId = completeExperienceData.guide.userId;
+          bookingData.guideId = completeExperienceData.guide.userId;
           console.log('🔍 Complete experience data received:', completeExperienceData);
         } else {
           console.warn('⚠️ Could not fetch complete experience data for guide ID');
         }
 
-        setExperience(experienceData);
+        setRawBookingData(bookingData);
+
+        // Check if user has already submitted a review for this booking
+        const reviewCheckResponse = await fetch(`http://localhost:8080/api/reviews/user/${user.id}`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (reviewCheckResponse.ok) {
+          const userReviews = await reviewCheckResponse.json();
+          const existingReview = userReviews.find(review =>
+            review.booking && review.booking.bookingId === parseInt(bookingId)
+          );
+
+          if (existingReview) {
+            setHasExistingReview(true);
+            setError('You have already submitted a review for this booking. You can view your review on the experience details page.');
+          }
+        }
       } catch (err) {
         console.error('Error fetching booking:', err);
         setError(err.message);
@@ -92,6 +101,23 @@ const WriteReviewPage = () => {
 
     fetchBookingDetails();
   }, [bookingId, user?.id]);
+
+  // Memoize experience object to prevent unnecessary re-renders
+  const experience = useMemo(() => {
+    if (!rawBookingData) return null;
+
+    return {
+      experienceId: rawBookingData.experienceId,
+      title: rawBookingData.experienceTitle,
+      shortDescription: rawBookingData.experienceDescription,
+      location: rawBookingData.experienceLocation,
+      country: rawBookingData.experienceCountry,
+      price: rawBookingData.experiencePrice,
+      coverImageUrl: rawBookingData.experienceCoverPhotoUrl,
+      importantInfo: rawBookingData.experienceImportantInfo,
+      guideId: rawBookingData.guideId
+    };
+  }, [rawBookingData]);
 
   // Function to send notification
   const sendNotification = async (notificationData) => {
@@ -225,20 +251,30 @@ const WriteReviewPage = () => {
             Back to My Bookings
           </button>
 
-          <div className="bg-white rounded-lg p-8 shadow-sm border border-red-200">
+          <div className={`bg-white rounded-lg p-8 shadow-sm border ${hasExistingReview ? 'border-blue-200' : 'border-red-200'}`}>
             <div className="text-center">
-              <div className="text-red-600 text-lg font-semibold mb-2">
-                Unable to Load Review Form
+              <div className={`text-lg font-semibold mb-2 ${hasExistingReview ? 'text-blue-600' : 'text-red-600'}`}>
+                {hasExistingReview ? 'Review Already Submitted' : 'Unable to Load Review Form'}
               </div>
               <p className="text-gray-600 mb-4">
                 {error || 'Booking or experience data could not be found.'}
               </p>
-              <button
-                onClick={() => navigate('/my-bookings')}
-                className="bg-primary-1 text-white px-6 py-2 rounded-md hover:bg-primary-1/90 transition-colors"
-              >
-                Return to My Bookings
-              </button>
+              <div className="space-x-4">
+                <button
+                  onClick={() => navigate('/my-bookings')}
+                  className="bg-gray-500 text-white px-6 py-2 rounded-md hover:bg-gray-600 transition-colors"
+                >
+                  Return to My Bookings
+                </button>
+                {hasExistingReview && experience && (
+                  <button
+                    onClick={() => navigate(`/experience/${experience.experienceId}`)}
+                    className="bg-primary-1 text-white px-6 py-2 rounded-md hover:bg-primary-1/90 transition-colors"
+                  >
+                    View Experience
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

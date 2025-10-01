@@ -3,36 +3,35 @@ import { X, Upload, Image, AlertCircle, CheckCircle, Star } from 'lucide-react';
 import StarRating from './StarRating';
 import { useReviews } from '../../contexts/ReviewContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { reviewService } from '../../services/reviewService';
 
 const ReviewForm = ({
   booking,
   experience,
-  existingReview = null,
   onSubmit,
   onCancel,
   isModal = false,
   className = ''
 }) => {
-  const { createReview, updateReview, loading } = useReviews();
+  const { createReview, loading } = useReviews();
   const { user } = useAuth();
   const fileInputRef = useRef(null);
 
   // Form state
   const [formData, setFormData] = useState({
-    rating: existingReview?.rating || 0,
-    title: existingReview?.title || '',
-    comment: existingReview?.comment || '',
+    rating: 0,
+    title: '',
+    comment: '',
     photos: []
   });
 
   const [errors, setErrors] = useState({});
   const [submitStatus, setSubmitStatus] = useState(null); // 'success', 'error', null
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   // Photo handling
-  const [previewPhotos, setPreviewPhotos] = useState(
-    existingReview?.photos?.map(p => ({ ...p, isExisting: true })) || []
-  );
+  const [previewPhotos, setPreviewPhotos] = useState([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
 
   const maxPhotos = 5;
@@ -110,10 +109,14 @@ const ReviewForm = ({
     });
 
     // Update form data
-    setFormData(prev => ({
-      ...prev,
-      photos: [...prev.photos, ...validFiles]
-    }));
+    setFormData(prev => {
+      const newFormData = {
+        ...prev,
+        photos: [...prev.photos, ...validFiles]
+      };
+      console.log('📷 Updated formData.photos:', newFormData.photos);
+      return newFormData;
+    });
 
     // Clear file input
     if (fileInputRef.current) {
@@ -164,18 +167,23 @@ const ReviewForm = ({
 
       console.log('🚀 Submitting review data:', reviewData);
 
-      let result;
-      if (existingReview) {
-        result = await updateReview(existingReview.reviewId, reviewData);
-      } else {
-        result = await createReview(reviewData);
-      }
+      const result = await createReview(reviewData);
       console.log('🚀 Review submission result:', result);
+      console.log('🖼️ FormData.photos length:', formData.photos.length);
+      console.log('🖼️ FormData.photos:', formData.photos);
       if (result.success) {
         // Handle photo uploads if any new photos
         if (formData.photos.length > 0) {
+          console.log('📤 Starting photo upload for', formData.photos.length, 'photos');
           setUploadingPhotos(true);
-          // TODO: Upload photos using reviewService.uploadReviewPhotos
+          try {
+            const photoUploadResult = await reviewService.uploadReviewPhotos(result.data.reviewId, formData.photos);
+            if (!photoUploadResult.success) {
+              console.warn('Photo upload failed:', photoUploadResult.error);
+            }
+          } catch (photoError) {
+            console.error('Error uploading photos:', photoError);
+          }
         }
 
         setSubmitStatus('success');
@@ -415,8 +423,7 @@ const ReviewForm = ({
           <div className="flex items-center">
             <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
             <p className="text-sm text-green-700">
-              Review {existingReview ? 'updated' : 'submitted'} successfully!
-              {!existingReview && ' You earned 10 TripPoints!'}
+              Review submitted successfully! You earned 10 TripPoints!
             </p>
           </div>
         </div>
@@ -441,10 +448,10 @@ const ReviewForm = ({
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
-              {existingReview ? 'Updating...' : 'Submitting...'}
+              Submitting...
             </>
           ) : (
-            existingReview ? 'Update Review' : 'Submit Review'
+            'Submit Review'
           )}
         </button>
       </div>
@@ -458,7 +465,7 @@ const ReviewForm = ({
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
-                {existingReview ? 'Edit Review' : 'Write a Review'}
+                Write a Review
               </h2>
               <button
                 onClick={onCancel}
@@ -480,7 +487,7 @@ const ReviewForm = ({
     <div className={`bg-white rounded-lg p-6 border border-gray-200 ${className}`}>
       <div className="mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-2">
-          {existingReview ? 'Edit Your Review' : 'Write a Review'}
+          Write a Review
         </h2>
         <p className="text-sm text-gray-600">
           Share your experience to help other travelers make informed decisions.
