@@ -169,7 +169,7 @@ public class DataSeedingService {
                 { "Tokyo Street Food Adventure", "Tokyo", "Japan",
                         "Explore hidden local food spots in Shibuya and taste authentic Japanese cuisine",
                         ExperienceCategory.DAYTRIP, 3.0, 85.00, 12,
-                        "https://images.unsplash.com/photo-1545892204-e37749721199" },
+                        "https://images.unsplash.com/photo-1557410069-8da84c0523d9?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" },
                 { "Bali Volcano Trekking", "Mount Batur", "Indonesia",
                         "Challenging trek to active volcano summit with sunrise breakfast",
                         ExperienceCategory.ADVENTURE, 6.0, 120.00, 8,

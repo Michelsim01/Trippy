@@ -126,22 +126,27 @@ export const ReviewProvider = ({ children }) => {
       setLoading(true);
       setError(null);
 
-      console.log('🔄 ReviewContext: Calling reviewService.createReview with data:', reviewData);
       const response = await reviewService.createReview(reviewData);
-      console.log('🔄 ReviewContext: Got response from reviewService:', response);
 
       if (response.success) {
         // Update cached data - get experienceId from response or pass it separately
         const experienceId = response.data?.experienceId || reviewData.experienceId;
 
+        // Ensure bookingId is included in the review data
+        // Backend might not return it, so we add it from our request data
+        const reviewWithBookingId = {
+          ...response.data,
+          bookingId: response.data?.bookingId || response.data?.booking?.bookingId || reviewData.bookingId
+        };
+
         // Add to experience reviews cache
         setReviews(prev => ({
           ...prev,
-          [experienceId]: [response.data, ...(prev[experienceId] || [])]
+          [experienceId]: [reviewWithBookingId, ...(prev[experienceId] || [])]
         }));
 
         // Add to user reviews
-        setUserReviews(prev => [response.data, ...prev]);
+        setUserReviews(prev => [reviewWithBookingId, ...prev]);
 
         // Clear stats cache for this experience to force reload
         setReviewStats(prev => {
@@ -150,7 +155,7 @@ export const ReviewProvider = ({ children }) => {
           return updated;
         });
 
-        return { success: true, data: response.data };
+        return { success: true, data: reviewWithBookingId };
       } else {
         setError(response.error);
         return { success: false, error: response.error };
@@ -311,7 +316,10 @@ export const ReviewProvider = ({ children }) => {
     getExperienceReviews: (experienceId) => reviews[experienceId] || [],
     getReviewStats: (experienceId) => reviewStats[experienceId] || null,
     hasReviewForBooking: (bookingId) => {
-      return userReviews.some(review => review.booking?.bookingId === bookingId);
+      return userReviews.some(review => {
+        const reviewBookingId = review.booking?.bookingId || review.bookingId;
+        return reviewBookingId === bookingId;
+      });
     }
   };
 

@@ -5,7 +5,7 @@ import { useReviews } from '../contexts/ReviewContext';
 
 const BookingCard = ({ booking }) => {
     const navigate = useNavigate();
-    const { hasReviewForBooking } = useReviews();
+    const { hasReviewForBooking, userReviews } = useReviews();
     const [hasWrittenReview, setHasWrittenReview] = useState(false);
 
     // Check if user has written a review for this booking
@@ -14,7 +14,7 @@ const BookingCard = ({ booking }) => {
             const hasReview = hasReviewForBooking(booking.bookingId);
             setHasWrittenReview(hasReview);
         }
-    }, [booking.bookingId, hasReviewForBooking]);
+    }, [booking.bookingId, hasReviewForBooking, userReviews]);
 
     const handleCardClick = () => {
         navigate(`/booking/${booking.bookingId}`);
