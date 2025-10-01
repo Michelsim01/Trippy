@@ -334,33 +334,6 @@ const MyToursPage = () => {
                                 </div>
                             ) : (
                                 <>
-                                    {/* Quick Stats */}
-                                    <div className="mb-12 grid grid-cols-1 md:grid-cols-4 gap-6">
-                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6">
-                                            <div className="text-2xl font-bold text-primary-1 mb-1">
-                                                {tours.length}
-                                            </div>
-                                            <div className="text-neutrals-4 text-sm">Total Tours</div>
-                                        </div>
-                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6">
-                                            <div className="text-2xl font-bold text-green-600 mb-1">
-                                                {tours.filter(t => t.status === 'ACTIVE').length}
-                                            </div>
-                                            <div className="text-neutrals-4 text-sm">Active Tours</div>
-                                        </div>
-                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6">
-                                            <div className="text-2xl font-bold text-blue-600 mb-1">
-                                                {totalBookings}
-                                            </div>
-                                            <div className="text-neutrals-4 text-sm">Total Bookings</div>
-                                        </div>
-                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6">
-                                            <div className="text-2xl font-bold text-yellow-600 mb-1">
-                                                {averageRating}
-                                            </div>
-                                            <div className="text-neutrals-4 text-sm">Average Rating</div>
-                                        </div>
-                                    </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                         {tours.map((tour) => (
                                             <ExperienceCard
