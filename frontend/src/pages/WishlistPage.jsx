@@ -42,7 +42,7 @@ const WishlistPage = () => {
                     location: item.experience.location,
                     price: item.experience.price,
                     originalPrice: item.experience.price,
-                    rating: item.experience.averageRating,
+                    averageRating: item.experience.averageRating,
                     imageUrl: item.experience.coverPhotoUrl,
                     addedAt: item.addedAt,
                     shortDescription: item.experience.shortDescription,
