@@ -53,6 +53,7 @@ public class WishlistItemController {
                 exp.put("status", item.getExperience().getStatus());
                 exp.put("averageRating", item.getExperience().getAverageRating());
                 exp.put("totalReviews", item.getExperience().getTotalReviews());
+                exp.put("participantsAllowed", item.getExperience().getParticipantsAllowed());
                 m.put("experience", exp);
                 return m;
             }).toList();

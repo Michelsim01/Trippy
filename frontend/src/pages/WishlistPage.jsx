@@ -49,7 +49,8 @@ const WishlistPage = () => {
                     duration: item.experience.duration,
                     category: item.experience.category,
                     status: item.experience.status,
-                    totalReviews: item.experience.totalReviews
+                    totalReviews: item.experience.totalReviews,
+                    participantsAllowed: item.experience.participantsAllowed
                 }));
                 
                 setWishlistItems(transformedData);
