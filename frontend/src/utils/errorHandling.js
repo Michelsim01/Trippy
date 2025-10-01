@@ -15,7 +15,9 @@ export const handleApiError = (response, navigate) => {
             case 502:
             case 503:
             case 504:
-                navigate('/500');
+                // Temporarily disabled to allow debugging - uncomment when fixed
+                // navigate('/500');
+                console.error('Server error detected:', response.status, response.statusText);
                 break;
             default:
                 // For other errors (401, 403, etc.), let the component handle them
@@ -31,7 +33,8 @@ export const handleApiError = (response, navigate) => {
  */
 export const handleGenericError = (error, navigate) => {
     console.error('Application error:', error);
-    navigate('/500');
+    // Temporarily disabled to allow debugging - uncomment when fixed
+    // navigate('/500');
 };
 
 /**
@@ -87,6 +90,7 @@ export const VALID_ROUTES = [
     '/wishlist',
     '/messages',
     '/blog',
+    '/my-bookings',
     '/create-experience',
     '/create-experience/basic-info',
     '/create-experience/details',

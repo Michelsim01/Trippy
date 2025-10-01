@@ -1,12 +1,59 @@
-import React from 'react';
-import { Star } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Star, Trash2, Edit3 } from 'lucide-react';
+import { useReviews } from '../../contexts/ReviewContext';
+import LikeButton from '../reviews/LikeButton';
 
 const MyReviewsTab = ({ touristReviews, loading }) => {
+    const { deleteReview, loading: reviewLoading } = useReviews();
+    const [sortOption, setSortOption] = useState('newest');
+
+    const handleDeleteReview = async (reviewId) => {
+        if (!window.confirm('Are you sure you want to delete this review? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const result = await deleteReview(reviewId);
+            if (result.success) {
+                // Review deleted successfully - the context will update the UI
+            } else {
+                alert('Failed to delete review: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error deleting review:', error);
+            alert('Failed to delete review. Please try again.');
+        }
+    };
+
+    // Sort reviews based on selected option
+    const sortedReviews = useMemo(() => {
+        if (!touristReviews || touristReviews.length === 0) return [];
+
+        const sorted = [...touristReviews].sort((a, b) => {
+            switch (sortOption) {
+                case 'oldest':
+                    return new Date(a.createdAt) - new Date(b.createdAt);
+                case 'highest':
+                    // Sort by rating first (highest to lowest), then by newest if same rating
+                    if (b.rating !== a.rating) {
+                        return b.rating - a.rating;
+                    }
+                    // If same rating, sort by newest
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+                case 'newest':
+                default:
+                    return new Date(b.createdAt) - new Date(a.createdAt);
+            }
+        });
+
+        return sorted;
+    }, [touristReviews, sortOption]);
+
     const renderStars = (rating) => {
         return Array.from({ length: 5 }, (_, i) => (
-            <Star 
-                key={i} 
-                className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-primary-2 fill-current' : 'text-neutrals-5'}`} 
+            <Star
+                key={i}
+                className={`w-4 h-4 ${i < Math.floor(rating) ? 'text-primary-2 fill-current' : 'text-neutrals-5'}`}
             />
         ));
     };
@@ -27,10 +74,14 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                 </h3>
                 <div className="flex items-center gap-2">
                     <span className="text-sm text-neutrals-4">{touristReviews.length} reviews given</span>
-                    <select className="select-field-sm">
-                        <option>Newest</option>
-                        <option>Oldest</option>
-                        <option>Highest Rating</option>
+                    <select
+                        className="select-field-sm"
+                        value={sortOption}
+                        onChange={(e) => setSortOption(e.target.value)}
+                    >
+                        <option value="newest">Newest</option>
+                        <option value="oldest">Oldest</option>
+                        <option value="highest">Highest Rating</option>
                     </select>
                 </div>
             </div>
@@ -47,11 +98,11 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {touristReviews.map((review) => (
+                    {sortedReviews.map((review) => (
                         <div key={review.id} className="bg-white rounded-lg p-4 shadow-sm">
                             <div className="flex items-start gap-4">
-                                <img 
-                                    src={review.avatar} 
+                                <img
+                                    src={review.avatar}
                                     alt={review.tourGuide}
                                     className="w-10 h-10 rounded-full object-cover"
                                 />
@@ -67,12 +118,25 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
                                     </div>
                                     <p className="text-neutrals-3 text-sm mb-3">{review.comment}</p>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs text-neutrals-4">{review.timeAgo}</span>
+                                        <div className="flex items-center gap-4">
+                                            <span className="text-xs text-neutrals-4">{review.timeAgo}</span>
+                                            <LikeButton
+                                                reviewId={review.reviewId || review.id}
+                                                initialLikeCount={review.likeCount || 0}
+                                                className="text-xs"
+                                            />
+                                        </div>
                                         <div className="flex items-center gap-2">
                                             <button className="btn btn-outline-info btn-sm">
+                                                <Edit3 className="w-3 h-3 mr-1" />
                                                 Edit
                                             </button>
-                                            <button className="btn btn-outline-accent btn-sm">
+                                            <button
+                                                onClick={() => handleDeleteReview(review.id)}
+                                                disabled={reviewLoading}
+                                                className="btn btn-outline-accent btn-sm"
+                                            >
+                                                <Trash2 className="w-3 h-3 mr-1" />
                                                 Delete
                                             </button>
                                         </div>
@@ -85,6 +149,6 @@ const MyReviewsTab = ({ touristReviews, loading }) => {
             )}
         </div>
     );
-};
+}
 
 export default MyReviewsTab;

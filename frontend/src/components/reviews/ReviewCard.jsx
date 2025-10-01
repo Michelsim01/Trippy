@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Heart, MessageCircle, Flag, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { MessageCircle, Flag, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import StarRating from './StarRating';
 import ReviewDeleteModal from './ReviewDeleteModal';
+import LikeButton from './LikeButton';
 import { useAuth } from '../../contexts/AuthContext';
 import { useReviews } from '../../contexts/ReviewContext';
 
@@ -18,8 +19,6 @@ const ReviewCard = ({
   const [showActions, setShowActions] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-  const [likesCount, setLikesCount] = useState(review.likesCount || 0);
 
   const isOwnReview = user?.id === review.reviewer?.id;
   const reviewerName = review.reviewer ?
@@ -45,10 +44,6 @@ const ReviewCard = ({
     });
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
-    setLikesCount(prev => isLiked ? prev - 1 : prev + 1);
-  };
 
   const handleReport = () => {
     if (onReport) {
@@ -228,20 +223,11 @@ const ReviewCard = ({
       {/* Actions */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-100">
         <div className="flex items-center space-x-4">
-          <button
-            onClick={handleLike}
-            className={`flex items-center space-x-1 text-sm transition-colors ${
-              isLiked
-                ? 'text-red-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-            disabled={!user}
-          >
-            <Heart
-              className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`}
-            />
-            <span>{likesCount}</span>
-          </button>
+          <LikeButton
+            reviewId={review.reviewId}
+            initialLikeCount={review.likeCount || 0}
+            className="text-sm"
+          />
 
           <button className="flex items-center space-x-1 text-sm text-gray-500 hover:text-gray-700 transition-colors">
             <MessageCircle className="w-4 h-4" />

@@ -1,12 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Calendar, Users, MapPin } from 'lucide-react';
+import { Calendar, Users, MapPin, Star, Edit } from 'lucide-react';
+import { useReviews } from '../contexts/ReviewContext';
 
 const BookingCard = ({ booking }) => {
     const navigate = useNavigate();
+    const { hasReviewForBooking } = useReviews();
+    const [hasWrittenReview, setHasWrittenReview] = useState(false);
+
+    // Check if user has written a review for this booking
+    useEffect(() => {
+        if (booking.bookingId) {
+            const hasReview = hasReviewForBooking(booking.bookingId);
+            setHasWrittenReview(hasReview);
+        }
+    }, [booking.bookingId, hasReviewForBooking]);
 
     const handleCardClick = () => {
         navigate(`/booking/${booking.bookingId}`);
+    };
+
+    const handleReviewClick = (e) => {
+        e.stopPropagation(); // Prevent card click
+        navigate(`/write-review/${booking.bookingId}`);
+    };
+
+    const handleEditReviewClick = (e) => {
+        e.stopPropagation(); // Prevent card click
+        // Navigate to edit review page (you can implement this later)
+        navigate(`/write-review/${booking.bookingId}?edit=true`);
     };
 
     // Format booking date for display (handles both single day and multi-day)
@@ -143,13 +165,38 @@ const BookingCard = ({ booking }) => {
                 <div className="h-px bg-neutrals-6 rounded-[1px] mb-4" />
 
                 {/* Bottom Section */}
-                <div className="flex items-center justify-between mt-auto">
-                    <div className="text-sm text-neutrals-4 truncate flex-1 mr-2">
-                        Booking #{booking.confirmationCode || booking.bookingId}
+                <div className="space-y-3 mt-auto">
+                    <div className="flex items-center justify-between">
+                        <div className="text-sm text-neutrals-4 truncate flex-1 mr-2">
+                            Booking #{booking.confirmationCode || booking.bookingId}
+                        </div>
+                        <div className="text-lg font-bold text-primary-1 flex-shrink-0">
+                            {formatPrice(booking.totalAmount)}
+                        </div>
                     </div>
-                    <div className="text-lg font-bold text-primary-1 flex-shrink-0">
-                        {formatPrice(booking.totalAmount)}
-                    </div>
+
+                    {/* Review Button for Completed Bookings */}
+                    {booking.status === 'COMPLETED' && (
+                        <div className="pt-2 border-t border-neutrals-6">
+                            {hasWrittenReview ? (
+                                <button
+                                    onClick={handleEditReviewClick}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 hover:bg-green-100 transition-colors text-sm font-medium"
+                                >
+                                    <Edit className="w-4 h-4" />
+                                    Review Written
+                                </button>
+                            ) : (
+                                <button
+                                    onClick={handleReviewClick}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-1 text-white rounded-lg hover:bg-primary-1/90 transition-colors text-sm font-medium"
+                                >
+                                    <Star className="w-4 h-4" />
+                                    Leave Review
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

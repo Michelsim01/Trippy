@@ -324,6 +324,7 @@ const ProfilePage = () => {
         rating: review.rating,
         comment: review.comment,
         timeAgo: new Date(review.createdAt).toLocaleDateString(),
+        createdAt: review.createdAt,
         tripPointsEarned: review.tripPointsEarned
     }));
 
