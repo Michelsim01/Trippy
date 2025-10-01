@@ -378,7 +378,7 @@ public class ReviewController {
             response.put("title", savedReview.getTitle());
             response.put("comment", savedReview.getComment());
             response.put("tripPointsEarned", savedReview.getTripPointsEarned());
-            response.put("createdAt", savedReview.getCreatedAt());
+            response.put("createdAt", savedReview.getCreatedAt().toString());
             response.put("success", true);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
