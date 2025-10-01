@@ -434,6 +434,7 @@ const ExperienceDetailsPage = () => {
                     reviews={reviews}
                     averageRating={averageRating}
                     totalReviews={totalReviews}
+                    user={user}
                     isMobile={false}
                     onChatWithGuide={handleChatWithGuide}
                   />
@@ -641,6 +642,7 @@ const ExperienceDetailsPage = () => {
                 reviews={reviews}
                 averageRating={averageRating}
                 totalReviews={totalReviews}
+                user={user}
                 isMobile={true}
                 onChatWithGuide={handleChatWithGuide}
               />
