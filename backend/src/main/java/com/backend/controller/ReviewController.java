@@ -783,8 +783,10 @@ public class ReviewController {
                 }
             }
 
-            // Create directory if it doesn't exist
-            Path uploadDir = Paths.get("uploads/reviews");
+            // Create directory if it doesn't exist - use absolute path
+            String projectRoot = System.getProperty("user.dir");
+            Path uploadDir = Paths.get(projectRoot, "uploads", "reviews");
+            System.out.println("Creating upload directory at: " + uploadDir.toAbsolutePath());
             if (!Files.exists(uploadDir)) {
                 Files.createDirectories(uploadDir);
             }
@@ -914,5 +916,33 @@ public class ReviewController {
         System.out.println("DEBUG: Updated guide " + guide.getId() + " average rating to " +
             guide.getAverageRating() + " (based on " + ratedExperiences.size() +
             " rated experiences out of " + guideExperiences.size() + " total)");
+    }
+
+    // Debug endpoint to test file access
+    @GetMapping("/test-upload")
+    public ResponseEntity<?> testUpload() {
+        try {
+            String projectRoot = System.getProperty("user.dir");
+            Path uploadDir = Paths.get(projectRoot, "uploads", "reviews");
+
+            Map<String, Object> info = new HashMap<>();
+            info.put("projectRoot", projectRoot);
+            info.put("uploadDir", uploadDir.toAbsolutePath().toString());
+            info.put("uploadDirExists", Files.exists(uploadDir));
+
+            if (Files.exists(uploadDir)) {
+                try {
+                    info.put("files", Files.list(uploadDir)
+                        .map(path -> path.getFileName().toString())
+                        .collect(Collectors.toList()));
+                } catch (Exception e) {
+                    info.put("filesError", e.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(info);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error: " + e.getMessage());
+        }
     }
 }

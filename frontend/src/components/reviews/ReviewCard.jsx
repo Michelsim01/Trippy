@@ -136,18 +136,11 @@ const ReviewCard = ({
         <div className="mb-4">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {review.photos.slice(0, 6).map((photo, index) => (
-              <div key={index} className="aspect-square relative">
+              <div key={index} className="aspect-square">
                 <img
                   src={photo.url}
                   alt={`Review photo ${index + 1}`}
                   className="w-full h-full object-cover rounded-lg"
-                  onError={(e) => {
-                    console.error('Failed to load review photo:', photo.url);
-                    e.target.style.display = 'none';
-                  }}
-                  onLoad={() => {
-                    console.log('Successfully loaded review photo:', photo.url);
-                  }}
                 />
                 {index === 5 && review.photos.length > 6 && (
                   <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
