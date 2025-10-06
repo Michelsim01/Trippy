@@ -15,6 +15,9 @@ public class UserSurvey {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(length = 1000)
+    private String introduction;
+    
     @ElementCollection
     private List<String> interests;
     private String travelStyle;
@@ -25,6 +28,8 @@ public class UserSurvey {
     public void setSurveyId(Long surveyId) { this.surveyId = surveyId; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+    public String getIntroduction() { return introduction; }
+    public void setIntroduction(String introduction) { this.introduction = introduction; }
     public java.util.List<String> getInterests() { return interests; }
     public void setInterests(java.util.List<String> interests) { this.interests = interests; }
     public String getTravelStyle() { return travelStyle; }
