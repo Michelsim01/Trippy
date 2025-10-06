@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,9 @@ public class BookingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private TripPointsService tripPointsService;
 
     /**
      * Validate a booking request before creating the actual booking.
@@ -94,10 +98,16 @@ public class BookingService {
                     experience.getPrice(),
                     bookingRequest.getNumberOfParticipants());
 
-            boolean priceValid = pricing.validatePricing(
-                    bookingRequest.getBaseAmount(),
-                    bookingRequest.getServiceFee(),
-                    bookingRequest.getTotalAmount());
+            // Account for trippoints discount in total validation
+            BigDecimal expectedTotal = pricing.getTotalAmount();
+            BigDecimal trippointsDiscount = bookingRequest.getTrippointsDiscount();
+            if (trippointsDiscount != null && trippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                expectedTotal = expectedTotal.subtract(trippointsDiscount);
+            }
+
+            boolean priceValid = pricing.getBaseAmount().compareTo(bookingRequest.getBaseAmount()) == 0 &&
+                    pricing.getServiceFee().compareTo(bookingRequest.getServiceFee()) == 0 &&
+                    expectedTotal.compareTo(bookingRequest.getTotalAmount()) == 0;
 
             validation.setPriceValid(priceValid);
             validation.setExperiencePrice(experience.getPrice());
@@ -192,6 +202,7 @@ public class BookingService {
             booking.setBaseAmount(bookingRequest.getBaseAmount());
             booking.setServiceFee(bookingRequest.getServiceFee());
             booking.setTotalAmount(bookingRequest.getTotalAmount());
+            booking.setTrippointsDiscount(bookingRequest.getTrippointsDiscount());
 
             // Generate confirmation code
             booking.setConfirmationCode(generateConfirmationCode());
@@ -258,6 +269,16 @@ public class BookingService {
             // Update booking status based on transaction outcome
             if (paymentResult.getStatus() == TransactionStatus.COMPLETED) {
                 booking.setStatus(BookingStatus.CONFIRMED);
+
+                // Process trippoints redemption if applicable
+                if (booking.getTrippointsDiscount() != null &&
+                    booking.getTrippointsDiscount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+
+                    int pointsToRedeem = booking.getTrippointsDiscount()
+                        .multiply(new java.math.BigDecimal("100")).intValue();
+
+                    tripPointsService.redeemPoints(booking.getTraveler().getId(), pointsToRedeem);
+                }
 
                 ExperienceSchedule schedule = booking.getExperienceSchedule();
                 int availableSpots = schedule.getAvailableSpots() - booking.getNumberOfParticipants();

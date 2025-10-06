@@ -48,6 +48,9 @@ public class BookingRequestDTO {
     @DecimalMin(value = "0.0", inclusive = false, message = "Total amount must be positive")
     private BigDecimal totalAmount;
 
+    @DecimalMin(value = "0.0", message = "Trippoints discount must be non-negative")
+    private BigDecimal trippointsDiscount;
+
     // Default constructor
     public BookingRequestDTO() {
     }
@@ -56,7 +59,8 @@ public class BookingRequestDTO {
     public BookingRequestDTO(Long experienceScheduleId, Integer numberOfParticipants,
             String contactFirstName, String contactLastName,
             String contactEmail, String contactPhone,
-            BigDecimal baseAmount, BigDecimal serviceFee, BigDecimal totalAmount) {
+            BigDecimal baseAmount, BigDecimal serviceFee, BigDecimal totalAmount,
+            BigDecimal trippointsDiscount) {
         this.experienceScheduleId = experienceScheduleId;
         this.numberOfParticipants = numberOfParticipants;
         this.contactFirstName = contactFirstName;
@@ -66,6 +70,7 @@ public class BookingRequestDTO {
         this.baseAmount = baseAmount;
         this.serviceFee = serviceFee;
         this.totalAmount = totalAmount;
+        this.trippointsDiscount = trippointsDiscount;
     }
 
     // Getters and Setters
@@ -141,6 +146,14 @@ public class BookingRequestDTO {
         this.totalAmount = totalAmount;
     }
 
+    public BigDecimal getTrippointsDiscount() {
+        return trippointsDiscount;
+    }
+
+    public void setTrippointsDiscount(BigDecimal trippointsDiscount) {
+        this.trippointsDiscount = trippointsDiscount;
+    }
+
     @Override
     public String toString() {
         return "BookingRequestDTO{" +
@@ -151,6 +164,7 @@ public class BookingRequestDTO {
                 ", contactEmail='" + contactEmail + '\'' +
                 ", contactPhone='" + contactPhone + '\'' +
                 ", totalAmount=" + totalAmount +
+                ", trippointsDiscount=" + trippointsDiscount +
                 '}';
     }
 }

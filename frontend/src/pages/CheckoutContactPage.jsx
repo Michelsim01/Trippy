@@ -159,7 +159,8 @@ export default function CheckoutContactPage() {
         contactPhone: contactInfo.phone,
         baseAmount: pricing.baseAmount,
         serviceFee: pricing.serviceFee,
-        totalAmount: pricing.totalAmount
+        totalAmount: pricing.totalAmount,
+        trippointsDiscount: pricing.trippointsDiscount || 0
       });
 
       // Validate booking with backend

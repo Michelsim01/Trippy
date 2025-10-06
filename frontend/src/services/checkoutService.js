@@ -387,7 +387,8 @@ export const createBookingRequest = ({
   contactPhone,
   baseAmount,
   serviceFee,
-  totalAmount
+  totalAmount,
+  trippointsDiscount = 0
 }) => {
   return {
     experienceScheduleId,
@@ -398,7 +399,8 @@ export const createBookingRequest = ({
     contactPhone,
     baseAmount,
     serviceFee,
-    totalAmount
+    totalAmount,
+    trippointsDiscount
   }
 }
 
