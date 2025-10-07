@@ -151,7 +151,7 @@ const SurveyPage = () => {
 
                 // Prepare survey data for backend
                 const surveyData = {
-                    user: { id: user.id },
+                    userId: user.id,
                     introduction: userData.name.trim(),
                     interests: userData.interests,
                     travelStyle: userData.travelStyle,

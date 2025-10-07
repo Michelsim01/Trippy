@@ -1,5 +1,6 @@
 package com.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -10,6 +11,8 @@ public class UserSurveyDTO {
     private List<String> interests;
     private String travelStyle;
     private String experienceBudget;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime completedAt;
 
     // Default constructor

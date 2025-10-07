@@ -43,6 +43,8 @@ public class UserSurveyService {
 
     public UserSurveyDTO createUserSurvey(UserSurveyDTO userSurveyDTO) {
         UserSurvey userSurvey = convertToEntity(userSurveyDTO);
+        // Set completion time to current time regardless of what frontend sends
+        userSurvey.setCompletedAt(java.time.LocalDateTime.now());
         UserSurvey savedUserSurvey = userSurveyRepository.save(userSurvey);
         return convertToDTO(savedUserSurvey);
     }
@@ -110,7 +112,13 @@ public class UserSurveyService {
             userSurvey.setInterests(dto.getInterests());
             userSurvey.setTravelStyle(dto.getTravelStyle());
             userSurvey.setExperienceBudget(dto.getExperienceBudget());
-            userSurvey.setCompletedAt(dto.getCompletedAt());
+            
+            // Set completion time - if not provided or invalid, use current time
+            if (dto.getCompletedAt() != null) {
+                userSurvey.setCompletedAt(dto.getCompletedAt());
+            } else {
+                userSurvey.setCompletedAt(java.time.LocalDateTime.now());
+            }
             
             System.out.println("Successfully converted DTO to entity");
             return userSurvey;

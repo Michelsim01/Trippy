@@ -84,17 +84,42 @@ public class UserSurveyController {
     }
 
     @PostMapping
-    public ResponseEntity<UserSurveyDTO> createUserSurvey(@RequestBody UserSurveyDTO userSurveyDTO) {
+    public ResponseEntity<?> createUserSurvey(@RequestBody UserSurveyDTO userSurveyDTO) {
         try {
             if (userSurveyDTO == null) {
-                return ResponseEntity.badRequest().build();
+                return ResponseEntity.badRequest().body("Survey data is required");
             }
+            
+            // Validate required fields
+            if (userSurveyDTO.getUserId() == null) {
+                return ResponseEntity.badRequest().body("User ID is required");
+            }
+            
+            if (userSurveyDTO.getIntroduction() == null || userSurveyDTO.getIntroduction().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Introduction is required");
+            }
+            
+            if (userSurveyDTO.getInterests() == null || userSurveyDTO.getInterests().size() != 5) {
+                return ResponseEntity.badRequest().body("Exactly 5 interests are required");
+            }
+            
+            if (userSurveyDTO.getTravelStyle() == null || userSurveyDTO.getTravelStyle().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Travel style is required");
+            }
+            
+            if (userSurveyDTO.getExperienceBudget() == null || userSurveyDTO.getExperienceBudget().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body("Experience budget is required");
+            }
+            
+            System.out.println("Creating survey for user ID: " + userSurveyDTO.getUserId());
+            System.out.println("Survey data: " + userSurveyDTO.toString());
             
             UserSurveyDTO savedUserSurvey = userSurveyService.createUserSurvey(userSurveyDTO);
             return ResponseEntity.status(HttpStatus.CREATED).body(savedUserSurvey);
         } catch (Exception e) {
             System.err.println("Error creating user survey: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Internal server error: " + e.getMessage());
         }
     }
 

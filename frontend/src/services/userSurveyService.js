@@ -119,19 +119,26 @@ export const userSurveyService = {
   // Create user survey
   async createUserSurvey(surveyData) {
     try {
+      console.log('Sending survey data:', surveyData)
       const response = await api.post('/api/user-surveys', surveyData)
+      console.log('Survey creation response:', response.data)
       
       return {
         success: true,
         data: response.data,
       }
     } catch (error) {
+      console.error('Survey creation error:', error)
+      console.error('Error response data:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      
       let errorMessage = 'Failed to create user survey'
       
       if (error.response?.status === 401) {
         errorMessage = 'Authentication required'
       } else if (error.response?.status === 400) {
-        errorMessage = 'Invalid survey data'
+        // Use the specific error message from backend
+        errorMessage = error.response?.data || 'Invalid survey data'
       } else if (error.response?.data) {
         if (typeof error.response.data === 'string') {
           errorMessage = error.response.data
