@@ -40,7 +40,8 @@ public class Booking {
     // Payment Breakdown
     private BigDecimal baseAmount; // Experience price
     private BigDecimal serviceFee; // Platform fee
-    // totalAmount = baseAmount + serviceFee
+    private BigDecimal trippointsDiscount; // Amount discounted via trippoints
+    // totalAmount = baseAmount + serviceFee - trippointsDiscount
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -220,5 +221,13 @@ public class Booking {
 
     public void setServiceFee(BigDecimal serviceFee) {
         this.serviceFee = serviceFee;
+    }
+
+    public BigDecimal getTrippointsDiscount() {
+        return trippointsDiscount;
+    }
+
+    public void setTrippointsDiscount(BigDecimal trippointsDiscount) {
+        this.trippointsDiscount = trippointsDiscount;
     }
 }
