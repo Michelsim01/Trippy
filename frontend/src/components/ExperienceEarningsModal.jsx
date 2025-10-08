@@ -69,6 +69,12 @@ const ExperienceEarningsModal = ({
         });
     };
 
+    const isTourCompleted = (endDateTime) => {
+        const now = new Date();
+        const tourEndTime = new Date(endDateTime);
+        return now > tourEndTime;
+    };
+
     const handleCompleteTimeslot = (scheduleId) => {
         setSelectedScheduleId(scheduleId);
         setShowConfirmDialog(true);
@@ -76,6 +82,20 @@ const ExperienceEarningsModal = ({
 
     const handleConfirmComplete = async () => {
         if (!selectedScheduleId) return;
+
+        // Find the selected schedule to validate end time
+        const selectedSchedule = schedules.find(schedule => schedule.scheduleId === selectedScheduleId);
+        if (selectedSchedule && !isTourCompleted(selectedSchedule.endDateTime)) {
+            swal.fire({
+                icon: 'error',
+                title: 'Tour Still in Progress',
+                text: 'This tour has not ended yet. You can only complete a tour after its scheduled end time.',
+                confirmButtonText: 'OK'
+            });
+            setShowConfirmDialog(false);
+            setSelectedScheduleId(null);
+            return;
+        }
 
         try {
             setCompletingSchedule(selectedScheduleId);
@@ -93,7 +113,7 @@ const ExperienceEarningsModal = ({
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
-            const result = await response.json();
+            await response.json();
 
             // Refresh earnings data to show updated amounts
             if (isOpen && experienceId && userId) {
@@ -275,14 +295,28 @@ const ExperienceEarningsModal = ({
                                         {/* Action Button */}
                                         <div>
                                             {schedule.status === "CONFIRMED" ? (
-                                                <Button
-                                                    variant="primary"
-                                                    size="sm"
-                                                    onClick={() => handleCompleteTimeslot(schedule.scheduleId)}
-                                                    disabled={completingSchedule === schedule.scheduleId}
-                                                >
-                                                    {completingSchedule === schedule.scheduleId ? 'Completing...' : 'Complete'}
-                                                </Button>
+                                                (() => {
+                                                    const tourCompleted = isTourCompleted(schedule.endDateTime);
+                                                    const isDisabled = completingSchedule === schedule.scheduleId || !tourCompleted;
+
+                                                    return (
+                                                        <Button
+                                                            variant={tourCompleted ? "primary" : "secondary"}
+                                                            size="sm"
+                                                            onClick={() => handleCompleteTimeslot(schedule.scheduleId)}
+                                                            disabled={isDisabled}
+                                                            className={!tourCompleted ? "opacity-50 cursor-not-allowed" : ""}
+                                                            title={!tourCompleted ? "Tour must end before it can be marked as completed" : "Mark this tour as completed"}
+                                                        >
+                                                            {completingSchedule === schedule.scheduleId
+                                                                ? 'Completing...'
+                                                                : tourCompleted
+                                                                    ? 'Mark As Completed'
+                                                                    : 'Tour Not Completed'
+                                                            }
+                                                        </Button>
+                                                    );
+                                                })()
                                             ) : (
                                                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { userService } from '../services/userService';
+import { userSurveyService } from '../services/userSurveyService';
 import { experienceApi } from '../services/experienceApi';
 import { reviewService } from '../services/reviewService';
 import Navbar from '../components/Navbar';
@@ -45,9 +46,8 @@ const ProfilePage = () => {
     const [error, setError] = useState(null);
     const [isOwnProfile, setIsOwnProfile] = useState(false);
     const [wishlistExperienceIds, setWishlistExperienceIds] = useState([]);
-    
-    // Reviews state
-    const [userReviews, setUserReviews] = useState([]);
+    const [surveyData, setSurveyData] = useState(null);
+    const [surveyLoading, setSurveyLoading] = useState(false);
     const [experienceReviews, setExperienceReviews] = useState([]);
     const [reviewsLoading, setReviewsLoading] = useState(false);
 
@@ -57,6 +57,25 @@ const ProfilePage = () => {
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
+    };
+
+    const fetchUserSurvey = async (userId) => {
+        try {
+            setSurveyLoading(true);
+            const response = await userSurveyService.getUserSurveyByUserId(userId);
+            console.log('Fetched survey data:', response);
+            if (response.success) {
+                setSurveyData(response.data);
+            } else {
+                console.log('No survey data found for user:', userId);
+                setSurveyData(null);
+            }
+        } catch (error) {
+            console.error('Error fetching survey data:', error);
+            setSurveyData(null);
+        } finally {
+            setSurveyLoading(false);
+        }
     };
 
     const fetchUserData = async (userId) => { 
@@ -184,7 +203,11 @@ const ProfilePage = () => {
         }
     };
 
-    const handleTourDeleted = (deletedTourId) => {
+        const handleSurveyUpdate = (updatedSurveyData) => {
+        setSurveyData(updatedSurveyData);
+    };
+
+    const handleTourDeleted = (deletedExperienceId) => {
         // Remove the deleted tour from the userExperiences list
         setUserExperiences(prevExperiences =>
             prevExperiences.filter(experience =>
@@ -247,6 +270,13 @@ const ProfilePage = () => {
             fetchReceivedReviews(parseInt(id));
         }
     }, [id, userData, currentRole]);
+
+    // Fetch survey data when user data is loaded
+    useEffect(() => {
+        if (userData && id) {
+            fetchUserSurvey(id);
+        }
+    }, [userData, id]);
 
     // Reset active tab when tabs change (when switching between profiles)
     useEffect(() => {
@@ -318,6 +348,9 @@ const ProfilePage = () => {
                     isTourGuide={isTourGuide} 
                     isOwnProfile={isOwnProfile}
                     onUserDataUpdate={setUserData}
+                    surveyData={surveyData}
+                    surveyLoading={surveyLoading}
+                    onSurveyUpdate={handleSurveyUpdate}
                 />;
             case 'Tour list':
                 return <TourListTab
@@ -355,12 +388,12 @@ const ProfilePage = () => {
     return (
         <div className="min-h-screen bg-neutrals-8">
             {/* Loading State */}
-            {(loading || authLoading) && (
+            {(loading || authLoading || surveyLoading) && (
                 <div className="flex items-center justify-center min-h-screen">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto mb-4"></div>
                         <p className="text-neutrals-3">
-                            {authLoading ? 'Checking authentication...' : 'Loading profile...'}
+                            {authLoading ? 'Checking authentication...' : (surveyLoading ? 'Loading survey data...' : 'Loading profile...')}
                         </p>
                     </div>
                 </div>
