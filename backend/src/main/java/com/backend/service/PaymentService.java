@@ -325,15 +325,21 @@ public class PaymentService {
                 booking.getNumberOfParticipants(),
                 serviceFeeRate);
 
-        // Validate amounts using DTO method
-        boolean isValid = pricing.validatePricing(
-                booking.getBaseAmount(),
-                booking.getServiceFee(),
-                booking.getTotalAmount());
+        // Account for trippoints discount in total validation
+        BigDecimal expectedTotal = pricing.getTotalAmount();
+        BigDecimal trippointsDiscount = booking.getTrippointsDiscount();
+        if (trippointsDiscount != null && trippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            expectedTotal = expectedTotal.subtract(trippointsDiscount);
+        }
+
+        // Validate individual components and adjusted total
+        boolean isValid = pricing.getBaseAmount().compareTo(booking.getBaseAmount()) == 0 &&
+                pricing.getServiceFee().compareTo(booking.getServiceFee()) == 0 &&
+                expectedTotal.compareTo(booking.getTotalAmount()) == 0;
 
         if (!isValid) {
             throw new IllegalArgumentException("Payment amount validation failed. Expected total: "
-                    + pricing.getTotalAmount() + ", Submitted total: " + booking.getTotalAmount());
+                    + expectedTotal + ", Submitted total: " + booking.getTotalAmount());
         }
 
         return true;

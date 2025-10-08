@@ -15,7 +15,14 @@ const initialState = {
     baseAmount: 0,
     serviceFee: 0,
     totalAmount: 0,
-    experiencePrice: 0
+    experiencePrice: 0,
+    trippointsDiscount: 0
+  },
+
+  // Trippoints redemption state
+  trippoints: {
+    isRedemptionActive: false,
+    discountAmount: 0
   },
 
   // Contact information
@@ -69,7 +76,15 @@ const CHECKOUT_ACTIONS = {
   CLEAR_ERROR: 'CLEAR_ERROR',
 
   // Validation
-  UPDATE_VALIDATION: 'UPDATE_VALIDATION'
+  SET_VALIDATION: 'SET_VALIDATION',
+  UPDATE_VALIDATION: 'UPDATE_VALIDATION',
+
+  // Trippoints
+  TOGGLE_TRIPPOINTS_REDEMPTION: 'TOGGLE_TRIPPOINTS_REDEMPTION',
+  SET_TRIPPOINTS_DISCOUNT: 'SET_TRIPPOINTS_DISCOUNT',
+
+  // Reset
+  RESET_CHECKOUT: 'RESET_CHECKOUT'
 }
 
 // Checkout reducer function
@@ -123,6 +138,42 @@ function checkoutReducer(state, action) {
         validation: { ...state.validation, [action.payload.field]: action.payload.value }
       }
 
+    case CHECKOUT_ACTIONS.TOGGLE_TRIPPOINTS_REDEMPTION:
+      const isActive = !state.trippoints.isRedemptionActive
+      const discountAmount = isActive ? action.payload.discountAmount : 0
+      const newTotalAmount = state.pricing.baseAmount + state.pricing.serviceFee - discountAmount
+
+      return {
+        ...state,
+        trippoints: {
+          ...state.trippoints,
+          isRedemptionActive: isActive,
+          discountAmount
+        },
+        pricing: {
+          ...state.pricing,
+          trippointsDiscount: discountAmount,
+          totalAmount: parseFloat(newTotalAmount.toFixed(2))
+        }
+      }
+
+    case CHECKOUT_ACTIONS.SET_TRIPPOINTS_DISCOUNT:
+      const newTotal = state.pricing.baseAmount + state.pricing.serviceFee - action.payload
+      return {
+        ...state,
+        trippoints: {
+          ...state.trippoints,
+          discountAmount: action.payload
+        },
+        pricing: {
+          ...state.pricing,
+          trippointsDiscount: action.payload,
+          totalAmount: parseFloat(newTotal.toFixed(2))
+        }
+      }
+
+    case CHECKOUT_ACTIONS.RESET_CHECKOUT:
+      return { ...initialState, experienceData: state.experienceData, scheduleData: state.scheduleData }
 
     default:
       return state
@@ -168,7 +219,20 @@ export function CheckoutProvider({ children }) {
     updateValidation: (field, value) => dispatch({
       type: CHECKOUT_ACTIONS.UPDATE_VALIDATION,
       payload: { field, value }
-    })
+    }),
+
+    // Trippoints
+    toggleTrippointsRedemption: (discountAmount) => dispatch({
+      type: CHECKOUT_ACTIONS.TOGGLE_TRIPPOINTS_REDEMPTION,
+      payload: { discountAmount }
+    }),
+    setTrippointsDiscount: (discountAmount) => dispatch({
+      type: CHECKOUT_ACTIONS.SET_TRIPPOINTS_DISCOUNT,
+      payload: discountAmount
+    }),
+
+    // Reset
+    resetCheckout: () => dispatch({ type: CHECKOUT_ACTIONS.RESET_CHECKOUT })
   }
 
   // Calculate pricing when participants or experience price changes
