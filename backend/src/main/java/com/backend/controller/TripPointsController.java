@@ -154,37 +154,6 @@ public class TripPointsController {
     }
 
     /**
-     * Award points for experience completion
-     */
-    @PostMapping("/user/{userId}/award-experience")
-    public ResponseEntity<Map<String, Object>> awardPointsForExperience(
-            @PathVariable Long userId,
-            @RequestBody Map<String, Object> request) {
-
-        Long referenceId = request.get("referenceId") != null ? 
-            Long.valueOf(request.get("referenceId").toString()) : null;
-
-        try {
-            TripPoints transaction = tripPointsService.awardPointsForExperience(userId, referenceId);
-
-            Map<String, Object> response = Map.of(
-                "success", true,
-                "message", "Points awarded for experience completion",
-                "transactionId", transaction.getPointsId(),
-                "pointsEarned", transaction.getPointsChange(),
-                "newBalance", transaction.getPointsBalanceAfter(),
-                "transactionType", transaction.getTransactionType().name(),
-                "referenceId", referenceId
-            );
-
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest()
-                .body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
      * Redeem points
      */
     @PostMapping("/user/{userId}/redeem")
@@ -222,24 +191,6 @@ public class TripPointsController {
     }
 
     /**
-     * Get leaderboard
-     */
-    @GetMapping("/leaderboard")
-    public ResponseEntity<List<Object[]>> getLeaderboard() {
-        List<Object[]> leaderboard = tripPointsService.getLeaderboard();
-        return ResponseEntity.ok(leaderboard);
-    }
-
-    /**
-     * Get points policy
-     */
-    @GetMapping("/policy")
-    public ResponseEntity<Map<String, String>> getPointsPolicy() {
-        String policy = tripPointsService.getPointsPolicy();
-        return ResponseEntity.ok(Map.of("policy", policy));
-    }
-
-    /**
      * Create new TripPoints transaction
      */
     @PostMapping
@@ -271,7 +222,7 @@ public class TripPointsController {
                 return ResponseEntity.badRequest().build();
             }
             
-            tripPoints.setPointsId(id);
+        tripPoints.setPointsId(id);
             TripPoints updatedTripPoints = tripPointsService.updateTripPoints(tripPoints);
             return ResponseEntity.ok(updatedTripPoints);
         } catch (Exception e) {

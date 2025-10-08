@@ -50,4 +50,5 @@ frontend/.env
 docs/changelog.md
 docs/claude.md
 docs/folder-structure.txt
-docs/personaldocs.md
+docs/personaldocs.mdadmin_frontend/node_modules/
+admin_frontend/.vite/

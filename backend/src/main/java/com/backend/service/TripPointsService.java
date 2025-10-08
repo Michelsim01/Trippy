@@ -26,10 +26,6 @@ public class TripPointsService {
     @Autowired
     private UserRepository userRepository;
 
-    // Points policy constants
-    private static final int POINTS_PER_REVIEW = 50;
-    private static final int POINTS_PER_EXPERIENCE_COMPLETION = 25;
-
     /**
      * Get current balance for a user
      */
@@ -76,13 +72,6 @@ public class TripPointsService {
     }
 
     /**
-     * Award points for completing an experience
-     */
-    public TripPoints awardPointsForExperience(Long userId, Long referenceId) {
-        return createTransaction(userId, TripPointsTransaction.EXPERIENCE_COMPLETION, POINTS_PER_EXPERIENCE_COMPLETION, referenceId);
-    }
-
-    /**
      * Redeem points
      */
     public TripPoints redeemPoints(Long userId, Integer pointsToRedeem) {
@@ -122,13 +111,6 @@ public class TripPointsService {
     }
 
     /**
-     * Get TripPoints leaderboard
-     */
-    public List<Object[]> getLeaderboard() {
-        return tripPointsRepository.getLeaderboardData();
-    }
-
-    /**
      * Get TripPoints by ID
      */
     public Optional<TripPoints> getTripPointsById(Long pointsId) {
@@ -155,15 +137,5 @@ public class TripPointsService {
     public boolean hasEnoughPoints(Long userId, Integer pointsRequired) {
         Integer currentBalance = getPointsBalance(userId);
         return currentBalance >= pointsRequired;
-    }
-
-    /**
-     * Get points policy information
-     */
-    public String getPointsPolicy() {
-        return String.format(
-            "Points Policy: %d points per review, %d points per experience completion",
-            POINTS_PER_REVIEW, POINTS_PER_EXPERIENCE_COMPLETION
-        );
     }
 }
