@@ -50,5 +50,17 @@ frontend/.env
 docs/changelog.md
 docs/claude.md
 docs/folder-structure.txt
-docs/personaldocs.mdadmin_frontend/node_modules/
+docs/personaldocs.md
+
+# ========= Admin Frontend =========
+admin_frontend/node_modules/
 admin_frontend/.vite/
+admin_frontend/dist/
+admin_frontend/dist-ssr/
+admin_frontend/*.log
+admin_frontend/npm-debug.log*
+admin_frontend/yarn-debug.log*
+admin_frontend/yarn-error.log*
+admin_frontend/pnpm-debug.log*
+admin_frontend/lerna-debug.log*
+admin_frontend/*.local
