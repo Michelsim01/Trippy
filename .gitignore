@@ -65,3 +65,4 @@ admin_frontend/pnpm-debug.log*
 admin_frontend/lerna-debug.log*
 admin_frontend/*.local
 backend/uploads/reviews/
+admin_frontend/public/Logo.png
