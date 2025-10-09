@@ -265,7 +265,7 @@ export default function CheckoutPaymentPage() {
 
               {/* Right Column - Order Summary */}
               <div className="lg:col-span-1">
-                <OrderSummary />
+                <OrderSummary disableTrippointsToggle={true} />
               </div>
             </div>
           </div>
@@ -292,7 +292,7 @@ export default function CheckoutPaymentPage() {
             </div>
 
             {/* Order Summary */}
-            <OrderSummary isMobile={true} />
+            <OrderSummary isMobile={true} disableTrippointsToggle={true} />
 
             {/* Payment Form */}
             <div className="bg-white rounded-xl p-4">

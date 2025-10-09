@@ -3,7 +3,7 @@ import { Clock, Users } from 'lucide-react';
 import { useCheckout } from '../../contexts/CheckoutContext';
 import { useTripPoints } from '../../contexts/TripPointsContext';
 
-export default function OrderSummary({ isMobile = false }) {
+export default function OrderSummary({ isMobile = false, disableTrippointsToggle = false }) {
   const {
     experienceData,
     scheduleData,
@@ -187,52 +187,54 @@ export default function OrderSummary({ isMobile = false }) {
       </div>
 
       {/* Trippoints Redemption Section */}
-      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <span className="text-blue-600 font-medium text-sm">🏆</span>
-            <span className={`font-medium text-blue-900 ${isMobile ? 'text-sm' : 'text-base'}`}>
-              Trippoints
+      {!disableTrippointsToggle && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-blue-600 font-medium text-sm">🏆</span>
+              <span className={`font-medium text-blue-900 ${isMobile ? 'text-sm' : 'text-base'}`}>
+                Trippoints
+              </span>
+            </div>
+            <span className={`text-blue-700 font-medium ${isMobile ? 'text-sm' : 'text-base'}`}>
+              {trippointsLoading ? 'Loading...' : `${currentBalance} points`}
             </span>
           </div>
-          <span className={`text-blue-700 font-medium ${isMobile ? 'text-sm' : 'text-base'}`}>
-            {trippointsLoading ? 'Loading...' : `${currentBalance} points`}
-          </span>
-        </div>
 
-        <p className={`text-blue-700 mb-3 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-          100 points = $1 • {hasEligibleBalance ? `You can save up to $${maxDiscountAmount}` : 'Need 100+ points to redeem'}
-        </p>
-
-        {canRedeem ? (
-          <button
-            onClick={handleTrippointsToggle}
-            className={`w-full px-4 py-2 rounded-lg font-medium transition-all ${
-              trippoints.isRedemptionActive
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            } ${isMobile ? 'text-sm' : 'text-base'}`}
-          >
-            {trippoints.isRedemptionActive
-              ? `Remove $${maxDiscountAmount} discount`
-              : `Redeem $${maxDiscountAmount} off with Trippoints`
-            }
-          </button>
-        ) : (
-          <div className={`text-center py-2 text-blue-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-            {currentBalance < 100
-              ? `Need ${100 - currentBalance} more points to redeem`
-              : 'No discount available for this order'
-            }
-          </div>
-        )}
-
-        {trippoints.isRedemptionActive && (
-          <p className={`text-orange-600 mt-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-            ⚠️ Trippoints will not be refunded if booking is cancelled
+          <p className={`text-blue-700 mb-3 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+            100 points = $1 • {hasEligibleBalance ? `You can save up to $${maxDiscountAmount}` : 'Need 100+ points to redeem'}
           </p>
-        )}
-      </div>
+
+          {canRedeem ? (
+            <button
+              onClick={handleTrippointsToggle}
+              className={`w-full px-4 py-2 rounded-lg font-medium transition-all ${
+                trippoints.isRedemptionActive
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              } ${isMobile ? 'text-sm' : 'text-base'}`}
+            >
+              {trippoints.isRedemptionActive
+                ? `Remove $${maxDiscountAmount} discount`
+                : `Redeem $${maxDiscountAmount} off with Trippoints`
+              }
+            </button>
+          ) : (
+            <div className={`text-center py-2 text-blue-600 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              {currentBalance < 100
+                ? `Need ${100 - currentBalance} more points to redeem`
+                : 'No discount available for this order'
+              }
+            </div>
+          )}
+
+          {trippoints.isRedemptionActive && (
+            <p className={`text-orange-600 mt-2 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+              ⚠️ Trippoints will not be refunded if booking is cancelled
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Promo Code Input */}
       <div className="mb-4">
