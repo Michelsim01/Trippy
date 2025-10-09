@@ -71,8 +71,8 @@ export default function CreateExperiencePricingPage() {
               <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Create New Experience</h1>
               <ProgressSteps currentStep={3} />
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-20">
-              <div className="lg:col-span-3">
+            <div className="max-w-4xl">
+              <div>
                 <div className="space-y-8">
                   {/* Base Pricing */}
                   <div style={{marginBottom: '15px'}}>
@@ -123,35 +123,6 @@ export default function CreateExperiencePricingPage() {
                   >
                     Next
                   </button>
-                </div>
-              </div>
-              <div className="lg:col-span-2">
-                <div className="space-y-6">
-                  <div className="bg-white border-2 border-neutrals-6 rounded-xl p-6">
-                    <h3 className="text-lg font-semibold text-neutrals-1 mb-4">Pricing Preview</h3>
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-neutrals-3">Base price per person</span>
-                        <span className="font-medium text-neutrals-1">
-                          ${formData.pricePerPerson || '0.00'}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-neutrals-3">Platform fee (5%)</span>
-                        <span className="font-medium text-neutrals-1">
-                          ${formData.pricePerPerson ? (parseFloat(formData.pricePerPerson) * 0.05).toFixed(2) : '0.00'}
-                        </span>
-                      </div>
-                      <div className="border-t border-neutrals-6 pt-3">
-                        <div className="flex justify-between">
-                          <span className="font-semibold text-neutrals-1">You receive per person</span>
-                          <span className="font-bold text-primary-1">
-                            ${formData.pricePerPerson ? (parseFloat(formData.pricePerPerson) * 0.95).toFixed(2) : '0.00'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -213,32 +184,6 @@ export default function CreateExperiencePricingPage() {
                 </div>
               </div>
 
-              {/* Mobile Pricing Preview */}
-              <div className="bg-white border-2 border-neutrals-6 rounded-xl p-4" style={{marginBottom: '10px'}}>
-                <h3 className="text-sm font-semibold text-neutrals-1 mb-3">Pricing Preview</h3>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-xs text-neutrals-3">Base price per person</span>
-                    <span className="text-sm font-medium text-neutrals-1">
-                      ${formData.pricePerPerson || '0.00'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-xs text-neutrals-3">Platform fee (5%)</span>
-                    <span className="text-sm font-medium text-neutrals-1">
-                      ${formData.pricePerPerson ? (parseFloat(formData.pricePerPerson) * 0.05).toFixed(2) : '0.00'}
-                    </span>
-                  </div>
-                  <div className="border-t border-neutrals-6 pt-2">
-                    <div className="flex justify-between">
-                      <span className="text-xs font-semibold text-neutrals-1">You receive per person</span>
-                      <span className="text-sm font-bold text-primary-1">
-                        ${formData.pricePerPerson ? (parseFloat(formData.pricePerPerson) * 0.95).toFixed(2) : '0.00'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
               
               <div className="flex gap-3" style={{marginBottom: '15px'}}>
                 <button

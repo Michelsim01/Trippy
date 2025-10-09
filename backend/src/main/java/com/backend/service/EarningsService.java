@@ -36,12 +36,12 @@ public class EarningsService {
             // Handle null amounts gracefully
             BigDecimal pendingEarnings = allBookings.stream()
                     .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
-                    .map(booking -> booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO)
+                    .map(booking -> booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal paidOutEarnings = allBookings.stream()
                     .filter(booking -> booking.getStatus() == BookingStatus.COMPLETED)
-                    .map(booking -> booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO)
+                    .map(booking -> booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             BigDecimal totalEarnings = pendingEarnings.add(paidOutEarnings);
@@ -87,12 +87,12 @@ public class EarningsService {
         // Calculate experience-level totals
         BigDecimal pendingEarnings = experienceBookings.stream()
                 .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
-                .map(Booking::getTotalAmount)
+                .map(Booking::getBaseAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal paidOutEarnings = experienceBookings.stream()
                 .filter(booking -> booking.getStatus() == BookingStatus.COMPLETED)
-                .map(Booking::getTotalAmount)
+                .map(Booking::getBaseAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalEarnings = pendingEarnings.add(paidOutEarnings);
@@ -111,7 +111,7 @@ public class EarningsService {
                             .sum();
 
                     BigDecimal potentialEarnings = scheduleBookings.stream()
-                            .map(Booking::getTotalAmount)
+                            .map(Booking::getBaseAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
                     // Determine schedule status - if all bookings are COMPLETED, then COMPLETED, otherwise CONFIRMED
