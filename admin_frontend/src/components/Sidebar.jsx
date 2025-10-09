@@ -32,7 +32,7 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="w-64 bg-slate-900 text-white min-h-screen flex flex-col">
+    <div className="w-full h-full bg-slate-900 text-white flex flex-col">
       {/* Logo and Title */}
       <div className="p-6 border-b border-slate-700">
         <div className="flex items-center gap-3">
