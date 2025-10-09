@@ -43,12 +43,6 @@ public interface TripPointsRepository extends JpaRepository<TripPoints, Long> {
     Integer getTotalRedeemedByUserId(@Param("userId") Long userId);
     
     /**
-     * Get all TripPoints transactions ordered by total earned (for leaderboard)
-     */
-    @Query("SELECT tp.user.id, COALESCE(SUM(tp.pointsChange), 0) as totalEarned FROM TripPoints tp WHERE tp.pointsChange > 0 GROUP BY tp.user.id ORDER BY totalEarned DESC")
-    List<Object[]> getLeaderboardData();
-    
-    /**
      * Check if user has any TripPoints transactions
      */
     @Query("SELECT COUNT(tp) > 0 FROM TripPoints tp WHERE tp.user.id = :userId")
