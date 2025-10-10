@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, UserX, UserCheck, Trash2 } from 'lucide-react';
 import { adminService } from '../services/adminService';
+import ConfirmationModal from './ConfirmationModal';
 
 const UserEditModal = ({ user, isOpen, onClose, onUserUpdated }) => {
   const [formData, setFormData] = useState({
@@ -13,6 +14,13 @@ const UserEditModal = ({ user, isOpen, onClose, onUserUpdated }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    action: null
+  });
 
   useEffect(() => {
     if (user) {
@@ -34,108 +42,149 @@ const UserEditModal = ({ user, isOpen, onClose, onUserUpdated }) => {
     }));
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adminService.updateUser(user.id, formData);
-      
-      if (response.success) {
-        setSuccess('User updated successfully!');
-        onUserUpdated(response.data);
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1500);
-      } else {
-        setError(response.error);
-      }
-    } catch (err) {
-      setError('Failed to update user');
-      console.error('Update user error:', err);
-    } finally {
-      setLoading(false);
-    }
+  const showConfirmation = (title, message, type, action) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      action
+    });
   };
 
-  const handleSuspend = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adminService.suspendUser(user.id);
-      
-      if (response.success) {
-        setSuccess('User suspended successfully!');
-        onUserUpdated(response.data);
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1500);
-      } else {
-        setError(response.error);
-      }
-    } catch (err) {
-      setError('Failed to suspend user');
-      console.error('Suspend user error:', err);
-    } finally {
-      setLoading(false);
+  const handleConfirm = async () => {
+    if (confirmationModal.action) {
+      await confirmationModal.action();
     }
+    setConfirmationModal({ isOpen: false, title: '', message: '', type: 'warning', action: null });
   };
 
-  const handleActivate = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adminService.activateUser(user.id);
-      
-      if (response.success) {
-        setSuccess('User activated successfully!');
-        onUserUpdated(response.data);
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1500);
-      } else {
-        setError(response.error);
+  const handleSave = () => {
+    showConfirmation(
+      'Save Changes',
+      'Are you sure you want to save these changes to the user?',
+      'info',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await adminService.updateUser(user.id, formData);
+          
+          if (response.success) {
+            setSuccess('User updated successfully!');
+            onUserUpdated(response.data);
+            setTimeout(() => {
+              onClose();
+              setSuccess(null);
+            }, 1500);
+          } else {
+            setError(response.error);
+          }
+        } catch (err) {
+          setError('Failed to update user');
+          console.error('Update user error:', err);
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      setError('Failed to activate user');
-      console.error('Activate user error:', err);
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await adminService.deleteUser(user.id);
-      
-      if (response.success) {
-        setSuccess('User deleted successfully!');
-        onUserUpdated(null); // Signal that user was deleted
-        setTimeout(() => {
-          onClose();
-          setSuccess(null);
-        }, 1500);
-      } else {
-        setError(response.error);
+  const handleSuspend = () => {
+    showConfirmation(
+      'Suspend User',
+      `Are you sure you want to suspend ${user.firstName} ${user.lastName}? They will not be able to access their account.`,
+      'warning',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await adminService.suspendUser(user.id);
+          
+          if (response.success) {
+            setSuccess('User suspended successfully!');
+            onUserUpdated(response.data);
+            setTimeout(() => {
+              onClose();
+              setSuccess(null);
+            }, 1500);
+          } else {
+            setError(response.error);
+          }
+        } catch (err) {
+          setError('Failed to suspend user');
+          console.error('Suspend user error:', err);
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      setError('Failed to delete user');
-      console.error('Delete user error:', err);
-    } finally {
-      setLoading(false);
-    }
+    );
+  };
+
+  const handleActivate = () => {
+    showConfirmation(
+      'Activate User',
+      `Are you sure you want to activate ${user.firstName} ${user.lastName}? They will regain access to their account.`,
+      'success',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await adminService.activateUser(user.id);
+          
+          if (response.success) {
+            setSuccess('User activated successfully!');
+            onUserUpdated(response.data);
+            setTimeout(() => {
+              onClose();
+              setSuccess(null);
+            }, 1500);
+          } else {
+            setError(response.error);
+          }
+        } catch (err) {
+          setError('Failed to activate user');
+          console.error('Activate user error:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
+  };
+
+  const handleDelete = () => {
+    showConfirmation(
+      'Delete User',
+      `Are you sure you want to permanently delete ${user.firstName} ${user.lastName}? This action cannot be undone and will remove all their data.`,
+      'warning',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          
+          const response = await adminService.deleteUser(user.id);
+          
+          if (response.success) {
+            setSuccess('User deleted successfully!');
+            onUserUpdated(null); // Signal that user was deleted
+            setTimeout(() => {
+              onClose();
+              setSuccess(null);
+            }, 1500);
+          } else {
+            setError(response.error);
+          }
+        } catch (err) {
+          setError('Failed to delete user');
+          console.error('Delete user error:', err);
+        } finally {
+          setLoading(false);
+        }
+      }
+    );
   };
 
   if (!isOpen || !user) return null;
@@ -283,6 +332,17 @@ const UserEditModal = ({ user, isOpen, onClose, onUserUpdated }) => {
           </div>
         </div>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmationModal.isOpen}
+        onClose={() => setConfirmationModal({ isOpen: false, title: '', message: '', type: 'warning', action: null })}
+        onConfirm={handleConfirm}
+        title={confirmationModal.title}
+        message={confirmationModal.message}
+        type={confirmationModal.type}
+        loading={loading}
+      />
     </div>
   );
 };

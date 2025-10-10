@@ -21,8 +21,8 @@ const Sidebar = () => {
     { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'User Management', href: '/admin/users', icon: Users },
     { name: 'Experience Management', href: '/admin/experiences', icon: MapPin },
-    { name: 'Bookings', href: '/admin/bookings', icon: Calendar },
-    { name: 'Transactions', href: '/admin/transactions', icon: FileText },
+    { name: 'Booking Management', href: '/admin/bookings', icon: Calendar },
+    { name: 'Transaction Management', href: '/admin/transactions', icon: FileText },
     { name: 'Dispute Resolution', href: '/admin/disputes', icon: AlertTriangle },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -40,8 +40,8 @@ const Sidebar = () => {
             <img src="/Logo.png" alt="Trippy Logo" className="w-8 h-8 object-contain" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">Trippy Admin</h1>
-            <p className="text-xs text-slate-400">Portal</p>
+            <h1 className="text-lg font-semibold">Trippy</h1>
+            <p className="text-xs text-slate-400">Admin Portal</p>
           </div>
         </div>
       </div>

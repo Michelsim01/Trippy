@@ -1,114 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
-import { adminService } from '../services/adminService';
-import UserEditModal from './UserEditModal';
+import { Edit, Search, Calendar, Users, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 
-const UsersTable = ({ onUserAction }) => {
-  const [users, setUsers] = useState([]);
+const BookingsTable = ({ onBookingAction }) => {
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
 
+  const mockBookings = [
+    { id: 'BK001', traveler: 'John Doe', email: 'john@trippy.com', experience: 'Tokyo Street Food Adventure', schedule: '2025-10-01 14:00', participants: 2, amount: 58, status: 'PAID' },
+    { id: 'BK002', traveler: 'Pritam Lee', email: 'pritam@trippy.com', experience: 'Hidden Gems in Singapore', schedule: '2025-10-02 10:00', participants: 1, amount: 31, status: 'PAID' },
+    { id: 'BK003', traveler: 'Singh Potter', email: 'singh@trippy.com', experience: 'Adventure of a Lifetime', schedule: '2025-10-03 09:00', participants: 4, amount: 568, status: 'REFUNDED' },
+    { id: 'BK004', traveler: 'Bob Frank', email: 'bob@trippy.com', experience: 'Touching Grass', schedule: '2025-10-05 16:00', participants: 2, amount: 109, status: 'PENDING' },
+  ];
+
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchBookings = async () => {
       try {
         setLoading(true);
-        const response = await adminService.getAllUsers();
-        
-        if (response.success) {
-          setUsers(response.data);
-          setError(null);
-        } else {
-          setError(response.error);
-        }
+        // Mock API call - instant response
+        setBookings(mockBookings);
+        setError(null);
       } catch (err) {
-        setError('Failed to load users');
-        console.error('Users fetch error:', err);
+        setError('Failed to load bookings');
+        console.error('Bookings fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchBookings();
   }, []);
 
-  const getStatusColor = (isActive) => {
-    return isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-  };
-
-  const getRoleColor = (canCreateExperiences) => {
-    return canCreateExperiences ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
-  };
-
-  const getInitials = (firstName, lastName) => {
-    const first = firstName ? firstName.charAt(0).toUpperCase() : '';
-    const last = lastName ? lastName.charAt(0).toUpperCase() : '';
-    return first + last;
-  };
-
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-
-  const handleUserUpdated = (updatedUser) => {
-    if (updatedUser === null) {
-      // User was deleted, remove from list
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
-    } else {
-      // User was updated, update the list
-      setUsers(prevUsers => 
-        prevUsers.map(user => user.id === updatedUser.id ? updatedUser : user)
-      );
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'PAID': return 'bg-green-100 text-green-800';
+      case 'REFUNDED': return 'bg-gray-100 text-gray-800';
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'CANCELLED': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
-    
+  };
+
+  const handleEditBooking = (booking) => {
+    // TODO: Implement edit booking modal
+    console.log('Edit booking:', booking);
+  };
+
+  const handleBookingAction = () => {
     // Notify parent component to refresh metrics
-    if (onUserAction) {
-      onUserAction();
+    if (onBookingAction) {
+      onBookingAction();
     }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedUser(null);
-  };
-
-  const filteredUsers = users.filter(user => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-    const email = user.email ? user.email.toLowerCase() : '';
-    
-    return fullName.includes(searchLower) || email.includes(searchLower);
+  const filteredBookings = bookings.filter((b) => {
+    const q = searchTerm.toLowerCase();
+    return (
+      b.id.toLowerCase().includes(q) ||
+      b.traveler.toLowerCase().includes(q) ||
+      b.email.toLowerCase().includes(q) ||
+      b.experience.toLowerCase().includes(q)
+    );
   });
 
   // Sorting logic
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
     if (sortConfig.key === 'id') {
-      const aId = parseInt(a.id) || 0;
-      const bId = parseInt(b.id) || 0;
-      return sortConfig.direction === 'asc' ? aId - bId : bId - aId;
+      // Extract numeric part from booking ID (e.g., "BK001" -> 1)
+      const aNum = parseInt(a.id.replace(/\D/g, '')) || 0;
+      const bNum = parseInt(b.id.replace(/\D/g, '')) || 0;
+      return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
     }
     return 0;
   });
 
   // Pagination logic
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedBookings.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentUsers = sortedUsers.slice(startIndex, endIndex);
+  const currentBookings = sortedBookings.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -148,7 +122,7 @@ const UsersTable = ({ onUserAction }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
         </div>
         <div className="p-6">
           <div className="animate-pulse space-y-4">
@@ -175,7 +149,7 @@ const UsersTable = ({ onUserAction }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
         </div>
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -186,7 +160,7 @@ const UsersTable = ({ onUserAction }) => {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading users</h3>
+                <h3 className="text-sm font-medium text-red-800">Error loading bookings</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{error}</p>
                 </div>
@@ -200,21 +174,17 @@ const UsersTable = ({ onUserAction }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search bookings..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -226,74 +196,60 @@ const UsersTable = ({ onUserAction }) => {
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>ID</span>
+                  <span>Booking ID</span>
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Join Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bookings
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traveler</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {currentUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {user.id}
-                </td>
+            {currentBookings.map((b) => (
+              <tr key={b.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.id}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-700">
-                        {getInitials(user.firstName, user.lastName)}
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-gray-700">
+                        {b.traveler.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.email}
-                      </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-gray-900">{b.traveler}</div>
+                      <div className="text-sm text-gray-500">{b.email}</div>
                     </div>
                   </div>
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.experience}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.canCreateExperiences)}`}>
-                    {user.canCreateExperiences ? 'Tour Guide' : 'Tourist'}
-                  </span>
+                  <div className="flex items-center text-sm text-gray-900">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    {b.schedule}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.isActive)}`}>
-                    {user.isActive ? 'Active' : 'Suspended'}
+                  <div className="flex items-center text-sm text-gray-900">
+                    <Users className="w-4 h-4 mr-1" />
+                    {b.participants}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${b.amount}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(b.status)}`}>
+                    {b.status}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDate(user.createdAt)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {user.bookingCount || 0}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
-                    onClick={() => handleEditUser(user)}
+                    onClick={() => handleEditBooking(b)}
                     className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="Edit User"
+                    title="Edit Booking"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -303,9 +259,9 @@ const UsersTable = ({ onUserAction }) => {
           </tbody>
         </table>
       </div>
-      {sortedUsers.length === 0 && searchTerm && (
+      {sortedBookings.length === 0 && searchTerm && (
         <div className="px-6 py-4 text-center text-gray-500">
-          No users found matching "{searchTerm}"
+          No bookings found matching "{searchTerm}"
         </div>
       )}
 
@@ -314,7 +270,7 @@ const UsersTable = ({ onUserAction }) => {
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
+              Showing {startIndex + 1} to {Math.min(endIndex, sortedBookings.length)} of {sortedBookings.length} bookings
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -350,16 +306,8 @@ const UsersTable = ({ onUserAction }) => {
           </div>
         </div>
       )}
-
-      {/* User Edit Modal */}
-      <UserEditModal
-        user={selectedUser}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        onUserUpdated={handleUserUpdated}
-      />
     </div>
   );
 };
 
-export default UsersTable;
+export default BookingsTable;
