@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useReviews } from '../contexts/ReviewContext';
-import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat, Star } from 'lucide-react';
+import { Calendar, Users, MapPin, ExternalLink, Users as UsersChat, Star } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -127,7 +127,7 @@ const BookingDetailPage = () => {
                         </svg>
                     </div>
                     <h3 className="text-lg font-medium text-neutrals-2 mb-2">{error}</h3>
-                    <p className="text-neutrals-4 mb-6">We couldn't load this booking. Please try again or go back to your bookings.</p>
+                    <p className="text-neutrals-4 mb-6">We couldn't load this booking. Please try again.</p>
                     <div className="space-x-4">
                         <Button
                             variant="outline"
@@ -135,13 +135,6 @@ const BookingDetailPage = () => {
                             onClick={() => window.location.reload()}
                         >
                             Try Again
-                        </Button>
-                        <Button
-                            variant="primary"
-                            size="md"
-                            onClick={() => navigate('/my-bookings')}
-                        >
-                            Back to My Bookings
                         </Button>
                     </div>
                 </div>
@@ -320,16 +313,6 @@ const BookingDetailPage = () => {
 
             <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : ''}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Back Button */}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate('/my-bookings')}
-                        className="flex items-center gap-2 mb-6 !px-0"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back to My Bookings</span>
-                    </Button>
 
                     {/* Page Header */}
                     <div className="mb-8">
