@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -58,4 +59,17 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.experience.guide.id = :guideId ORDER BY b.bookingDate DESC")
     List<Booking> findByGuideIdOrderByBookingDateDesc(@Param("guideId") Long guideId);
+
+    // Calculate total revenue (service_fee) for bookings within date range
+    @Query("SELECT COALESCE(SUM(b.serviceFee), 0) FROM Booking b WHERE b.createdAt BETWEEN :startDate AND :endDate")
+    BigDecimal calculateRevenueByDateRange(@Param("startDate") LocalDateTime startDate, 
+                                         @Param("endDate") LocalDateTime endDate);
+
+    // Count bookings created within date range
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.createdAt BETWEEN :startDate AND :endDate")
+    Long countByCreatedAtBetween(@Param("startDate") LocalDateTime startDate, 
+                                @Param("endDate") LocalDateTime endDate);
+
+    // Count bookings by traveler ID
+    Long countByTraveler_Id(Long travelerId);
 }

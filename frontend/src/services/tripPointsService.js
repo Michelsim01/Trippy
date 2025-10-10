@@ -110,30 +110,6 @@ export const tripPointsService = {
   },
 
   /**
-   * Award points for completing an experience
-   * @param {number} userId - The user ID
-   * @param {number} referenceId - Optional reference ID (booking ID)
-   * @returns {Promise<Object>} Award response
-   */
-  awardPointsForExperience: async (userId, referenceId = null) => {
-    try {
-      const response = await api.post(`/api/trip-points/user/${userId}/award-experience`, {
-        referenceId
-      })
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      console.error('Error awarding points for experience:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to award points for experience'
-      }
-    }
-  },
-
-  /**
    * Redeem points
    * @param {number} userId - The user ID
    * @param {number} pointsToRedeem - Points to redeem
@@ -153,46 +129,6 @@ export const tripPointsService = {
       return {
         success: false,
         error: error.response?.data?.message || 'Failed to redeem points'
-      }
-    }
-  },
-
-  /**
-   * Get TripPoints leaderboard
-   * @returns {Promise<Object>} Leaderboard data
-   */
-  getLeaderboard: async () => {
-    try {
-      const response = await api.get('/api/trip-points/leaderboard')
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch leaderboard'
-      }
-    }
-  },
-
-  /**
-   * Get points policy information
-   * @returns {Promise<Object>} Points policy data
-   */
-  getPointsPolicy: async () => {
-    try {
-      const response = await api.get('/api/trip-points/policy')
-      return {
-        success: true,
-        data: response.data
-      }
-    } catch (error) {
-      console.error('Error fetching points policy:', error)
-      return {
-        success: false,
-        error: error.response?.data?.message || 'Failed to fetch points policy'
       }
     }
   },

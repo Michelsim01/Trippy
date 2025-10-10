@@ -262,5 +262,50 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return List of users with expired email verification tokens
      */
     List<User> findByEmailVerificationTokenExpiresAtBefore(LocalDateTime expirationTime);
+    
+    /**
+     * Count users created within date range for admin dashboard metrics.
+     * 
+     * @param startDate The start date
+     * @param endDate The end date
+     * @return Number of users created within the date range
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :startDate AND :endDate")
+    Long countByCreatedAtBetween(@Param("startDate") LocalDateTime startDate, 
+                                @Param("endDate") LocalDateTime endDate);
+    
+    /**
+     * Count users by admin status for admin dashboard metrics.
+     * 
+     * @param isAdmin Whether the user is an admin
+     * @return Number of users with the specified admin status
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.isAdmin = :isAdmin")
+    Long countByIsAdmin(@Param("isAdmin") Boolean isAdmin);
+    
+    /**
+     * Count users created within date range and admin status for admin dashboard metrics.
+     * 
+     * @param startDate The start date
+     * @param endDate The end date
+     * @param isAdmin Whether the user is an admin
+     * @return Number of users created within the date range with specified admin status
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :startDate AND :endDate AND u.isAdmin = :isAdmin")
+    Long countByCreatedAtBetweenAndIsAdmin(@Param("startDate") LocalDateTime startDate, 
+                                         @Param("endDate") LocalDateTime endDate,
+                                         @Param("isAdmin") Boolean isAdmin);
+    
+    /**
+     * Count users by admin status and active status for user management metrics.
+     * 
+     * @param isAdmin Whether the user is an admin
+     * @param isActive Whether the user is active
+     * @return Number of users with the specified admin and active status
+     */
+    @Query("SELECT COUNT(u) FROM User u WHERE u.isAdmin = :isAdmin AND u.isActive = :isActive")
+    Long countByIsAdminAndIsActive(@Param("isAdmin") Boolean isAdmin, 
+                                  @Param("isActive") Boolean isActive);
+    
 }
  

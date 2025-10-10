@@ -100,6 +100,9 @@ spring.mail.templates.path=classpath:/templates/email/
 # Stripe Configuration
 stripe.api.secret-key=sk_test_51SASx4PPgLxRpMEFgG9lqCXpgBxIqBquMKF6hGsbpk8RazH7G6ZcpcaP2rF75jvF4MI9VEnQCu1xaqFppIQen7J100EuR3LCRC
 stripe.api.publishable-key=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
+
+# MapBox Configuration
+mapbox.api.access-token=pk.eyJ1IjoibWljaGVsc2ltMDEiLCJhIjoiY21najUwZWM4MGd2MzJqb2t0cXgwMmNmZyJ9.U_2z19hTOSuTlD1-gpRrMg
 ```
 
 4. Create a `.env` file in the frontend directory (`frontend/.env`):

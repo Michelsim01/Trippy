@@ -88,8 +88,65 @@ public class ExperienceService {
                 experience.setDuration(java.math.BigDecimal.valueOf(3));
             }
 
-            experience.setLocation((String) experienceData.get("location"));
-            experience.setCountry((String) experienceData.get("country"));
+            // Handle location data - can be String (legacy) or Object (new structure)
+            Object locationObj = experienceData.get("location");
+            if (locationObj instanceof String) {
+                // Legacy format - just a string
+                experience.setLocation((String) locationObj);
+            } else if (locationObj instanceof Map) {
+                // New format - object with coordinates
+                Map<String, Object> locationData = (Map<String, Object>) locationObj;
+                experience.setLocation((String) locationData.get("name"));
+                
+                // Set latitude if provided
+                if (locationData.get("latitude") != null) {
+                    Object latObj = locationData.get("latitude");
+                    if (latObj instanceof Number) {
+                        experience.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+                    } else if (latObj instanceof String) {
+                        experience.setLatitude(new java.math.BigDecimal((String) latObj));
+                    }
+                }
+                
+                // Set longitude if provided
+                if (locationData.get("longitude") != null) {
+                    Object lngObj = locationData.get("longitude");
+                    if (lngObj instanceof Number) {
+                        experience.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+                    } else if (lngObj instanceof String) {
+                        experience.setLongitude(new java.math.BigDecimal((String) lngObj));
+                    }
+                }
+                
+                // Set country from location data if available
+                if (locationData.get("country") != null) {
+                    experience.setCountry((String) locationData.get("country"));
+                }
+            }
+            
+            // Fallback to country field if not set from location
+            if (experience.getCountry() == null || experience.getCountry().isEmpty()) {
+                experience.setCountry((String) experienceData.get("country"));
+            }
+            
+            // Handle direct latitude and longitude fields (for backward compatibility)
+            if (experienceData.get("latitude") != null && experience.getLatitude() == null) {
+                Object latObj = experienceData.get("latitude");
+                if (latObj instanceof Number) {
+                    experience.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+                } else if (latObj instanceof String) {
+                    experience.setLatitude(new java.math.BigDecimal((String) latObj));
+                }
+            }
+            
+            if (experienceData.get("longitude") != null && experience.getLongitude() == null) {
+                Object lngObj = experienceData.get("longitude");
+                if (lngObj instanceof Number) {
+                    experience.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+                } else if (lngObj instanceof String) {
+                    experience.setLongitude(new java.math.BigDecimal((String) lngObj));
+                }
+            }
             experience.setStatus(ExperienceStatus.valueOf((String) experienceData.getOrDefault("status", "ACTIVE")));
             experience.setCreatedAt(LocalDateTime.now());
             experience.setUpdatedAt(LocalDateTime.now());
@@ -243,8 +300,65 @@ public class ExperienceService {
             existingExperience.setDuration(java.math.BigDecimal.valueOf(3));
         }
 
-        existingExperience.setLocation((String) experienceData.get("location"));
-        existingExperience.setCountry((String) experienceData.get("country"));
+        // Handle location data - can be String (legacy) or Object (new structure)
+        Object locationObj = experienceData.get("location");
+        if (locationObj instanceof String) {
+            // Legacy format - just a string
+            existingExperience.setLocation((String) locationObj);
+        } else if (locationObj instanceof Map) {
+            // New format - object with coordinates
+            Map<String, Object> locationData = (Map<String, Object>) locationObj;
+            existingExperience.setLocation((String) locationData.get("name"));
+            
+            // Set latitude if provided
+            if (locationData.get("latitude") != null) {
+                Object latObj = locationData.get("latitude");
+                if (latObj instanceof Number) {
+                    existingExperience.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+                } else if (latObj instanceof String) {
+                    existingExperience.setLatitude(new java.math.BigDecimal((String) latObj));
+                }
+            }
+            
+            // Set longitude if provided
+            if (locationData.get("longitude") != null) {
+                Object lngObj = locationData.get("longitude");
+                if (lngObj instanceof Number) {
+                    existingExperience.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+                } else if (lngObj instanceof String) {
+                    existingExperience.setLongitude(new java.math.BigDecimal((String) lngObj));
+                }
+            }
+            
+            // Set country from location data if available
+            if (locationData.get("country") != null) {
+                existingExperience.setCountry((String) locationData.get("country"));
+            }
+        }
+        
+        // Fallback to country field if not set from location
+        if (existingExperience.getCountry() == null || existingExperience.getCountry().isEmpty()) {
+            existingExperience.setCountry((String) experienceData.get("country"));
+        }
+        
+        // Handle direct latitude and longitude fields (for backward compatibility)
+        if (experienceData.get("latitude") != null && existingExperience.getLatitude() == null) {
+            Object latObj = experienceData.get("latitude");
+            if (latObj instanceof Number) {
+                existingExperience.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+            } else if (latObj instanceof String) {
+                existingExperience.setLatitude(new java.math.BigDecimal((String) latObj));
+            }
+        }
+        
+        if (experienceData.get("longitude") != null && existingExperience.getLongitude() == null) {
+            Object lngObj = experienceData.get("longitude");
+            if (lngObj instanceof Number) {
+                existingExperience.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+            } else if (lngObj instanceof String) {
+                existingExperience.setLongitude(new java.math.BigDecimal((String) lngObj));
+            }
+        }
         existingExperience
                 .setStatus(ExperienceStatus.valueOf((String) experienceData.getOrDefault("status", "ACTIVE")));
         existingExperience.setUpdatedAt(LocalDateTime.now());
