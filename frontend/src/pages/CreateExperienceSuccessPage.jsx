@@ -86,7 +86,7 @@ export default function CreateExperienceSuccessPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutrals-3">Location:</span>
-                  <span className="text-neutrals-1 font-medium">{formData.location || 'Not specified'}</span>
+                  <span className="text-neutrals-1 font-medium">{formData.location?.name || formData.location || 'Not specified'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-neutrals-3">Duration:</span>

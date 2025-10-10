@@ -29,7 +29,7 @@ export const FormDataProvider = ({ children }) => {
     duration: '', // BigDecimal in backend, will convert to number (calculated from start/end)
     startDateTime: '', // New field: Start date and time for multi-day support
     endDateTime: '', // New field: End date and time for multi-day support
-    location: '',
+    location: null, // Now object with {name, latitude, longitude, country, city}
     country: '', // New field for country where experience is held
     tags: [], // List<String> in backend
     languages: [], // Not in backend Experience entity - will store in important_info or separate handling
@@ -79,7 +79,7 @@ export const FormDataProvider = ({ children }) => {
       duration: '',
       startDateTime: '',
       endDateTime: '',
-      location: '',
+      location: null,
       country: '',
       tags: [],
       languages: [],
@@ -130,7 +130,13 @@ export const FormDataProvider = ({ children }) => {
         duration: experienceData.duration || '',
         startDateTime: earliestSchedule?.startDateTime || '',
         endDateTime: earliestSchedule?.endDateTime || '',
-        location: experienceData.location || '',
+        location: experienceData.location ? {
+          name: experienceData.location,
+          latitude: experienceData.latitude || null,
+          longitude: experienceData.longitude || null,
+          country: experienceData.country || '',
+          city: experienceData.location.split(',')[0] || ''
+        } : null,
         country: experienceData.country || '',
         tags: experienceData.tags || [],
         languages: [], // Extract from importantInfo if needed

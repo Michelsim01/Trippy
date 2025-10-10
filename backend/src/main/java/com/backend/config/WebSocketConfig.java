@@ -22,9 +22,9 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(chatWebSocketHandler, "/ws/chat/**")
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:5174");
         
         registry.addHandler(userNotificationWebSocketHandler, "/ws/user/*/notifications")
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:5174");
     }
 }
