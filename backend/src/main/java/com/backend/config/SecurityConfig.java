@@ -146,6 +146,7 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/users/profile-pictures/**").permitAll()
                 .requestMatchers("/api/experience-media/files/**").permitAll()
+                .requestMatchers("/api/locations/**").permitAll() // Allow location search for forms
                 .requestMatchers("/uploads/**").permitAll()
                 
                 // WebSocket endpoints (no authentication required for connection)

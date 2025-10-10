@@ -10,6 +10,7 @@ import ProgressSteps from '../components/create-experience/ProgressSteps';
 import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import PhotoUpload from '../components/create-experience/PhotoUpload';
+import LocationSearchInput from '../components/create-experience/LocationSearchInput';
 
 export default function EditExperienceBasicInfoPage() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function EditExperienceBasicInfoPage() {
     shortDescription: "",
     highlights: [],
     category: "",
-    location: "",
+    location: null, // Now expects object with {name, latitude, longitude, country, city}
     country: "",
     tags: [],
     languages: [],
@@ -88,7 +89,7 @@ export default function EditExperienceBasicInfoPage() {
         shortDescription: contextData?.shortDescription || "",
         highlights: contextData?.highlights || [],
         category: contextData?.category || "",
-        location: contextData?.location || "",
+        location: contextData?.location || null,
         country: contextData?.country || "",
         tags: contextData?.tags || [],
         languages: contextData?.languages || [],
@@ -121,8 +122,8 @@ export default function EditExperienceBasicInfoPage() {
         shortDescription: formData.shortDescription.trim(),
         highlights: formData.highlights,
         category: formData.category,
-        location: formData.location.trim(),
-        country: formData.country.trim(),
+        location: formData.location,
+        country: formData.location?.country || formData.country.trim(),
         tags: formData.tags,
         languages: formData.languages,
         participantsAllowed: formData.participantsAllowed,
@@ -159,12 +160,8 @@ export default function EditExperienceBasicInfoPage() {
       alert('Please select a category');
       return;
     }
-    if (!formData.location.trim()) {
-      alert('Please enter a location');
-      return;
-    }
-    if (!formData.country.trim()) {
-      alert('Please enter a country');
+    if (!formData.location || !formData.location.name) {
+      alert('Please select a location');
       return;
     }
     if (!formData.participantsAllowed || parseInt(formData.participantsAllowed) <= 0) {
@@ -177,8 +174,8 @@ export default function EditExperienceBasicInfoPage() {
       shortDescription: formData.shortDescription.trim(),
       highlights: formData.highlights,
       category: formData.category,
-      location: formData.location.trim(),
-      country: formData.country.trim(),
+      location: formData.location,
+      country: formData.location?.country || formData.country.trim(),
       tags: formData.tags,
       languages: formData.languages,
       participantsAllowed: formData.participantsAllowed,
@@ -392,13 +389,19 @@ export default function EditExperienceBasicInfoPage() {
                     />
                   </div>
 
-                  <FormField
+                  <LocationSearchInput
                     label="Location/Meeting Point"
-                    type="text"
                     value={formData.location}
-                    onChange={(value) => handleInputChange('location', value)}
-                    placeholder="Enter meeting point or location"
+                    onChange={(locationData) => {
+                      handleInputChange('location', locationData);
+                      // Auto-populate country from location data
+                      if (locationData?.country) {
+                        handleInputChange('country', locationData.country);
+                      }
+                    }}
+                    placeholder="Search for a location..."
                     isMobile={false}
+                    required={true}
                   />
 
                   {/* Max Participants */}
@@ -592,13 +595,19 @@ export default function EditExperienceBasicInfoPage() {
                 />
               </div>
 
-              <FormField
+              <LocationSearchInput
                 label="Location/Meeting Point"
-                type="text"
                 value={formData.location}
-                onChange={(value) => handleInputChange('location', value)}
-                placeholder="Enter meeting point or location"
+                onChange={(locationData) => {
+                  handleInputChange('location', locationData);
+                  // Auto-populate country from location data
+                  if (locationData?.country) {
+                    handleInputChange('country', locationData.country);
+                  }
+                }}
+                placeholder="Search for a location..."
                 isMobile={true}
+                required={true}
               />
 
               {/* Max Participants */}

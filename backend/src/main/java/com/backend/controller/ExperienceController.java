@@ -61,6 +61,8 @@ public class ExperienceController {
             expMap.put("title", exp.getTitle());
             expMap.put("location", exp.getLocation());
             expMap.put("country", exp.getCountry());
+            expMap.put("latitude", exp.getLatitude());
+            expMap.put("longitude", exp.getLongitude());
             expMap.put("price", exp.getPrice());
             expMap.put("totalStars", exp.getTotalStars());
             expMap.put("averageRating", exp.getAverageRating());
@@ -105,6 +107,8 @@ public class ExperienceController {
             expMap.put("title", exp.getTitle());
             expMap.put("location", exp.getLocation());
             expMap.put("country", exp.getCountry());
+            expMap.put("latitude", exp.getLatitude());
+            expMap.put("longitude", exp.getLongitude());
             expMap.put("price", exp.getPrice());
             expMap.put("totalStars", exp.getTotalStars());
             expMap.put("averageRating", exp.getAverageRating());

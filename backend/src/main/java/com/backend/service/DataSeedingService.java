@@ -36,6 +36,15 @@ public class DataSeedingService {
     @Autowired
     private TransactionRepository transactionRepository;
 
+    @Autowired
+    private GeocodingService geocodingService;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private UserSurveyRepository userSurveyRepository;
+
     private final Random random = new Random();
 
     @Transactional
@@ -65,6 +74,12 @@ public class DataSeedingService {
         // Create transactions for bookings
         createTransactions(bookings);
 
+        // Create reviews for some completed bookings
+        List<Review> reviews = createReviews(bookings);
+
+        // Create user surveys for some users
+        List<UserSurvey> surveys = createUserSurveys(users);
+
         // Create wishlist items
         createWishlistItems(users, experiences);
 
@@ -73,6 +88,8 @@ public class DataSeedingService {
         System.out.println("Created " + experiences.size() + " experiences");
         System.out.println("Created " + schedules.size() + " schedules");
         System.out.println("Created " + bookings.size() + " bookings");
+        System.out.println("Created " + reviews.size() + " reviews");
+        System.out.println("Created " + surveys.size() + " user surveys");
 
         // Print booking status distribution for testing reference
         long completedCount = bookings.stream().filter(b -> b.getStatus() == BookingStatus.COMPLETED).count();
@@ -242,6 +259,12 @@ public class DataSeedingService {
             experience.setTitle((String) data[0]);
             experience.setLocation((String) data[1]);
             experience.setCountry((String) data[2]);
+            
+            // Fetch and set coordinates
+            BigDecimal[] coordinates = fetchCoordinates((String) data[1], (String) data[2]);
+            experience.setLatitude(coordinates[0]);
+            experience.setLongitude(coordinates[1]);
+            
             experience.setShortDescription((String) data[3]);
             experience.setFullDescription(generateFullDescription((String) data[3]));
             experience.setCategory((ExperienceCategory) data[4]);
@@ -307,9 +330,9 @@ public class DataSeedingService {
                 .filter(user -> !user.getCanCreateExperiences())
                 .toList();
 
-        // Create some past schedules for demo purposes (completed experiences with reviews)
+        // Create more past schedules for demo purposes (completed experiences with reviews)
         List<ExperienceSchedule> pastSchedules = new ArrayList<>();
-        for (int i = 0; i < Math.min(10, schedules.size()); i++) {
+        for (int i = 0; i < Math.min(25, schedules.size()); i++) {
             ExperienceSchedule pastSchedule = new ExperienceSchedule();
             pastSchedule.setExperience(schedules.get(i).getExperience());
             LocalDateTime pastStartTime = LocalDateTime.now()
@@ -328,7 +351,7 @@ public class DataSeedingService {
 
         // Create bookings for past schedules (completed experiences)
         for (ExperienceSchedule schedule : pastSchedules) {
-            int bookingCount = 1 + random.nextInt(3);
+            int bookingCount = 2 + random.nextInt(4);
             List<User> shuffledTravelers = new ArrayList<>(travelers);
             java.util.Collections.shuffle(shuffledTravelers);
 
@@ -566,5 +589,139 @@ public class DataSeedingService {
         // Return 4-6 random tags
         java.util.Collections.shuffle(categoryTags);
         return categoryTags.subList(0, Math.min(4 + random.nextInt(3), categoryTags.size()));
+    }
+
+    /**
+     * Fetch coordinates for a location using the GeocodingService
+     * @param location The location name
+     * @param country The country name
+     * @return Array of [latitude, longitude] or [null, null] if not found
+     */
+    private BigDecimal[] fetchCoordinates(String location, String country) {
+        try {
+            String query = location + ", " + country;
+            var suggestions = geocodingService.searchLocations(query);
+            
+            if (!suggestions.isEmpty()) {
+                var bestMatch = suggestions.get(0);
+                System.out.println("Fetched coordinates for " + query + ": " + 
+                    bestMatch.getLatitude() + ", " + bestMatch.getLongitude());
+                return new BigDecimal[]{bestMatch.getLatitude(), bestMatch.getLongitude()};
+            } else {
+                System.out.println("No coordinates found for: " + query);
+                return new BigDecimal[]{null, null};
+            }
+        } catch (Exception e) {
+            System.err.println("Error fetching coordinates for " + location + ", " + country + ": " + e.getMessage());
+            return new BigDecimal[]{null, null};
+        }
+    }
+
+    /**
+     * Create reviews for completed bookings
+     */
+    private List<Review> createReviews(List<Booking> bookings) {
+        List<Review> reviews = new ArrayList<>();
+        
+        // Only create reviews for completed bookings (about 70% of completed bookings get reviews)
+        List<Booking> completedBookings = bookings.stream()
+            .filter(booking -> booking.getStatus() == BookingStatus.COMPLETED)
+            .toList();
+        
+        String[] reviewTitles = {
+            "Amazing experience!", "Highly recommended", "Great value for money",
+            "Unforgettable adventure", "Excellent guide", "Worth every penny",
+            "Fantastic experience", "Well organized", "Exceeded expectations",
+            "Memorable trip", "Perfect for families", "Unique experience"
+        };
+        
+        String[] reviewComments = {
+            "This was absolutely incredible! The guide was knowledgeable and friendly. Would definitely book again.",
+            "Had an amazing time. Everything was well organized and the views were breathtaking.",
+            "Great experience overall. The guide provided excellent insights and made the trip memorable.",
+            "Exceeded our expectations. Professional guide and stunning locations. Highly recommend!",
+            "Perfect activity for our family. Kids loved it and adults enjoyed it too.",
+            "Unique experience that you can't find elsewhere. Worth the price and time.",
+            "Well planned itinerary with great attention to detail. The guide was passionate and informative.",
+            "Fantastic day out! Great weather and even better company. Will book more experiences.",
+            "Amazing views and great photo opportunities. Guide was very patient with our questions.",
+            "Excellent value for money. Professional service and unforgettable memories created."
+        };
+        
+        for (Booking booking : completedBookings) {
+            // 100% chance of getting a review
+            if (true) {
+                Review review = new Review();
+                review.setBooking(booking);
+                review.setReviewer(booking.getTraveler());
+                review.setExperience(booking.getExperienceSchedule().getExperience());
+                
+                // Generate rating (80% are 4-5 stars, 20% are 1-3 stars)
+                int rating = random.nextDouble() < 0.8 ? (4 + random.nextInt(2)) : (1 + random.nextInt(3));
+                review.setRating(rating);
+                
+                review.setTitle(reviewTitles[random.nextInt(reviewTitles.length)]);
+                review.setComment(reviewComments[random.nextInt(reviewComments.length)]);
+                review.setTripPointsEarned(rating * 10); // 10 points per star
+                review.setLikeCount(random.nextInt(15)); // 0-14 likes
+                
+                LocalDateTime reviewDate = booking.getExperienceSchedule().getStartDateTime().plusDays(1 + random.nextInt(7));
+                review.setCreatedAt(reviewDate);
+                review.setUpdatedAt(reviewDate);
+                
+                reviews.add(reviewRepository.save(review));
+            }
+        }
+        
+        return reviews;
+    }
+
+    /**
+     * Create user surveys for some users
+     */
+    private List<UserSurvey> createUserSurveys(List<User> users) {
+        List<UserSurvey> surveys = new ArrayList<>();
+        
+        String[] introductions = {
+            "I'm a travel enthusiast who loves exploring new cultures and trying local cuisines.",
+            "Adventure seeker always looking for the next thrill and unique experiences.",
+            "I enjoy slow travel and getting to know local communities during my trips.",
+            "Photography is my passion and I travel to capture beautiful moments and landscapes.",
+            "I love history and always seek experiences that teach me about local heritage.",
+            "Nature lover who prefers outdoor activities and eco-friendly travel options.",
+            "Foodie traveler interested in cooking classes and food tours around the world."
+        };
+        
+        String[] travelStyles = {"Budget Traveler", "Luxury Traveler", "Adventure Seeker", 
+                                 "Cultural Explorer", "Eco Traveler", "Family Traveler"};
+        
+        String[] budgetRanges = {"Budget-Friendly", "Moderate", "Premium", "Luxury"};
+        
+        List<String> allInterests = Arrays.asList(
+            "Adventure", "Culture", "Food", "History", "Nature", "Photography", 
+            "Art", "Music", "Wildlife", "Architecture", "Beaches", "Mountains"
+        );
+        
+        // Create surveys for ALL users (100%)
+        for (User user : users) {
+            if (true) {
+                UserSurvey survey = new UserSurvey();
+                survey.setUser(user);
+                survey.setIntroduction(introductions[random.nextInt(introductions.length)]);
+                survey.setTravelStyle(travelStyles[random.nextInt(travelStyles.length)]);
+                survey.setExperienceBudget(budgetRanges[random.nextInt(budgetRanges.length)]);
+                
+                // Assign 3-5 random interests
+                List<String> userInterests = new ArrayList<>(allInterests);
+                java.util.Collections.shuffle(userInterests);
+                survey.setInterests(userInterests.subList(0, 3 + random.nextInt(3)));
+                
+                survey.setCompletedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
+                
+                surveys.add(userSurveyRepository.save(survey));
+            }
+        }
+        
+        return surveys;
     }
 }

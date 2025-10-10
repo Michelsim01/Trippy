@@ -11,6 +11,7 @@ import ProgressSteps from '../components/create-experience/ProgressSteps';
 import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import PhotoUpload from '../components/create-experience/PhotoUpload';
+import LocationSearchInput from '../components/create-experience/LocationSearchInput';
 
 export default function CreateExperienceBasicInfoPage() {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ export default function CreateExperienceBasicInfoPage() {
     duration: contextData?.duration || "",
     startDateTime: contextData?.startDateTime || "",
     endDateTime: contextData?.endDateTime || "",
-    location: contextData?.location || "",
+    location: contextData?.location || null, // Now expects object with {name, latitude, longitude, country, city}
     country: contextData?.country || "",
     tags: contextData?.tags || [],
     languages: contextData?.languages || [],
@@ -94,12 +95,8 @@ export default function CreateExperienceBasicInfoPage() {
       alert('Please select an end date and time for your experience');
       return;
     }
-    if (!formData.location.trim()) {
-      alert('Please enter a location');
-      return;
-    }
-    if (!formData.country.trim()) {
-      alert('Please enter a country');
+    if (!formData.location || !formData.location.name) {
+      alert('Please select a location');
       return;
     }
     if (!formData.participantsAllowed || formData.participantsAllowed <= 0) {
@@ -120,8 +117,8 @@ export default function CreateExperienceBasicInfoPage() {
       duration: formData.duration,
       startDateTime: formData.startDateTime,
       endDateTime: formData.endDateTime,
-      location: formData.location.trim(),
-      country: formData.country.trim(),
+      location: formData.location,
+      country: formData.location?.country || formData.country.trim(),
       tags: formData.tags,
       languages: formData.languages,
       participantsAllowed: formData.participantsAllowed,
@@ -325,19 +322,26 @@ export default function CreateExperienceBasicInfoPage() {
                   </div>
                 )}
 
-                <FormField
-                  label="Country"
-                  value={formData.country}
-                  onChange={(value) => handleInputChange('country', value)}
-                  placeholder="Enter country"
+                <LocationSearchInput
+                  label="Location/Meeting Point"
+                  value={formData.location}
+                  onChange={(locationData) => {
+                    handleInputChange('location', locationData);
+                    // Auto-populate country from location data
+                    if (locationData?.country) {
+                      handleInputChange('country', locationData.country);
+                    }
+                  }}
+                  placeholder="Search for a location..."
                   isMobile={false}
+                  required={true}
                 />
 
                 <FormField
-                  label="Location/Meeting Point"
-                  value={formData.location}
-                  onChange={(value) => handleInputChange('location', value)}
-                  placeholder="Enter meeting point or location"
+                  label="Country"
+                  value={formData.location?.country || formData.country}
+                  onChange={(value) => handleInputChange('country', value)}
+                  placeholder="Enter country"
                   isMobile={false}
                 />
 
@@ -517,19 +521,26 @@ export default function CreateExperienceBasicInfoPage() {
                 </div>
               )}
 
-              <FormField
-                label="Country"
-                value={formData.country}
-                onChange={(value) => handleInputChange('country', value)}
-                placeholder="Enter country"
+              <LocationSearchInput
+                label="Location/Meeting Point"
+                value={formData.location}
+                onChange={(locationData) => {
+                  handleInputChange('location', locationData);
+                  // Auto-populate country from location data
+                  if (locationData?.country) {
+                    handleInputChange('country', locationData.country);
+                  }
+                }}
+                placeholder="Search for a location..."
                 isMobile={true}
+                required={true}
               />
 
               <FormField
-                label="Location/Meeting Point"
-                value={formData.location}
-                onChange={(value) => handleInputChange('location', value)}
-                placeholder="Enter meeting point or location"
+                label="Country"
+                value={formData.location?.country || formData.country}
+                onChange={(value) => handleInputChange('country', value)}
+                placeholder="Enter country"
                 isMobile={true}
               />
 
