@@ -72,4 +72,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Count bookings by traveler ID
     Long countByTraveler_Id(Long travelerId);
+    
+    // Count bookings by experience ID through experience schedule
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.experienceSchedule.experience.experienceId = :experienceId")
+    Long countByExperienceId(@Param("experienceId") Long experienceId);
 }
