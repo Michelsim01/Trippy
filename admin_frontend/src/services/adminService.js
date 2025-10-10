@@ -326,6 +326,132 @@ export const adminService = {
         error: error.response?.data?.message || 'Failed to fetch pending experiences'
       };
     }
+  },
+
+  /**
+   * Get experience management metrics
+   * @returns {Promise<Object>} Experience management metrics
+   */
+  getExperienceManagementMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/experiences/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching experience management metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch experience management metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all experiences with review and booking counts
+   * @returns {Promise<Object>} Experiences with counts
+   */
+  getAllExperiences: async () => {
+    try {
+      const response = await api.get('/api/admin/experiences');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all experiences:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch all experiences'
+      };
+    }
+  },
+
+  /**
+   * Update experience details
+   * @param {number} experienceId - Experience ID
+   * @param {Object} experienceData - Experience data to update
+   * @returns {Promise<Object>} Updated experience
+   */
+  updateExperience: async (experienceId, experienceData) => {
+    try {
+      const response = await api.put(`/api/admin/experiences/${experienceId}`, experienceData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating experience:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update experience'
+      };
+    }
+  },
+
+  /**
+   * Update experience status
+   * @param {number} experienceId - Experience ID
+   * @param {string} status - New status (ACTIVE, INACTIVE, SUSPENDED)
+   * @returns {Promise<Object>} Updated experience
+   */
+  updateExperienceStatus: async (experienceId, status) => {
+    try {
+      const response = await api.patch(`/api/admin/experiences/${experienceId}/status`, { status });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating experience status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update experience status'
+      };
+    }
+  },
+
+  /**
+   * Suspend experience
+   * @param {number} experienceId - Experience ID
+   * @returns {Promise<Object>} Updated experience
+   */
+  suspendExperience: async (experienceId) => {
+    try {
+      const response = await api.patch(`/api/admin/experiences/${experienceId}/suspend`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error suspending experience:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to suspend experience'
+      };
+    }
+  },
+
+  /**
+   * Delete experience
+   * @param {number} experienceId - Experience ID
+   * @returns {Promise<Object>} Deletion result
+   */
+  deleteExperience: async (experienceId) => {
+    try {
+      const response = await api.delete(`/api/admin/experiences/${experienceId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting experience:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete experience'
+      };
+    }
   }
 };
 

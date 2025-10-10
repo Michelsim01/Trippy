@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, UserX, Mail, Phone, Calendar } from 'lucide-react';
+import { MapPin, CheckCircle, XCircle, Star } from 'lucide-react';
 import { adminService } from '../services/adminService';
-import UsersTable from '../components/UsersTable';
+import ExperiencesTable from '../components/ExperiencesTable';
 
-const UserManagementPage = () => {
+const ExperienceManagementPage = () => {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await adminService.getUserManagementMetrics();
+      const response = await adminService.getExperienceManagementMetrics();
       
       if (response.success) {
         setMetrics(response.data);
@@ -20,8 +21,8 @@ const UserManagementPage = () => {
         setError(response.error);
       }
     } catch (err) {
-      setError('Failed to load user management metrics');
-      console.error('User management error:', err);
+      setError('Failed to load experience metrics');
+      console.error('Experience management error:', err);
     } finally {
       setLoading(false);
     }
@@ -31,8 +32,8 @@ const UserManagementPage = () => {
     fetchMetrics();
   }, []);
 
-  const handleUserAction = () => {
-    // Refresh metrics when user actions occur
+  const handleExperienceAction = () => {
+    // Refresh metrics when experience actions occur
     fetchMetrics();
   };
 
@@ -41,8 +42,8 @@ const UserManagementPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
-        <p className="text-gray-600">Manage users, guides, and permissions</p>
+        <h1 className="text-2xl font-bold text-gray-900">Experience Management</h1>
+        <p className="text-gray-600">Manage tours and experiences</p>
       </div>
 
       {/* Stats Cards */}
@@ -72,7 +73,7 @@ const UserManagementPage = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading user metrics</h3>
+                <h3 className="text-sm font-medium text-red-800">Error loading experience metrics</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{error}</p>
                 </div>
@@ -85,12 +86,12 @@ const UserManagementPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-blue-600" />
+                  <MapPin className="w-6 h-6 text-blue-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
+                  <p className="text-sm font-medium text-gray-600">Total Experiences</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.totalUsers?.toLocaleString() || '0'}
+                    {metrics?.totalExperiences?.toLocaleString() || '0'}
                   </p>
                 </div>
               </div>
@@ -98,25 +99,25 @@ const UserManagementPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <UserCheck className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Active Users</p>
+                  <p className="text-sm font-medium text-gray-600">Active Experiences</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.activeUsers?.toLocaleString() || '0'}
+                    {metrics?.activeExperiences?.toLocaleString() || '0'}
                   </p>
                 </div>
               </div>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+                  <Star className="w-6 h-6 text-gray-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Tour Guides</p>
+                  <p className="text-sm font-medium text-gray-600">Inactive Experiences</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.tourGuides?.toLocaleString() || '0'}
+                    {metrics?.inactiveExperiences?.toLocaleString() || '0'}
                   </p>
                 </div>
               </div>
@@ -124,12 +125,12 @@ const UserManagementPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <UserX className="w-6 h-6 text-red-600" />
+                  <XCircle className="w-6 h-6 text-red-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Suspended</p>
+                  <p className="text-sm font-medium text-gray-600">Suspended Experiences</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    {metrics?.suspendedUsers?.toLocaleString() || '0'}
+                    {metrics?.suspendedExperiences?.toLocaleString() || '0'}
                   </p>
                 </div>
               </div>
@@ -138,10 +139,12 @@ const UserManagementPage = () => {
         )}
       </div>
 
-      {/* Users Table */}
-      <UsersTable onUserAction={handleUserAction} />
+      {/* Experiences Table */}
+      <ExperiencesTable onExperienceAction={handleExperienceAction} />
     </div>
   );
 };
 
-export default UserManagementPage;
+export default ExperienceManagementPage;
+
+

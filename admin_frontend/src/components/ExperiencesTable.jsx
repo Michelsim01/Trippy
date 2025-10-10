@@ -1,101 +1,108 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit, Search, MapPin, Clock, Users as UsersIcon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
 import { adminService } from '../services/adminService';
-import UserEditModal from './UserEditModal';
+import ExperienceEditModal from './ExperienceEditModal';
 
-const UsersTable = ({ onUserAction }) => {
-  const [users, setUsers] = useState([]);
+const ExperiencesTable = ({ onExperienceAction }) => {
+  const [experiences, setExperiences] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+  const [selectedExperience, setSelectedExperience] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchExperiences = async () => {
       try {
         setLoading(true);
-        const response = await adminService.getAllUsers();
-        
+        const response = await adminService.getAllExperiences();
         if (response.success) {
-          setUsers(response.data);
+          setExperiences(response.data);
           setError(null);
         } else {
           setError(response.error);
         }
       } catch (err) {
-        setError('Failed to load users');
-        console.error('Users fetch error:', err);
+        setError('Failed to load experiences');
+        console.error('Experiences fetch error:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUsers();
+    fetchExperiences();
   }, []);
 
-  const getStatusColor = (isActive) => {
-    return isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'ACTIVE': return 'bg-green-100 text-green-800';
+      case 'INACTIVE': return 'bg-gray-100 text-gray-800';
+      case 'SUSPENDED': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
-  const getRoleColor = (canCreateExperiences) => {
-    return canCreateExperiences ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+  const getCategoryColor = (category) => {
+    switch (category) {
+      case 'DAYTRIP': return 'bg-green-100 text-green-800';
+      case 'FOOD': return 'bg-pink-100 text-pink-800';
+      case 'ADVENTURE': return 'bg-purple-100 text-purple-800';
+      case 'PHOTOGRAPHY': return 'bg-indigo-100 text-indigo-800';
+      default: return 'bg-blue-100 text-blue-800';
+    }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
-  };
-
-  const getInitials = (firstName, lastName) => {
-    const first = firstName ? firstName.charAt(0).toUpperCase() : '';
-    const last = lastName ? lastName.charAt(0).toUpperCase() : '';
-    return first + last;
-  };
-
-  const handleEditUser = (user) => {
-    setSelectedUser(user);
+  const handleEditExperience = (experience) => {
+    setSelectedExperience(experience);
     setIsModalOpen(true);
   };
 
-  const handleUserUpdated = (updatedUser) => {
-    if (updatedUser === null) {
-      // User was deleted, remove from list
-      setUsers(prevUsers => prevUsers.filter(user => user.id !== selectedUser.id));
+  const handleExperienceAction = () => {
+    // Notify parent component to refresh metrics
+    if (onExperienceAction) {
+      onExperienceAction();
+    }
+  };
+
+  const handleExperienceUpdated = (updatedExperience) => {
+    if (updatedExperience === null) {
+      // Experience was deleted, remove from list
+      setExperiences(prevExperiences => prevExperiences.filter(exp => exp.id !== selectedExperience.id));
     } else {
-      // User was updated, update the list
-      setUsers(prevUsers => 
-        prevUsers.map(user => user.id === updatedUser.id ? updatedUser : user)
+      // Experience was updated, update the list
+      setExperiences(prevExperiences => 
+        prevExperiences.map(exp => exp.id === updatedExperience.id ? updatedExperience : exp)
       );
     }
     
     // Notify parent component to refresh metrics
-    if (onUserAction) {
-      onUserAction();
+    if (onExperienceAction) {
+      onExperienceAction();
     }
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedUser(null);
+    setSelectedExperience(null);
   };
 
-  const filteredUsers = users.filter(user => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-    const email = user.email ? user.email.toLowerCase() : '';
-    
-    return fullName.includes(searchLower) || email.includes(searchLower);
+  const filteredExperiences = experiences.filter(exp => {
+    const q = searchTerm.toLowerCase();
+    return (
+      exp.title.toLowerCase().includes(q) ||
+      (exp.guide && `${exp.guide.firstName} ${exp.guide.lastName}`.toLowerCase().includes(q)) ||
+      exp.category.toLowerCase().includes(q) ||
+      exp.location.toLowerCase().includes(q) ||
+      exp.country.toLowerCase().includes(q)
+    );
   });
 
   // Sorting logic
-  const sortedUsers = [...filteredUsers].sort((a, b) => {
+  const sortedExperiences = [...filteredExperiences].sort((a, b) => {
     if (sortConfig.key === 'id') {
       const aId = parseInt(a.id) || 0;
       const bId = parseInt(b.id) || 0;
@@ -105,10 +112,10 @@ const UsersTable = ({ onUserAction }) => {
   });
 
   // Pagination logic
-  const totalPages = Math.ceil(sortedUsers.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedExperiences.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const currentUsers = sortedUsers.slice(startIndex, endIndex);
+  const currentExperiences = sortedExperiences.slice(startIndex, endIndex);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
@@ -148,7 +155,7 @@ const UsersTable = ({ onUserAction }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Experiences</h3>
         </div>
         <div className="p-6">
           <div className="animate-pulse space-y-4">
@@ -175,7 +182,7 @@ const UsersTable = ({ onUserAction }) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Experiences</h3>
         </div>
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -186,7 +193,7 @@ const UsersTable = ({ onUserAction }) => {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading users</h3>
+                <h3 className="text-sm font-medium text-red-800">Error loading experiences</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{error}</p>
                 </div>
@@ -200,21 +207,17 @@ const UsersTable = ({ onUserAction }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-          </div>
+      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">All Experiences</h3>
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search experiences..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -230,70 +233,67 @@ const UsersTable = ({ onUserAction }) => {
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Role
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Join Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Bookings
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience Details</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bookings</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {currentUsers.map((user) => (
-              <tr key={user.id} className="hover:bg-gray-50">
+            {currentExperiences.map((exp) => (
+              <tr key={exp.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {user.id}
+                  {exp.id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-gray-700">
-                        {getInitials(user.firstName, user.lastName)}
-                      </span>
-                    </div>
-                    <div className="ml-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {user.firstName && user.lastName 
-                          ? `${user.firstName} ${user.lastName}` 
-                          : user.email}
-                      </div>
-                      <div className="text-sm text-gray-500">{user.email}</div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">{exp.title}</div>
+                    <div className="text-sm text-gray-500 flex items-center space-x-1 mt-1">
+                      <MapPin className="w-3 h-3" /> <span>{exp.location}, {exp.country}</span>
+                      <Clock className="w-3 h-3 ml-2" /> <span>{exp.duration} Hours</span>
+                      <UsersIcon className="w-3 h-3 ml-2" /> <span>Max {exp.participantsAllowed}</span>
                     </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRoleColor(user.canCreateExperiences)}`}>
-                    {user.canCreateExperiences ? 'Tour Guide' : 'Tourist'}
-                  </span>
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-medium text-gray-700">
+                        {exp.guide ? `${exp.guide.firstName?.charAt(0) || ''}${exp.guide.lastName?.charAt(0) || ''}` : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="ml-3">
+                      <div className="text-sm font-medium text-gray-900">
+                        {exp.guide ? `${exp.guide.firstName} ${exp.guide.lastName}` : 'No Guide'}
+                      </div>
+                    </div>
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(user.isActive)}`}>
-                    {user.isActive ? 'Active' : 'Suspended'}
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(exp.category)}`}>
+                    {exp.category}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDate(user.createdAt)}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${exp.price}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">{exp.averageRating ? exp.averageRating.toFixed(1) : 'N/A'}</div>
+                  <div className="text-xs text-gray-500">{exp.reviewCount} Reviews</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {user.bookingCount || 0}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exp.bookingCount}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exp.status)}`}>
+                    {exp.status === 'ACTIVE' ? 'Active' : exp.status === 'INACTIVE' ? 'Inactive' : 'Suspended'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <button
-                    onClick={() => handleEditUser(user)}
+                    onClick={() => handleEditExperience(exp)}
                     className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="Edit User"
+                    title="Edit Experience"
                   >
                     <Edit className="w-4 h-4" />
                   </button>
@@ -303,9 +303,9 @@ const UsersTable = ({ onUserAction }) => {
           </tbody>
         </table>
       </div>
-      {sortedUsers.length === 0 && searchTerm && (
+      {sortedExperiences.length === 0 && searchTerm && (
         <div className="px-6 py-4 text-center text-gray-500">
-          No users found matching "{searchTerm}"
+          No experiences found matching "{searchTerm}"
         </div>
       )}
 
@@ -314,7 +314,7 @@ const UsersTable = ({ onUserAction }) => {
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-700">
-              Showing {startIndex + 1} to {Math.min(endIndex, sortedUsers.length)} of {sortedUsers.length} users
+              Showing {startIndex + 1} to {Math.min(endIndex, sortedExperiences.length)} of {sortedExperiences.length} experiences
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -351,15 +351,15 @@ const UsersTable = ({ onUserAction }) => {
         </div>
       )}
 
-      {/* User Edit Modal */}
-      <UserEditModal
-        user={selectedUser}
+      {/* Experience Edit Modal */}
+      <ExperienceEditModal
+        experience={selectedExperience}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onUserUpdated={handleUserUpdated}
+        onExperienceUpdated={handleExperienceUpdated}
       />
     </div>
   );
 };
 
-export default UsersTable;
+export default ExperiencesTable;

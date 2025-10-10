@@ -3,8 +3,12 @@ package com.backend.controller;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.ExperienceRepository;
+import com.backend.repository.ReviewRepository;
+import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.entity.ExperienceStatus;
+import com.backend.entity.ExperienceCategory;
 import com.backend.entity.User;
+import com.backend.entity.Experience;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +35,12 @@ public class AdminController {
 
     @Autowired
     private ExperienceRepository experienceRepository;
+
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private ExperienceScheduleRepository experienceScheduleRepository;
 
     /**
      * Get dashboard metrics for admin panel
@@ -477,6 +487,365 @@ public class AdminController {
             System.err.println("Error fetching pending experiences: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    /**
+     * Get experience management metrics
+     */
+    @GetMapping("/experiences/metrics")
+    public ResponseEntity<Map<String, Object>> getExperienceManagementMetrics() {
+        try {
+            // Get total experiences count
+            Long totalExperiences = experienceRepository.count();
+            
+            // Get active experiences count
+            Long activeExperiences = experienceRepository.countByStatus(ExperienceStatus.ACTIVE);
+            if (activeExperiences == null) activeExperiences = 0L;
+            
+            // Get inactive experiences count
+            Long inactiveExperiences = experienceRepository.countByStatus(ExperienceStatus.INACTIVE);
+            if (inactiveExperiences == null) inactiveExperiences = 0L;
+            
+            // Get suspended experiences count
+            Long suspendedExperiences = experienceRepository.countByStatus(ExperienceStatus.SUSPENDED);
+            if (suspendedExperiences == null) suspendedExperiences = 0L;
+            
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("totalExperiences", totalExperiences);
+            metrics.put("activeExperiences", activeExperiences);
+            metrics.put("inactiveExperiences", inactiveExperiences);
+            metrics.put("suspendedExperiences", suspendedExperiences);
+            
+            return ResponseEntity.ok(metrics);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching experience management metrics: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch experience management metrics: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all experiences with review and booking counts for admin panel
+     */
+    @GetMapping("/experiences")
+    public ResponseEntity<List<Map<String, Object>>> getAllExperiencesWithCounts() {
+        try {
+            List<Experience> experiences = experienceRepository.findAll();
+            List<Map<String, Object>> experiencesWithCounts = new ArrayList<>();
+            
+            for (Experience experience : experiences) {
+                try {
+                    // Count reviews for this experience
+                    Long reviewCount = reviewRepository.countByExperienceId(experience.getExperienceId());
+                    if (reviewCount == null) reviewCount = 0L;
+                    
+                    // Count bookings for this experience through schedules
+                    Long bookingCount = bookingRepository.countByExperienceId(experience.getExperienceId());
+                    if (bookingCount == null) bookingCount = 0L;
+                    
+                    Map<String, Object> experienceData = new HashMap<>();
+                    experienceData.put("id", experience.getExperienceId());
+                    experienceData.put("title", experience.getTitle() != null ? experience.getTitle() : "");
+                    experienceData.put("location", experience.getLocation() != null ? experience.getLocation() : "");
+                    experienceData.put("country", experience.getCountry() != null ? experience.getCountry() : "");
+                    experienceData.put("duration", experience.getDuration() != null ? experience.getDuration() : BigDecimal.ZERO);
+                    experienceData.put("participantsAllowed", experience.getParticipantsAllowed() != null ? experience.getParticipantsAllowed() : 0);
+                    // Handle guide data safely
+                    if (experience.getGuide() != null) {
+                        Map<String, Object> guideData = new HashMap<>();
+                        guideData.put("id", experience.getGuide().getId());
+                        guideData.put("firstName", experience.getGuide().getFirstName());
+                        guideData.put("lastName", experience.getGuide().getLastName());
+                        guideData.put("email", experience.getGuide().getEmail());
+                        experienceData.put("guide", guideData);
+                    } else {
+                        experienceData.put("guide", null);
+                    }
+                    experienceData.put("category", experience.getCategory() != null ? experience.getCategory().toString() : "");
+                    experienceData.put("price", experience.getPrice() != null ? experience.getPrice() : BigDecimal.ZERO);
+                    experienceData.put("averageRating", experience.getAverageRating() != null ? experience.getAverageRating() : BigDecimal.ZERO);
+                    experienceData.put("reviewCount", reviewCount);
+                    experienceData.put("bookingCount", bookingCount);
+                    experienceData.put("status", experience.getStatus() != null ? experience.getStatus().toString() : "");
+                    
+                    experiencesWithCounts.add(experienceData);
+                } catch (Exception ex) {
+                    System.err.println("Error processing experience " + experience.getExperienceId() + ": " + ex.getMessage());
+                    ex.printStackTrace();
+                    // Continue with next experience instead of failing completely
+                }
+            }
+            
+            return ResponseEntity.ok(experiencesWithCounts);
+            
+        } catch (Exception e) {
+            System.err.println("Error fetching experiences with counts: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    /**
+     * Update experience details
+     */
+    @PutMapping("/experiences/{experienceId}")
+    public ResponseEntity<Map<String, Object>> updateExperience(@PathVariable Long experienceId, @RequestBody Map<String, Object> experienceData) {
+        try {
+            Experience experience = experienceRepository.findById(experienceId).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Update experience fields
+            if (experienceData.containsKey("title")) {
+                experience.setTitle((String) experienceData.get("title"));
+            }
+            if (experienceData.containsKey("location")) {
+                experience.setLocation((String) experienceData.get("location"));
+            }
+            if (experienceData.containsKey("country")) {
+                experience.setCountry((String) experienceData.get("country"));
+            }
+            if (experienceData.containsKey("duration")) {
+                Object durationObj = experienceData.get("duration");
+                if (durationObj instanceof Number) {
+                    experience.setDuration(new BigDecimal(durationObj.toString()));
+                } else if (durationObj instanceof String) {
+                    try {
+                        experience.setDuration(new BigDecimal((String) durationObj));
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.badRequest().body(Map.of("error", "Invalid duration format: " + durationObj));
+                    }
+                }
+            }
+            if (experienceData.containsKey("participantsAllowed")) {
+                Object participantsObj = experienceData.get("participantsAllowed");
+                if (participantsObj instanceof Number) {
+                    experience.setParticipantsAllowed(((Number) participantsObj).intValue());
+                } else if (participantsObj instanceof String) {
+                    try {
+                        experience.setParticipantsAllowed(Integer.parseInt((String) participantsObj));
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.badRequest().body(Map.of("error", "Invalid participants format: " + participantsObj));
+                    }
+                }
+            }
+            if (experienceData.containsKey("category")) {
+                String categoryStr = (String) experienceData.get("category");
+                if (categoryStr != null && !categoryStr.isEmpty()) {
+                    try {
+                        experience.setCategory(ExperienceCategory.valueOf(categoryStr));
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.badRequest().body(Map.of("error", "Invalid category: " + categoryStr));
+                    }
+                }
+            }
+            if (experienceData.containsKey("price")) {
+                Object priceObj = experienceData.get("price");
+                if (priceObj instanceof Number) {
+                    experience.setPrice(new BigDecimal(priceObj.toString()));
+                } else if (priceObj instanceof String) {
+                    try {
+                        experience.setPrice(new BigDecimal((String) priceObj));
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.badRequest().body(Map.of("error", "Invalid price format: " + priceObj));
+                    }
+                }
+            }
+
+            Experience updatedExperience = experienceRepository.save(experience);
+
+            // Return updated experience with counts
+            Long reviewCount = reviewRepository.countByExperienceId(updatedExperience.getExperienceId());
+            if (reviewCount == null) reviewCount = 0L;
+            Long bookingCount = bookingRepository.countByExperienceId(updatedExperience.getExperienceId());
+            if (bookingCount == null) bookingCount = 0L;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updatedExperience.getExperienceId());
+            response.put("title", updatedExperience.getTitle());
+            response.put("location", updatedExperience.getLocation());
+            response.put("country", updatedExperience.getCountry());
+            response.put("duration", updatedExperience.getDuration());
+            response.put("participantsAllowed", updatedExperience.getParticipantsAllowed());
+            response.put("category", updatedExperience.getCategory().toString());
+            response.put("price", updatedExperience.getPrice());
+            response.put("averageRating", updatedExperience.getAverageRating());
+            response.put("reviewCount", reviewCount);
+            response.put("bookingCount", bookingCount);
+            response.put("status", updatedExperience.getStatus().toString());
+
+            if (updatedExperience.getGuide() != null) {
+                Map<String, Object> guideData = new HashMap<>();
+                guideData.put("id", updatedExperience.getGuide().getId());
+                guideData.put("firstName", updatedExperience.getGuide().getFirstName());
+                guideData.put("lastName", updatedExperience.getGuide().getLastName());
+                guideData.put("email", updatedExperience.getGuide().getEmail());
+                response.put("guide", guideData);
+            } else {
+                response.put("guide", null);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error updating experience: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to update experience: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update experience status
+     */
+    @PatchMapping("/experiences/{experienceId}/status")
+    public ResponseEntity<Map<String, Object>> updateExperienceStatus(@PathVariable Long experienceId, @RequestBody Map<String, String> request) {
+        try {
+            Experience experience = experienceRepository.findById(experienceId).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            String statusStr = request.get("status");
+            if (statusStr == null || statusStr.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Status is required"));
+            }
+
+            try {
+                ExperienceStatus newStatus = ExperienceStatus.valueOf(statusStr);
+                experience.setStatus(newStatus);
+                Experience updatedExperience = experienceRepository.save(experience);
+
+                // Return updated experience with counts
+                Long reviewCount = reviewRepository.countByExperienceId(updatedExperience.getExperienceId());
+                if (reviewCount == null) reviewCount = 0L;
+                Long bookingCount = bookingRepository.countByExperienceId(updatedExperience.getExperienceId());
+                if (bookingCount == null) bookingCount = 0L;
+
+                Map<String, Object> response = new HashMap<>();
+                response.put("id", updatedExperience.getExperienceId());
+                response.put("title", updatedExperience.getTitle());
+                response.put("location", updatedExperience.getLocation());
+                response.put("country", updatedExperience.getCountry());
+                response.put("duration", updatedExperience.getDuration());
+                response.put("participantsAllowed", updatedExperience.getParticipantsAllowed());
+                response.put("category", updatedExperience.getCategory().toString());
+                response.put("price", updatedExperience.getPrice());
+                response.put("averageRating", updatedExperience.getAverageRating());
+                response.put("reviewCount", reviewCount);
+                response.put("bookingCount", bookingCount);
+                response.put("status", updatedExperience.getStatus().toString());
+
+                if (updatedExperience.getGuide() != null) {
+                    Map<String, Object> guideData = new HashMap<>();
+                    guideData.put("id", updatedExperience.getGuide().getId());
+                    guideData.put("firstName", updatedExperience.getGuide().getFirstName());
+                    guideData.put("lastName", updatedExperience.getGuide().getLastName());
+                    guideData.put("email", updatedExperience.getGuide().getEmail());
+                    response.put("guide", guideData);
+                } else {
+                    response.put("guide", null);
+                }
+
+                return ResponseEntity.ok(response);
+
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Invalid status: " + statusStr));
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error updating experience status: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to update experience status: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Suspend experience
+     */
+    @PatchMapping("/experiences/{experienceId}/suspend")
+    public ResponseEntity<Map<String, Object>> suspendExperience(@PathVariable Long experienceId) {
+        try {
+            Experience experience = experienceRepository.findById(experienceId).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            experience.setStatus(ExperienceStatus.SUSPENDED);
+            Experience updatedExperience = experienceRepository.save(experience);
+
+            // Return updated experience with counts
+            Long reviewCount = reviewRepository.countByExperienceId(updatedExperience.getExperienceId());
+            if (reviewCount == null) reviewCount = 0L;
+            Long bookingCount = bookingRepository.countByExperienceId(updatedExperience.getExperienceId());
+            if (bookingCount == null) bookingCount = 0L;
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updatedExperience.getExperienceId());
+            response.put("title", updatedExperience.getTitle());
+            response.put("location", updatedExperience.getLocation());
+            response.put("country", updatedExperience.getCountry());
+            response.put("duration", updatedExperience.getDuration());
+            response.put("participantsAllowed", updatedExperience.getParticipantsAllowed());
+            response.put("category", updatedExperience.getCategory().toString());
+            response.put("price", updatedExperience.getPrice());
+            response.put("averageRating", updatedExperience.getAverageRating());
+            response.put("reviewCount", reviewCount);
+            response.put("bookingCount", bookingCount);
+            response.put("status", updatedExperience.getStatus().toString());
+
+            if (updatedExperience.getGuide() != null) {
+                Map<String, Object> guideData = new HashMap<>();
+                guideData.put("id", updatedExperience.getGuide().getId());
+                guideData.put("firstName", updatedExperience.getGuide().getFirstName());
+                guideData.put("lastName", updatedExperience.getGuide().getLastName());
+                guideData.put("email", updatedExperience.getGuide().getEmail());
+                response.put("guide", guideData);
+            } else {
+                response.put("guide", null);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error suspending experience: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to suspend experience: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete experience
+     */
+    @DeleteMapping("/experiences/{experienceId}")
+    public ResponseEntity<Map<String, Object>> deleteExperience(@PathVariable Long experienceId) {
+        try {
+            Experience experience = experienceRepository.findById(experienceId).orElse(null);
+            if (experience == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Check if experience has bookings
+            Long bookingCount = bookingRepository.countByExperienceId(experienceId);
+            if (bookingCount != null && bookingCount > 0) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Cannot delete experience with existing bookings"));
+            }
+
+            // Delete experience schedules first to avoid foreign key constraint issues
+            // This will also cascade delete any bookings associated with those schedules
+            experienceScheduleRepository.deleteByExperienceExperienceId(experienceId);
+            
+            // Now delete the experience (this will cascade delete reviews, wishlist items, etc.)
+            experienceRepository.delete(experience);
+            
+            return ResponseEntity.ok(Map.of("message", "Experience deleted successfully"));
+
+        } catch (Exception e) {
+            System.err.println("Error deleting experience: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete experience: " + e.getMessage()));
         }
     }
 

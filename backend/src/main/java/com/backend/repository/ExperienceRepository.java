@@ -29,8 +29,7 @@ public interface ExperienceRepository extends JpaRepository<Experience, Long> {
     List<Experience> findByGuide_Id(Long guideId);
     
     // Count experiences by status for admin dashboard
-    @Query("SELECT COUNT(e) FROM Experience e WHERE e.status = :status")
-    Long countByStatus(@Param("status") ExperienceStatus status);
+    Long countByStatus(ExperienceStatus status);
     
     // Get category counts for chart data
     @Query("SELECT e.category as category, COUNT(e) as count FROM Experience e WHERE e.status = 'ACTIVE' GROUP BY e.category ORDER BY COUNT(e) DESC")
