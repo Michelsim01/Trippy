@@ -6,37 +6,11 @@ import AdminSignupPage from './pages/AdminSignupPage';
 import AdminLayout from './components/AdminLayout';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
+import ExperienceManagementPage from './pages/ExperienceManagementPage';
+import BookingManagementPage from './pages/BookingManagementPage';
+import TransactionManagementPage from './pages/TransactionManagementPage';
 
 // Placeholder components for other pages
-const ExperienceManagementPage = () => (
-  <div className="space-y-6">
-    <h1 className="text-2xl font-bold text-gray-900">Experience Management</h1>
-    <p className="text-gray-600">Manage tours and experiences</p>
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-      <p className="text-gray-500">Experience management features coming soon...</p>
-    </div>
-  </div>
-);
-
-const BookingsPage = () => (
-  <div className="space-y-6">
-    <h1 className="text-2xl font-bold text-gray-900">Bookings</h1>
-    <p className="text-gray-600">Manage all bookings</p>
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-      <p className="text-gray-500">Booking management features coming soon...</p>
-    </div>
-  </div>
-);
-
-const TransactionsPage = () => (
-  <div className="space-y-6">
-    <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-    <p className="text-gray-600">View all financial transactions</p>
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-      <p className="text-gray-500">Transaction management features coming soon...</p>
-    </div>
-  </div>
-);
 
 const DisputeResolutionPage = () => (
   <div className="space-y-6">
@@ -125,7 +99,7 @@ const AppRoutes = () => {
         path="/admin/bookings" 
         element={
           <ProtectedRoute>
-            <BookingsPage />
+            <BookingManagementPage />
           </ProtectedRoute>
         } 
       />
@@ -133,7 +107,7 @@ const AppRoutes = () => {
         path="/admin/transactions" 
         element={
           <ProtectedRoute>
-            <TransactionsPage />
+            <TransactionManagementPage />
           </ProtectedRoute>
         } 
       />
