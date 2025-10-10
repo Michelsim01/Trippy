@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import UserEditModal from './UserEditModal';
+import UserViewModal from './UserViewModal';
 
 const UsersTable = ({ onUserAction }) => {
   const [users, setUsers] = useState([]);
@@ -10,6 +11,8 @@ const UsersTable = ({ onUserAction }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedViewUser, setSelectedViewUser] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
@@ -48,7 +51,11 @@ const UsersTable = ({ onUserAction }) => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toISOString().split('T')[0]; // Returns YYYY-MM-DD format
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
   };
 
   const getInitials = (firstName, lastName) => {
@@ -84,6 +91,16 @@ const UsersTable = ({ onUserAction }) => {
     setSelectedUser(null);
   };
 
+  const handleViewUser = (user) => {
+    setSelectedViewUser(user);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedViewUser(null);
+  };
+
   const filteredUsers = users.filter(user => {
     if (!searchTerm) return true;
     
@@ -91,7 +108,11 @@ const UsersTable = ({ onUserAction }) => {
     const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
     const email = user.email ? user.email.toLowerCase() : '';
     
-    return fullName.includes(searchLower) || email.includes(searchLower);
+    return (
+      user.id?.toString().includes(searchLower) ||
+      fullName.includes(searchLower) || 
+      email.includes(searchLower)
+    );
   });
 
   // Sorting logic
@@ -290,13 +311,22 @@ const UsersTable = ({ onUserAction }) => {
                   {user.bookingCount || 0}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEditUser(user)}
-                    className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="Edit User"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewUser(user)}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                      title="View User Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      title="Edit User"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -325,19 +355,53 @@ const UsersTable = ({ onUserAction }) => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {(() => {
+                const getVisiblePages = () => {
+                  const delta = 2; // Number of pages to show on each side of current page
+                  const range = [];
+                  const rangeWithDots = [];
+
+                  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+                    range.push(i);
+                  }
+
+                  if (currentPage - delta > 2) {
+                    rangeWithDots.push(1, '...');
+                  } else {
+                    rangeWithDots.push(1);
+                  }
+
+                  rangeWithDots.push(...range);
+
+                  if (currentPage + delta < totalPages - 1) {
+                    rangeWithDots.push('...', totalPages);
+                  } else {
+                    rangeWithDots.push(totalPages);
+                  }
+
+                  return rangeWithDots;
+                };
+
+                return getVisiblePages().map((page, index) => (
+                  page === '...' ? (
+                    <span key={`dots-${index}`} className="px-3 py-1 text-sm font-medium text-gray-500">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 text-sm font-medium rounded-md ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                ));
+              })()}
               
               <button
                 onClick={handleNextPage}
@@ -357,6 +421,13 @@ const UsersTable = ({ onUserAction }) => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onUserUpdated={handleUserUpdated}
+      />
+
+      {/* User View Modal */}
+      <UserViewModal
+        user={selectedViewUser}
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
       />
     </div>
   );

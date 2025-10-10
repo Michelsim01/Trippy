@@ -5,10 +5,15 @@ import com.backend.repository.UserRepository;
 import com.backend.repository.ExperienceRepository;
 import com.backend.repository.ReviewRepository;
 import com.backend.repository.ExperienceScheduleRepository;
+import com.backend.repository.TransactionRepository;
 import com.backend.entity.ExperienceStatus;
 import com.backend.entity.ExperienceCategory;
+import com.backend.entity.BookingStatus;
+import com.backend.entity.TransactionStatus;
 import com.backend.entity.User;
 import com.backend.entity.Experience;
+import com.backend.entity.Booking;
+import com.backend.entity.Transaction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,11 +21,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -41,6 +48,9 @@ public class AdminController {
 
     @Autowired
     private ExperienceScheduleRepository experienceScheduleRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     /**
      * Get dashboard metrics for admin panel
@@ -849,6 +859,212 @@ public class AdminController {
         }
     }
 
+    /**
+     * Get booking management metrics
+     */
+    @GetMapping("/bookings/metrics")
+    public ResponseEntity<Map<String, Object>> getBookingManagementMetrics() {
+        try {
+            long totalBookings = bookingRepository.count();
+            long paidBookings = bookingRepository.countByStatus(BookingStatus.CONFIRMED) + bookingRepository.countByStatus(BookingStatus.COMPLETED);
+            long pendingBookings = bookingRepository.countByStatus(BookingStatus.PENDING);
+            long cancelledBookings = bookingRepository.countByStatus(BookingStatus.CANCELLED);
+
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("totalBookings", totalBookings);
+            metrics.put("paidBookings", paidBookings);
+            metrics.put("pendingBookings", pendingBookings);
+            metrics.put("cancelledBookings", cancelledBookings);
+
+            return ResponseEntity.ok(metrics);
+        } catch (Exception e) {
+            System.err.println("Error fetching booking metrics: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch booking metrics: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all bookings with traveler and experience details for admin panel
+     */
+    @GetMapping("/bookings")
+    public ResponseEntity<List<Map<String, Object>>> getAllBookingsWithDetails() {
+        try {
+            // Use native query to avoid lazy loading issues
+            List<Object[]> results = bookingRepository.findAllBookingDetailsForAdmin();
+
+            List<Map<String, Object>> response = results.stream().map(result -> {
+                Map<String, Object> bookingData = new HashMap<>();
+                
+                // Extract booking data from Object[] result
+                bookingData.put("id", result[0]); // booking_id
+                bookingData.put("numberOfParticipants", result[1]); // number_of_participants
+                bookingData.put("totalAmount", result[2]); // total_amount
+                bookingData.put("status", result[3] != null ? result[3].toString() : null); // status
+                bookingData.put("createdAt", result[4]); // created_at
+
+                // Traveler details
+                Map<String, Object> travelerData = new HashMap<>();
+                travelerData.put("id", result[5]); // user id
+                travelerData.put("firstName", result[6]); // first_name
+                travelerData.put("lastName", result[7]); // last_name
+                travelerData.put("email", result[8]); // email
+                bookingData.put("traveler", travelerData);
+
+                // Experience details
+                Map<String, Object> experienceData = new HashMap<>();
+                experienceData.put("id", result[9]); // experience_id
+                experienceData.put("title", result[10]); // title
+                bookingData.put("experience", experienceData);
+
+                // Schedule details
+                bookingData.put("startDateTime", result[11]); // start_date_time
+                bookingData.put("endDateTime", result[12]); // end_date_time
+
+                return bookingData;
+            }).collect(Collectors.toList());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error fetching all bookings with details: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(List.of(Map.of("error", "Failed to fetch bookings: " + e.getMessage())));
+        }
+    }
+
+    /**
+     * Update booking details
+     * @param bookingId The booking ID
+     * @param request The booking update request
+     * @return Updated booking
+     */
+    @PutMapping("/bookings/{bookingId}")
+    public ResponseEntity<?> updateBooking(@PathVariable Long bookingId, @RequestBody Map<String, Object> request) {
+        try {
+            Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+            if (!bookingOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Booking not found"));
+            }
+
+            Booking booking = bookingOpt.get();
+
+            // Update number of participants
+            if (request.containsKey("numberOfParticipants")) {
+                Object participantsObj = request.get("numberOfParticipants");
+                int numberOfParticipants;
+                if (participantsObj instanceof Number) {
+                    numberOfParticipants = ((Number) participantsObj).intValue();
+                } else if (participantsObj instanceof String) {
+                    try {
+                        numberOfParticipants = Integer.parseInt((String) participantsObj);
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.status(400).body(Map.of("error", "Invalid number of participants format"));
+                    }
+                } else {
+                    return ResponseEntity.status(400).body(Map.of("error", "Invalid number of participants"));
+                }
+                
+                if (numberOfParticipants <= 0) {
+                    return ResponseEntity.status(400).body(Map.of("error", "Number of participants must be greater than 0"));
+                }
+                booking.setNumberOfParticipants(numberOfParticipants);
+            }
+
+            // Update total amount
+            if (request.containsKey("totalAmount")) {
+                Object amountObj = request.get("totalAmount");
+                double totalAmount;
+                if (amountObj instanceof Number) {
+                    totalAmount = ((Number) amountObj).doubleValue();
+                } else if (amountObj instanceof String) {
+                    try {
+                        totalAmount = Double.parseDouble((String) amountObj);
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.status(400).body(Map.of("error", "Invalid total amount format"));
+                    }
+                } else {
+                    return ResponseEntity.status(400).body(Map.of("error", "Invalid total amount"));
+                }
+                
+                if (totalAmount < 0) {
+                    return ResponseEntity.status(400).body(Map.of("error", "Total amount cannot be negative"));
+                }
+                booking.setTotalAmount(BigDecimal.valueOf(totalAmount));
+            }
+
+            // Update status
+            if (request.containsKey("status")) {
+                String statusStr = (String) request.get("status");
+                if (statusStr != null && !statusStr.trim().isEmpty()) {
+                    try {
+                        BookingStatus status = BookingStatus.valueOf(statusStr.toUpperCase());
+                        booking.setStatus(status);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.status(400).body(Map.of("error", "Invalid booking status: " + statusStr));
+                    }
+                }
+            }
+
+            Booking updatedBooking = bookingRepository.save(booking);
+
+            // Return updated booking with details
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updatedBooking.getBookingId());
+            response.put("numberOfParticipants", updatedBooking.getNumberOfParticipants());
+            response.put("totalAmount", updatedBooking.getTotalAmount());
+            response.put("status", updatedBooking.getStatus().toString());
+            response.put("createdAt", updatedBooking.getCreatedAt());
+
+            // Add traveler details
+            Map<String, Object> travelerData = new HashMap<>();
+            travelerData.put("id", updatedBooking.getTraveler().getId());
+            travelerData.put("firstName", updatedBooking.getTraveler().getFirstName());
+            travelerData.put("lastName", updatedBooking.getTraveler().getLastName());
+            travelerData.put("email", updatedBooking.getTraveler().getEmail());
+            response.put("traveler", travelerData);
+
+            // Add experience details
+            Map<String, Object> experienceData = new HashMap<>();
+            experienceData.put("id", updatedBooking.getExperienceSchedule().getExperience().getExperienceId());
+            experienceData.put("title", updatedBooking.getExperienceSchedule().getExperience().getTitle());
+            response.put("experience", experienceData);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error updating booking: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to update booking: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Delete booking
+     * @param bookingId The booking ID
+     * @return Success message
+     */
+    @DeleteMapping("/bookings/{bookingId}")
+    public ResponseEntity<?> deleteBooking(@PathVariable Long bookingId) {
+        try {
+            Optional<Booking> bookingOpt = bookingRepository.findById(bookingId);
+            if (!bookingOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Booking not found"));
+            }
+
+            Booking booking = bookingOpt.get();
+            
+            // Check if booking has any transactions or other dependencies
+            // For now, we'll allow deletion but this could be enhanced with business logic
+            
+            bookingRepository.delete(booking);
+            
+            return ResponseEntity.ok(Map.of("message", "Booking deleted successfully"));
+        } catch (Exception e) {
+            System.err.println("Error deleting booking: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete booking: " + e.getMessage()));
+        }
+    }
+
     private double calculatePercentageChange(Long oldValue, Long newValue) {
         if (oldValue == null || oldValue == 0) {
             return newValue != null && newValue > 0 ? 100.0 : 0.0;
@@ -857,5 +1073,215 @@ public class AdminController {
             return -100.0;
         }
         return ((double) (newValue - oldValue) / oldValue) * 100.0;
+    }
+
+    // Transaction Management Endpoints
+    @GetMapping("/transactions/metrics")
+    public ResponseEntity<Map<String, Object>> getTransactionManagementMetrics() {
+        try {
+            // Total Revenue - sum of all transaction amounts
+            BigDecimal totalRevenue = transactionRepository.findAll().stream()
+                .map(Transaction::getAmount)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Total Profit - sum of service_fee from booking table
+            BigDecimal totalProfit = bookingRepository.findAll().stream()
+                .map(Booking::getServiceFee)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Total Transactions - count of all transactions
+            long totalTransactions = transactionRepository.count();
+
+            // Failed Transactions - count of transactions with FAILED status
+            long failedTransactions = transactionRepository.findAll().stream()
+                .filter(t -> t.getStatus() == TransactionStatus.FAILED)
+                .count();
+
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("totalRevenue", totalRevenue.doubleValue());
+            metrics.put("totalProfit", totalProfit.doubleValue());
+            metrics.put("totalTransactions", totalTransactions);
+            metrics.put("failedTransactions", failedTransactions);
+
+            return ResponseEntity.ok(metrics);
+        } catch (Exception e) {
+            System.err.println("Error fetching transaction metrics: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch transaction metrics: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/transactions")
+    public ResponseEntity<List<Map<String, Object>>> getAllTransactions() {
+        try {
+            List<Transaction> transactions = transactionRepository.findAll();
+            List<Map<String, Object>> transactionData = new ArrayList<>();
+
+            for (Transaction transaction : transactions) {
+                Map<String, Object> data = new HashMap<>();
+                
+                // Transaction ID
+                data.put("id", transaction.getTransactionId());
+                
+                // Transaction Type
+                data.put("type", transaction.getType() != null ? transaction.getType().toString() : "UNKNOWN");
+                
+                // Booking ID
+                data.put("bookingId", transaction.getBooking() != null ? transaction.getBooking().getBookingId() : null);
+                
+                // Experience - get through booking -> experienceSchedule -> experience
+                String experienceTitle = "Unknown Experience";
+                if (transaction.getBooking() != null && 
+                    transaction.getBooking().getExperienceSchedule() != null && 
+                    transaction.getBooking().getExperienceSchedule().getExperience() != null) {
+                    experienceTitle = transaction.getBooking().getExperienceSchedule().getExperience().getTitle();
+                }
+                data.put("experience", experienceTitle);
+                
+                // User - get from transaction user or booking traveler
+                String userName = "Unknown User";
+                String userEmail = "unknown@example.com";
+                if (transaction.getUser() != null) {
+                    userName = transaction.getUser().getFirstName() + " " + transaction.getUser().getLastName();
+                    userEmail = transaction.getUser().getEmail();
+                } else if (transaction.getBooking() != null && transaction.getBooking().getTraveler() != null) {
+                    userName = transaction.getBooking().getTraveler().getFirstName() + " " + transaction.getBooking().getTraveler().getLastName();
+                    userEmail = transaction.getBooking().getTraveler().getEmail();
+                }
+                data.put("user", userName);
+                data.put("userEmail", userEmail);
+                
+                // Platform Fee - get service_fee from booking
+                BigDecimal platformFee = BigDecimal.ZERO;
+                if (transaction.getBooking() != null && transaction.getBooking().getServiceFee() != null) {
+                    platformFee = transaction.getBooking().getServiceFee();
+                }
+                data.put("platformFee", platformFee.doubleValue());
+                
+                // Amount
+                data.put("amount", transaction.getAmount() != null ? transaction.getAmount().doubleValue() : 0.0);
+                
+                // Date
+                data.put("date", transaction.getCreatedAt() != null ? transaction.getCreatedAt().toString() : "");
+                
+                // Status
+                data.put("status", transaction.getStatus() != null ? transaction.getStatus().toString() : "UNKNOWN");
+                
+                transactionData.add(data);
+            }
+
+            return ResponseEntity.ok(transactionData);
+        } catch (Exception e) {
+            System.err.println("Error fetching transactions: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(List.of(Map.of("error", "Failed to fetch transactions: " + e.getMessage())));
+        }
+    }
+
+    @PutMapping("/transactions/{transactionId}")
+    public ResponseEntity<?> updateTransaction(@PathVariable Long transactionId, @RequestBody Map<String, Object> request) {
+        try {
+            Optional<Transaction> transactionOpt = transactionRepository.findById(transactionId);
+            if (!transactionOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Transaction not found"));
+            }
+
+            Transaction transaction = transactionOpt.get();
+
+            // Update amount
+            if (request.containsKey("amount")) {
+                Object amountObj = request.get("amount");
+                BigDecimal amount;
+                if (amountObj instanceof Number) {
+                    amount = BigDecimal.valueOf(((Number) amountObj).doubleValue());
+                } else if (amountObj instanceof String) {
+                    try {
+                        amount = new BigDecimal((String) amountObj);
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.status(400).body(Map.of("error", "Invalid amount format"));
+                    }
+                } else {
+                    return ResponseEntity.status(400).body(Map.of("error", "Invalid amount"));
+                }
+                
+                if (amount.compareTo(BigDecimal.ZERO) < 0) {
+                    return ResponseEntity.status(400).body(Map.of("error", "Amount cannot be negative"));
+                }
+                transaction.setAmount(amount);
+            }
+
+            // Update status
+            if (request.containsKey("status")) {
+                String statusStr = (String) request.get("status");
+                if (statusStr != null && !statusStr.trim().isEmpty()) {
+                    try {
+                        TransactionStatus status = TransactionStatus.valueOf(statusStr.toUpperCase());
+                        transaction.setStatus(status);
+                    } catch (IllegalArgumentException e) {
+                        return ResponseEntity.status(400).body(Map.of("error", "Invalid transaction status: " + statusStr));
+                    }
+                }
+            }
+
+            Transaction updatedTransaction = transactionRepository.save(transaction);
+
+            // Return updated transaction with details
+            Map<String, Object> response = new HashMap<>();
+            response.put("id", updatedTransaction.getTransactionId());
+            response.put("amount", updatedTransaction.getAmount().doubleValue());
+            response.put("status", updatedTransaction.getStatus().toString());
+            response.put("type", updatedTransaction.getType().toString());
+            response.put("createdAt", updatedTransaction.getCreatedAt());
+
+            // Add booking details
+            if (updatedTransaction.getBooking() != null) {
+                Map<String, Object> bookingData = new HashMap<>();
+                bookingData.put("id", updatedTransaction.getBooking().getBookingId());
+                bookingData.put("platformFee", updatedTransaction.getBooking().getServiceFee() != null ? 
+                    updatedTransaction.getBooking().getServiceFee().doubleValue() : 0.0);
+                response.put("booking", bookingData);
+            }
+
+            // Add user details
+            if (updatedTransaction.getUser() != null) {
+                Map<String, Object> userData = new HashMap<>();
+                userData.put("id", updatedTransaction.getUser().getId());
+                userData.put("firstName", updatedTransaction.getUser().getFirstName());
+                userData.put("lastName", updatedTransaction.getUser().getLastName());
+                userData.put("email", updatedTransaction.getUser().getEmail());
+                response.put("user", userData);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println("Error updating transaction: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to update transaction: " + e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/transactions/{transactionId}")
+    public ResponseEntity<?> deleteTransaction(@PathVariable Long transactionId) {
+        try {
+            Optional<Transaction> transactionOpt = transactionRepository.findById(transactionId);
+            if (!transactionOpt.isPresent()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Transaction not found"));
+            }
+
+            Transaction transaction = transactionOpt.get();
+            
+            // Check if transaction has any dependencies
+            // For now, we'll allow deletion but this could be enhanced with business logic
+            
+            transactionRepository.delete(transaction);
+            
+            return ResponseEntity.ok(Map.of("message", "Transaction deleted successfully"));
+        } catch (Exception e) {
+            System.err.println("Error deleting transaction: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to delete transaction: " + e.getMessage()));
+        }
     }
 }

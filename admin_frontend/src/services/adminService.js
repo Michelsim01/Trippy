@@ -452,6 +452,172 @@ export const adminService = {
         error: error.response?.data?.message || 'Failed to delete experience'
       };
     }
+  },
+
+  /**
+   * Get booking management metrics
+   * @returns {Promise<Object>} Booking management metrics
+   */
+  getBookingManagementMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/bookings/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching booking metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch booking metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all bookings with traveler and experience details
+   * @returns {Promise<Object>} Bookings with details
+   */
+  getAllBookings: async () => {
+    try {
+      const response = await api.get('/api/admin/bookings');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all bookings:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch bookings'
+      };
+    }
+  },
+
+  /**
+   * Update booking details
+   * @param {number} bookingId - The booking ID
+   * @param {Object} updateData - The booking data to update
+   * @returns {Promise<Object>} Update result
+   */
+  updateBooking: async (bookingId, updateData) => {
+    try {
+      const response = await api.put(`/api/admin/bookings/${bookingId}`, updateData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update booking'
+      };
+    }
+  },
+
+  /**
+   * Delete booking
+   * @param {number} bookingId - The booking ID
+   * @returns {Promise<Object>} Delete result
+   */
+  deleteBooking: async (bookingId) => {
+    try {
+      const response = await api.delete(`/api/admin/bookings/${bookingId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete booking'
+      };
+    }
+  },
+
+  /**
+   * Get transaction management metrics
+   * @returns {Promise<Object>} Transaction metrics
+   */
+  getTransactionManagementMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/transactions/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching transaction metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch transaction metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all transactions
+   * @returns {Promise<Object>} All transactions
+   */
+  getAllTransactions: async () => {
+    try {
+      const response = await api.get('/api/admin/transactions');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all transactions:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch transactions'
+      };
+    }
+  },
+
+  /**
+   * Update transaction details
+   * @param {number} transactionId - The transaction ID
+   * @param {Object} updateData - The transaction data to update
+   * @returns {Promise<Object>} Update result
+   */
+  updateTransaction: async (transactionId, updateData) => {
+    try {
+      const response = await api.put(`/api/admin/transactions/${transactionId}`, updateData);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update transaction'
+      };
+    }
+  },
+
+  /**
+   * Delete transaction
+   * @param {number} transactionId - The transaction ID
+   * @returns {Promise<Object>} Delete result
+   */
+  deleteTransaction: async (transactionId) => {
+    try {
+      const response = await api.delete(`/api/admin/transactions/${transactionId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete transaction'
+      };
+    }
   }
 };
 

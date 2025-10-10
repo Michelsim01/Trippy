@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Search, MapPin, Clock, Users as UsersIcon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Edit, Search, MapPin, Clock, Users as UsersIcon, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Eye } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import ExperienceEditModal from './ExperienceEditModal';
+import ExperienceViewModal from './ExperienceViewModal';
 
 const ExperiencesTable = ({ onExperienceAction }) => {
   const [experiences, setExperiences] = useState([]);
@@ -13,6 +14,8 @@ const ExperiencesTable = ({ onExperienceAction }) => {
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
   const [selectedExperience, setSelectedExperience] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedViewExperience, setSelectedViewExperience] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
 
   useEffect(() => {
@@ -90,9 +93,20 @@ const ExperiencesTable = ({ onExperienceAction }) => {
     setSelectedExperience(null);
   };
 
+  const handleViewExperience = (experience) => {
+    setSelectedViewExperience(experience);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedViewExperience(null);
+  };
+
   const filteredExperiences = experiences.filter(exp => {
     const q = searchTerm.toLowerCase();
     return (
+      exp.id?.toString().includes(q) ||
       exp.title.toLowerCase().includes(q) ||
       (exp.guide && `${exp.guide.firstName} ${exp.guide.lastName}`.toLowerCase().includes(q)) ||
       exp.category.toLowerCase().includes(q) ||
@@ -290,13 +304,22 @@ const ExperiencesTable = ({ onExperienceAction }) => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEditExperience(exp)}
-                    className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="Edit Experience"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewExperience(exp)}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                      title="View Experience Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEditExperience(exp)}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      title="Edit Experience"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -325,19 +348,53 @@ const ExperiencesTable = ({ onExperienceAction }) => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {(() => {
+                const getVisiblePages = () => {
+                  const delta = 2; // Number of pages to show on each side of current page
+                  const range = [];
+                  const rangeWithDots = [];
+
+                  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+                    range.push(i);
+                  }
+
+                  if (currentPage - delta > 2) {
+                    rangeWithDots.push(1, '...');
+                  } else {
+                    rangeWithDots.push(1);
+                  }
+
+                  rangeWithDots.push(...range);
+
+                  if (currentPage + delta < totalPages - 1) {
+                    rangeWithDots.push('...', totalPages);
+                  } else {
+                    rangeWithDots.push(totalPages);
+                  }
+
+                  return rangeWithDots;
+                };
+
+                return getVisiblePages().map((page, index) => (
+                  page === '...' ? (
+                    <span key={`dots-${index}`} className="px-3 py-1 text-sm font-medium text-gray-500">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 text-sm font-medium rounded-md ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                ));
+              })()}
               
               <button
                 onClick={handleNextPage}
@@ -357,6 +414,13 @@ const ExperiencesTable = ({ onExperienceAction }) => {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onExperienceUpdated={handleExperienceUpdated}
+      />
+
+      {/* Experience View Modal */}
+      <ExperienceViewModal
+        experience={selectedViewExperience}
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
       />
     </div>
   );

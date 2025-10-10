@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, CheckCircle, Clock, XCircle } from 'lucide-react';
 import TransactionsTable from '../components/TransactionsTable';
+import { adminService } from '../services/adminService';
 
 const TransactionManagementPage = () => {
   const [metrics, setMetrics] = useState(null);
@@ -10,14 +11,14 @@ const TransactionManagementPage = () => {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      // Mock API call - instant response
-      setMetrics({
-        totalRevenue: 12750,
-        platformFees: 1125,
-        processingFees: 491,
-        failedTransactions: 2
-      });
-      setError(null);
+      const response = await adminService.getTransactionManagementMetrics();
+      
+      if (response.success) {
+        setMetrics(response.data);
+        setError(null);
+      } else {
+        setError(response.error || 'Failed to load transaction metrics');
+      }
     } catch (err) {
       setError('Failed to load transaction metrics');
       console.error('Transaction management error:', err);
@@ -100,11 +101,10 @@ const TransactionManagementPage = () => {
                   <CheckCircle className="w-6 h-6 text-green-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Platform Fees</p>
+                  <p className="text-sm font-medium text-gray-600">Total Profit</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${metrics?.platformFees?.toLocaleString() || '0'}
+                    ${metrics?.totalProfit?.toLocaleString() || '0'}
                   </p>
-                  <p className="text-xs text-gray-500">15% Commission</p>
                 </div>
               </div>
             </div>
@@ -114,11 +114,10 @@ const TransactionManagementPage = () => {
                   <Clock className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Processing Fees</p>
+                  <p className="text-sm font-medium text-gray-600">Total Transactions</p>
                   <p className="text-2xl font-bold text-gray-900">
-                    ${metrics?.processingFees?.toLocaleString() || '0'}
+                    {metrics?.totalTransactions?.toLocaleString() || '0'}
                   </p>
-                  <p className="text-xs text-gray-500">2.9%, $0.50</p>
                 </div>
               </div>
             </div>

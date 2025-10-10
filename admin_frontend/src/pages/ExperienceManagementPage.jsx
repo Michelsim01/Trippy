@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, CheckCircle, XCircle, Star } from 'lucide-react';
+import { MapPin, CheckCircle, XCircle, Octagon } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import ExperiencesTable from '../components/ExperiencesTable';
 
@@ -112,7 +112,7 @@ const ExperienceManagementPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Star className="w-6 h-6 text-gray-600" />
+                  <Octagon className="w-6 h-6 text-gray-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Inactive Experiences</p>

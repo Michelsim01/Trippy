@@ -134,7 +134,7 @@ const DashboardPage = () => {
       labels,
       datasets: [
         {
-          label: 'Revenue ($)',
+          label: 'Profit ($)',
           data,
           borderColor: 'rgb(34, 197, 94)',
           backgroundColor: 'rgba(34, 197, 94, 0.1)',
@@ -293,7 +293,7 @@ const DashboardPage = () => {
 
   const stats = [
     {
-      title: 'Monthly Revenue',
+      title: 'Monthly Profit',
       value: formatCurrency(metrics?.monthlyRevenue?.current || 0),
       change: formatChange(metrics?.monthlyRevenue?.changePercent || 0),
       changeType: getChangeType(metrics?.monthlyRevenue?.changePercent || 0),
@@ -364,7 +364,7 @@ const DashboardPage = () => {
         {/* Revenue Chart */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Revenue Trend</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Profit Trend</h3>
             <div className="flex items-center space-x-2">
               <TrendingUp className={`w-4 h-4 ${metrics?.monthlyRevenue?.changePercent >= 0 ? 'text-green-500' : 'text-red-500'}`} />
               <span className={`text-sm ${metrics?.monthlyRevenue?.changePercent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -386,7 +386,7 @@ const DashboardPage = () => {
               <div className="h-full flex items-center justify-center bg-gray-50 rounded-lg">
                 <div className="text-center">
                   <div className="text-gray-500 mb-2">📈</div>
-                  <p className="text-gray-600">No revenue data available</p>
+                  <p className="text-gray-600">No profit data available</p>
                 </div>
               </div>
             )}

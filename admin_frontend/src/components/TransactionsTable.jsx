@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, Search, DollarSign, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Eye, Search, DollarSign, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Edit } from 'lucide-react';
+import { adminService } from '../services/adminService';
+import TransactionEditModal from './TransactionEditModal';
+import TransactionViewModal from './TransactionViewModal';
 
 const TransactionsTable = ({ onTransactionAction }) => {
   const [transactions, setTransactions] = useState([]);
@@ -9,21 +12,23 @@ const TransactionsTable = ({ onTransactionAction }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
-
-  const mockTransactions = [
-    { id: 'TXN-001', type: 'Booking Payment', bookingId: 'BK001', experience: 'Tokyo Street Food Adventure', user: 'Lim Chen Kit', platformFee: 4, amount: 58, date: '2025-10-01', status: 'PAID' },
-    { id: 'TXN-002', type: 'Refund', bookingId: 'BK003', experience: 'Adventure of a Lifetime', user: 'Charles Podi', platformFee: 0, amount: -142, date: '2025-10-02', status: 'PENDING' },
-    { id: 'TXN-003', type: 'Payout', bookingId: 'BK002', experience: 'Hidden Gems in Singapore', user: 'Hector Hugo', platformFee: 1, amount: 30, date: '2025-10-03', status: 'PAID' },
-    { id: 'TXN-004', type: 'Booking Payment', bookingId: 'BK004', experience: 'Touching Grass', user: 'Will Lee', platformFee: 5, amount: 109, date: '2025-10-05', status: 'PAID' },
-  ];
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedViewTransaction, setSelectedViewTransaction] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
         setLoading(true);
-        // Mock API call - instant response
-        setTransactions(mockTransactions);
-        setError(null);
+        const response = await adminService.getAllTransactions();
+        
+        if (response.success) {
+          setTransactions(response.data);
+          setError(null);
+        } else {
+          setError(response.error || 'Failed to load transactions');
+        }
       } catch (err) {
         setError('Failed to load transactions');
         console.error('Transactions fetch error:', err);
@@ -35,9 +40,49 @@ const TransactionsTable = ({ onTransactionAction }) => {
     fetchTransactions();
   }, []);
 
+  const handleEditTransaction = (transaction) => {
+    setSelectedTransaction(transaction);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedTransaction(null);
+  };
+
+  const handleViewTransaction = (transaction) => {
+    setSelectedViewTransaction(transaction);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedViewTransaction(null);
+  };
+
+  const handleTransactionUpdated = () => {
+    // Refresh transactions list
+    const fetchTransactions = async () => {
+      try {
+        const response = await adminService.getAllTransactions();
+        if (response.success) {
+          setTransactions(response.data);
+        }
+      } catch (err) {
+        console.error('Error refreshing transactions:', err);
+      }
+    };
+    fetchTransactions();
+    
+    // Notify parent component to refresh metrics
+    if (onTransactionAction) {
+      onTransactionAction();
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800';
+      case 'COMPLETED': return 'bg-green-100 text-green-800';
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'FAILED': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -46,17 +91,13 @@ const TransactionsTable = ({ onTransactionAction }) => {
 
   const getTypeColor = (type) => {
     switch (type) {
-      case 'Booking Payment': return 'bg-blue-100 text-blue-800';
-      case 'Refund': return 'bg-red-100 text-red-800';
-      case 'Payout': return 'bg-green-100 text-green-800';
+      case 'PAYMENT': return 'bg-blue-100 text-blue-800';
+      case 'REFUND': return 'bg-red-100 text-red-800';
+      case 'PAYOUT': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleViewTransaction = (transaction) => {
-    // TODO: Implement view transaction modal
-    console.log('View transaction:', transaction);
-  };
 
   const handleTransactionAction = () => {
     // Notify parent component to refresh metrics
@@ -68,8 +109,8 @@ const TransactionsTable = ({ onTransactionAction }) => {
   const filteredTransactions = transactions.filter((t) => {
     const q = searchTerm.toLowerCase();
     return (
-      t.id.toLowerCase().includes(q) ||
-      t.bookingId.toLowerCase().includes(q) ||
+      t.id?.toString().includes(q) ||
+      t.bookingId?.toString().includes(q) ||
       t.user.toLowerCase().includes(q) ||
       t.experience.toLowerCase().includes(q)
     );
@@ -78,9 +119,9 @@ const TransactionsTable = ({ onTransactionAction }) => {
   // Sorting logic
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
     if (sortConfig.key === 'id') {
-      // Extract numeric part from transaction ID (e.g., "TXN-001" -> 1)
-      const aNum = parseInt(a.id.replace(/\D/g, '')) || 0;
-      const bNum = parseInt(b.id.replace(/\D/g, '')) || 0;
+      // Handle numeric IDs directly
+      const aNum = typeof a.id === 'number' ? a.id : parseInt(a.id.toString().replace(/\D/g, '')) || 0;
+      const bNum = typeof b.id === 'number' ? b.id : parseInt(b.id.toString().replace(/\D/g, '')) || 0;
       return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
     }
     return 0;
@@ -209,10 +250,10 @@ const TransactionsTable = ({ onTransactionAction }) => {
                 </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platform Fee</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Fee</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -242,17 +283,27 @@ const TransactionsTable = ({ onTransactionAction }) => {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <DollarSign className="w-4 h-4 mr-1" />
-                    {t.platformFee}
-                  </div>
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.platformFee}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.amount}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-900">
                     <Calendar className="w-4 h-4 mr-1" />
-                    {t.date}
+                    <div className="flex items-center">
+                      <span className="font-medium">
+                        {t.date ? new Date(t.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        }) : 'N/A'}
+                      </span>
+                      <span className="font-medium text-gray-500 ml-2">
+                        {t.date ? new Date(t.date).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: false
+                        }) : ''}
+                      </span>
+                    </div>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -261,13 +312,22 @@ const TransactionsTable = ({ onTransactionAction }) => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleViewTransaction(t)}
-                    className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="View Transaction"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewTransaction(t)}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                      title="View Transaction Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEditTransaction(t)}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      title="Edit Transaction"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -296,19 +356,53 @@ const TransactionsTable = ({ onTransactionAction }) => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
+              {(() => {
+                const getVisiblePages = () => {
+                  const delta = 2; // Number of pages to show on each side of current page
+                  const range = [];
+                  const rangeWithDots = [];
+
+                  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+                    range.push(i);
+                  }
+
+                  if (currentPage - delta > 2) {
+                    rangeWithDots.push(1, '...');
+                  } else {
+                    rangeWithDots.push(1);
+                  }
+
+                  rangeWithDots.push(...range);
+
+                  if (currentPage + delta < totalPages - 1) {
+                    rangeWithDots.push('...', totalPages);
+                  } else {
+                    rangeWithDots.push(totalPages);
+                  }
+
+                  return rangeWithDots;
+                };
+
+                return getVisiblePages().map((page, index) => (
+                  page === '...' ? (
+                    <span key={`dots-${index}`} className="px-3 py-1 text-sm font-medium text-gray-500">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 text-sm font-medium rounded-md ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                ));
+              })()}
               
               <button
                 onClick={handleNextPage}
@@ -321,6 +415,21 @@ const TransactionsTable = ({ onTransactionAction }) => {
           </div>
         </div>
       )}
+
+      {/* Transaction Edit Modal */}
+      <TransactionEditModal
+        transaction={selectedTransaction}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onTransactionUpdated={handleTransactionUpdated}
+      />
+
+      {/* Transaction View Modal */}
+      <TransactionViewModal
+        transaction={selectedViewTransaction}
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+      />
     </div>
   );
 };

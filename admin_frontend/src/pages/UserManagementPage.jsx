@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, UserCheck, UserX, Mail, Phone, Calendar } from 'lucide-react';
+import { Users, UserCheck, UserX, UserCircle, Mail, Phone, Calendar } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import UsersTable from '../components/UsersTable';
 
@@ -111,7 +111,7 @@ const UserManagementPage = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center">
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-purple-600" />
+                  <UserCircle className="w-6 h-6 text-purple-600" />
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Tour Guides</p>

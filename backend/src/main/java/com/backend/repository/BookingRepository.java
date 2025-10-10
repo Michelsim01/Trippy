@@ -76,4 +76,23 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Count bookings by experience ID through experience schedule
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.experienceSchedule.experience.experienceId = :experienceId")
     Long countByExperienceId(@Param("experienceId") Long experienceId);
+
+    // Count bookings by status
+    Long countByStatus(BookingStatus status);
+
+    // Fetch all bookings with eager fetching of user and experienceSchedule.experience
+    @Query("SELECT b FROM Booking b JOIN FETCH b.traveler u JOIN FETCH b.experienceSchedule es JOIN FETCH es.experience e ORDER BY b.bookingId DESC")
+    List<Booking> findAllWithUserDetailsAndExperienceDetails();
+
+    // Native query to get booking data with specific fields only
+    @Query(value = "SELECT b.booking_id, b.number_of_participants, b.total_amount, b.status, b.created_at, " +
+           "u.user_id, u.first_name, u.last_name, u.email, " +
+           "e.experience_id, e.title, " +
+           "es.start_date_time, es.end_date_time " +
+           "FROM booking b " +
+           "JOIN users u ON b.traveler_id = u.user_id " +
+           "JOIN experience_schedule es ON b.experience_schedule_id = es.schedule_id " +
+           "JOIN experiences e ON es.experience_id = e.experience_id " +
+           "ORDER BY b.booking_id DESC", nativeQuery = true)
+    List<Object[]> findAllBookingDetailsForAdmin();
 }

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Edit, Search, Calendar, Users, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Edit, Calendar, Eye } from 'lucide-react';
+import { adminService } from '../services/adminService';
+import BookingEditModal from './BookingEditModal';
+import BookingViewModal from './BookingViewModal';
 
 const BookingsTable = ({ onBookingAction }) => {
   const [bookings, setBookings] = useState([]);
@@ -9,21 +12,22 @@ const BookingsTable = ({ onBookingAction }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
-
-  const mockBookings = [
-    { id: 'BK001', traveler: 'John Doe', email: 'john@trippy.com', experience: 'Tokyo Street Food Adventure', schedule: '2025-10-01 14:00', participants: 2, amount: 58, status: 'PAID' },
-    { id: 'BK002', traveler: 'Pritam Lee', email: 'pritam@trippy.com', experience: 'Hidden Gems in Singapore', schedule: '2025-10-02 10:00', participants: 1, amount: 31, status: 'PAID' },
-    { id: 'BK003', traveler: 'Singh Potter', email: 'singh@trippy.com', experience: 'Adventure of a Lifetime', schedule: '2025-10-03 09:00', participants: 4, amount: 568, status: 'REFUNDED' },
-    { id: 'BK004', traveler: 'Bob Frank', email: 'bob@trippy.com', experience: 'Touching Grass', schedule: '2025-10-05 16:00', participants: 2, amount: 109, status: 'PENDING' },
-  ];
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedViewBooking, setSelectedViewBooking] = useState(null);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchBookings = async () => {
       try {
         setLoading(true);
-        // Mock API call - instant response
-        setBookings(mockBookings);
-        setError(null);
+        const response = await adminService.getAllBookings();
+        if (response.success) {
+          setBookings(response.data);
+          setError(null);
+        } else {
+          setError(response.error);
+        }
       } catch (err) {
         setError('Failed to load bookings');
         console.error('Bookings fetch error:', err);
@@ -37,43 +41,68 @@ const BookingsTable = ({ onBookingAction }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'PAID': return 'bg-green-100 text-green-800';
-      case 'REFUNDED': return 'bg-gray-100 text-gray-800';
+      case 'CONFIRMED': return 'bg-green-100 text-green-800';
       case 'PENDING': return 'bg-yellow-100 text-yellow-800';
       case 'CANCELLED': return 'bg-red-100 text-red-800';
+      case 'COMPLETED': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleEditBooking = (booking) => {
-    // TODO: Implement edit booking modal
-    console.log('Edit booking:', booking);
-  };
-
-  const handleBookingAction = () => {
-    // Notify parent component to refresh metrics
-    if (onBookingAction) {
-      onBookingAction();
+  const getTravellerName = (traveler) => {
+    if (!traveler) return 'N/A';
+    if (traveler.firstName && traveler.lastName) {
+      return `${traveler.firstName} ${traveler.lastName}`;
     }
+    return traveler.email || 'N/A';
   };
 
-  const filteredBookings = bookings.filter((b) => {
-    const q = searchTerm.toLowerCase();
+  const getExperienceTitle = (experience) => {
+    return experience?.title || 'N/A';
+  };
+
+  const formatDateTime = (dateTimeString) => {
+    if (!dateTimeString) return 'N/A';
+    const date = new Date(dateTimeString);
     return (
-      b.id.toLowerCase().includes(q) ||
-      b.traveler.toLowerCase().includes(q) ||
-      b.email.toLowerCase().includes(q) ||
-      b.experience.toLowerCase().includes(q)
+      <div className="flex items-center text-sm text-gray-900">
+        <Calendar className="w-4 h-4 mr-1" />
+        <div className="flex items-center">
+          <span className="font-medium">
+            {date.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })}
+          </span>
+          <span className="font-medium text-gray-500 ml-2">
+            {date.toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false
+            })}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  const filteredBookings = bookings.filter(booking => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      booking.id?.toString().includes(searchLower) ||
+      getTravellerName(booking.traveler).toLowerCase().includes(searchLower) ||
+      getExperienceTitle(booking.experience).toLowerCase().includes(searchLower) ||
+      booking.status?.toLowerCase().includes(searchLower)
     );
   });
 
   // Sorting logic
   const sortedBookings = [...filteredBookings].sort((a, b) => {
     if (sortConfig.key === 'id') {
-      // Extract numeric part from booking ID (e.g., "BK001" -> 1)
-      const aNum = parseInt(a.id.replace(/\D/g, '')) || 0;
-      const bNum = parseInt(b.id.replace(/\D/g, '')) || 0;
-      return sortConfig.direction === 'asc' ? aNum - bNum : bNum - aNum;
+      const aId = parseInt(a.id) || 0;
+      const bId = parseInt(b.id) || 0;
+      return sortConfig.direction === 'asc' ? aId - bId : bId - aId;
     }
     return 0;
   });
@@ -84,21 +113,9 @@ const BookingsTable = ({ onBookingAction }) => {
   const endIndex = startIndex + itemsPerPage;
   const currentBookings = sortedBookings.slice(startIndex, endIndex);
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage(currentPage + 1);
-    }
-  };
+  const handlePageChange = (page) => { setCurrentPage(page); };
+  const handlePrevPage = () => { if (currentPage > 1) { setCurrentPage(currentPage - 1); } };
+  const handleNextPage = () => { if (currentPage < totalPages) { setCurrentPage(currentPage + 1); } };
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -109,65 +126,67 @@ const BookingsTable = ({ onBookingAction }) => {
     setCurrentPage(1); // Reset to first page when sorting
   };
 
+  const handleEditBooking = (booking) => {
+    setSelectedBooking(booking);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedBooking(null);
+  };
+
+  const handleViewBooking = (booking) => {
+    setSelectedViewBooking(booking);
+    setIsViewModalOpen(true);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedViewBooking(null);
+  };
+
+  const handleBookingUpdated = () => {
+    // Refresh bookings data
+    const fetchBookings = async () => {
+      try {
+        const response = await adminService.getAllBookings();
+        if (response.success) {
+          setBookings(response.data);
+        }
+      } catch (err) {
+        console.error('Error refreshing bookings:', err);
+      }
+    };
+    fetchBookings();
+    
+    // Notify parent component to refresh metrics
+    if (onBookingAction) {
+      onBookingAction();
+    }
+  };
+
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) {
       return <ChevronUp className="w-4 h-4 text-gray-400" />;
     }
-    return sortConfig.direction === 'asc' 
+    return sortConfig.direction === 'asc'
       ? <ChevronUp className="w-4 h-4 text-blue-600" />
       : <ChevronDown className="w-4 h-4 text-blue-600" />;
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
-        </div>
-        <div className="p-6">
-          <div className="animate-pulse space-y-4">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                </div>
-                <div className="h-6 bg-gray-200 rounded w-16"></div>
-                <div className="h-6 bg-gray-200 rounded w-16"></div>
-                <div className="h-6 bg-gray-200 rounded w-20"></div>
-                <div className="h-6 bg-gray-200 rounded w-12"></div>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center text-gray-500">
+        Loading bookings...
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
-        </div>
-        <div className="p-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading bookings</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center text-red-500">
+        Error: {error}
       </div>
     );
   }
@@ -191,18 +210,19 @@ const BookingsTable = ({ onBookingAction }) => {
         <table className="w-full">
           <thead className="bg-gray-50">
             <tr>
-              <th 
+              <th
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center space-x-1">
-                  <span>Booking ID</span>
+                  <span>ID</span>
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traveler</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traveller</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Schedule</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -210,49 +230,52 @@ const BookingsTable = ({ onBookingAction }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {currentBookings.map((b) => (
-              <tr key={b.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-medium text-gray-700">
-                        {b.traveler.split(' ').map(n => n[0]).join('')}
-                      </span>
-                    </div>
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">{b.traveler}</div>
-                      <div className="text-sm text-gray-500">{b.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{b.experience}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    {b.schedule}
-                  </div>
+            {currentBookings.map((booking) => (
+              <tr key={booking.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {booking.id}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <Users className="w-4 h-4 mr-1" />
-                    {b.participants}
-                  </div>
+                  <div className="text-sm font-medium text-gray-900">{getTravellerName(booking.traveler)}</div>
+                  <div className="text-sm text-gray-500">{booking.traveler?.email}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${b.amount}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {getExperienceTitle(booking.experience)}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(b.status)}`}>
-                    {b.status}
+                  {formatDateTime(booking.startDateTime)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {formatDateTime(booking.endDateTime)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {booking.numberOfParticipants}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  ${booking.totalAmount ? booking.totalAmount.toFixed(2) : '0.00'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(booking.status)}`}>
+                    {booking.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <button
-                    onClick={() => handleEditBooking(b)}
-                    className="text-blue-600 hover:text-blue-900 transition-colors"
-                    title="Edit Booking"
-                  >
-                    <Edit className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleViewBooking(booking)}
+                      className="text-green-600 hover:text-green-900 transition-colors"
+                      title="View Booking Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleEditBooking(booking)}
+                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      title="Edit booking"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -262,6 +285,11 @@ const BookingsTable = ({ onBookingAction }) => {
       {sortedBookings.length === 0 && searchTerm && (
         <div className="px-6 py-4 text-center text-gray-500">
           No bookings found matching "{searchTerm}"
+        </div>
+      )}
+      {sortedBookings.length === 0 && !searchTerm && !loading && (
+        <div className="px-6 py-4 text-center text-gray-500">
+          No bookings available.
         </div>
       )}
 
@@ -280,21 +308,55 @@ const BookingsTable = ({ onBookingAction }) => {
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => handlePageChange(page)}
-                  className={`px-3 py-1 text-sm font-medium rounded-md ${
-                    currentPage === page
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {page}
-                </button>
-              ))}
-              
+
+              {(() => {
+                const getVisiblePages = () => {
+                  const delta = 2; // Number of pages to show on each side of current page
+                  const range = [];
+                  const rangeWithDots = [];
+
+                  for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+                    range.push(i);
+                  }
+
+                  if (currentPage - delta > 2) {
+                    rangeWithDots.push(1, '...');
+                  } else {
+                    rangeWithDots.push(1);
+                  }
+
+                  rangeWithDots.push(...range);
+
+                  if (currentPage + delta < totalPages - 1) {
+                    rangeWithDots.push('...', totalPages);
+                  } else {
+                    rangeWithDots.push(totalPages);
+                  }
+
+                  return rangeWithDots;
+                };
+
+                return getVisiblePages().map((page, index) => (
+                  page === '...' ? (
+                    <span key={`dots-${index}`} className="px-3 py-1 text-sm font-medium text-gray-500">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-1 text-sm font-medium rounded-md ${
+                        currentPage === page
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 bg-white border border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
+                ));
+              })()}
+
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
@@ -306,6 +368,21 @@ const BookingsTable = ({ onBookingAction }) => {
           </div>
         </div>
       )}
+
+      {/* Booking Edit Modal */}
+      <BookingEditModal
+        booking={selectedBooking}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onBookingUpdated={handleBookingUpdated}
+      />
+
+      {/* Booking View Modal */}
+      <BookingViewModal
+        booking={selectedViewBooking}
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+      />
     </div>
   );
 };
