@@ -46,6 +46,9 @@ public class EarningsService {
 
             BigDecimal totalEarnings = pendingEarnings.add(paidOutEarnings);
 
+            // Calculate pending deductions from guide cancellation fees
+            BigDecimal pendingDeductions = bookingRepository.calculatePendingCancellationFees(guideId);
+
             Integer pendingBookings = (int) allBookings.stream()
                     .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
                     .count();
@@ -56,9 +59,9 @@ public class EarningsService {
 
             Integer totalBookings = pendingBookings + completedBookings;
 
-            System.out.println("DEBUG: Calculated earnings - Total: " + totalEarnings + ", Pending: " + pendingEarnings + ", Paid: " + paidOutEarnings);
+            System.out.println("DEBUG: Calculated earnings - Total: " + totalEarnings + ", Pending: " + pendingEarnings + ", Paid: " + paidOutEarnings + ", Deductions: " + pendingDeductions);
 
-            return new GuideEarningsDTO(totalEarnings, pendingEarnings, paidOutEarnings,
+            return new GuideEarningsDTO(totalEarnings, pendingEarnings, paidOutEarnings, pendingDeductions,
                     totalBookings, pendingBookings, completedBookings);
         } catch (Exception e) {
             System.err.println("ERROR in getGuideEarnings: " + e.getMessage());
@@ -78,13 +81,17 @@ public class EarningsService {
 
         String experienceTitle = schedules.get(0).getExperience().getTitle();
 
-        // Get all bookings for this experience
-        List<Booking> experienceBookings = schedules.stream()
+        // Get ALL bookings for this experience (including cancelled ones for fee calculation)
+        List<Booking> allExperienceBookings = schedules.stream()
                 .flatMap(schedule -> schedule.getBookings().stream())
+                .collect(Collectors.toList());
+
+        // Filter only active bookings for earnings calculations
+        List<Booking> experienceBookings = allExperienceBookings.stream()
                 .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.COMPLETED)
                 .collect(Collectors.toList());
 
-        // Calculate experience-level totals
+        // Calculate experience-level totals from active bookings only
         BigDecimal pendingEarnings = experienceBookings.stream()
                 .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
                 .map(Booking::getBaseAmount)
@@ -96,6 +103,14 @@ public class EarningsService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalEarnings = pendingEarnings.add(paidOutEarnings);
+
+        // Calculate pending deductions from ALL bookings (including cancelled ones)
+        // This ensures cancellation fees are tracked even after schedules are cancelled
+        BigDecimal pendingDeductions = allExperienceBookings.stream()
+                .filter(booking -> booking.getGuideCancellationFee() != null &&
+                                 booking.getGuideCancellationFee().compareTo(BigDecimal.ZERO) > 0)
+                .map(Booking::getGuideCancellationFee)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // Group bookings by schedule and create ScheduleEarningsDTO
         Map<Long, List<Booking>> bookingsBySchedule = experienceBookings.stream()
@@ -133,6 +148,6 @@ public class EarningsService {
                 .filter(scheduleEarning -> scheduleEarning.getBookingCount() > 0) // Only include schedules with bookings
                 .collect(Collectors.toList());
 
-        return new ExperienceEarningsDTO(experienceId, experienceTitle, totalEarnings, pendingEarnings, paidOutEarnings, scheduleEarnings);
+        return new ExperienceEarningsDTO(experienceId, experienceTitle, totalEarnings, pendingEarnings, paidOutEarnings, pendingDeductions, scheduleEarnings);
     }
 }

@@ -95,4 +95,15 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
            "JOIN experiences e ON es.experience_id = e.experience_id " +
            "ORDER BY b.booking_id DESC", nativeQuery = true)
     List<Object[]> findAllBookingDetailsForAdmin();
+
+    // Calculate total pending cancellation fees for a guide
+    @Query("SELECT COALESCE(SUM(b.guideCancellationFee), 0) FROM Booking b " +
+           "JOIN b.experienceSchedule s " +
+           "JOIN s.experience e " +
+           "WHERE e.guide.id = :guideId AND b.guideCancellationFee > 0")
+    BigDecimal calculatePendingCancellationFees(@Param("guideId") Long guideId);
+
+    // Find all CONFIRMED bookings for a specific schedule
+    @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
+    List<Booking> findConfirmedBookingsByScheduleId(@Param("scheduleId") Long scheduleId);
 }

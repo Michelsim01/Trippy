@@ -272,10 +272,10 @@ public class BookingService {
 
                 // Process trippoints redemption if applicable
                 if (booking.getTrippointsDiscount() != null &&
-                    booking.getTrippointsDiscount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+                        booking.getTrippointsDiscount().compareTo(java.math.BigDecimal.ZERO) > 0) {
 
                     int pointsToRedeem = booking.getTrippointsDiscount()
-                        .multiply(new java.math.BigDecimal("100")).intValue();
+                            .multiply(new java.math.BigDecimal("100")).intValue();
 
                     tripPointsService.redeemPoints(booking.getTraveler().getId(), pointsToRedeem);
                 }
@@ -399,8 +399,8 @@ public class BookingService {
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
         if (booking.getStatus() == BookingStatus.CANCELLED ||
-            booking.getStatus() == BookingStatus.CANCELLED_BY_TOURIST ||
-            booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE) {
+                booking.getStatus() == BookingStatus.CANCELLED_BY_TOURIST ||
+                booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE) {
             throw new IllegalStateException("Booking is already cancelled");
         }
 
@@ -459,6 +459,85 @@ public class BookingService {
         } else {
             // Non-refundable
             return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Cancel an experience schedule by guide and apply cancellation fees
+     *
+     * @param scheduleId the ID of the schedule to cancel
+     * @param reason     the reason for cancellation
+     * @param guideId    the ID of the guide performing the cancellation
+     * @return GuideCancellationResponseDTO containing cancellation results
+     */
+    @Transactional
+    public GuideCancellationResponseDTO cancelScheduleByGuide(Long scheduleId, String reason, Long guideId) {
+        try {
+            // Find the schedule and verify ownership
+            ExperienceSchedule schedule = experienceScheduleRepository.findById(scheduleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Experience schedule not found"));
+
+            if (!schedule.getExperience().getGuide().getId().equals(guideId)) {
+                throw new IllegalArgumentException("You can only cancel your own experience schedules");
+            }
+
+            // Find all CONFIRMED bookings for this schedule
+            List<Booking> confirmedBookings = bookingRepository.findConfirmedBookingsByScheduleId(scheduleId);
+
+            if (confirmedBookings.isEmpty()) {
+                throw new IllegalStateException("No confirmed bookings found for this schedule");
+            }
+
+            BigDecimal totalCancellationFee = BigDecimal.ZERO;
+            int affectedBookings = confirmedBookings.size();
+
+            // Process each booking
+            for (Booking booking : confirmedBookings) {
+                // Calculate cancellation fee for this booking
+                BigDecimal cancellationFee = calculateGuideCancellationFee(booking);
+                totalCancellationFee = totalCancellationFee.add(cancellationFee);
+
+                // Update booking status and details
+                booking.setStatus(BookingStatus.CANCELLED_BY_GUIDE);
+                booking.setCancellationReason(reason);
+                booking.setCancelledAt(LocalDateTime.now());
+                booking.setRefundAmount(booking.getTotalAmount()); // Full refund to customer
+                booking.setGuideCancellationFee(cancellationFee);
+                booking.setUpdatedAt(LocalDateTime.now());
+
+                bookingRepository.save(booking);
+            }
+
+            // Mark schedule as unavailable
+            schedule.setIsAvailable(false);
+            experienceScheduleRepository.save(schedule);
+
+            return new GuideCancellationResponseDTO(scheduleId, affectedBookings, totalCancellationFee, reason);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to cancel schedule: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Calculate guide cancellation fee based on timing policy:
+     * - ≤48 hours before: 50% of booking total
+     * - 2-30 days before: 25% of booking total
+     * - >30 days before: 10% of booking total
+     */
+    private BigDecimal calculateGuideCancellationFee(Booking booking) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
+
+        long hoursUntilStart = java.time.Duration.between(now, experienceStart).toHours();
+        BigDecimal totalAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
+
+        if (hoursUntilStart <= 48) {
+            return totalAmount.multiply(new BigDecimal("0.50")); // 50%
+        } else if (hoursUntilStart <= (30 * 24)) { // 30 days in hours
+            return totalAmount.multiply(new BigDecimal("0.25")); // 25%
+        } else {
+            return totalAmount.multiply(new BigDecimal("0.10")); // 10%
         }
     }
 

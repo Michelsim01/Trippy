@@ -16,6 +16,12 @@ const ExperienceEarningsModal = ({
     const [selectedScheduleId, setSelectedScheduleId] = useState(null);
     const [completingSchedule, setCompletingSchedule] = useState(null);
 
+    // Cancellation state
+    const [showCancellationDialog, setShowCancellationDialog] = useState(false);
+    const [selectedCancellationSchedule, setSelectedCancellationSchedule] = useState(null);
+    const [cancellationReason, setCancellationReason] = useState('');
+    const [cancellingSchedule, setCancellingSchedule] = useState(null);
+
     // Fetch earnings data when modal opens
     useEffect(() => {
         const fetchEarningsData = async () => {
@@ -73,6 +79,35 @@ const ExperienceEarningsModal = ({
         const now = new Date();
         const tourEndTime = new Date(endDateTime);
         return now > tourEndTime;
+    };
+
+    // Calculate cancellation fee based on timing policy
+    const calculateCancellationFee = (schedule) => {
+        const now = new Date();
+        const experienceStart = new Date(schedule.startDateTime);
+        const hoursUntilStart = (experienceStart - now) / (1000 * 60 * 60);
+
+        const totalRevenue = parseFloat(schedule.potentialEarnings || 0);
+
+        if (hoursUntilStart <= 48) {
+            return {
+                amount: totalRevenue * 0.50,
+                percentage: 50,
+                policy: '≤48 hours before'
+            };
+        } else if (hoursUntilStart <= (30 * 24)) { // 30 days in hours
+            return {
+                amount: totalRevenue * 0.25,
+                percentage: 25,
+                policy: '2-30 days before'
+            };
+        } else {
+            return {
+                amount: totalRevenue * 0.10,
+                percentage: 10,
+                policy: '>30 days before'
+            };
+        }
     };
 
     const handleCompleteTimeslot = (scheduleId) => {
@@ -150,12 +185,78 @@ const ExperienceEarningsModal = ({
         setSelectedScheduleId(null);
     };
 
+    // Cancellation handlers
+    const handleCancelTimeslot = (schedule) => {
+        setSelectedCancellationSchedule(schedule);
+        setCancellationReason('');
+        setShowCancellationDialog(true);
+    };
+
+    const handleConfirmCancellation = async () => {
+        if (!selectedCancellationSchedule || !cancellationReason) return;
+
+        try {
+            setCancellingSchedule(selectedCancellationSchedule.scheduleId);
+            setShowCancellationDialog(false);
+
+            const response = await fetch(`http://localhost:8080/api/bookings/experiences/schedules/${selectedCancellationSchedule.scheduleId}/cancel?reason=${encodeURIComponent(cancellationReason)}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Refresh earnings data
+            if (isOpen && experienceId && userId) {
+                const earningsResponse = await fetch(`http://localhost:8080/api/earnings/experience/${experienceId}/guide/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (earningsResponse.ok) {
+                    const updatedData = await earningsResponse.json();
+                    setEarningsData(updatedData);
+                }
+            }
+
+            swal.fire({
+                icon: 'success',
+                title: 'Timeslot Cancelled',
+                text: `Tour cancelled successfully. ${result.affectedBookings || 0} customers will receive full refunds. Cancellation fee: $${result.totalFee?.toFixed(2) || '0.00'}`,
+            });
+
+        } catch (error) {
+            console.error('Error cancelling timeslot:', error);
+            alert('Failed to cancel timeslot. Please try again.');
+        } finally {
+            setCancellingSchedule(null);
+            setSelectedCancellationSchedule(null);
+            setCancellationReason('');
+        }
+    };
+
+    const handleCancelCancellation = () => {
+        setShowCancellationDialog(false);
+        setSelectedCancellationSchedule(null);
+        setCancellationReason('');
+    };
+
     // Get earnings totals from API data or default values
     const earningsTotals = earningsData ? {
         total: parseFloat(earningsData.totalEarnings || 0),
         pending: parseFloat(earningsData.pendingEarnings || 0),
-        paidOut: parseFloat(earningsData.paidOutEarnings || 0)
-    } : { total: 0, pending: 0, paidOut: 0 };
+        paidOut: parseFloat(earningsData.paidOutEarnings || 0),
+        pendingDeductions: parseFloat(earningsData.pendingDeductions || 0)
+    } : { total: 0, pending: 0, paidOut: 0, pendingDeductions: 0 };
 
     const schedules = earningsData?.schedules || [];
 
@@ -184,11 +285,11 @@ const ExperienceEarningsModal = ({
 
                 {/* Experience Earnings Summary */}
                 <div className="p-6 border-b border-neutrals-6">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-4 gap-3">
                         {/* Total Earnings */}
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-blue-600 mb-1">
+                                <div className="text-xl font-bold text-blue-600 mb-1">
                                     ${earningsTotals.total.toFixed(2)}
                                 </div>
                                 <div className="text-xs text-blue-700 font-medium">Total</div>
@@ -196,25 +297,47 @@ const ExperienceEarningsModal = ({
                         </div>
 
                         {/* Pending Earnings */}
-                        <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                        <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-yellow-600 mb-1">
+                                <div className="text-xl font-bold text-yellow-600 mb-1">
                                     ${earningsTotals.pending.toFixed(2)}
                                 </div>
                                 <div className="text-xs text-yellow-700 font-medium">Pending</div>
                             </div>
                         </div>
 
-                        {/* Paid Out Earnings */}
-                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        {/* Pending Deductions */}
+                        <div className="bg-red-50 p-3 rounded-lg border border-red-200">
                             <div className="text-center">
-                                <div className="text-2xl font-bold text-green-600 mb-1">
+                                <div className="text-xl font-bold text-red-600 mb-1">
+                                    -${earningsTotals.pendingDeductions.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-red-700 font-medium">Deductions</div>
+                            </div>
+                        </div>
+
+                        {/* Paid Out Earnings */}
+                        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                            <div className="text-center">
+                                <div className="text-xl font-bold text-green-600 mb-1">
                                     ${earningsTotals.paidOut.toFixed(2)}
                                 </div>
                                 <div className="text-xs text-green-700 font-medium">Paid Out</div>
                             </div>
                         </div>
                     </div>
+
+                    {/* Net Available Summary */}
+                    {earningsTotals.pendingDeductions > 0 && (
+                        <div className="mt-4 p-3 bg-neutrals-7 rounded-lg border border-neutrals-6">
+                            <div className="text-center">
+                                <div className="text-sm text-neutrals-3 mb-1">Net Available After Deductions</div>
+                                <div className="text-lg font-bold text-neutrals-1">
+                                    ${Math.max(0, earningsTotals.pending - earningsTotals.pendingDeductions).toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Modal Content */}
@@ -292,31 +415,49 @@ const ExperienceEarningsModal = ({
                                             </div>
                                         </div>
 
-                                        {/* Action Button */}
-                                        <div>
+                                        {/* Action Buttons */}
+                                        <div className="flex flex-col items-end space-y-2">
                                             {schedule.status === "CONFIRMED" ? (
-                                                (() => {
-                                                    const tourCompleted = isTourCompleted(schedule.endDateTime);
-                                                    const isDisabled = completingSchedule === schedule.scheduleId || !tourCompleted;
+                                                <>
+                                                    {/* Complete Timeslot Button */}
+                                                    {(() => {
+                                                        const tourCompleted = isTourCompleted(schedule.endDateTime);
+                                                        const isDisabled = completingSchedule === schedule.scheduleId || !tourCompleted;
 
-                                                    return (
-                                                        <Button
-                                                            variant={tourCompleted ? "primary" : "secondary"}
-                                                            size="sm"
-                                                            onClick={() => handleCompleteTimeslot(schedule.scheduleId)}
-                                                            disabled={isDisabled}
-                                                            className={!tourCompleted ? "opacity-50 cursor-not-allowed" : ""}
-                                                            title={!tourCompleted ? "Tour must end before it can be marked as completed" : "Mark this tour as completed"}
-                                                        >
-                                                            {completingSchedule === schedule.scheduleId
-                                                                ? 'Completing...'
-                                                                : tourCompleted
-                                                                    ? 'Mark As Completed'
-                                                                    : 'Tour Not Completed'
-                                                            }
-                                                        </Button>
-                                                    );
-                                                })()
+                                                        return (
+                                                            <Button
+                                                                variant={tourCompleted ? "primary" : "secondary"}
+                                                                size="sm"
+                                                                onClick={() => handleCompleteTimeslot(schedule.scheduleId)}
+                                                                disabled={isDisabled}
+                                                                className={!tourCompleted ? "opacity-50 cursor-not-allowed" : ""}
+                                                                title={!tourCompleted ? "Tour must end before it can be marked as completed" : "Mark this tour as completed"}
+                                                            >
+                                                                {completingSchedule === schedule.scheduleId
+                                                                    ? 'Completing...'
+                                                                    : tourCompleted
+                                                                        ? 'Mark As Completed'
+                                                                        : 'Tour Not Completed'
+                                                                }
+                                                            </Button>
+                                                        );
+                                                    })()}
+
+                                                    {/* Cancel Timeslot Button */}
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        onClick={() => handleCancelTimeslot(schedule)}
+                                                        disabled={cancellingSchedule === schedule.scheduleId}
+                                                        className="bg-red-50 border-red-200 text-red-700 hover:bg-red-100"
+                                                        title="Cancel this timeslot and refund all customers"
+                                                    >
+                                                        {cancellingSchedule === schedule.scheduleId
+                                                            ? 'Cancelling...'
+                                                            : 'Cancel Timeslot'
+                                                        }
+                                                    </Button>
+                                                </>
                                             ) : (
                                                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -399,6 +540,119 @@ const ExperienceEarningsModal = ({
                                 className="flex-1 bg-red-600 hover:bg-red-700"
                             >
                                 I Understand - Complete Timeslot
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Cancellation Dialog */}
+            {showCancellationDialog && selectedCancellationSchedule && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-60 p-4">
+                    <div className="bg-white rounded-lg max-w-md w-full p-6">
+                        {/* Dialog Header */}
+                        <div className="flex items-center mb-4">
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-lg font-semibold text-neutrals-1">Cancel Timeslot Confirmation</h3>
+                        </div>
+
+                        {/* Dialog Content */}
+                        <div className="mb-6">
+                            <p className="text-sm text-neutrals-2 mb-4">
+                                You are about to <strong>CANCEL</strong> this timeslot. This will:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-neutrals-2 mb-4 space-y-1">
+                                <li>Cancel all confirmed bookings for this timeslot</li>
+                                <li>Provide full refunds to all {selectedCancellationSchedule.bookingCount} customers</li>
+                                <li>Cannot be undone once confirmed</li>
+                            </ul>
+
+                            {/* Fee Calculation */}
+                            {(() => {
+                                const feeInfo = calculateCancellationFee(selectedCancellationSchedule);
+                                return (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                                        <div className="flex items-start">
+                                            <svg className="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                                            </svg>
+                                            <div>
+                                                <p className="text-sm font-semibold text-red-800 mb-1">CANCELLATION FEE</p>
+                                                <p className="text-xs text-red-700 mb-2">
+                                                    Based on timing policy ({feeInfo.policy}):
+                                                </p>
+                                                <p className="text-lg font-bold text-red-700">
+                                                    ${feeInfo.amount.toFixed(2)} ({feeInfo.percentage}% of booking revenue)
+                                                </p>
+                                                <p className="text-xs text-red-700 mt-2">
+                                                    This fee will be deducted from your future earnings.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Customer Protection Notice */}
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                <div className="flex items-start">
+                                    <svg className="w-5 h-5 text-green-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div>
+                                        <p className="text-sm font-semibold text-green-800 mb-1">CUSTOMER PROTECTION</p>
+                                        <p className="text-xs text-green-700">
+                                            All customers will receive full refunds (including service fees) and will be notified immediately.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Cancellation Reason */}
+                            <div>
+                                <label className="block text-sm font-medium text-neutrals-2 mb-2">
+                                    Reason for cancellation *
+                                </label>
+                                <select
+                                    value={cancellationReason}
+                                    onChange={(e) => setCancellationReason(e.target.value)}
+                                    className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none"
+                                    required
+                                >
+                                    <option value="">Select a reason</option>
+                                    <option value="emergency">Emergency</option>
+                                    <option value="illness">Illness</option>
+                                    <option value="weather">Weather conditions</option>
+                                    <option value="equipment_failure">Equipment failure</option>
+                                    <option value="safety_concerns">Safety concerns</option>
+                                    <option value="personal_reasons">Personal reasons</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Dialog Actions */}
+                        <div className="flex space-x-3">
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={handleCancelCancellation}
+                                className="flex-1"
+                            >
+                                Go Back
+                            </Button>
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={handleConfirmCancellation}
+                                disabled={!cancellationReason}
+                                className="flex-1 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                Confirm Cancellation
                             </Button>
                         </div>
                     </div>

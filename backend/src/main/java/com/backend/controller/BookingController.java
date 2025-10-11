@@ -21,6 +21,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -142,7 +144,7 @@ public class BookingController {
     }
 
     /**
-<<<<<<< Updated upstream
+     * <<<<<<< Updated upstream
      * Get booking details by confirmation code
      * 
      * @param confirmationCode the confirmation code of the booking
@@ -171,8 +173,8 @@ public class BookingController {
     }
 
     /**
-=======
->>>>>>> Stashed changes
+     * =======
+     * >>>>>>> Stashed changes
      * Get all bookings for a user by email
      * 
      * @param email the email address of the user
@@ -491,7 +493,8 @@ public class BookingController {
                 transaction.getCreatedAt());
     }
 
-    // Complete timeslot endpoint - marks all CONFIRMED bookings for a schedule as COMPLETED
+    // Complete timeslot endpoint - marks all CONFIRMED bookings for a schedule as
+    // COMPLETED
     @PutMapping("/complete-timeslot/{scheduleId}")
     public ResponseEntity<Map<String, Object>> completeTimeslot(@PathVariable Long scheduleId) {
         try {
@@ -509,10 +512,10 @@ public class BookingController {
 
             // Find all CONFIRMED bookings for this schedule
             List<Booking> confirmedBookings = bookingRepository.findAll().stream()
-                .filter(booking -> booking.getExperienceSchedule() != null &&
-                                 booking.getExperienceSchedule().getScheduleId().equals(scheduleId) &&
-                                 booking.getStatus() == BookingStatus.CONFIRMED)
-                .collect(Collectors.toList());
+                    .filter(booking -> booking.getExperienceSchedule() != null &&
+                            booking.getExperienceSchedule().getScheduleId().equals(scheduleId) &&
+                            booking.getStatus() == BookingStatus.CONFIRMED)
+                    .collect(Collectors.toList());
 
             // Update all confirmed bookings to COMPLETED
             int updatedCount = 0;
@@ -529,19 +532,19 @@ public class BookingController {
                         Notification notification = new Notification();
                         notification.setTitle("Review Request");
                         notification.setMessage(String.format(
-                            "Your tour '%s' has been completed! Please go to my bookings page to leave a review. You will earn trippoints for your feedback.",
-                            schedule.getExperience().getTitle()
-                        ));
+                                "Your tour '%s' has been completed! Please go to my bookings page to leave a review. You will earn trippoints for your feedback.",
+                                schedule.getExperience().getTitle()));
                         notification.setUser(traveler);
                         notification.setType(NotificationType.REVIEW_REQUEST);
                         notification.setCreatedAt(LocalDateTime.now());
                         notification.setIsRead(false);
-                        
+
                         notificationRepository.save(notification);
                         System.out.println("Sent review request notification to user ID: " + traveler.getId());
                     }
                 } catch (Exception notificationError) {
-                    System.err.println("Error sending notification for booking " + booking.getBookingId() + ": " + notificationError.getMessage());
+                    System.err.println("Error sending notification for booking " + booking.getBookingId() + ": "
+                            + notificationError.getMessage());
                     // Continue processing other bookings even if notification fails
                 }
             }
@@ -581,9 +584,9 @@ public class BookingController {
 
             // Extract unique user IDs
             List<Long> participantIds = bookings.stream()
-                .map(booking -> booking.getTraveler().getId())
-                .distinct()
-                .collect(Collectors.toList());
+                    .map(booking -> booking.getTraveler().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -601,7 +604,98 @@ public class BookingController {
         }
     }
 
-        // Calendar endpoints
+    // ================================
+    // GUIDE CANCELLATION METHODS
+    // ================================
+
+    /**
+     * Cancel an experience schedule by guide
+     *
+     * @param scheduleId the ID of the schedule to cancel
+     * @param reason     the reason for cancellation
+     * @return GuideCancellationResponseDTO with cancellation results
+     */
+    @PostMapping("/experiences/schedules/{scheduleId}/cancel")
+    public ResponseEntity<GuideCancellationResponseDTO> cancelScheduleByGuide(
+            @PathVariable Long scheduleId,
+            @RequestParam String reason) {
+        try {
+            if (scheduleId == null || scheduleId <= 0) {
+                return ResponseEntity.badRequest()
+                        .body(GuideCancellationResponseDTO.failure("Invalid schedule ID", "INVALID_SCHEDULE_ID"));
+            }
+
+            if (reason == null || reason.trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(GuideCancellationResponseDTO.failure("Cancellation reason is required",
+                                "MISSING_REASON"));
+            }
+
+            // Get current authenticated user
+            Long guideId = getCurrentAuthenticatedUserId();
+
+            if (guideId == null) {
+                System.err.println("ERROR: Authentication failed for guide cancellation");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(GuideCancellationResponseDTO.failure("Authentication required", "UNAUTHORIZED"));
+            }
+
+            GuideCancellationResponseDTO result = bookingService.cancelScheduleByGuide(scheduleId, reason, guideId);
+            return ResponseEntity.ok(result);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Guide cancellation validation error: " + e.getMessage());
+            return ResponseEntity.badRequest()
+                    .body(GuideCancellationResponseDTO.failure(e.getMessage(), "VALIDATION_ERROR"));
+        } catch (IllegalStateException e) {
+            System.err.println("Guide cancellation state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(GuideCancellationResponseDTO.failure(e.getMessage(), "INVALID_STATE"));
+        } catch (RuntimeException e) {
+            System.err.println("Guide cancellation processing error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(GuideCancellationResponseDTO.failure(e.getMessage(), "PROCESSING_ERROR"));
+        } catch (Exception e) {
+            System.err.println("Unexpected guide cancellation error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(GuideCancellationResponseDTO.failure("Internal server error", "INTERNAL_ERROR"));
+        }
+    }
+
+    /**
+     * Helper method to get the current authenticated user ID
+     */
+    private Long getCurrentAuthenticatedUserId() {
+        try {
+            // Get current authenticated user
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                System.err.println("ERROR: No authenticated user found");
+                return null;
+            }
+
+            String userEmail = authentication.getName();
+            System.out.println("DEBUG: Looking up user with email: " + userEmail);
+
+            // Find user by email
+            Optional<User> user = userRepository.findByEmailAndIsActive(userEmail, true);
+
+            if (user.isPresent()) {
+                System.out.println("DEBUG: Found user with ID: " + user.get().getId());
+                return user.get().getId();
+            } else {
+                System.err.println("ERROR: User not found with email: " + userEmail);
+                return null;
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR: Exception getting authenticated user ID: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // Calendar endpoints
     @GetMapping("/user/{userId}/calendar")
     public ResponseEntity<Map<String, Object>> getUserCalendarBookings(@PathVariable Long userId,
             @RequestParam(required = false) String startDate,
@@ -699,7 +793,6 @@ public class BookingController {
 
         return events;
     }
-
 
     private List<Map<String, Object>> transformSchedulesToEvents(List<ExperienceSchedule> schedules, String userRole) {
         List<Map<String, Object>> events = new ArrayList<>();
