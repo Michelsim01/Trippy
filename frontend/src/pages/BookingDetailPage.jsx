@@ -20,7 +20,6 @@ const BookingDetailPage = () => {
     const [error, setError] = useState(null);
     const [showCancellationForm, setShowCancellationForm] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
-    const [cancellationDetails, setCancellationDetails] = useState('');
     const [hasWrittenReview, setHasWrittenReview] = useState(false);
 
     useEffect(() => {
@@ -55,6 +54,7 @@ const BookingDetailPage = () => {
                     numberOfParticipants: data.numberOfParticipants,
                     totalAmount: data.totalAmount,
                     serviceFee: data.serviceFee,
+                    refundAmount: data.refundAmount,
                     bookingDate: data.bookingDate,
                     cancellationReason: data.cancellationReason,
                     cancelledAt: data.cancelledAt,
@@ -203,6 +203,8 @@ const BookingDetailPage = () => {
             CONFIRMED: { bg: 'bg-green-100', text: 'text-green-800', label: 'Confirmed' },
             PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
             CANCELLED: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_TOURIST: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_GUIDE: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Cancelled by Guide' },
             COMPLETED: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' }
         };
 
@@ -282,19 +284,63 @@ const BookingDetailPage = () => {
     };
 
     // Handle cancellation form submission
-    const handleCancellationSubmit = () => {
-        // Phase 3: This will make API call to submit cancellation
-        console.log('Cancellation submitted:', {
-            bookingId: booking.bookingId,
-            reason: cancellationReason,
-            details: cancellationDetails
-        });
+    const handleCancellationSubmit = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/bookings/${booking.bookingId}/cancel?reason=${encodeURIComponent(cancellationReason)}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
 
-        // For now, just show success message and hide form
-        alert('Cancellation request submitted successfully. You will receive a confirmation email shortly.');
-        setShowCancellationForm(false);
-        setCancellationReason('');
-        setCancellationDetails('');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const updatedBooking = await response.json();
+
+            // Transform to match expected structure (same as initial fetch)
+            const transformedBooking = {
+                bookingId: updatedBooking.bookingId,
+                confirmationCode: updatedBooking.confirmationCode,
+                status: updatedBooking.status,
+                numberOfParticipants: updatedBooking.numberOfParticipants,
+                totalAmount: updatedBooking.totalAmount,
+                serviceFee: updatedBooking.serviceFee,
+                refundAmount: updatedBooking.refundAmount,
+                bookingDate: updatedBooking.bookingDate,
+                cancellationReason: updatedBooking.cancellationReason,
+                cancelledAt: updatedBooking.cancelledAt,
+                experience: {
+                    experienceId: updatedBooking.experienceId,
+                    title: updatedBooking.experienceTitle,
+                    country: updatedBooking.experienceCountry,
+                    coverPhotoUrl: updatedBooking.experienceCoverPhotoUrl,
+                    shortDescription: updatedBooking.experienceDescription,
+                    importantInfo: updatedBooking.experienceImportantInfo,
+                    location: updatedBooking.experienceLocation
+                },
+                experienceSchedule: {
+                    startDateTime: updatedBooking.startDateTime,
+                    endDateTime: updatedBooking.endDateTime
+                }
+            };
+
+            // Update the booking state with transformed data
+            setBooking(transformedBooking);
+
+            // Show success message with refund amount
+            const refundAmount = updatedBooking.refundAmount || 0;
+            alert(`Cancellation completed. Refund of $${Math.round(refundAmount)} will be processed within 5 working days.`);
+
+            // Hide form and reset
+            setShowCancellationForm(false);
+            setCancellationReason('');
+        } catch (error) {
+            console.error('Error cancelling booking:', error);
+            alert('Failed to cancel booking. Please try again.');
+        }
     };
 
     return (
@@ -390,6 +436,19 @@ const BookingDetailPage = () => {
                                             {formatPrice(booking.totalAmount)}
                                         </span>
                                     </div>
+
+                                    {/* Refund Amount - Show for cancelled bookings */}
+                                    {(booking.status === 'CANCELLED' ||
+                                      booking.status === 'CANCELLED_BY_TOURIST' ||
+                                      booking.status === 'CANCELLED_BY_GUIDE') &&
+                                     booking.refundAmount !== null && booking.refundAmount !== undefined && (
+                                        <div className="flex items-center justify-between pt-4 border-t border-neutrals-6">
+                                            <span className="text-neutrals-3">Refund Amount</span>
+                                            <span className="text-2xl font-bold text-green-600">
+                                                {formatPrice(booking.refundAmount)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -551,20 +610,6 @@ const BookingDetailPage = () => {
                                             </select>
                                         </div>
 
-                                        {/* Additional Details */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-neutrals-2 mb-2">
-                                                Additional details (optional)
-                                            </label>
-                                            <textarea
-                                                value={cancellationDetails}
-                                                onChange={(e) => setCancellationDetails(e.target.value)}
-                                                placeholder="Please provide any additional information..."
-                                                rows={3}
-                                                className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none resize-none"
-                                                style={{ padding: '6px' }}
-                                            />
-                                        </div>
 
                                         {/* Action Buttons */}
                                         <div className="space-y-2">
@@ -575,7 +620,7 @@ const BookingDetailPage = () => {
                                                 disabled={!cancellationReason}
                                                 className="w-full bg-red-600 hover:bg-red-700 focus:ring-red-600"
                                             >
-                                                Submit Cancellation Request
+                                                Confirm Cancellation
                                             </Button>
                                             <Button
                                                 variant="secondary"
@@ -592,8 +637,10 @@ const BookingDetailPage = () => {
                                 {!canCancel && (
                                     <div className="text-center py-4">
                                         <p className="text-neutrals-4 text-sm">
-                                            {booking.status === 'CANCELLED'
+                                            {booking.status === 'CANCELLED' || booking.status === 'CANCELLED_BY_TOURIST'
                                                 ? 'This booking has been cancelled and your refund will be shortly processed.'
+                                                : booking.status === 'CANCELLED_BY_GUIDE'
+                                                ? 'Your tour was cancelled by the guide. Full refund has been processed.'
                                                 : 'This booking cannot be cancelled.'
                                             }
                                         </p>

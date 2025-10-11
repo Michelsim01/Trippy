@@ -54,6 +54,7 @@ public class BookingResponseDTO {
     private BigDecimal baseAmount;
     private BigDecimal serviceFee;
     private BigDecimal totalAmount;
+    private BigDecimal refundAmount;
 
     // Timestamps
     private LocalDateTime createdAt;
@@ -329,6 +330,14 @@ public class BookingResponseDTO {
 
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
+    }
+
+    public BigDecimal getRefundAmount() {
+        return refundAmount;
+    }
+
+    public void setRefundAmount(BigDecimal refundAmount) {
+        this.refundAmount = refundAmount;
     }
 
     public LocalDateTime getCreatedAt() {

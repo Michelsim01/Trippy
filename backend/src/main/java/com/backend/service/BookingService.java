@@ -398,21 +398,69 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
+        if (booking.getStatus() == BookingStatus.CANCELLED ||
+            booking.getStatus() == BookingStatus.CANCELLED_BY_TOURIST ||
+            booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE) {
             throw new IllegalStateException("Booking is already cancelled");
         }
 
-        // Update booking status
-        booking.setStatus(BookingStatus.CANCELLED);
+        // Calculate refund amount based on cancellation policy
+        BigDecimal refundAmount = calculateTouristRefundAmount(booking);
+
+        // Update booking status - auto-approved for tourists
+        booking.setStatus(BookingStatus.CANCELLED_BY_TOURIST);
         booking.setCancellationReason(cancellationReason);
         booking.setCancelledAt(LocalDateTime.now());
+        booking.setRefundAmount(refundAmount);
         booking.setUpdatedAt(LocalDateTime.now());
-
-        // Note: Refund logic should be implemented based on business requirements
 
         booking = bookingRepository.save(booking);
 
         return createBookingResponseDTO(booking);
+    }
+
+    /**
+     * Calculate refund amount for tourist cancellation based on policy:
+     * - Free: 24 hours after purchase
+     * - 7+ days before: Full refund (minus service fee)
+     * - 3-6 days before: 50% refund (minus service fee)
+     * - <3 days: Non-refundable
+     */
+    private BigDecimal calculateTouristRefundAmount(Booking booking) {
+        if (booking.getBookingDate() == null || booking.getExperienceSchedule() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime bookingCreated = booking.getBookingDate();
+        LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
+
+        BigDecimal totalAmount = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
+        BigDecimal serviceFee = booking.getServiceFee() != null ? booking.getServiceFee() : BigDecimal.ZERO;
+
+        // Calculate hours since booking was created
+        long hoursFromBooking = java.time.Duration.between(bookingCreated, now).toHours();
+
+        // Calculate hours until experience starts
+        long hoursToExperience = java.time.Duration.between(now, experienceStart).toHours();
+        double daysToExperience = hoursToExperience / 24.0;
+
+        // Free cancellation: Within 24 hours of booking
+        if (hoursFromBooking <= 24) {
+            return totalAmount; // Full refund
+        }
+
+        // Standard cancellation policies based on time until experience
+        if (daysToExperience >= 7) {
+            // Full refund minus service fee
+            return totalAmount.subtract(serviceFee);
+        } else if (daysToExperience >= 3) {
+            // 50% refund minus service fee
+            return totalAmount.multiply(new BigDecimal("0.5")).subtract(serviceFee);
+        } else {
+            // Non-refundable
+            return BigDecimal.ZERO;
+        }
     }
 
     // Helper methods
@@ -630,6 +678,7 @@ public class BookingService {
         response.setBaseAmount(booking.getBaseAmount());
         response.setServiceFee(booking.getServiceFee());
         response.setTotalAmount(booking.getTotalAmount());
+        response.setRefundAmount(booking.getRefundAmount());
 
         // Payment information is already set via PaymentTransactionDTO
 
