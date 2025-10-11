@@ -16,6 +16,11 @@ const ExperiencesTable = ({ onExperienceAction }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedViewExperience, setSelectedViewExperience] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    category: 'all',
+    status: 'all',
+    guide: 'all'
+  });
 
 
   useEffect(() => {
@@ -103,17 +108,60 @@ const ExperiencesTable = ({ onExperienceAction }) => {
     setSelectedViewExperience(null);
   };
 
-  const filteredExperiences = experiences.filter(exp => {
-    const q = searchTerm.toLowerCase();
-    return (
-      exp.id?.toString().includes(q) ||
-      exp.title.toLowerCase().includes(q) ||
-      (exp.guide && `${exp.guide.firstName} ${exp.guide.lastName}`.toLowerCase().includes(q)) ||
-      exp.category.toLowerCase().includes(q) ||
-      exp.location.toLowerCase().includes(q) ||
-      exp.country.toLowerCase().includes(q)
-    );
-  });
+  const getFilteredExperiences = () => {
+    let filtered = experiences;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(experience => 
+        experience.id.toString().includes(searchTerm) ||
+        experience.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        experience.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        experience.country.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Category filter
+    if (filters.category !== 'all') {
+      filtered = filtered.filter(experience => experience.category === filters.category);
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(experience => experience.status === filters.status);
+    }
+
+    // Guide filter
+    if (filters.guide !== 'all') {
+      filtered = filtered.filter(experience => {
+        const guideName = `${experience.guide?.firstName || ''} ${experience.guide?.lastName || ''}`.toLowerCase();
+        return guideName.includes(filters.guide.toLowerCase());
+      });
+    }
+
+    // Price range filter
+    if (filters.priceRange !== 'all') {
+      filtered = filtered.filter(experience => {
+        const price = parseFloat(experience.price) || 0;
+        switch (filters.priceRange) {
+          case 'under_50':
+            return price < 50;
+          case '50_100':
+            return price >= 50 && price <= 100;
+          case '100_200':
+            return price >= 100 && price <= 200;
+          case 'over_200':
+            return price > 200;
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredExperiences = getFilteredExperiences();
 
   // Sorting logic
   const sortedExperiences = [...filteredExperiences].sort((a, b) => {
@@ -155,6 +203,15 @@ const ExperiencesTable = ({ onExperienceAction }) => {
     setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
   };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
 
   const getSortIcon = (key) => {
     if (sortConfig.key !== key) {
@@ -221,17 +278,62 @@ const ExperiencesTable = ({ onExperienceAction }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">All Experiences</h3>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search experiences..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-gray-900">All Experiences</h3>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Category:</label>
+              <select
+                value={filters.category}
+                onChange={(e) => handleFilterChange('category', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="ADVENTURE">Adventure</option>
+                <option value="DAYTRIP">Day Trip</option>
+                <option value="GUIDED_TOUR">Guided Tour</option>
+                <option value="WATER_ACTIVITY">Water Activity</option>
+                <option value="WORKSHOP">Workshop</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="ACTIVE">Active</option>
+                <option value="INACTIVE">Inactive</option>
+                <option value="SUSPENDED">Suspended</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Guide:</label>
+              <input
+                type="text"
+                placeholder="Guide name..."
+                value={filters.guide === 'all' ? '' : filters.guide}
+                onChange={(e) => handleFilterChange('guide', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search experiences..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">

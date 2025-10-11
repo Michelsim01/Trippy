@@ -16,6 +16,12 @@ const BookingsTable = ({ onBookingAction }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedViewBooking, setSelectedViewBooking] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    dateRange: 'all',
+    user: 'all',
+    experience: 'all'
+  });
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -87,15 +93,66 @@ const BookingsTable = ({ onBookingAction }) => {
     );
   };
 
-  const filteredBookings = bookings.filter(booking => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      booking.id?.toString().includes(searchLower) ||
-      getTravellerName(booking.traveler).toLowerCase().includes(searchLower) ||
-      getExperienceTitle(booking.experience).toLowerCase().includes(searchLower) ||
-      booking.status?.toLowerCase().includes(searchLower)
-    );
-  });
+  const getFilteredBookings = () => {
+    let filtered = bookings;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(booking => 
+        booking.id.toString().includes(searchTerm) ||
+        booking.traveler?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.traveler?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.traveler?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        booking.experience?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(booking => booking.status === filters.status);
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      filtered = filtered.filter(booking => {
+        const bookingDate = new Date(booking.createdAt);
+        switch (filters.dateRange) {
+          case 'last_7_days':
+            return bookingDate >= sevenDaysAgo;
+          case 'last_30_days':
+            return bookingDate >= thirtyDaysAgo;
+          case 'this_year':
+            return bookingDate.getFullYear() === now.getFullYear();
+          default:
+            return true;
+        }
+      });
+    }
+
+    // User filter
+    if (filters.user !== 'all') {
+      filtered = filtered.filter(booking => {
+        const userName = `${booking.traveler?.firstName || ''} ${booking.traveler?.lastName || ''}`.toLowerCase();
+        return userName.includes(filters.user.toLowerCase());
+      });
+    }
+
+    // Experience filter
+    if (filters.experience !== 'all') {
+      filtered = filtered.filter(booking => {
+        const experienceTitle = booking.experience?.title?.toLowerCase() || '';
+        return experienceTitle.includes(filters.experience.toLowerCase());
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredBookings = getFilteredBookings();
 
   // Sorting logic
   const sortedBookings = [...filteredBookings].sort((a, b) => {
@@ -124,6 +181,14 @@ const BookingsTable = ({ onBookingAction }) => {
     }
     setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const handleEditBooking = (booking) => {
@@ -193,17 +258,72 @@ const BookingsTable = ({ onBookingAction }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search bookings..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-gray-900">All Bookings</h3>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="PENDING">Pending</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Date:</label>
+              <select
+                value={filters.dateRange}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_30_days">Last 30 Days</option>
+                <option value="this_year">This Year</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">User:</label>
+              <input
+                type="text"
+                placeholder="User name..."
+                value={filters.user === 'all' ? '' : filters.user}
+                onChange={(e) => handleFilterChange('user', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Experience:</label>
+              <input
+                type="text"
+                placeholder="Experience..."
+                value={filters.experience === 'all' ? '' : filters.experience}
+                onChange={(e) => handleFilterChange('experience', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search bookings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -223,6 +343,7 @@ const BookingsTable = ({ onBookingAction }) => {
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Date</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -247,6 +368,9 @@ const BookingsTable = ({ onBookingAction }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {formatDateTime(booking.endDateTime)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {formatDateTime(booking.createdAt)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                   {booking.numberOfParticipants}
