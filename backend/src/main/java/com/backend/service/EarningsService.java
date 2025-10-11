@@ -57,12 +57,16 @@ public class EarningsService {
                     .filter(booking -> booking.getStatus() == BookingStatus.COMPLETED)
                     .count();
 
+            Integer cancelledBookings = (int) allBookings.stream()
+                    .filter(booking -> booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE)
+                    .count();
+
             Integer totalBookings = pendingBookings + completedBookings;
 
             System.out.println("DEBUG: Calculated earnings - Total: " + totalEarnings + ", Pending: " + pendingEarnings + ", Paid: " + paidOutEarnings + ", Deductions: " + pendingDeductions);
 
             return new GuideEarningsDTO(totalEarnings, pendingEarnings, paidOutEarnings, pendingDeductions,
-                    totalBookings, pendingBookings, completedBookings);
+                    totalBookings, pendingBookings, completedBookings, cancelledBookings);
         } catch (Exception e) {
             System.err.println("ERROR in getGuideEarnings: " + e.getMessage());
             e.printStackTrace();

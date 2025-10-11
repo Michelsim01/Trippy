@@ -224,7 +224,7 @@ const MyToursPage = () => {
                                         <p className="text-neutrals-3">Loading earnings...</p>
                                     </div>
                                 ) : earnings ? (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                         {/* Total Earnings Card */}
                                         <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
                                             <div className="flex items-center justify-between mb-4">
@@ -291,6 +291,29 @@ const MyToursPage = () => {
                                             </div>
                                             <div className="text-sm text-neutrals-4">
                                                 {earnings.completedBookings} completed tours
+                                            </div>
+                                        </div>
+
+                                        {/* Pending Deductions Card */}
+                                        <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center">
+                                                    <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                                        <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                                        </svg>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold text-neutrals-1">Deductions</h3>
+                                                        <p className="text-sm text-neutrals-4">Cancellation fees to be deducted</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-3xl font-bold text-red-600 mb-2">
+                                                ${(earnings.pendingDeductions || 0).toFixed(2)}
+                                            </div>
+                                            <div className="text-sm text-neutrals-4">
+                                                {earnings.cancelledBookings || 0} cancelled tours
                                             </div>
                                         </div>
                                     </div>
@@ -455,6 +478,27 @@ const MyToursPage = () => {
                                     </div>
                                     <div className="text-xs text-neutrals-4">
                                         {earnings.completedBookings} completed tours
+                                    </div>
+                                </div>
+
+                                {/* Pending Deductions Card */}
+                                <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
+                                    <div className="flex items-center mb-3">
+                                        <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h3 className="text-md font-semibold text-neutrals-1">Deductions</h3>
+                                            <p className="text-xs text-neutrals-4">Cancellation fees to be deducted</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-2xl font-bold text-red-600 mb-1">
+                                        ${(earnings.pendingDeductions || 0).toFixed(2)}
+                                    </div>
+                                    <div className="text-xs text-neutrals-4">
+                                        {earnings.cancelledBookings || 0} cancelled tours
                                     </div>
                                 </div>
                             </div>

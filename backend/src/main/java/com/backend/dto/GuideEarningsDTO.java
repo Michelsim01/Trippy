@@ -10,11 +10,12 @@ public class GuideEarningsDTO {
     private Integer totalBookings;
     private Integer pendingBookings;
     private Integer completedBookings;
+    private Integer cancelledBookings;
 
     public GuideEarningsDTO() {}
 
     public GuideEarningsDTO(BigDecimal totalEarnings, BigDecimal pendingEarnings, BigDecimal paidOutEarnings, BigDecimal pendingDeductions,
-                           Integer totalBookings, Integer pendingBookings, Integer completedBookings) {
+                           Integer totalBookings, Integer pendingBookings, Integer completedBookings, Integer cancelledBookings) {
         this.totalEarnings = totalEarnings;
         this.pendingEarnings = pendingEarnings;
         this.paidOutEarnings = paidOutEarnings;
@@ -22,6 +23,7 @@ public class GuideEarningsDTO {
         this.totalBookings = totalBookings;
         this.pendingBookings = pendingBookings;
         this.completedBookings = completedBookings;
+        this.cancelledBookings = cancelledBookings;
     }
 
     public BigDecimal getTotalEarnings() { return totalEarnings; }
@@ -44,4 +46,7 @@ public class GuideEarningsDTO {
 
     public Integer getCompletedBookings() { return completedBookings; }
     public void setCompletedBookings(Integer completedBookings) { this.completedBookings = completedBookings; }
+
+    public Integer getCancelledBookings() { return cancelledBookings; }
+    public void setCancelledBookings(Integer cancelledBookings) { this.cancelledBookings = cancelledBookings; }
 }
