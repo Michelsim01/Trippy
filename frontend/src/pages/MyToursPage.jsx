@@ -325,7 +325,7 @@ const MyToursPage = () => {
                             </div>
 
                             {/* Net Available Summary - Desktop */}
-                            {earnings && earnings.pendingDeductions && earnings.pendingDeductions > 0 && (
+                            {earnings && earnings.pendingEarnings && earnings.pendingEarnings > 0 && (
                                 <div className="mb-6">
                                     {(() => {
                                         const netAvailable = earnings.pendingEarnings - earnings.pendingDeductions;
@@ -535,7 +535,7 @@ const MyToursPage = () => {
                     </div>
 
                     {/* Net Available Summary - Mobile */}
-                    {earnings && earnings.pendingDeductions && earnings.pendingDeductions > 0 && (
+                    {earnings && earnings.pendingEarnings && earnings.pendingEarnings > 0 && (
                         <div className="mb-4">
                             {(() => {
                                 const netAvailable = earnings.pendingEarnings - earnings.pendingDeductions;
