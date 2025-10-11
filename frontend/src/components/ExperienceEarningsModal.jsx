@@ -341,7 +341,7 @@ const ExperienceEarningsModal = ({
                 </div>
 
                 {/* Modal Content */}
-                <div className="p-6 overflow-y-auto max-h-[calc(80vh-240px)]">
+                <div className="p-6 overflow-y-auto max-h-[calc(80vh-300px)]">
                     {loading ? (
                         <div className="text-center py-8">
                             <div className="w-16 h-16 mx-auto mb-4">
@@ -396,6 +396,13 @@ const ExperienceEarningsModal = ({
                                                             </svg>
                                                             COMPLETED
                                                         </span>
+                                                    ) : schedule.status === "CANCELLED" ? (
+                                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                            </svg>
+                                                            CANCELLED
+                                                        </span>
                                                     ) : (
                                                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                                             <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -406,11 +413,21 @@ const ExperienceEarningsModal = ({
                                                     )}
                                                 </div>
                                                 <div className="flex items-center space-x-4 mt-1 text-sm text-neutrals-4">
-                                                    <span>{schedule.bookingCount} bookings</span>
-                                                    <span>•</span>
-                                                    <span>{schedule.totalGuests} guests</span>
-                                                    <span>•</span>
-                                                    <span className="font-semibold text-primary-1">${parseFloat(schedule.potentialEarnings || 0).toFixed(2)}</span>
+                                                    {schedule.status === "CANCELLED" ? (
+                                                        <>
+                                                            <span className="text-red-600">Cancelled by guide</span>
+                                                            <span>•</span>
+                                                            <span className="font-semibold text-red-600">Cancellation fees applied</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>{schedule.bookingCount} bookings</span>
+                                                            <span>•</span>
+                                                            <span>{schedule.totalGuests} guests</span>
+                                                            <span>•</span>
+                                                            <span className="font-semibold text-primary-1">${parseFloat(schedule.potentialEarnings || 0).toFixed(2)}</span>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -458,13 +475,19 @@ const ExperienceEarningsModal = ({
                                                         }
                                                     </Button>
                                                 </>
-                                            ) : (
+                                            ) : schedule.status === "COMPLETED" ? (
                                                 <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
                                                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                     </svg>
                                                 </div>
-                                            )}
+                                            ) : schedule.status === "CANCELLED" ? (
+                                                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                                    <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                    </svg>
+                                                </div>
+                                            ) : null}
                                         </div>
                                     </div>
                                 </div>

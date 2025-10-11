@@ -116,13 +116,18 @@ public class EarningsService {
                 .map(Booking::getGuideCancellationFee)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        // Group bookings by schedule and create ScheduleEarningsDTO
+        // Group ALL bookings (including cancelled ones) by schedule for complete view
+        Map<Long, List<Booking>> allBookingsBySchedule = allExperienceBookings.stream()
+                .collect(Collectors.groupingBy(booking -> booking.getExperienceSchedule().getScheduleId()));
+
+        // Group active bookings by schedule for earnings calculations
         Map<Long, List<Booking>> bookingsBySchedule = experienceBookings.stream()
                 .collect(Collectors.groupingBy(booking -> booking.getExperienceSchedule().getScheduleId()));
 
         List<ScheduleEarningsDTO> scheduleEarnings = schedules.stream()
                 .map(schedule -> {
                     List<Booking> scheduleBookings = bookingsBySchedule.getOrDefault(schedule.getScheduleId(), List.of());
+                    List<Booking> allScheduleBookings = allBookingsBySchedule.getOrDefault(schedule.getScheduleId(), List.of());
 
                     Integer bookingCount = scheduleBookings.size();
                     Integer totalGuests = scheduleBookings.stream()
@@ -133,9 +138,14 @@ public class EarningsService {
                             .map(Booking::getBaseAmount)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-                    // Determine schedule status - if all bookings are COMPLETED, then COMPLETED, otherwise CONFIRMED
+                    // Determine schedule status - check for cancelled schedules
                     String status = "CONFIRMED";
-                    if (!scheduleBookings.isEmpty() && scheduleBookings.stream().allMatch(booking -> booking.getStatus() == BookingStatus.COMPLETED)) {
+                    boolean hasCancelledBookings = allScheduleBookings.stream()
+                            .anyMatch(booking -> booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE);
+
+                    if (hasCancelledBookings && scheduleBookings.isEmpty()) {
+                        status = "CANCELLED";
+                    } else if (!scheduleBookings.isEmpty() && scheduleBookings.stream().allMatch(booking -> booking.getStatus() == BookingStatus.COMPLETED)) {
                         status = "COMPLETED";
                     }
 
@@ -149,7 +159,7 @@ public class EarningsService {
                             status
                     );
                 })
-                .filter(scheduleEarning -> scheduleEarning.getBookingCount() > 0) // Only include schedules with bookings
+                .filter(scheduleEarning -> scheduleEarning.getBookingCount() > 0 || "CANCELLED".equals(scheduleEarning.getStatus())) // Include schedules with bookings OR cancelled schedules
                 .collect(Collectors.toList());
 
         return new ExperienceEarningsDTO(experienceId, experienceTitle, totalEarnings, pendingEarnings, paidOutEarnings, pendingDeductions, scheduleEarnings);
