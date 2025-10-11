@@ -421,9 +421,9 @@ public class BookingService {
 
     /**
      * Calculate refund amount for tourist cancellation based on policy:
-     * - Free: 24 hours after purchase
-     * - 7+ days before: Full refund (minus service fee)
-     * - 3-6 days before: 50% refund (minus service fee)
+     * - Free: 24 hours after purchase (full base amount)
+     * - 7+ days before: Full base amount refund (service fee not refunded)
+     * - 3-6 days before: 50% base amount refund (service fee not refunded)
      * - <3 days: Non-refundable
      */
     private BigDecimal calculateTouristRefundAmount(Booking booking) {
@@ -435,8 +435,7 @@ public class BookingService {
         LocalDateTime bookingCreated = booking.getBookingDate();
         LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
 
-        BigDecimal totalAmount = booking.getTotalAmount() != null ? booking.getTotalAmount() : BigDecimal.ZERO;
-        BigDecimal serviceFee = booking.getServiceFee() != null ? booking.getServiceFee() : BigDecimal.ZERO;
+        BigDecimal baseAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
 
         // Calculate hours since booking was created
         long hoursFromBooking = java.time.Duration.between(bookingCreated, now).toHours();
@@ -447,16 +446,16 @@ public class BookingService {
 
         // Free cancellation: Within 24 hours of booking
         if (hoursFromBooking <= 24) {
-            return totalAmount; // Full refund
+            return baseAmount; // Full base amount refund
         }
 
         // Standard cancellation policies based on time until experience
         if (daysToExperience >= 7) {
-            // Full refund minus service fee
-            return totalAmount.subtract(serviceFee);
+            // Full base amount refund (service fee never refunded)
+            return baseAmount;
         } else if (daysToExperience >= 3) {
-            // 50% refund minus service fee
-            return totalAmount.multiply(new BigDecimal("0.5")).subtract(serviceFee);
+            // 50% base amount refund (service fee never refunded)
+            return baseAmount.multiply(new BigDecimal("0.5"));
         } else {
             // Non-refundable
             return BigDecimal.ZERO;

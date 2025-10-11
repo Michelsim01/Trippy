@@ -244,28 +244,29 @@ const BookingDetailPage = () => {
 
         const totalAmount = booking.totalAmount || 0;
         const serviceFee = booking.serviceFee || 0;
+        const baseAmount = (totalAmount - serviceFee) || 0; // Extract base amount from total
 
         // Free cancellation: Within 24 hours of booking
         if (hoursFromBooking <= 24) {
             return {
-                amount: totalAmount,
+                amount: baseAmount,
                 policy: 'Free Cancellation',
-                explanation: 'Full refund (within 24 hours of purchase)'
+                explanation: 'Full base amount refund (within 24 hours of purchase)'
             };
         }
 
         // Standard cancellation policies based on time until experience
         if (daysToExperience >= 7) {
             return {
-                amount: totalAmount - serviceFee,
+                amount: baseAmount,
                 policy: '7+ Days Before',
-                explanation: 'Full refund minus service fee'
+                explanation: 'Full base amount refund (service fee not refunded)'
             };
         } else if (daysToExperience >= 3) {
             return {
-                amount: (totalAmount * 0.5) - serviceFee,
+                amount: baseAmount * 0.5,
                 policy: '3-6 Days Before',
-                explanation: '50% refund minus service fee'
+                explanation: '50% base amount refund (service fee not refunded)'
             };
         } else {
             return {
@@ -568,15 +569,13 @@ const BookingDetailPage = () => {
                                                     <span className="text-neutrals-2 font-medium">{refundInfo.policy}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-neutrals-4">Original Amount:</span>
-                                                    <span className="text-neutrals-2">{formatPrice(booking.totalAmount)}</span>
+                                                    <span className="text-neutrals-4">Base Amount:</span>
+                                                    <span className="text-neutrals-2">{formatPrice(booking.totalAmount - booking.serviceFee)}</span>
                                                 </div>
-                                                {refundInfo.policy !== 'Free Cancellation' && refundInfo.amount > 0 && (
-                                                    <div className="flex justify-between">
-                                                        <span className="text-neutrals-4">Service Fee:</span>
-                                                        <span className="text-neutrals-2">-{formatPrice(booking.serviceFee)}</span>
-                                                    </div>
-                                                )}
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutrals-4">Service Fee:</span>
+                                                    <span className="text-neutrals-2">Non-refundable</span>
+                                                </div>
                                                 <div className="pt-2 border-t border-neutrals-6">
                                                     <div className="flex justify-between">
                                                         <span className="font-medium text-neutrals-2">Refund Amount:</span>
@@ -651,10 +650,11 @@ const BookingDetailPage = () => {
                                 <div className="mt-6 pt-6 border-t border-neutrals-6">
                                     <h4 className="font-medium text-neutrals-2 mb-2">Cancellation Policy</h4>
                                     <div className="text-xs text-neutrals-4 space-y-1">
-                                        <p><strong>Free:</strong> 24 hours after purchase</p>
-                                        <p><strong>7+ days before:</strong> Full refund (minus service fee)</p>
-                                        <p><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+                                        <p><strong>Free:</strong> 24 hours after purchase (full base amount)</p>
+                                        <p><strong>7+ days before:</strong> Full base amount refund</p>
+                                        <p><strong>3-6 days before:</strong> 50% base amount refund</p>
                                         <p><strong>&lt;3 days:</strong> Non-refundable</p>
+                                        <p className="italic mt-2">Service fees are non-refundable in all cases</p>
                                     </div>
                                 </div>
                             </div>
