@@ -324,6 +324,31 @@ const MyToursPage = () => {
                                 )}
                             </div>
 
+                            {/* Net Available Summary - Desktop */}
+                            {earnings && earnings.pendingDeductions && earnings.pendingDeductions > 0 && (
+                                <div className="mb-6">
+                                    {(() => {
+                                        const netAvailable = earnings.pendingEarnings - earnings.pendingDeductions;
+                                        const isPositive = netAvailable >= 0;
+
+                                        return (
+                                            <div className={`${isPositive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} p-6 rounded-lg border text-center`}>
+                                                <div className="text-lg font-semibold text-neutrals-4 mb-2">Net Available</div>
+                                                <div className={`text-3xl font-bold mb-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                                    {isPositive ? '$' : '-$'}{Math.abs(netAvailable).toFixed(2)}
+                                                </div>
+                                                <div className={`text-sm ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
+                                                    {isPositive
+                                                        ? 'Available for payout'
+                                                        : 'Will be deducted from future earnings'
+                                                    }
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            )}
+
                             {loading ? (
                                 <div className="bg-white rounded-lg p-8 shadow-sm text-center">
                                     <p className="text-neutrals-3 text-lg">Loading your tours...</p>
@@ -508,6 +533,31 @@ const MyToursPage = () => {
                             </div>
                         )}
                     </div>
+
+                    {/* Net Available Summary - Mobile */}
+                    {earnings && earnings.pendingDeductions && earnings.pendingDeductions > 0 && (
+                        <div className="mb-4">
+                            {(() => {
+                                const netAvailable = earnings.pendingEarnings - earnings.pendingDeductions;
+                                const isPositive = netAvailable >= 0;
+
+                                return (
+                                    <div className={`${isPositive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} p-4 rounded-lg border text-center`}>
+                                        <div className="text-md font-semibold text-neutrals-4 mb-2">Net Available</div>
+                                        <div className={`text-2xl font-bold mb-2 ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                            {isPositive ? '$' : '-$'}{Math.abs(netAvailable).toFixed(2)}
+                                        </div>
+                                        <div className={`text-xs ${isPositive ? 'text-green-700' : 'text-red-700'}`}>
+                                            {isPositive
+                                                ? 'Available for payout'
+                                                : 'Will be deducted from future earnings'
+                                            }
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    )}
 
                     {loading ? (
                         <div className="bg-white rounded-lg p-6 shadow-sm text-center">
