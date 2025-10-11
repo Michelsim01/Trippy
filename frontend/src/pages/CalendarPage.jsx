@@ -232,7 +232,7 @@ const CalendarPage = () => {
 
     // Utility function to check if event is cancelled
     const isEventCancelled = (event) => {
-        return event.status === 'CANCELLED';
+        return event.status === 'CANCELLED' || event.status === 'CANCELLED_BY_TOURIST' || event.status === 'CANCELLED_BY_GUIDE';
     };
 
     // Utility function to check if event spans multiple days
