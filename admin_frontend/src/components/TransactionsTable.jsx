@@ -16,6 +16,12 @@ const TransactionsTable = ({ onTransactionAction }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedViewTransaction, setSelectedViewTransaction] = useState(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    status: 'all',
+    type: 'all',
+    dateRange: 'all',
+    user: 'all'
+  });
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -106,15 +112,64 @@ const TransactionsTable = ({ onTransactionAction }) => {
     }
   };
 
-  const filteredTransactions = transactions.filter((t) => {
-    const q = searchTerm.toLowerCase();
-    return (
-      t.id?.toString().includes(q) ||
-      t.bookingId?.toString().includes(q) ||
-      t.user.toLowerCase().includes(q) ||
-      t.experience.toLowerCase().includes(q)
-    );
-  });
+  const getFilteredTransactions = () => {
+    let filtered = transactions;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(transaction => 
+        transaction.id.toString().includes(searchTerm) ||
+        transaction.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        transaction.experience?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(transaction => transaction.status === filters.status);
+    }
+
+    // Type filter
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(transaction => transaction.type === filters.type);
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      filtered = filtered.filter(transaction => {
+        const transactionDate = new Date(transaction.date);
+        switch (filters.dateRange) {
+          case 'last_7_days':
+            return transactionDate >= sevenDaysAgo;
+          case 'last_30_days':
+            return transactionDate >= thirtyDaysAgo;
+          case 'this_year':
+            return transactionDate.getFullYear() === now.getFullYear();
+          default:
+            return true;
+        }
+      });
+    }
+
+    // User filter
+    if (filters.user !== 'all') {
+      filtered = filtered.filter(transaction => {
+        const userName = (transaction.user || '').toLowerCase();
+        return userName.includes(filters.user.toLowerCase());
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredTransactions = getFilteredTransactions();
 
   // Sorting logic
   const sortedTransactions = [...filteredTransactions].sort((a, b) => {
@@ -156,6 +211,14 @@ const TransactionsTable = ({ onTransactionAction }) => {
     }
     setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const getSortIcon = (key) => {
@@ -223,17 +286,74 @@ const TransactionsTable = ({ onTransactionAction }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-      <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">All Transactions</h3>
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search transactions..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+      <div className="px-6 py-4 border-b border-gray-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-lg font-semibold text-gray-900">All Transactions</h3>
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="PENDING">Pending</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="FAILED">Failed</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Type:</label>
+              <select
+                value={filters.type}
+                onChange={(e) => handleFilterChange('type', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="PAYMENT">Payment</option>
+                <option value="REFUND">Refund</option>
+                <option value="PAYOUT">Payout</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Date:</label>
+              <select
+                value={filters.dateRange}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_30_days">Last 30 Days</option>
+                <option value="this_year">This Year</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">User:</label>
+              <input
+                type="text"
+                placeholder="User name..."
+                value={filters.user === 'all' ? '' : filters.user}
+                onChange={(e) => handleFilterChange('user', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search transactions..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
         </div>
       </div>
       <div className="overflow-x-auto">

@@ -32,7 +32,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/kyc")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class KycController {
     @Autowired
     private KycService kycService;

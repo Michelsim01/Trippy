@@ -618,6 +618,114 @@ export const adminService = {
         error: error.response?.data?.message || 'Failed to delete transaction'
       };
     }
+  },
+
+  // ==================== KYC MANAGEMENT ====================
+
+  /**
+   * Get KYC metrics
+   * @returns {Promise<Object>} KYC metrics data
+   */
+  getKYCMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/kyc/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching KYC metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch KYC metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all KYC submissions
+   * @returns {Promise<Object>} All KYC submissions
+   */
+  getAllKYCSubmissions: async () => {
+    try {
+      const response = await api.get('/api/admin/kyc/submissions');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching KYC submissions:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch KYC submissions'
+      };
+    }
+  },
+
+  /**
+   * Get KYC submission by ID
+   * @param {number} submissionId - The KYC submission ID
+   * @returns {Promise<Object>} KYC submission details
+   */
+  getKYCSubmission: async (submissionId) => {
+    try {
+      const response = await api.get(`/api/admin/kyc/submissions/${submissionId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching KYC submission:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch KYC submission'
+      };
+    }
+  },
+
+  /**
+   * Approve KYC submission
+   * @param {number} submissionId - The KYC submission ID
+   * @returns {Promise<Object>} Approval result
+   */
+  approveKYC: async (submissionId) => {
+    try {
+      const response = await api.put(`/api/admin/kyc/submissions/${submissionId}/approve`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error approving KYC:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to approve KYC submission'
+      };
+    }
+  },
+
+  /**
+   * Decline KYC submission
+   * @param {number} submissionId - The KYC submission ID
+   * @param {string} declineMessage - Reason for decline
+   * @returns {Promise<Object>} Decline result
+   */
+  declineKYC: async (submissionId, declineMessage = '') => {
+    try {
+      const response = await api.put(`/api/admin/kyc/submissions/${submissionId}/decline`, {
+        declineMessage
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error declining KYC:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to decline KYC submission'
+      };
+    }
   }
 };
 

@@ -30,13 +30,32 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuth = () => {
       if (token) {
-        // If we have a token, assume user is authenticated
-        // The actual validation will happen when they try to access protected routes
-        setIsAuthenticated(true);
-        setIsLoading(false);
-      } else {
-        setIsLoading(false);
+        // Try to get user info from stored token
+        const storedUser = localStorage.getItem('admin_user');
+        if (storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            setUser(userData);
+            setIsAuthenticated(true);
+          } catch (error) {
+            console.error('Error parsing stored user data:', error);
+            // Clear invalid data
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_user');
+            setToken(null);
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          // No stored user data, but we have a token
+          // This shouldn't happen in normal flow, but clear everything
+          localStorage.removeItem('admin_token');
+          setToken(null);
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       }
+      setIsLoading(false);
     };
 
     checkAuth();
@@ -69,6 +88,7 @@ export const AuthProvider = ({ children }) => {
       };
 
       localStorage.setItem('admin_token', authData.token);
+      localStorage.setItem('admin_user', JSON.stringify(userData));
       setToken(authData.token);
       setUser(userData);
       setIsAuthenticated(true);
@@ -111,6 +131,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_user');
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);

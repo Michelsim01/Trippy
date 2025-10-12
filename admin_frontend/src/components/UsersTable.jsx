@@ -16,6 +16,11 @@ const UsersTable = ({ onUserAction }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+  const [filters, setFilters] = useState({
+    role: 'all',
+    status: 'all',
+    dateRange: 'all'
+  });
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -101,19 +106,62 @@ const UsersTable = ({ onUserAction }) => {
     setSelectedViewUser(null);
   };
 
-  const filteredUsers = users.filter(user => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    const fullName = `${user.firstName || ''} ${user.lastName || ''}`.toLowerCase();
-    const email = user.email ? user.email.toLowerCase() : '';
-    
-    return (
-      user.id?.toString().includes(searchLower) ||
-      fullName.includes(searchLower) || 
-      email.includes(searchLower)
-    );
-  });
+  const getFilteredUsers = () => {
+    let filtered = users;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(user => 
+        user.id.toString().includes(searchTerm) ||
+        user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Role filter
+    if (filters.role !== 'all') {
+      filtered = filtered.filter(user => {
+        if (filters.role === 'tour_guide') return user.canCreateExperiences;
+        if (filters.role === 'tourist') return !user.canCreateExperiences;
+        return true;
+      });
+    }
+
+    // Status filter
+    if (filters.status !== 'all') {
+      filtered = filtered.filter(user => {
+        if (filters.status === 'active') return user.isActive;
+        if (filters.status === 'suspended') return !user.isActive;
+        return true;
+      });
+    }
+
+    // Date range filter
+    if (filters.dateRange !== 'all') {
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      filtered = filtered.filter(user => {
+        const userDate = new Date(user.createdAt);
+        switch (filters.dateRange) {
+          case 'last_7_days':
+            return userDate >= sevenDaysAgo;
+          case 'last_30_days':
+            return userDate >= thirtyDaysAgo;
+          case 'this_year':
+            return userDate.getFullYear() === now.getFullYear();
+          default:
+            return true;
+        }
+      });
+    }
+
+    return filtered;
+  };
+
+  const filteredUsers = getFilteredUsers();
 
   // Sorting logic
   const sortedUsers = [...filteredUsers].sort((a, b) => {
@@ -154,6 +202,14 @@ const UsersTable = ({ onUserAction }) => {
     }
     setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [filterType]: value
+    }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   const getSortIcon = (key) => {
@@ -222,9 +278,49 @@ const UsersTable = ({ onUserAction }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <h3 className="text-lg font-semibold text-gray-900">All Users</h3>
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Role:</label>
+              <select
+                value={filters.role}
+                onChange={(e) => handleFilterChange('role', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="tour_guide">Tour Guide</option>
+                <option value="tourist">Tourist</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Status:</label>
+              <select
+                value={filters.status}
+                onChange={(e) => handleFilterChange('status', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="active">Active</option>
+                <option value="suspended">Suspended</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Date:</label>
+              <select
+                value={filters.dateRange}
+                onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">All</option>
+                <option value="last_7_days">Last 7 Days</option>
+                <option value="last_30_days">Last 30 Days</option>
+                <option value="this_year">This Year</option>
+              </select>
+            </div>
+            
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input

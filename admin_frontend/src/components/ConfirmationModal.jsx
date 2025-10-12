@@ -10,11 +10,24 @@ const ConfirmationModal = ({
   confirmText = "Confirm", 
   cancelText = "Cancel",
   type = "warning", // warning, success, info
-  loading = false
+  loading = false,
+  showTextArea = false,
+  textAreaLabel = "",
+  textAreaValue = "",
+  textAreaOnChange = () => {},
+  textAreaPlaceholder = "",
+  confirmButtonClass = "",
+  icon = null,
+  iconColor = ""
 }) => {
   if (!isOpen) return null;
 
   const getIcon = () => {
+    if (icon) {
+      const IconComponent = icon;
+      return <IconComponent className={`w-8 h-8 ${iconColor}`} />;
+    }
+    
     switch (type) {
       case 'success':
         return <CheckCircle className="w-8 h-8 text-green-600" />;
@@ -26,6 +39,10 @@ const ConfirmationModal = ({
   };
 
   const getConfirmButtonColor = () => {
+    if (confirmButtonClass) {
+      return confirmButtonClass;
+    }
+    
     switch (type) {
       case 'success':
         return 'bg-green-600 hover:bg-green-700';
@@ -57,6 +74,22 @@ const ConfirmationModal = ({
         {/* Content */}
         <div className="p-6">
           <p className="text-gray-600 mb-6">{message}</p>
+          
+          {/* Text Area */}
+          {showTextArea && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {textAreaLabel}
+              </label>
+              <textarea
+                value={textAreaValue}
+                onChange={(e) => textAreaOnChange(e.target.value)}
+                placeholder={textAreaPlaceholder}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                rows={4}
+              />
+            </div>
+          )}
           
           {/* Buttons */}
           <div className="flex space-x-3">

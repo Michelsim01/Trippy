@@ -6,14 +6,21 @@ import com.backend.repository.ExperienceRepository;
 import com.backend.repository.ReviewRepository;
 import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.TransactionRepository;
+import com.backend.repository.KycDocumentRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import com.backend.entity.ExperienceStatus;
 import com.backend.entity.ExperienceCategory;
 import com.backend.entity.BookingStatus;
 import com.backend.entity.TransactionStatus;
+import com.backend.entity.KycStatus;
+import com.backend.entity.StatusType;
 import com.backend.entity.User;
 import com.backend.entity.Experience;
 import com.backend.entity.Booking;
 import com.backend.entity.Transaction;
+import com.backend.entity.KycDocument;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -51,6 +58,88 @@ public class AdminController {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private KycDocumentRepository kycDocumentRepository;
+
+    /**
+     * Helper method to get the currently authenticated admin user ID
+     * 
+     * @return Admin user ID if authenticated, null otherwise
+     */
+    private Long getCurrentAdminUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            System.out.println("=== DEBUG: getCurrentAdminUserId ===");
+            System.out.println("Authentication: " + authentication);
+            System.out.println("Is authenticated: " + (authentication != null && authentication.isAuthenticated()));
+            
+            if (authentication != null && authentication.isAuthenticated()) {
+                System.out.println("Principal type: " + authentication.getPrincipal().getClass().getName());
+                System.out.println("Principal: " + authentication.getPrincipal());
+                
+                if (authentication.getPrincipal() instanceof UserDetails) {
+                    UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+                    String email = userDetails.getUsername();
+                    System.out.println("Email from UserDetails: " + email);
+
+                    Optional<User> userOpt = userRepository.findByEmailAndIsActive(email, true);
+                    if (userOpt.isPresent()) {
+                        User user = userOpt.get();
+                        System.out.println("Found user: " + user.getEmail() + ", isAdmin: " + user.getIsAdmin() + ", ID: " + user.getId());
+                        if (user.getIsAdmin()) {
+                            System.out.println("Returning admin user ID: " + user.getId());
+                            return user.getId();
+                        } else {
+                            System.out.println("User is not an admin!");
+                        }
+                    } else {
+                        System.out.println("No user found for email: " + email);
+                        // Let's also try without the isActive filter
+                        Optional<User> userOpt2 = userRepository.findByEmail(email);
+                        if (userOpt2.isPresent()) {
+                            User user2 = userOpt2.get();
+                            System.out.println("Found user (inactive): " + user2.getEmail() + ", isAdmin: " + user2.getIsAdmin() + ", isActive: " + user2.getIsActive());
+                        }
+                    }
+                }
+            }
+            System.out.println("=== END DEBUG ===");
+        } catch (Exception e) {
+            System.err.println("Error getting authenticated admin user: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Debug endpoint to check admin user status
+     */
+    @GetMapping("/debug/admin-status")
+    public ResponseEntity<Map<String, Object>> getAdminStatus() {
+        try {
+            Long adminUserId = getCurrentAdminUserId();
+            Map<String, Object> response = new HashMap<>();
+            response.put("adminUserId", adminUserId);
+            
+            // Also check the user directly
+            Optional<User> userOpt = userRepository.findByEmail("totallyregi@gmail.com");
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                response.put("userFound", true);
+                response.put("userEmail", user.getEmail());
+                response.put("userIsAdmin", user.getIsAdmin());
+                response.put("userIsActive", user.getIsActive());
+                response.put("userId", user.getId());
+            } else {
+                response.put("userFound", false);
+            }
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
 
     /**
      * Get dashboard metrics for admin panel
@@ -1282,6 +1371,209 @@ public class AdminController {
             System.err.println("Error deleting transaction: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Failed to delete transaction: " + e.getMessage()));
+        }
+    }
+
+    // ==================== KYC MANAGEMENT ====================
+
+    /**
+     * Get KYC metrics for admin panel
+     */
+    @GetMapping("/kyc/metrics")
+    public ResponseEntity<Map<String, Object>> getKYCMetrics() {
+        try {
+            // Get total submissions from kyc_document table
+            long totalSubmissions = kycDocumentRepository.count();
+            
+            // Get pending submissions
+            long pendingSubmissions = kycDocumentRepository.countByStatus(StatusType.PENDING);
+            
+            // Get approved submissions
+            long approvedSubmissions = kycDocumentRepository.countByStatus(StatusType.APPROVED);
+            
+            // Get declined submissions
+            long declinedSubmissions = kycDocumentRepository.countByStatus(StatusType.REJECTED);
+
+            Map<String, Object> metrics = new HashMap<>();
+            metrics.put("totalSubmissions", totalSubmissions);
+            metrics.put("pendingSubmissions", pendingSubmissions);
+            metrics.put("approvedSubmissions", approvedSubmissions);
+            metrics.put("declinedSubmissions", declinedSubmissions);
+
+            return ResponseEntity.ok(metrics);
+        } catch (Exception e) {
+            System.err.println("Error fetching KYC metrics: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch KYC metrics: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get all KYC submissions for admin review
+     */
+    @GetMapping("/kyc/submissions")
+    public ResponseEntity<List<Map<String, Object>>> getAllKYCSubmissions() {
+        try {
+            // Get all KYC documents from the database
+            List<KycDocument> kycDocuments = kycDocumentRepository.findAll();
+            
+            List<Map<String, Object>> submissions = new ArrayList<>();
+            
+            for (KycDocument doc : kycDocuments) {
+                Map<String, Object> submission = new HashMap<>();
+                submission.put("id", doc.getKycDocumentId());
+                submission.put("kycId", doc.getKycDocumentId());
+                submission.put("docType", doc.getDocType());
+                submission.put("status", doc.getStatus() != null ? doc.getStatus().toString() : "PENDING");
+                submission.put("submittedAt", doc.getSubmittedAt());
+                submission.put("userId", doc.getUser().getId());
+                submission.put("userName", doc.getUser().getFirstName() + " " + doc.getUser().getLastName());
+                submission.put("userEmail", doc.getUser().getEmail());
+                submission.put("fileUrl", doc.getFileUrl());
+                submission.put("notes", doc.getNotes());
+                submission.put("rejectionReason", doc.getRejectionReason());
+                submission.put("docSide", doc.getDocSide());
+                submission.put("reviewedAt", doc.getReviewedAt());
+                submission.put("reviewedBy", doc.getReviewedBy());
+                
+                submissions.add(submission);
+            }
+            
+            return ResponseEntity.ok(submissions);
+        } catch (Exception e) {
+            System.err.println("Error fetching KYC submissions: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(List.of(Map.of("error", "Failed to fetch KYC submissions: " + e.getMessage())));
+        }
+    }
+
+    /**
+     * Get specific KYC submission details
+     */
+    @GetMapping("/kyc/submissions/{submissionId}")
+    public ResponseEntity<Map<String, Object>> getKYCSubmission(@PathVariable Long submissionId) {
+        try {
+            Optional<KycDocument> docOpt = kycDocumentRepository.findById(submissionId);
+            if (docOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            KycDocument doc = docOpt.get();
+            
+            Map<String, Object> submission = new HashMap<>();
+            submission.put("id", doc.getKycDocumentId());
+            submission.put("kycId", doc.getKycDocumentId());
+            submission.put("docType", doc.getDocType());
+            submission.put("status", doc.getStatus() != null ? doc.getStatus().toString() : "PENDING");
+            submission.put("submittedAt", doc.getSubmittedAt());
+            submission.put("userId", doc.getUser().getId());
+            submission.put("userName", doc.getUser().getFirstName() + " " + doc.getUser().getLastName());
+            submission.put("userEmail", doc.getUser().getEmail());
+            submission.put("fileUrl", doc.getFileUrl());
+            submission.put("notes", doc.getNotes());
+            submission.put("rejectionReason", doc.getRejectionReason());
+            submission.put("docSide", doc.getDocSide());
+            submission.put("reviewedAt", doc.getReviewedAt());
+            submission.put("reviewedBy", doc.getReviewedBy());
+            
+            return ResponseEntity.ok(submission);
+        } catch (Exception e) {
+            System.err.println("Error fetching KYC submission: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch KYC submission: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Approve KYC submission
+     */
+    @PutMapping("/kyc/submissions/{submissionId}/approve")
+    public ResponseEntity<Map<String, Object>> approveKYC(@PathVariable Long submissionId) {
+        try {
+            Optional<KycDocument> docOpt = kycDocumentRepository.findById(submissionId);
+            if (docOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            KycDocument doc = docOpt.get();
+            
+            // Store previous status
+            doc.setPreviousStatus(doc.getStatus());
+            
+            // Update status to APPROVED
+            doc.setStatus(StatusType.APPROVED);
+            
+            // Set reviewed information
+            doc.setReviewedAt(LocalDateTime.now());
+            Long adminUserId = getCurrentAdminUserId();
+            System.out.println("Admin user ID for approval: " + adminUserId);
+            doc.setReviewedBy(adminUserId != null ? adminUserId : 1L); // Fallback to 1L if no admin found
+            
+            // Update timestamp
+            doc.setUpdatedAt(LocalDateTime.now());
+            
+            // Save the document
+            kycDocumentRepository.save(doc);
+            
+            // Also update user's KYC status and enable experience creation
+            User user = doc.getUser();
+            user.setKycStatus(KycStatus.APPROVED);
+            user.setKycApprovedAt(LocalDateTime.now());
+            user.setCanCreateExperiences(true); // Enable experience creation for approved guides
+            userRepository.save(user);
+            
+            return ResponseEntity.ok(Map.of("message", "KYC submission approved successfully"));
+        } catch (Exception e) {
+            System.err.println("Error approving KYC: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to approve KYC: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Reject KYC submission
+     */
+    @PutMapping("/kyc/submissions/{submissionId}/decline")
+    public ResponseEntity<Map<String, Object>> rejectKYC(@PathVariable Long submissionId, @RequestBody Map<String, String> request) {
+        try {
+            Optional<KycDocument> docOpt = kycDocumentRepository.findById(submissionId);
+            if (docOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            KycDocument doc = docOpt.get();
+            
+            // Store previous status
+            doc.setPreviousStatus(doc.getStatus());
+            
+            // Update status to REJECTED
+            doc.setStatus(StatusType.REJECTED);
+            
+            // Set rejection reason
+            doc.setRejectionReason(request.get("declineMessage"));
+            
+            // Set reviewed information
+            doc.setReviewedAt(LocalDateTime.now());
+            Long adminUserId = getCurrentAdminUserId();
+            System.out.println("Admin user ID for rejection: " + adminUserId);
+            doc.setReviewedBy(adminUserId != null ? adminUserId : 1L); // Fallback to 1L if no admin found
+            
+            // Update timestamp
+            doc.setUpdatedAt(LocalDateTime.now());
+            
+            // Save the document
+            kycDocumentRepository.save(doc);
+            
+            // Also update user's KYC status
+            User user = doc.getUser();
+            user.setKycStatus(KycStatus.REJECTED);
+            userRepository.save(user);
+            
+            return ResponseEntity.ok(Map.of("message", "KYC submission rejected successfully"));
+        } catch (Exception e) {
+            System.err.println("Error rejecting KYC: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to reject KYC: " + e.getMessage()));
         }
     }
 }
