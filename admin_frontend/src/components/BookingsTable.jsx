@@ -99,11 +99,7 @@ const BookingsTable = ({ onBookingAction }) => {
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(booking => 
-        booking.id.toString().includes(searchTerm) ||
-        booking.traveler?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.traveler?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.traveler?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        booking.experience?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        booking.id.toString().includes(searchTerm)
       );
     }
 
@@ -148,6 +144,13 @@ const BookingsTable = ({ onBookingAction }) => {
         return experienceTitle.includes(filters.experience.toLowerCase());
       });
     }
+
+    // Sort by booking date (latest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateB - dateA; // Latest first
+    });
 
     return filtered;
   };
@@ -292,10 +295,10 @@ const BookingsTable = ({ onBookingAction }) => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <label className="text-sm font-medium text-gray-700">User:</label>
+              <label className="text-sm font-medium text-gray-700">Traveller:</label>
               <input
                 type="text"
-                placeholder="User name..."
+                placeholder="Traveller name..."
                 value={filters.user === 'all' ? '' : filters.user}
                 onChange={(e) => handleFilterChange('user', e.target.value)}
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -317,21 +320,21 @@ const BookingsTable = ({ onBookingAction }) => {
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search bookings..."
+                placeholder="Search by ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
               />
             </div>
           </div>
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
               <th
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center space-x-1">
@@ -339,52 +342,103 @@ const BookingsTable = ({ onBookingAction }) => {
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traveller</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Traveller</th>
+              <th className="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Start Date</th>
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">End Date</th>
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking Date</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Participants</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentBookings.map((booking) => (
               <tr key={booking.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 text-sm text-gray-900">
                   {booking.id}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{getTravellerName(booking.traveler)}</div>
-                  <div className="text-sm text-gray-500">{booking.traveler?.email}</div>
+                <td className="px-4 py-4">
+                  <div className="text-sm font-medium text-gray-900 truncate" title={getTravellerName(booking.traveler)}>
+                    {getTravellerName(booking.traveler)}
+                  </div>
+                  <div className="text-sm text-gray-500 truncate" title={booking.traveler?.email}>
+                    {booking.traveler?.email}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {getExperienceTitle(booking.experience)}
+                <td className="px-4 py-4">
+                  <div className="text-sm text-gray-900 truncate" title={getExperienceTitle(booking.experience)}>
+                    {getExperienceTitle(booking.experience)}
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDateTime(booking.startDateTime)}
+                <td className="px-4 py-4">
+                  <div className="text-xs text-gray-900">
+                    <div className="font-medium">
+                      {booking.startDateTime ? new Date(booking.startDateTime).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">
+                      {booking.startDateTime ? new Date(booking.startDateTime).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      }) : ''}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDateTime(booking.endDateTime)}
+                <td className="px-4 py-4">
+                  <div className="text-xs text-gray-900">
+                    <div className="font-medium">
+                      {booking.endDateTime ? new Date(booking.endDateTime).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">
+                      {booking.endDateTime ? new Date(booking.endDateTime).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      }) : ''}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {formatDateTime(booking.createdAt)}
+                <td className="px-4 py-4">
+                  <div className="text-xs text-gray-900">
+                    <div className="font-medium">
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">
+                      {booking.createdAt ? new Date(booking.createdAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      }) : ''}
+                    </div>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">
                   {booking.numberOfParticipants}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">
                   ${booking.totalAmount ? booking.totalAmount.toFixed(2) : '0.00'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(booking.status)}`}>
                     {booking.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                <td className="px-4 py-4 text-sm font-medium">
+                  <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleViewBooking(booking)}
                       className="text-green-600 hover:text-green-900 transition-colors"

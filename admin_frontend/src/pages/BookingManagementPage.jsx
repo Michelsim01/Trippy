@@ -36,11 +36,15 @@ const BookingManagementPage = () => {
   }, []);
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">Booking Management</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
+        <p className="text-gray-600">Manage bookings, reservations, and customer interactions</p>
+      </div>
 
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         {/* Total Bookings */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center">
@@ -50,11 +54,11 @@ const BookingManagementPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Bookings</p>
               {loadingMetrics ? (
-                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse mt-1"></div>
+                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
               ) : metricsError ? (
-                <p className="text-red-500 text-lg font-bold mt-1">Error</p>
+                <p className="text-red-500 text-lg font-bold">Error</p>
               ) : (
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.totalBookings}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.totalBookings}</p>
               )}
             </div>
           </div>
@@ -69,11 +73,11 @@ const BookingManagementPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Paid Bookings</p>
               {loadingMetrics ? (
-                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse mt-1"></div>
+                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
               ) : metricsError ? (
-                <p className="text-red-500 text-lg font-bold mt-1">Error</p>
+                <p className="text-red-500 text-lg font-bold">Error</p>
               ) : (
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.paidBookings}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.paidBookings}</p>
               )}
             </div>
           </div>
@@ -88,11 +92,11 @@ const BookingManagementPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Pending Bookings</p>
               {loadingMetrics ? (
-                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse mt-1"></div>
+                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
               ) : metricsError ? (
-                <p className="text-red-500 text-lg font-bold mt-1">Error</p>
+                <p className="text-red-500 text-lg font-bold">Error</p>
               ) : (
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.pendingBookings}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.pendingBookings}</p>
               )}
             </div>
           </div>
@@ -107,11 +111,11 @@ const BookingManagementPage = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Cancelled Bookings</p>
               {loadingMetrics ? (
-                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse mt-1"></div>
+                <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
               ) : metricsError ? (
-                <p className="text-red-500 text-lg font-bold mt-1">Error</p>
+                <p className="text-red-500 text-lg font-bold">Error</p>
               ) : (
-                <p className="text-2xl font-bold text-gray-900 mt-1">{metrics.cancelledBookings}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.cancelledBookings}</p>
               )}
             </div>
           </div>
