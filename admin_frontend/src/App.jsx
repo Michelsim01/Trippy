@@ -9,6 +9,7 @@ import UserManagementPage from './pages/UserManagementPage';
 import ExperienceManagementPage from './pages/ExperienceManagementPage';
 import BookingManagementPage from './pages/BookingManagementPage';
 import TransactionManagementPage from './pages/TransactionManagementPage';
+import KYCManagementPage from './pages/KYCManagementPage';
 
 // Placeholder components for other pages
 
@@ -108,6 +109,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TransactionManagementPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/kyc" 
+        element={
+          <ProtectedRoute>
+            <KYCManagementPage />
           </ProtectedRoute>
         } 
       />

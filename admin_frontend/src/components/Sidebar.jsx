@@ -6,6 +6,7 @@ import {
   MapPin, 
   Calendar, 
   FileText, 
+  ShieldCheck,
   AlertTriangle, 
   Settings,
   LogOut
@@ -23,6 +24,7 @@ const Sidebar = () => {
     { name: 'Experience Management', href: '/admin/experiences', icon: MapPin },
     { name: 'Booking Management', href: '/admin/bookings', icon: Calendar },
     { name: 'Transaction Management', href: '/admin/transactions', icon: FileText },
+    { name: 'KYC Management', href: '/admin/kyc', icon: ShieldCheck },
     { name: 'Dispute Resolution', href: '/admin/disputes', icon: AlertTriangle },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];

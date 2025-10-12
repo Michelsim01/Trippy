@@ -210,6 +210,22 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByKycStatus(KycStatus kycStatus);
     
     /**
+     * Find users by multiple KYC statuses.
+     * 
+     * @param kycStatuses List of KYC statuses to filter by
+     * @return List of users with any of the specified KYC statuses
+     */
+    List<User> findByKycStatusIn(List<KycStatus> kycStatuses);
+    
+    /**
+     * Count users by multiple KYC statuses.
+     * 
+     * @param kycStatuses List of KYC statuses to count
+     * @return Number of users with any of the specified KYC statuses
+     */
+    long countByKycStatusIn(List<KycStatus> kycStatuses);
+    
+    /**
      * Count active users. 
      * 
      * @param isActive Whether the user is active
