@@ -20,7 +20,9 @@ const TransactionsTable = ({ onTransactionAction }) => {
     status: 'all',
     type: 'all',
     dateRange: 'all',
-    user: 'all'
+    user: 'all',
+    experience: 'all',
+    bookingId: 'all'
   });
 
   useEffect(() => {
@@ -119,11 +121,7 @@ const TransactionsTable = ({ onTransactionAction }) => {
     if (searchTerm) {
       filtered = filtered.filter(transaction => 
         transaction.id.toString().includes(searchTerm) ||
-        transaction.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.user?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.user?.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        transaction.experience?.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        transaction.status?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -165,6 +163,29 @@ const TransactionsTable = ({ onTransactionAction }) => {
         return userName.includes(filters.user.toLowerCase());
       });
     }
+
+    // Experience filter
+    if (filters.experience !== 'all') {
+      filtered = filtered.filter(transaction => {
+        const experienceName = (transaction.experience || '').toLowerCase();
+        return experienceName.includes(filters.experience.toLowerCase());
+      });
+    }
+
+    // Booking ID filter
+    if (filters.bookingId !== 'all') {
+      filtered = filtered.filter(transaction => {
+        const bookingId = transaction.bookingId?.toString() || '';
+        return bookingId.includes(filters.bookingId);
+      });
+    }
+
+    // Sort by transaction date (latest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.date || 0);
+      const dateB = new Date(b.date || 0);
+      return dateB - dateA; // Latest first
+    });
 
     return filtered;
   };
@@ -343,25 +364,47 @@ const TransactionsTable = ({ onTransactionAction }) => {
               />
             </div>
             
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Experience:</label>
+              <input
+                type="text"
+                placeholder="Experience name..."
+                value={filters.experience === 'all' ? '' : filters.experience}
+                onChange={(e) => handleFilterChange('experience', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <label className="text-sm font-medium text-gray-700">Booking ID:</label>
+              <input
+                type="text"
+                placeholder="Booking ID..."
+                value={filters.bookingId === 'all' ? '' : filters.bookingId}
+                onChange={(e) => handleFilterChange('bookingId', e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            
             <div className="relative">
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search transactions..."
+                placeholder="Search by ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
               />
             </div>
           </div>
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center space-x-1">
@@ -369,70 +412,69 @@ const TransactionsTable = ({ onTransactionAction }) => {
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Fee</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Booking ID</th>
+              <th className="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
+              <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Fee</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentTransactions.map((t) => (
               <tr key={t.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.id}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 text-sm text-gray-900">{t.id}</td>
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(t.type)}`}>
                     {t.type}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.bookingId}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{t.experience}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">{t.bookingId}</td>
+                <td className="px-4 py-4">
+                  <div className="text-sm text-gray-900 truncate" title={t.experience}>{t.experience}</div>
+                </td>
+                <td className="px-4 py-4">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-gray-700">
                         {t.user.split(' ').map(n => n[0]).join('')}
                       </span>
                     </div>
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">{t.user}</div>
+                    <div className="ml-3 min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate" title={t.user}>{t.user}</div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.platformFee}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${t.amount}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <Calendar className="w-4 h-4 mr-1" />
-                    <div className="flex items-center">
-                      <span className="font-medium">
-                        {t.date ? new Date(t.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        }) : 'N/A'}
-                      </span>
-                      <span className="font-medium text-gray-500 ml-2">
-                        {t.date ? new Date(t.date).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: false
-                        }) : ''}
-                      </span>
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">${t.platformFee}</td>
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">${t.amount}</td>
+                <td className="px-4 py-4">
+                  <div className="text-xs text-gray-900">
+                    <div className="font-medium">
+                      {t.date ? new Date(t.date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">
+                      {t.date ? new Date(t.date).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      }) : ''}
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(t.status)}`}>
                     {t.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                <td className="px-4 py-4 text-sm font-medium">
+                  <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleViewTransaction(t)}
                       className="text-green-600 hover:text-green-900 transition-colors"

@@ -668,6 +668,7 @@ public class AdminController {
                     experienceData.put("reviewCount", reviewCount);
                     experienceData.put("bookingCount", bookingCount);
                     experienceData.put("status", experience.getStatus() != null ? experience.getStatus().toString() : "");
+                    experienceData.put("createdAt", experience.getCreatedAt());
                     
                     experiencesWithCounts.add(experienceData);
                 } catch (Exception ex) {
@@ -775,6 +776,7 @@ public class AdminController {
             response.put("reviewCount", reviewCount);
             response.put("bookingCount", bookingCount);
             response.put("status", updatedExperience.getStatus().toString());
+            response.put("createdAt", updatedExperience.getCreatedAt());
 
             if (updatedExperience.getGuide() != null) {
                 Map<String, Object> guideData = new HashMap<>();
@@ -894,6 +896,7 @@ public class AdminController {
             response.put("reviewCount", reviewCount);
             response.put("bookingCount", bookingCount);
             response.put("status", updatedExperience.getStatus().toString());
+            response.put("createdAt", updatedExperience.getCreatedAt());
 
             if (updatedExperience.getGuide() != null) {
                 Map<String, Object> guideData = new HashMap<>();

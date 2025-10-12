@@ -158,6 +158,13 @@ const ExperiencesTable = ({ onExperienceAction }) => {
       });
     }
 
+    // Sort by created date (latest first)
+    filtered.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0);
+      const dateB = new Date(b.createdAt || 0);
+      return dateB - dateA; // Latest first
+    });
+
     return filtered;
   };
 
@@ -327,21 +334,21 @@ const ExperiencesTable = ({ onExperienceAction }) => {
               <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search experiences..."
+                placeholder="Search by ID, title or location..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-80"
               />
             </div>
           </div>
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead className="bg-gray-50">
             <tr>
               <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                 onClick={() => handleSort('id')}
               >
                 <div className="flex items-center space-x-1">
@@ -349,64 +356,90 @@ const ExperiencesTable = ({ onExperienceAction }) => {
                   {getSortIcon('id')}
                 </div>
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience Details</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bookings</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="w-80 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience Details</th>
+              <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rating</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bookings</th>
+              <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {currentExperiences.map((exp) => (
               <tr key={exp.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-4 py-4 text-sm text-gray-900">
                   {exp.id}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <div>
-                    <div className="text-sm font-medium text-gray-900">{exp.title}</div>
-                    <div className="text-sm text-gray-500 flex items-center space-x-1 mt-1">
-                      <MapPin className="w-3 h-3" /> <span>{exp.location}, {exp.country}</span>
-                      <Clock className="w-3 h-3 ml-2" /> <span>{exp.duration} Hours</span>
-                      <UsersIcon className="w-3 h-3 ml-2" /> <span>Max {exp.participantsAllowed}</span>
+                    <div className="text-sm font-medium text-gray-900 truncate" title={exp.title}>{exp.title}</div>
+                    <div className="text-xs text-gray-500 mt-1 space-y-1">
+                      <div className="flex items-center space-x-1">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="truncate">{exp.location}, {exp.country}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <Clock className="w-3 h-3 flex-shrink-0" />
+                        <span>{exp.duration}h</span>
+                        <UsersIcon className="w-3 h-3 ml-2 flex-shrink-0" />
+                        <span>Max {exp.participantsAllowed}</span>
+                      </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <div className="flex items-center">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                    <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-gray-700">
                         {exp.guide ? `${exp.guide.firstName?.charAt(0) || ''}${exp.guide.lastName?.charAt(0) || ''}` : 'N/A'}
                       </span>
                     </div>
-                    <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">
+                    <div className="ml-3 min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate" title={exp.guide ? `${exp.guide.firstName} ${exp.guide.lastName}` : 'No Guide'}>
                         {exp.guide ? `${exp.guide.firstName} ${exp.guide.lastName}` : 'No Guide'}
                       </div>
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getCategoryColor(exp.category)}`}>
                     {exp.category}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${exp.price}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">${exp.price}</td>
+                <td className="px-4 py-4">
                   <div className="text-sm text-gray-900">{exp.averageRating ? exp.averageRating.toFixed(1) : 'N/A'}</div>
-                  <div className="text-xs text-gray-500">{exp.reviewCount} Reviews</div>
+                  <div className="text-xs text-gray-500">{exp.reviewCount || 0}</div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{exp.bookingCount}</td>
-                <td className="px-6 py-4 whitespace-nowrap">
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">{exp.bookingCount || 0}</td>
+                <td className="px-4 py-4">
+                  <div className="text-xs text-gray-900">
+                    <div className="font-medium">
+                      {exp.createdAt ? new Date(exp.createdAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </div>
+                    <div className="text-gray-500">
+                      {exp.createdAt ? new Date(exp.createdAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: false
+                      }) : ''}
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-4">
                   <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(exp.status)}`}>
                     {exp.status === 'ACTIVE' ? 'Active' : exp.status === 'INACTIVE' ? 'Inactive' : 'Suspended'}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex items-center space-x-2">
+                <td className="px-4 py-4 text-sm font-medium">
+                  <div className="flex items-center space-x-1">
                     <button
                       onClick={() => handleViewExperience(exp)}
                       className="text-green-600 hover:text-green-900 transition-colors"
