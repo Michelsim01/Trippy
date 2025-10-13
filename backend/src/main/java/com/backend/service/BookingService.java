@@ -40,6 +40,9 @@ public class BookingService {
     @Autowired
     private TripPointsService tripPointsService;
 
+    @Autowired
+    private TripChatService tripChatService;
+
     /**
      * Validate a booking request before creating the actual booking.
      * 
@@ -289,6 +292,24 @@ public class BookingService {
                     schedule.setIsAvailable(false);
                 }
                 experienceScheduleRepository.save(schedule); // Single save with both updates
+
+                // Create or get trip chat channel and add participants
+                try {
+                    // Add the guide to the trip chat (creates chat if it doesn't exist)
+                    Long guideId = schedule.getExperience().getGuide().getId();
+                    tripChatService.addGuideToTripChat(schedule.getScheduleId(), guideId);
+
+                    // Add the traveler to the trip chat
+                    tripChatService.addUserToTripChat(
+                        schedule.getScheduleId(),
+                        booking.getTraveler().getId(),
+                        booking.getBookingId()
+                    );
+                } catch (Exception e) {
+                    // Log error but don't fail the booking if chat creation fails
+                    System.err.println("Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
             } else {
                 // if payment fails, keep the booking status as PENDING
                 booking.setStatus(BookingStatus.PENDING);

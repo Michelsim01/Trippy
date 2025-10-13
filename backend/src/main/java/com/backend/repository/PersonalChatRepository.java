@@ -28,6 +28,7 @@ public interface PersonalChatRepository extends JpaRepository<PersonalChat, Long
     @Query("SELECT pc FROM PersonalChat pc " +
            "JOIN pc.chatMembers cm " +
            "WHERE cm.user.id = :userId " +
+           "AND (pc.isTripChat = false OR pc.isTripChat IS NULL) " +
            "ORDER BY pc.createdAt DESC")
     List<PersonalChat> findChatsByUserId(@Param("userId") Long userId);
     
@@ -44,4 +45,19 @@ public interface PersonalChatRepository extends JpaRepository<PersonalChat, Long
            "LEFT JOIN FETCH cm.user " +
            "WHERE pc.personalChatId = :chatId")
     Optional<PersonalChat> findByIdWithExperienceAndMembers(@Param("chatId") Long chatId);
+
+    @Query("SELECT DISTINCT pc FROM PersonalChat pc " +
+           "JOIN ChatMember cm ON cm.personalChat.personalChatId = pc.personalChatId " +
+           "LEFT JOIN FETCH pc.tripCohort cohort " +
+           "LEFT JOIN FETCH cohort.experienceSchedule schedule " +
+           "LEFT JOIN FETCH schedule.experience exp " +
+           "WHERE cm.user.id = :userId " +
+           "AND pc.isTripChat = true")
+    List<PersonalChat> findTripChatsByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT DISTINCT pc FROM PersonalChat pc " +
+           "LEFT JOIN FETCH pc.chatMembers members " +
+           "LEFT JOIN FETCH members.user " +
+           "WHERE pc.personalChatId IN :chatIds")
+    List<PersonalChat> findByIdsWithMembers(@Param("chatIds") List<Long> chatIds);
 }

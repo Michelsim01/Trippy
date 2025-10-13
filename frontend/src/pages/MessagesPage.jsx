@@ -18,16 +18,18 @@ const MessagesPage = () => {
     const { user } = useAuth();
     const [searchParams] = useSearchParams();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [selectedChat, setSelectedChat] = useState(null);
+    const [selectedChat, setSelectedChat] = useState(null); // Just stores the chat ID
     const [newMessage, setNewMessage] = useState('');
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [chatMessages, setChatMessages] = useState({});
     const [loadingMessages, setLoadingMessages] = useState(false);
-    
+
     // WebSocket integration
     const currentUserId = user?.id || user?.userId;
-    const { isConnected, sendMessage: sendWebSocketMessage, incomingMessages, clearIncomingMessages } = useWebSocket(selectedChat, currentUserId);
+    const selectedConversation = conversations.find(c => c.id === selectedChat);
+    const chatType = selectedConversation?.isTripChat ? 'trip' : 'personal';
+    const { isConnected, sendMessage: sendWebSocketMessage, incomingMessages, clearIncomingMessages } = useWebSocket(selectedChat, currentUserId, chatType);
     
     // Chat notifications for conversation list updates
     const { chatNotifications, clearChatNotifications } = useChatNotifications(currentUserId);
@@ -36,27 +38,40 @@ const MessagesPage = () => {
     useEffect(() => {
         const loadUserChats = async () => {
             if (!user) return;
-            
+
             try {
                 const userId = user.id || user.userId;
-                const response = await fetch(`http://localhost:8080/api/personal-chats/user/${userId}`, {
+
+                // Fetch personal chats
+                const personalChatsResponse = await fetch(`http://localhost:8080/api/personal-chats/user/${userId}`, {
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('token')}`
                     }
                 });
-                
-                if (response.ok) {
-                    const chats = await response.json();
-                    const formattedConversations = chats.map(chat => {
+
+                // Fetch trip chats
+                const tripChatsResponse = await fetch(`http://localhost:8080/api/trip-chats/user/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    }
+                });
+
+                let allConversations = [];
+
+                // Process personal chats
+                if (personalChatsResponse.ok) {
+                    const personalChats = await personalChatsResponse.json();
+                    const formattedPersonalChats = personalChats.map(chat => {
                         // Get participant names from chat members
                         const currentUserId = user.id || user.userId;
                         const otherParticipant = chat.chatMembers?.find(member => member.user.id !== currentUserId);
-                        const participantName = otherParticipant ? 
-                            `${otherParticipant.user.firstName} ${otherParticipant.user.lastName}` : 
+                        const participantName = otherParticipant ?
+                            `${otherParticipant.user.firstName} ${otherParticipant.user.lastName}` :
                             "Guide";
-                        
+
                         return {
                             id: chat.personalChatId,
+                            type: 'personal',
                             title: chat.experience?.title || chat.name || "Chat with Guide",
                             lastMessage: chat.lastMessage || "Start chatting...",
                             timestamp: new Date(chat.createdAt).toLocaleDateString(),
@@ -69,10 +84,51 @@ const MessagesPage = () => {
                             chatMembers: chat.chatMembers
                         };
                     });
-                    setConversations(formattedConversations);
+                    allConversations = [...allConversations, ...formattedPersonalChats];
                 } else {
-                    console.error('Failed to load chats');
+                    console.error('Failed to load personal chats');
                 }
+
+                // Process trip chats
+                if (tripChatsResponse.ok) {
+                    const tripChats = await tripChatsResponse.json();
+                    console.log('Trip chats data:', tripChats.map(chat => ({
+                        id: chat.personalChatId,
+                        name: chat.name,
+                        chatMembers: chat.chatMembers,
+                        memberCount: chat.chatMembers?.length
+                    })));
+                    const formattedTripChats = tripChats.map(chat => {
+                        // Get schedule info from trip cohort
+                        const schedule = chat.tripCohort?.experienceSchedule;
+                        const experience = schedule?.experience;
+                        const memberCount = chat.chatMembers?.length || 0;
+
+                        return {
+                            id: chat.personalChatId,
+                            isTripChat: true,
+                            title: chat.name || "Trip Channel",
+                            lastMessage: chat.lastMessage || "Start chatting with your group...",
+                            timestamp: new Date(chat.createdAt).toLocaleDateString(),
+                            participants: `Group chat (${memberCount} members)`,
+                            activity: "Trip Channel",
+                            avatar: experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800",
+                            unreadCount: chat.unreadCount || 0,
+                            chatMembers: chat.chatMembers,
+                            tripCohort: chat.tripCohort,
+                            schedule: schedule,
+                            experience: experience
+                        };
+                    });
+                    allConversations = [...allConversations, ...formattedTripChats];
+                } else {
+                    console.error('Failed to load trip chats');
+                }
+
+                // Sort all conversations by timestamp (most recent first)
+                allConversations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                setConversations(allConversations);
             } catch (error) {
                 console.error('Error loading chats:', error);
             } finally {
@@ -118,16 +174,26 @@ const MessagesPage = () => {
 
     // Load messages for a specific chat
     const loadChatMessages = async (chatId) => {
-        if (chatMessages[chatId]) return; // Already loaded
+        // Check if we need to reload messages
+        const hasMessages = chatMessages[chatId] && chatMessages[chatId].length > 0;
+        const conversation = conversations.find(c => c.id === chatId);
+        const hasUnreadMessages = conversation && conversation.unreadCount > 0;
         
+        // Always load if no messages exist, or if there are unread messages
+        // This ensures we get the latest messages when switching to a chat with unread messages
+        if (hasMessages && !hasUnreadMessages) return;
+
         setLoadingMessages(true);
         try {
-            const response = await fetch(`http://localhost:8080/api/messages/chat/${chatId}`, {
+            // All chats now use the unified PersonalChat endpoint
+            const endpoint = `http://localhost:8080/api/messages/chat/${chatId}`;
+
+            const response = await fetch(endpoint, {
                 headers: {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (response.ok) {
                 const messages = await response.json();
                 const formattedMessages = messages.map(msg => ({
@@ -137,18 +203,18 @@ const MessagesPage = () => {
                     timestamp: new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     senderId: msg.sender.id
                 }));
-                
+
                 setChatMessages(prev => ({
                     ...prev,
                     [chatId]: formattedMessages
                 }));
-                
+
                 // Update last message in conversations list if messages exist
                 if (formattedMessages.length > 0) {
                     const lastMessage = formattedMessages[formattedMessages.length - 1];
-                    setConversations(prevConversations => 
-                        prevConversations.map(conv => 
-                            conv.id === chatId 
+                    setConversations(prevConversations =>
+                        prevConversations.map(conv =>
+                            conv.id === chatId
                                 ? { ...conv, lastMessage: lastMessage.text }
                                 : conv
                         )
@@ -293,12 +359,12 @@ const MessagesPage = () => {
         setIsSidebarOpen(false);
     };
 
-    const handleChatSelect = async (chatId) => {
-        setSelectedChat(chatId);
-        loadChatMessages(chatId);
-        
-        // Mark chat as read
-        await markChatAsRead(chatId);
+    const handleChatSelect = async (conversation) => {
+        setSelectedChat(conversation.id);
+        loadChatMessages(conversation.id);
+
+        // Mark chat as read for both personal and trip chats
+        await markChatAsRead(conversation.id);
     };
     
     const markChatAsRead = async (chatId) => {
@@ -310,17 +376,17 @@ const MessagesPage = () => {
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
                 }
             });
-            
+
             if (response.ok) {
                 // Update local conversations to set unread count to 0
-                setConversations(prevConversations => 
-                    prevConversations.map(conv => 
-                        conv.id === chatId 
+                setConversations(prevConversations =>
+                    prevConversations.map(conv =>
+                        conv.id === chatId
                             ? { ...conv, unreadCount: 0 }
                             : conv
                     )
                 );
-                
+
                 // Notify that unread count has changed
                 unreadCountManager.notifyCountChanged();
             }
@@ -333,8 +399,6 @@ const MessagesPage = () => {
         // Handle starting new chat with Trippy AI
         console.log('Starting new chat with Trippy AI');
     };
-
-    const selectedConversation = conversations.find(c => c.id === selectedChat);
 
     return (
         <div className="min-h-screen bg-neutrals-8">
@@ -372,8 +436,8 @@ const MessagesPage = () => {
                                         Loading conversations...
                                     </div>
                                 ) : conversations.length > 0 ? (
-                                    <ConversationList 
-                                        conversations={conversations} 
+                                    <ConversationList
+                                        conversations={conversations}
                                         selectedChat={selectedChat}
                                         onChatSelect={handleChatSelect}
                                     />
@@ -500,8 +564,8 @@ const MessagesPage = () => {
                                     </div>
                                 ) : conversations.length > 0 ? (
                                     <div className="bg-white">
-                                        <ConversationList 
-                                            conversations={conversations} 
+                                        <ConversationList
+                                            conversations={conversations}
                                             selectedChat={selectedChat}
                                             onChatSelect={handleChatSelect}
                                             showMobileChevron={true}
