@@ -311,6 +311,40 @@ public class PaymentService {
     }
 
     /**
+     * Create a refund transaction for a cancelled booking.
+     *
+     * This method creates a completed refund transaction record that will appear
+     * in the admin portal for tracking purposes.
+     *
+     * @param booking the booking being refunded
+     * @param refundAmount the amount being refunded
+     * @return the created and saved refund transaction
+     */
+    @Transactional
+    public Transaction createRefundTransaction(Booking booking, BigDecimal refundAmount) {
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking cannot be null");
+        }
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Refund amount must be non-negative");
+        }
+
+        Transaction refundTransaction = new Transaction();
+        refundTransaction.setBooking(booking);
+        refundTransaction.setUser(booking.getTraveler());
+        refundTransaction.setAmount(refundAmount);
+        refundTransaction.setType(TransactionType.REFUND);
+        refundTransaction.setStatus(TransactionStatus.COMPLETED);
+        refundTransaction.setPaymentMethod(DEFAULT_PAYMENT_METHOD);
+        refundTransaction.setExternalTransactionId(generateTransactionId());
+        refundTransaction.setCreatedAt(LocalDateTime.now());
+        refundTransaction.setUpdatedAt(LocalDateTime.now());
+        refundTransaction.setProcessedAt(LocalDateTime.now());
+
+        return transactionRepository.save(refundTransaction);
+    }
+
+    /**
      * Validate the payment amount for a given booking.
      *
      * This method uses the BookingPricingDTO to validate the payment amount.

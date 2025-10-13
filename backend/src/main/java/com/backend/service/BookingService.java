@@ -437,6 +437,27 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
+        // Restore available spots to the experience schedule
+        ExperienceSchedule schedule = booking.getExperienceSchedule();
+        int restoredSpots = schedule.getAvailableSpots() + booking.getNumberOfParticipants();
+        schedule.setAvailableSpots(restoredSpots);
+
+        // Update the isAvailable flag if spots are now available
+        if (restoredSpots > 0 && !schedule.getIsAvailable()) {
+            schedule.setIsAvailable(true);
+        }
+        experienceScheduleRepository.save(schedule);
+
+        // Create refund transaction for admin portal visibility
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                paymentService.createRefundTransaction(booking, refundAmount);
+            } catch (Exception e) {
+                // Log the error but don't fail the booking cancellation
+                System.err.println("Failed to create refund transaction: " + e.getMessage());
+            }
+        }
+
         // Remove user from trip chat if this was a trip booking
         try {
             tripChatService.removeUserFromTripChat(bookingId);
@@ -535,6 +556,14 @@ public class BookingService {
                 booking.setUpdatedAt(LocalDateTime.now());
 
                 bookingRepository.save(booking);
+
+                // Create refund transaction for admin portal visibility
+                try {
+                    paymentService.createRefundTransaction(booking, booking.getRefundAmount());
+                } catch (Exception e) {
+                    // Log the error but don't fail the schedule cancellation
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                }
             }
 
             // Mark schedule as unavailable
