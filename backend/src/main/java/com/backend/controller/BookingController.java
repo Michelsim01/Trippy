@@ -559,6 +559,10 @@ public class BookingController {
                 }
             }
 
+            // Mark the schedule as unavailable since the tour is now completed
+            schedule.setIsAvailable(false);
+            experienceScheduleRepository.save(schedule);
+
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Timeslot completed successfully");

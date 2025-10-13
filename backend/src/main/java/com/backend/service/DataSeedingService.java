@@ -458,6 +458,24 @@ public class DataSeedingService {
                     successfulTransaction.setUpdatedAt(successfulTransaction.getCreatedAt());
 
                     transactionRepository.save(successfulTransaction);
+
+                    // Create payout transaction for COMPLETED bookings only
+                    if (booking.getStatus() == BookingStatus.COMPLETED) {
+                        Transaction payoutTransaction = new Transaction();
+                        payoutTransaction.setBooking(booking);
+                        payoutTransaction.setUser(booking.getExperienceSchedule().getExperience().getGuide());
+                        payoutTransaction.setType(TransactionType.PAYOUT);
+                        payoutTransaction.setStatus(TransactionStatus.COMPLETED);
+                        payoutTransaction.setAmount(booking.getBaseAmount()); // Guide gets base amount (excludes service fees)
+                        payoutTransaction.setPaymentMethod(paymentMethods[0]);
+                        payoutTransaction.setLastFourDigits(successfulTransaction.getLastFourDigits());
+                        payoutTransaction.setCardBrand(successfulTransaction.getCardBrand());
+                        // Payout created after tour completion (1-3 days after end date)
+                        payoutTransaction.setCreatedAt(booking.getExperienceSchedule().getEndDateTime().plusDays(1 + random.nextInt(3)));
+                        payoutTransaction.setUpdatedAt(payoutTransaction.getCreatedAt());
+                        payoutTransaction.setProcessedAt(payoutTransaction.getCreatedAt());
+                        transactionRepository.save(payoutTransaction);
+                    }
                     break;
 
                 case CANCELLED:
