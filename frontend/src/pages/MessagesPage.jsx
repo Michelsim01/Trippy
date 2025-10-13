@@ -104,13 +104,21 @@ const MessagesPage = () => {
                         const experience = schedule?.experience;
                         const memberCount = chat.chatMembers?.length || 0;
 
+                        // Create participants list with guide labels based on chat role
+                        const currentUserId = user.id || user.userId;
+                        const participantsList = chat.chatMembers?.map(member => {
+                            const isCurrentUser = member.user.id === currentUserId;
+                            const displayName = isCurrentUser ? 'You' : `${member.user.firstName} ${member.user.lastName}`;
+                            return member.role === 'ADMIN' ? `${displayName} (guide)` : displayName;
+                        }).join(', ') || '';
+
                         return {
                             id: chat.personalChatId,
                             isTripChat: true,
                             title: chat.name || "Trip Channel",
                             lastMessage: chat.lastMessage || "Start chatting with your group...",
                             timestamp: new Date(chat.createdAt).toLocaleDateString(),
-                            participants: `Group chat (${memberCount} members)`,
+                            participants: participantsList || `Group chat (${memberCount} members)`,
                             activity: "Trip Channel",
                             avatar: experience?.coverPhotoUrl || "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800",
                             unreadCount: chat.unreadCount || 0,
