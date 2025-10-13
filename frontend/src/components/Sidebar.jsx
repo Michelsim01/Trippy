@@ -24,6 +24,7 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
             : [{ id: 'kyc-onboarding', label: 'Complete KYC to Create' }]
         ),
         { id: 'calendar', label: 'Calendar' },
+        { id: 'support', label: 'Support' },
         { id: 'about', label: 'About' },
         { id: 'contact', label: 'Contact' },
     ]

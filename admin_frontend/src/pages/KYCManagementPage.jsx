@@ -53,13 +53,13 @@ const KYCManagementPage = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Submissions</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900">
                 {loading ? (
                   <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
                 ) : (
                   metrics.totalSubmissions
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </div>
@@ -72,13 +72,13 @@ const KYCManagementPage = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Pending Review</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900">
                 {loading ? (
                   <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
                 ) : (
                   metrics.pendingSubmissions
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </div>
@@ -91,13 +91,13 @@ const KYCManagementPage = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900">
                 {loading ? (
                   <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
                 ) : (
                   metrics.approvedSubmissions
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </div>
@@ -110,13 +110,13 @@ const KYCManagementPage = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Declined</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <div className="text-2xl font-bold text-gray-900">
                 {loading ? (
                   <div className="h-6 bg-gray-200 rounded w-16 animate-pulse"></div>
                 ) : (
                   metrics.declinedSubmissions
                 )}
-              </p>
+              </div>
             </div>
           </div>
         </div>

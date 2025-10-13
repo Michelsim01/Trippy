@@ -297,7 +297,7 @@ const KYCTable = ({ onKYCAction }) => {
                 return (
                   <tr 
                     key={submission.id} 
-                    className={`hover:bg-gray-50 ${isPending ? 'bg-red-50 border-l-4 border-red-400' : ''}`}
+                    className={`hover:bg-gray-50 ${isPending ? 'bg-red-50 border-l-4 border-red-500' : ''}`}
                   >
                     <td className="px-4 py-4 text-sm font-medium text-gray-900">
                       {submission.kycId || submission.id}
@@ -333,7 +333,7 @@ const KYCTable = ({ onKYCAction }) => {
                     <td className="px-4 py-4 text-sm font-medium">
                       <button
                         onClick={() => handleViewKYC(submission)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-green-600 hover:text-green-900"
                         title="View KYC Details"
                       >
                         <Eye className="w-4 h-4" />

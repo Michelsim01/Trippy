@@ -44,6 +44,7 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
+import SupportPage from './pages/SupportPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
@@ -137,6 +138,10 @@ function AppRoutes() {
       />
 
       {/* Protected routes */}
+      <Route
+        path="/support"
+        element={<SupportPage />}
+      />
       <Route
         path="/home"
         element={requiresSurveyCompletion(<HomePage />)}

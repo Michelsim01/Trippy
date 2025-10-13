@@ -139,6 +139,12 @@ export const AuthProvider = ({ children }) => {
       // Call backend API
       const response = await authService.login(email, password)
       
+      // Check for account suspension error
+      if (!response.success && response.errorType === 'ACCOUNT_SUSPENDED') {
+        // Return suspension error for UI to handle
+        return { success: false, error: response.error, errorType: 'ACCOUNT_SUSPENDED' }
+      }
+      
       // If login is successful, extract the data and check if email is verified
       if (response.success) {
         // Destructure the response data

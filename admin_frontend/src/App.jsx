@@ -10,6 +10,7 @@ import ExperienceManagementPage from './pages/ExperienceManagementPage';
 import BookingManagementPage from './pages/BookingManagementPage';
 import TransactionManagementPage from './pages/TransactionManagementPage';
 import KYCManagementPage from './pages/KYCManagementPage';
+import TicketResolutionPage from './pages/TicketResolutionPage';
 
 // Placeholder components for other pages
 
@@ -121,10 +122,10 @@ const AppRoutes = () => {
         } 
       />
       <Route 
-        path="/admin/disputes" 
+        path="/admin/tickets" 
         element={
           <ProtectedRoute>
-            <DisputeResolutionPage />
+            <TicketResolutionPage />
           </ProtectedRoute>
         } 
       />
