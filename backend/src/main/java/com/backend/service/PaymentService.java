@@ -345,6 +345,43 @@ public class PaymentService {
     }
 
     /**
+     * Create a payout transaction for a completed booking.
+     *
+     * This method creates a completed payout transaction record that will appear
+     * in the admin portal for tracking guide earnings.
+     *
+     * @param booking the completed booking being paid out
+     * @param guide the guide receiving the payout
+     * @return the created and saved payout transaction
+     */
+    @Transactional
+    public Transaction createPayoutTransaction(Booking booking, User guide) {
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking cannot be null");
+        }
+        if (guide == null) {
+            throw new IllegalArgumentException("Guide cannot be null");
+        }
+        if (booking.getBaseAmount() == null || booking.getBaseAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Booking base amount must be non-negative");
+        }
+
+        Transaction payoutTransaction = new Transaction();
+        payoutTransaction.setBooking(booking);
+        payoutTransaction.setUser(guide); // Link to guide, not traveler
+        payoutTransaction.setAmount(booking.getBaseAmount()); // Base amount excludes service fees
+        payoutTransaction.setType(TransactionType.PAYOUT);
+        payoutTransaction.setStatus(TransactionStatus.COMPLETED);
+        payoutTransaction.setPaymentMethod(DEFAULT_PAYMENT_METHOD);
+        payoutTransaction.setExternalTransactionId(generateTransactionId());
+        payoutTransaction.setCreatedAt(LocalDateTime.now());
+        payoutTransaction.setUpdatedAt(LocalDateTime.now());
+        payoutTransaction.setProcessedAt(LocalDateTime.now());
+
+        return transactionRepository.save(payoutTransaction);
+    }
+
+    /**
      * Validate the payment amount for a given booking.
      *
      * This method uses the BookingPricingDTO to validate the payment amount.
