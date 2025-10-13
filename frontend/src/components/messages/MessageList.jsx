@@ -1,17 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const MessageItem = ({ message }) => {
+const MessageItem = ({ message, isTripChannel }) => {
+  const isOutgoing = message.sender === 'You';
+  
   return (
-    <div key={message.id} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-xs px-4 py-2 rounded-lg shadow-sm text-sm ${message.sender === 'You' ? 'bg-primary-4 text-white' : 'bg-white text-neutrals-1 border border-neutrals-6'}`}>
+    <div key={message.id} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
+      <div className={`max-w-xs px-4 py-2 rounded-lg shadow-sm text-sm ${isOutgoing ? 'bg-primary-4 text-white' : 'bg-white text-neutrals-1 border border-neutrals-6'}`}>
+        {!isOutgoing && isTripChannel && (
+          <div className="text-xs font-medium text-primary-4 mb-1">{message.sender}</div>
+        )}
         <div>{message.text}</div>
-        <div className="text-xs text-neutrals-4 mt-1 text-right">{message.timestamp}</div>
+        <div className={`text-xs mt-1 text-right ${isOutgoing ? 'text-primary-2' : 'text-neutrals-4'}`}>{message.timestamp}</div>
       </div>
     </div>
   );
 };
 
-const MessageList = ({ messages }) => {
+const MessageList = ({ messages, isTripChannel = false }) => {
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
@@ -87,7 +92,7 @@ const MessageList = ({ messages }) => {
     <div className="relative flex-1 flex flex-col min-h-0">
       <div ref={scrollAreaRef} className="flex-1 p-4 overflow-y-auto space-y-4">
         {messages.map(message => (
-          <MessageItem key={message.id} message={message} />
+          <MessageItem key={message.id} message={message} isTripChannel={isTripChannel} />
         ))}
         <div ref={messagesEndRef} />
       </div>

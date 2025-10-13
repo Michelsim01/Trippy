@@ -464,7 +464,7 @@ const MessagesPage = () => {
                                         </div>
                                     ) : (
                                         <>
-                                            <MessageList messages={chatMessages[selectedChat] || []} />
+                                            <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
                                             <div className="px-4 pb-4">
                                                 <div className="flex items-center justify-between mb-2">
                                                     <div className="flex items-center gap-2">
@@ -524,7 +524,7 @@ const MessagesPage = () => {
                                 </div>
                             ) : (
                                 <>
-                                    <MessageList messages={chatMessages[selectedChat] || []} />
+                                    <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
                                     <div className="px-4 pb-4">
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center gap-2">
