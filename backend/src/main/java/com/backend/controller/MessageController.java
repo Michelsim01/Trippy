@@ -122,7 +122,7 @@ public class MessageController {
             if (chatId == null || chatId <= 0) {
                 return ResponseEntity.badRequest().build();
             }
-            
+
             List<Message> messages = messageRepository.findByPersonalChatIdOrderByCreatedAt(chatId);
             return ResponseEntity.ok(messages);
         } catch (Exception e) {
@@ -130,7 +130,7 @@ public class MessageController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-    
+
     @PostMapping("/chat/{chatId}/send")
     public ResponseEntity<Message> sendMessage(
             @PathVariable Long chatId,
