@@ -556,6 +556,14 @@ public class BookingService {
                 booking.setUpdatedAt(LocalDateTime.now());
 
                 bookingRepository.save(booking);
+
+                // Create refund transaction for admin portal visibility
+                try {
+                    paymentService.createRefundTransaction(booking, booking.getRefundAmount());
+                } catch (Exception e) {
+                    // Log the error but don't fail the schedule cancellation
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                }
             }
 
             // Mark schedule as unavailable
