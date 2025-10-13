@@ -437,6 +437,17 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
+        // Restore available spots to the experience schedule
+        ExperienceSchedule schedule = booking.getExperienceSchedule();
+        int restoredSpots = schedule.getAvailableSpots() + booking.getNumberOfParticipants();
+        schedule.setAvailableSpots(restoredSpots);
+
+        // Update the isAvailable flag if spots are now available
+        if (restoredSpots > 0 && !schedule.getIsAvailable()) {
+            schedule.setIsAvailable(true);
+        }
+        experienceScheduleRepository.save(schedule);
+
         // Remove user from trip chat if this was a trip booking
         try {
             tripChatService.removeUserFromTripChat(bookingId);
