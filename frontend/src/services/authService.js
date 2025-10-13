@@ -67,10 +67,14 @@ export const authService = {
     } catch (error) {
       // Handle different error response formats
       let errorMessage = 'Login failed'
+      let errorType = 'GENERAL_ERROR'
       
       if (error.response?.data) {
-        // Backend returns error as plain string in response body
-        if (typeof error.response.data === 'string') {
+        // Check for account suspension error
+        if (error.response.status === 403 && error.response.data.error === 'ACCOUNT_SUSPENDED') {
+          errorType = 'ACCOUNT_SUSPENDED'
+          errorMessage = error.response.data.message || 'Your account has been suspended. Please contact support to appeal.'
+        } else if (typeof error.response.data === 'string') {
           errorMessage = error.response.data
         } else if (error.response.data.message) {
           errorMessage = error.response.data.message
@@ -82,6 +86,7 @@ export const authService = {
       return {
         success: false,
         error: errorMessage,
+        errorType: errorType,
       }
     }
   },

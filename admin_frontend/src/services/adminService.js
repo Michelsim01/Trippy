@@ -726,6 +726,136 @@ export const adminService = {
         error: error.response?.data?.message || 'Failed to decline KYC submission'
       };
     }
+  },
+
+  // ==================== TICKET MANAGEMENT ====================
+
+  /**
+   * Get ticket management metrics
+   * @returns {Promise<Object>} Ticket metrics data
+   */
+  getTicketMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/tickets/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching ticket metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch ticket metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all support tickets
+   * @returns {Promise<Object>} All support tickets
+   */
+  getAllTickets: async () => {
+    try {
+      const response = await api.get('/api/admin/tickets');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all tickets:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch tickets'
+      };
+    }
+  },
+
+  /**
+   * Update ticket status
+   * @param {number} ticketId - The ticket ID
+   * @param {string} status - New status (OPEN, IN_PROGRESS, RESOLVED, CLOSED)
+   * @returns {Promise<Object>} Update result
+   */
+  updateTicketStatus: async (ticketId, status) => {
+    try {
+      const response = await api.put(`/api/admin/tickets/${ticketId}/status`, { status });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating ticket status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update ticket status'
+      };
+    }
+  },
+
+  /**
+   * Delete ticket
+   * @param {number} ticketId - The ticket ID
+   * @returns {Promise<Object>} Delete result
+   */
+  deleteTicket: async (ticketId) => {
+    try {
+      const response = await api.delete(`/api/admin/tickets/${ticketId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete ticket'
+      };
+    }
+  },
+
+  /**
+   * Get tickets assigned to current admin
+   * @returns {Promise<Object>} My tickets data
+   */
+  getMyTickets: async () => {
+    try {
+      console.log('=== DEBUG: adminService.getMyTickets called ===');
+      const response = await api.get('/api/admin/tickets/my-tickets');
+      console.log('Raw response from backend:', response);
+      console.log('Response data:', response.data);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching my tickets:', error);
+      console.error('Error response:', error.response);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.response?.data?.error || 'Failed to fetch my tickets'
+      };
+    }
+  },
+
+  /**
+   * Take a ticket (assign to current admin)
+   * @param {number} ticketId - The ticket ID
+   * @returns {Promise<Object>} Take result
+   */
+  takeTicket: async (ticketId) => {
+    try {
+      const response = await api.put(`/api/admin/tickets/${ticketId}/take`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error taking ticket:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to take ticket'
+      };
+    }
   }
 };
 

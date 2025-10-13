@@ -25,7 +25,7 @@ const Sidebar = () => {
     { name: 'Booking Management', href: '/admin/bookings', icon: Calendar },
     { name: 'Transaction Management', href: '/admin/transactions', icon: FileText },
     { name: 'KYC Management', href: '/admin/kyc', icon: ShieldCheck },
-    { name: 'Dispute Resolution', href: '/admin/disputes', icon: AlertTriangle },
+    { name: 'Ticket Resolution', href: '/admin/tickets', icon: AlertTriangle },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 
