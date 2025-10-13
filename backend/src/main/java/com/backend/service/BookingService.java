@@ -448,6 +448,16 @@ public class BookingService {
         }
         experienceScheduleRepository.save(schedule);
 
+        // Create refund transaction for admin portal visibility
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                paymentService.createRefundTransaction(booking, refundAmount);
+            } catch (Exception e) {
+                // Log the error but don't fail the booking cancellation
+                System.err.println("Failed to create refund transaction: " + e.getMessage());
+            }
+        }
+
         // Remove user from trip chat if this was a trip booking
         try {
             tripChatService.removeUserFromTripChat(bookingId);
