@@ -32,7 +32,7 @@ const MessageItem = ({ message, isTripChannel }) => {
           <div className="text-xs font-medium mb-1" style={{ color: senderColor }}>{message.sender}</div>
         )}
         <div>{message.text}</div>
-        <div className={`text-xs mt-1 text-right ${isOutgoing ? 'text-primary-2' : 'text-neutrals-4'}`}>{message.timestamp}</div>
+        <div className={`text-xs mt-1 text-right ${isOutgoing ? 'text-white' : 'text-neutrals-4'}`}>{message.timestamp}</div>
       </div>
     </div>
   );

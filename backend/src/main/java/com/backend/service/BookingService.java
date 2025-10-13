@@ -437,6 +437,14 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
+        // Remove user from trip chat if this was a trip booking
+        try {
+            tripChatService.removeUserFromTripChat(bookingId);
+        } catch (Exception e) {
+            // Log the error but don't fail the booking cancellation
+            System.err.println("Failed to remove user from trip chat: " + e.getMessage());
+        }
+
         return createBookingResponseDTO(booking);
     }
 

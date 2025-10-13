@@ -155,6 +155,48 @@ public class TripChatService {
     }
 
     /**
+     * Remove a user from a trip chat channel when their booking is cancelled.
+     * Removes both cohort member and chat member records.
+     *
+     * @param bookingId the booking ID associated with the membership to remove
+     */
+    @Transactional
+    public void removeUserFromTripChat(Long bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        // Find cohort member by booking
+        List<CohortMember> cohortMembers = cohortMemberRepository.findByBooking(booking);
+        
+        for (CohortMember cohortMember : cohortMembers) {
+            TripCohort cohort = cohortMember.getTripCohort();
+            PersonalChat tripChat = cohort.getPersonalChat();
+            User user = cohortMember.getUser();
+
+            if (tripChat != null) {
+                // Remove chat member
+                Optional<ChatMember> chatMember = chatMemberRepository
+                        .findByPersonalChatAndUser(tripChat, user);
+                
+                if (chatMember.isPresent()) {
+                    chatMemberRepository.delete(chatMember.get());
+                }
+
+                // Remove unread count record if it exists
+                Optional<ChatUnreadCount> unreadCount = chatUnreadCountRepository
+                        .findByChatIdAndUserId(tripChat.getPersonalChatId(), user.getId());
+                
+                if (unreadCount.isPresent()) {
+                    chatUnreadCountRepository.delete(unreadCount.get());
+                }
+            }
+
+            // Remove cohort member
+            cohortMemberRepository.delete(cohortMember);
+        }
+    }
+
+    /**
      * Get all trip chats for a specific user (as participant or guide).
      *
      * @param userId the user ID
