@@ -1,17 +1,44 @@
 import React, { useEffect, useRef, useState } from 'react';
 
-const MessageItem = ({ message }) => {
+// Function to generate consistent dynamic color for a sender name
+const getSenderColor = (senderName) => {
+  // Create a hash from the sender name to ensure consistent color assignment
+  let hash = 0;
+  for (let i = 0; i < senderName.length; i++) {
+    hash = senderName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Use hash to generate HSL values
+  // Hue: 0-360 degrees (full color spectrum)
+  const hue = Math.abs(hash) % 360;
+  
+  // Saturation: 65-85% (vibrant but not too saturated)
+  const saturation = 65 + (Math.abs(hash >> 8) % 21);
+  
+  // Lightness: 35-55% (dark enough to read on white background)
+  const lightness = 35 + (Math.abs(hash >> 16) % 21);
+  
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};
+
+const MessageItem = ({ message, isTripChannel }) => {
+  const isOutgoing = message.sender === 'You';
+  const senderColor = getSenderColor(message.sender);
+  
   return (
-    <div key={message.id} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
-      <div className={`max-w-xs px-4 py-2 rounded-lg shadow-sm text-sm ${message.sender === 'You' ? 'bg-primary-4 text-white' : 'bg-white text-neutrals-1 border border-neutrals-6'}`}>
+    <div key={message.id} className={`flex ${isOutgoing ? 'justify-end' : 'justify-start'}`}>
+      <div className={`max-w-xs px-4 py-2 rounded-lg shadow-sm text-sm ${isOutgoing ? 'bg-primary-4 text-white' : 'bg-white text-neutrals-1 border border-neutrals-6'}`}>
+        {!isOutgoing && isTripChannel && (
+          <div className="text-xs font-medium mb-1" style={{ color: senderColor }}>{message.sender}</div>
+        )}
         <div>{message.text}</div>
-        <div className="text-xs text-neutrals-4 mt-1 text-right">{message.timestamp}</div>
+        <div className={`text-xs mt-1 text-right ${isOutgoing ? 'text-white' : 'text-neutrals-4'}`}>{message.timestamp}</div>
       </div>
     </div>
   );
 };
 
-const MessageList = ({ messages }) => {
+const MessageList = ({ messages, isTripChannel = false }) => {
   const messagesEndRef = useRef(null);
   const scrollAreaRef = useRef(null);
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false);
@@ -87,7 +114,7 @@ const MessageList = ({ messages }) => {
     <div className="relative flex-1 flex flex-col min-h-0">
       <div ref={scrollAreaRef} className="flex-1 p-4 overflow-y-auto space-y-4">
         {messages.map(message => (
-          <MessageItem key={message.id} message={message} />
+          <MessageItem key={message.id} message={message} isTripChannel={isTripChannel} />
         ))}
         <div ref={messagesEndRef} />
       </div>

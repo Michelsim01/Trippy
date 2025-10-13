@@ -14,7 +14,7 @@ public class ExperienceSchedule {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "experience_id", nullable = false)
-    @JsonIgnoreProperties({ "mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems" })
+    @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler", "mediaList", "itineraries", "schedules", "reviews", "bookings", "wishlistItems", "guide" })
     private Experience experience;
 
     @Column(name = "start_date_time")

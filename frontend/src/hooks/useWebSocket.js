@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const useWebSocket = (chatId, currentUserId) => {
+const useWebSocket = (chatId, currentUserId, chatType = 'personal') => {
     const [socket, setSocket] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [incomingMessages, setIncomingMessages] = useState([]);
@@ -20,8 +20,10 @@ const useWebSocket = (chatId, currentUserId) => {
                 }
                 return null;
             });
-            
-            const wsUrl = `ws://localhost:8080/ws/chat/${chatId}`;
+
+            // Use different WebSocket path based on chat type
+            const wsPath = chatType === 'trip' ? 'trip-chat' : 'chat';
+            const wsUrl = `ws://localhost:8080/ws/${wsPath}/${chatId}`;
             const ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
@@ -78,7 +80,7 @@ const useWebSocket = (chatId, currentUserId) => {
         } catch (error) {
             console.error('Error creating WebSocket connection:', error);
         }
-    }, [chatId, currentUserId]);
+    }, [chatId, currentUserId, chatType]);
 
     // Send message via WebSocket
     const sendMessage = useCallback((messageContent) => {

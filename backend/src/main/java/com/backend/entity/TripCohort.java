@@ -1,6 +1,7 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,6 +14,7 @@ public class TripCohort {
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "experience_schedule_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "tripCohort", "bookings"})
     private ExperienceSchedule experienceSchedule;
 
     private String name;
@@ -27,6 +29,7 @@ public class TripCohort {
         orphanRemoval = true,
         fetch = FetchType.LAZY
     )
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "tripCohort"})
     private List<CohortMember> members;
 
     @OneToOne(
@@ -35,7 +38,8 @@ public class TripCohort {
         fetch = FetchType.LAZY,
         orphanRemoval = true
     )
-    private TripChat tripChat;
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "tripCohort", "chatMembers", "messages"})
+    private PersonalChat personalChat;
 
     public Long getCohortId() { return cohortId; }
     public void setCohortId(Long cohortId) { this.cohortId = cohortId; }
@@ -53,6 +57,6 @@ public class TripCohort {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     public java.util.List<CohortMember> getMembers() { return members; }
     public void setMembers(java.util.List<CohortMember> members) { this.members = members; }
-    public TripChat getTripChat() { return tripChat; }
-    public void setTripChat(TripChat tripChat) { this.tripChat = tripChat; }
+    public PersonalChat getPersonalChat() { return personalChat; }
+    public void setPersonalChat(PersonalChat personalChat) { this.personalChat = personalChat; }
 }

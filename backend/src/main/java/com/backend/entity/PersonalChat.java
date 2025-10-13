@@ -18,6 +18,15 @@ public class PersonalChat {
     private Experience experience;
 
     private String name;
+
+    @Column(name = "is_trip_chat")
+    private Boolean isTripChat = false;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trip_cohort_id")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "personalChat", "members"})
+    private TripCohort tripCohort;
+
     private LocalDateTime createdAt;
 
     @OneToMany(
@@ -68,4 +77,8 @@ public class PersonalChat {
     public void setLastMessageTime(LocalDateTime lastMessageTime) { this.lastMessageTime = lastMessageTime; }
     public Integer getUnreadCount() { return unreadCount; }
     public void setUnreadCount(Integer unreadCount) { this.unreadCount = unreadCount; }
+    public Boolean getIsTripChat() { return isTripChat; }
+    public void setIsTripChat(Boolean isTripChat) { this.isTripChat = isTripChat; }
+    public TripCohort getTripCohort() { return tripCohort; }
+    public void setTripCohort(TripCohort tripCohort) { this.tripCohort = tripCohort; }
 }

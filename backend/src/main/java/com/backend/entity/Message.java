@@ -17,11 +17,6 @@ public class Message {
     private PersonalChat personalChat;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trip_chat_id")
-    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "messages", "chatMembers"})
-    private TripChat tripChat;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "passwordResetToken", "emailVerificationToken", "sentMessages", "experiences", "bookings", "reviews", "notifications", "wishlistItems", "tripPointsTransactions", "userSurvey", "transactions", "articleComments", "travelArticles"})
     private User sender;
@@ -38,8 +33,6 @@ public class Message {
     public void setMessageId(Long messageId) { this.messageId = messageId; }
     public PersonalChat getPersonalChat() { return personalChat; }
     public void setPersonalChat(PersonalChat personalChat) { this.personalChat = personalChat; }
-    public TripChat getTripChat() { return tripChat; }
-    public void setTripChat(TripChat tripChat) { this.tripChat = tripChat; }
     public User getSender() { return sender; }
     public void setSender(User sender) { this.sender = sender; }
     public String getContent() { return content; }

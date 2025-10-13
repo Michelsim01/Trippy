@@ -40,6 +40,9 @@ public class BookingService {
     @Autowired
     private TripPointsService tripPointsService;
 
+    @Autowired
+    private TripChatService tripChatService;
+
     /**
      * Validate a booking request before creating the actual booking.
      * 
@@ -289,6 +292,24 @@ public class BookingService {
                     schedule.setIsAvailable(false);
                 }
                 experienceScheduleRepository.save(schedule); // Single save with both updates
+
+                // Create or get trip chat channel and add participants
+                try {
+                    // Add the guide to the trip chat (creates chat if it doesn't exist)
+                    Long guideId = schedule.getExperience().getGuide().getId();
+                    tripChatService.addGuideToTripChat(schedule.getScheduleId(), guideId);
+
+                    // Add the traveler to the trip chat
+                    tripChatService.addUserToTripChat(
+                        schedule.getScheduleId(),
+                        booking.getTraveler().getId(),
+                        booking.getBookingId()
+                    );
+                } catch (Exception e) {
+                    // Log error but don't fail the booking if chat creation fails
+                    System.err.println("Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
             } else {
                 // if payment fails, keep the booking status as PENDING
                 booking.setStatus(BookingStatus.PENDING);
@@ -416,6 +437,35 @@ public class BookingService {
 
         booking = bookingRepository.save(booking);
 
+        // Restore available spots to the experience schedule
+        ExperienceSchedule schedule = booking.getExperienceSchedule();
+        int restoredSpots = schedule.getAvailableSpots() + booking.getNumberOfParticipants();
+        schedule.setAvailableSpots(restoredSpots);
+
+        // Update the isAvailable flag if spots are now available
+        if (restoredSpots > 0 && !schedule.getIsAvailable()) {
+            schedule.setIsAvailable(true);
+        }
+        experienceScheduleRepository.save(schedule);
+
+        // Create refund transaction for admin portal visibility
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                paymentService.createRefundTransaction(booking, refundAmount);
+            } catch (Exception e) {
+                // Log the error but don't fail the booking cancellation
+                System.err.println("Failed to create refund transaction: " + e.getMessage());
+            }
+        }
+
+        // Remove user from trip chat if this was a trip booking
+        try {
+            tripChatService.removeUserFromTripChat(bookingId);
+        } catch (Exception e) {
+            // Log the error but don't fail the booking cancellation
+            System.err.println("Failed to remove user from trip chat: " + e.getMessage());
+        }
+
         return createBookingResponseDTO(booking);
     }
 
@@ -506,6 +556,14 @@ public class BookingService {
                 booking.setUpdatedAt(LocalDateTime.now());
 
                 bookingRepository.save(booking);
+
+                // Create refund transaction for admin portal visibility
+                try {
+                    paymentService.createRefundTransaction(booking, booking.getRefundAmount());
+                } catch (Exception e) {
+                    // Log the error but don't fail the schedule cancellation
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                }
             }
 
             // Mark schedule as unavailable
