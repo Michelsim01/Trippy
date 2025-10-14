@@ -26,9 +26,9 @@ class ErrorBoundary extends React.Component {
 
     render() {
         if (this.state.hasError) {
-            // Redirect to server error page
-            window.location.href = '/500';
-            return null;
+            // window.location.href = '/500';  // Comment this out
+            console.error('Error boundary triggered:', this.state.error);
+            return <div>Error occurred: {this.state.error?.message}</div>;
         }
 
         return this.props.children;

@@ -211,7 +211,7 @@ export default function KycVerificationPage() {
         if (!form.email.trim()) newErrors.email = 'Email is required';
         else if (!/\S+@\S+\.\S+/.test(form.email)) newErrors.email = 'Email is invalid';
 
-        // Mobile is optional but if one is filled, require both
+        // Mobile number is optional but if one is filled, require both
         if ((form.mobileCountry && !form.mobileNumber.trim()) || (!form.mobileCountry && form.mobileNumber.trim())) {
             newErrors.mobileNumber = 'Please provide both country code and number';
         }
@@ -266,14 +266,9 @@ export default function KycVerificationPage() {
         console.log('Submitting KYC with userId:', currentUserId, 'documentFileUrl:', form.documentFileUrl);
 
         try {
-            if (form.documentFileUrl) {
-                // If document was uploaded, use the new submission method with document
-                await kycService.submitKycWithDocument(currentUserId, form, form.documentFileUrl);
-            } else {
-                // Fallback to original method if no document
-                await kycService.submitKyc(currentUserId, form);
-            }
-            updateKycStatus('PENDING');
+            // Use unified submit method - document is always required
+            await kycService.submitKyc(currentUserId, form);
+
             alert("KYC submitted successfully! Your application is under review.");
             navigate("/kyc-submitted");
         } catch (error) {

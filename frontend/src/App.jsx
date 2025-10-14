@@ -26,6 +26,8 @@ import BookingDetailPage from './pages/BookingDetailPage'
 import MyToursPage from './pages/MyToursPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
+import BlogDetailPage from './pages/BlogDetailPage'
+import CreateBlogPage from './pages/CreateBlogPage'
 import CreateExperienceBasicInfoPage from './pages/CreateExperienceBasicInfoPage'
 import CreateExperienceDetailsPage from './pages/CreateExperienceDetailsPage'
 import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
@@ -164,6 +166,18 @@ function AppRoutes() {
       <Route
         path="/blog"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
+      />
+      <Route
+        path="/blog/:id"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogDetailPage />}
+      />
+      <Route
+        path="/create-blog"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateBlogPage />}
+      />
+      <Route
+        path="/create-blog/basic-info"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateBlogPage />}
       />
 
       {/*create experience*/}

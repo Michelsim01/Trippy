@@ -8,7 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.HttpHeaders;
 
 import com.backend.entity.KycDocument;
-import com.backend.entity.KycStatus;
+// import com.backend.entity.KycStatus;
 import com.backend.service.KycService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -127,30 +127,19 @@ public class KycController {
         }
     }
 
-    // Submit KYC document
+    // Submit KYC application with document
     @PostMapping("/submit")
-    public ResponseEntity<?> submitKyc(@RequestBody KycDocument kycDoc, @RequestParam Long userId) {
-        kycService.submitKyc(userId, kycDoc);
-        return ResponseEntity.ok("KYC submitted");
-    }
-
-    // Submit KYC with file URL (alternative endpoint)
-    @PostMapping("/submit-with-document")
-    public ResponseEntity<Map<String, Object>> submitKycWithDocument(
-            @RequestParam("userId") Long userId,
-            @RequestParam("docType") String docType,
-            @RequestParam("docSide") String docSide,
-            @RequestParam("fileUrl") String fileUrl,
-            @RequestParam(value = "notes", required = false) String notes) {
+    public ResponseEntity<Map<String, Object>> submitKyc(@RequestBody KycDocument kycDoc, @RequestParam Long userId) {
         try {
-            KycDocument kycDoc = new KycDocument();
-            kycDoc.setDocType(docType);
-            kycDoc.setDocSide(docSide);
-            kycDoc.setFileUrl(fileUrl);
-            kycDoc.setNotes(notes);
+            // Validate that document URL is provided
+            if (kycDoc.getFileUrl() == null || kycDoc.getFileUrl().isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Document upload is required for KYC submission");
+                return ResponseEntity.badRequest().body(error);
+            }
 
             kycService.submitKyc(userId, kycDoc);
-            
+
             Map<String, Object> response = new HashMap<>();
             response.put("message", "KYC submitted successfully");
             return ResponseEntity.ok(response);

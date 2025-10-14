@@ -22,18 +22,23 @@ export const kycService = {
     }
   },
 
-  // Submit KYC document
+  // Submit KYC application with all required data
   async submitKyc(userId, formData) {
     try {
-      console.log('submitKyc called with userId:', userId);
-      
+      console.log('submitKyc called with userId:', userId, 'documentUrl:', formData.documentFileUrl);
+
       // Transform frontend form data to match backend KycDocument structure
       const kycDocument = {
         docType: formData.idType === 'other' ? formData.otherIdType : formData.idType,
-        docSide: 'front', // Default value, can be extended for file upload
-        fileUrl: formData.documentFileUrl || null, // Include file URL if document was uploaded
+        docSide: 'front',
+        fileUrl: formData.documentFileUrl || null, // Required - document must be uploaded
         notes: `Name: ${formData.fullName}, DOB: ${formData.dob}, Nationality: ${formData.nationality}, ID: ${formData.idNumber}, Email: ${formData.email}, Mobile: ${formData.mobileCountry}${formData.mobileNumber}`
       };
+
+      // Validate that document was uploaded
+      if (!kycDocument.fileUrl) {
+        throw new Error('Document upload is required for KYC submission');
+      }
 
       console.log('Submitting to /kyc/submit with userId:', userId, 'and document:', kycDocument);
 
@@ -41,33 +46,6 @@ export const kycService = {
       return response.data;
     } catch (error) {
       console.error('KYC submission error:', error);
-      console.error('Error response:', error.response?.data);
-      throw new Error(error.response?.data?.error || error.message || 'Failed to submit KYC application');
-    }
-  },
-
-  // Submit KYC with document (alternative method)
-  async submitKycWithDocument(userId, formData, fileUrl) {
-    try {
-      console.log('submitKycWithDocument called with:', { userId, fileUrl, idType: formData.idType });
-      
-      const params = new URLSearchParams();
-      params.append('userId', userId);
-      params.append('docType', formData.idType === 'other' ? formData.otherIdType : formData.idType);
-      params.append('docSide', 'front');
-      params.append('fileUrl', fileUrl);
-      params.append('notes', `Name: ${formData.fullName}, DOB: ${formData.dob}, Nationality: ${formData.nationality}, ID: ${formData.idNumber}, Email: ${formData.email}, Mobile: ${formData.mobileCountry}${formData.mobileNumber}`);
-
-      console.log('Sending parameters:', params.toString());
-
-      const response = await api.post('/kyc/submit-with-document', params, {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      });
-      return response.data;
-    } catch (error) {
-      console.error('KYC submission with document error:', error);
       console.error('Error response:', error.response?.data);
       throw new Error(error.response?.data?.error || error.message || 'Failed to submit KYC application');
     }

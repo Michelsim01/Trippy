@@ -8,8 +8,6 @@ import java.util.ArrayList;
 @Entity
 @Table(name = "travel_article")
 public class TravelArticle {
-    @OneToMany(mappedBy = "travelArticle", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<ArticleComment> comments = new ArrayList<>();
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long articleId;
@@ -65,7 +63,4 @@ public class TravelArticle {
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    public List<ArticleComment> getComments() { return comments; }
-    public void setComments(List<ArticleComment> comments) { this.comments = comments; }
 }

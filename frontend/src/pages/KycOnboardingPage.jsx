@@ -24,7 +24,6 @@ export default function GuideOnboardingPage() {
                 }
             } catch (error) {
                 console.error('Error checking KYC status:', error);
-                // Continue to allow access if there's an error checking status
             }
         };
 
@@ -89,7 +88,6 @@ export default function GuideOnboardingPage() {
                     {/* Image Section */}
                     <div className="w-full lg:w-1/2 flex justify-center">
                             <div className="relative">
-                                {/* Replace this src with your actual image path */}
                                 <img 
                                     src="/public/images/pic2.jpeg" 
                                     alt="Become a local guide and share your passion" 
