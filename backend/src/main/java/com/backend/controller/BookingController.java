@@ -519,11 +519,21 @@ public class BookingController {
 
             // Update all confirmed bookings to COMPLETED
             int updatedCount = 0;
+            User guide = schedule.getExperience().getGuide(); // Get the guide for payout transactions
+
             for (Booking booking : confirmedBookings) {
                 booking.setStatus(BookingStatus.COMPLETED);
                 booking.setUpdatedAt(LocalDateTime.now());
                 bookingRepository.save(booking);
                 updatedCount++;
+
+                // Create payout transaction for this booking
+                try {
+                    paymentService.createPayoutTransaction(booking, guide);
+                } catch (Exception payoutError) {
+                    // Log the error but don't fail the completion
+                    System.err.println("Failed to create payout transaction for booking " + booking.getBookingId() + ": " + payoutError.getMessage());
+                }
 
                 // Send review request notification to each participant
                 try {
@@ -548,6 +558,10 @@ public class BookingController {
                     // Continue processing other bookings even if notification fails
                 }
             }
+
+            // Mark the schedule as unavailable since the tour is now completed
+            schedule.setIsAvailable(false);
+            experienceScheduleRepository.save(schedule);
 
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
