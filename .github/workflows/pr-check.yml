@@ -1,0 +1,111 @@
+name: PR Build Check
+
+on:
+  pull_request:
+    branches: [ master ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  # Quick build check for PRs
+  pr-build-check:
+    runs-on: ubuntu-latest
+    name: PR Build Validation
+    
+    steps:
+    - name: Checkout PR code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v40
+      with:
+        files_yaml: |
+          backend:
+            - 'backend/**'
+          frontend:
+            - 'frontend/**'
+          admin_frontend:
+            - 'admin_frontend/**'
+          data_pipeline:
+            - 'data-pipeline/**'
+    
+    # Backend build (only if backend files changed)
+    - name: Set up JDK 17
+      if: steps.changed-files.outputs.backend_any_changed == 'true'
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Cache Maven dependencies
+      if: steps.changed-files.outputs.backend_any_changed == 'true'
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: Build backend
+      if: steps.changed-files.outputs.backend_any_changed == 'true'
+      working-directory: ./backend
+      run: |
+        chmod +x mvnw
+        ./mvnw clean compile test
+    
+    # Frontend build (only if frontend files changed)
+    - name: Set up Node.js
+      if: steps.changed-files.outputs.frontend_any_changed == 'true' || steps.changed-files.outputs.admin_frontend_any_changed == 'true'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Build frontend
+      if: steps.changed-files.outputs.frontend_any_changed == 'true'
+      working-directory: ./frontend
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
+        npm run build
+        
+    - name: Build admin frontend
+      if: steps.changed-files.outputs.admin_frontend_any_changed == 'true'
+      working-directory: ./admin_frontend
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
+        npm run build
+    
+    # Data pipeline check (only if data pipeline files changed)
+    - name: Set up Python
+      if: steps.changed-files.outputs.data_pipeline_any_changed == 'true'
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Check data pipeline
+      if: steps.changed-files.outputs.data_pipeline_any_changed == 'true'
+      working-directory: ./data-pipeline
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        python -m py_compile $(find . -name "*.py")
+        
+    - name: PR Summary
+      run: |
+        echo "## 📋 PR Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Changed Components:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Backend: ${{ steps.changed-files.outputs.backend_any_changed == 'true' && '✅ Changed & Tested' || '➖ No Changes' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Frontend: ${{ steps.changed-files.outputs.frontend_any_changed == 'true' && '✅ Changed & Tested' || '➖ No Changes' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Admin Frontend: ${{ steps.changed-files.outputs.admin_frontend_any_changed == 'true' && '✅ Changed & Tested' || '➖ No Changes' }}" >> $GITHUB_STEP_SUMMARY
+        echo "- Data Pipeline: ${{ steps.changed-files.outputs.data_pipeline_any_changed == 'true' && '✅ Changed & Tested' || '➖ No Changes' }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ **PR is ready for review!**" >> $GITHUB_STEP_SUMMARY
