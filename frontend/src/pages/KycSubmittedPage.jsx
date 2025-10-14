@@ -155,6 +155,7 @@ export default function KycSubmittedPage() {
                     {/* Action Buttons */}
                     <div className="flex flex-col sm:flex-row gap-4">
                         <button
+                            // need to allow user to redo submission again as handleretrysubmission only navigates to kyc-verificationpage, but verificationpage will automatically navigate user to kyc-submittedpage since kycstatus is not NOT_STARTED
                             onClick={handleRetrySubmission}
                             className="flex-1 bg-primary-1 text-white font-bold py-3 px-6 rounded-lg hover:bg-primary-1/90 transition-all"
                         >
