@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { Calendar, CheckCircle, Clock, XCircle, Bell } from 'lucide-react';
 import BookingsTable from '../components/BookingsTable';
 import { adminService } from '../services/adminService';
 
@@ -12,6 +12,8 @@ const BookingManagementPage = () => {
   });
   const [loadingMetrics, setLoadingMetrics] = useState(true);
   const [metricsError, setMetricsError] = useState(null);
+  const [sendingReminders, setSendingReminders] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState(null);
 
   const fetchMetrics = async () => {
     setLoadingMetrics(true);
@@ -31,6 +33,35 @@ const BookingManagementPage = () => {
     }
   };
 
+  const handleSendTripReminders = async () => {
+    setSendingReminders(true);
+    setReminderMessage(null);
+    try {
+      const response = await adminService.triggerDailyReminders();
+      if (response.success) {
+        setReminderMessage({
+          type: 'success',
+          text: 'Trip reminders sent successfully!'
+        });
+      } else {
+        setReminderMessage({
+          type: 'error',
+          text: response.error || 'Failed to send trip reminders'
+        });
+      }
+    } catch (err) {
+      setReminderMessage({
+        type: 'error',
+        text: 'Failed to send trip reminders. Please try again.'
+      });
+      console.error('Error sending trip reminders:', err);
+    } finally {
+      setSendingReminders(false);
+      // Clear message after 5 seconds
+      setTimeout(() => setReminderMessage(null), 5000);
+    }
+  };
+
   useEffect(() => {
     fetchMetrics();
   }, []);
@@ -38,9 +69,36 @@ const BookingManagementPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
-        <p className="text-gray-600">Manage bookings, reservations, and customer interactions</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Booking Management</h1>
+          <p className="text-gray-600">Manage bookings, reservations, and customer interactions</p>
+        </div>
+        <div className="flex flex-col items-end space-y-2">
+          <button
+            onClick={handleSendTripReminders}
+            disabled={sendingReminders}
+            className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+              sendingReminders
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            }`}
+          >
+            <Bell className={`w-4 h-4 mr-2 ${sendingReminders ? 'animate-pulse' : ''}`} />
+            {sendingReminders ? 'Sending...' : 'Send Trip Reminders'}
+          </button>
+          
+          {/* Reminder message */}
+          {reminderMessage && (
+            <div className={`px-3 py-2 rounded-md text-sm font-medium ${
+              reminderMessage.type === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-red-100 text-red-800 border border-red-200'
+            }`}>
+              {reminderMessage.text}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}

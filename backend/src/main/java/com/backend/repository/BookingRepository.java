@@ -106,4 +106,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Find all CONFIRMED bookings for a specific schedule
     @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
     List<Booking> findConfirmedBookingsByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    // Find all bookings for a specific experience schedule
+    List<Booking> findByExperienceSchedule_ScheduleId(Long scheduleId);
 }

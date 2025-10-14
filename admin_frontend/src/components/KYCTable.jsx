@@ -31,6 +31,44 @@ const KYCTable = ({ onKYCAction }) => {
     }
   };
 
+  const sendKycStatusNotification = async (userId, action, userName = 'User') => {
+    try {
+      console.log(`Sending KYC ${action} notification for userId:`, userId);
+      
+      const messages = {
+        approve: {
+          title: 'KYC Application Approved',
+          message: 'Congratulations! Your KYC verification has been approved. You can now create an experience.'
+        },
+        decline: {
+          title: 'KYC Application Rejected',
+          message: 'Your KYC verification has been rejected. Please head to the KYC page, review the requirements and resubmit if necessary.'
+        }
+      };
+
+      const notificationData = {
+        title: messages[action].title,
+        message: messages[action].message,
+        userId: userId,
+        type: 'UPDATE_INFO',
+      };
+      
+      console.log('KYC Status Notification data:', notificationData);
+
+      const result = await adminService.createNotification(notificationData);
+      console.log('KYC Status Notification result:', result);
+      
+      if (result.success) {
+        console.log('KYC Status Notification sent successfully:', result.data);
+      } else {
+        console.error('Error sending KYC status notification:', result.error);
+      }
+    }
+    catch (error) {
+      console.error('Error sending KYC status notification:', error);
+    }
+  };
+
   useEffect(() => {
     fetchKYCSubmissions();
   }, []);
@@ -100,6 +138,10 @@ const KYCTable = ({ onKYCAction }) => {
 
   const handleKYCAction = async (submissionId, action, declineMessage = '') => {
     try {
+      // Find the submission to get user information for notification
+      const submission = kycSubmissions.find(sub => sub.id === submissionId);
+      console.log(`Handling KYC ${action} for submissionId:`, submission);
+      
       let response;
       if (action === 'approve') {
         response = await adminService.approveKYC(submissionId);
@@ -108,6 +150,11 @@ const KYCTable = ({ onKYCAction }) => {
       }
 
       if (response.success) {
+        // Send notification to the user
+        if (submission && submission.userId) {
+          await sendKycStatusNotification(submission.userId, action, submission.userName || 'User');
+        }
+        
         // Refresh the data
         await fetchKYCSubmissions();
         onKYCAction();

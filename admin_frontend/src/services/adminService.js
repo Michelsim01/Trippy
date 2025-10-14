@@ -856,6 +856,40 @@ export const adminService = {
         error: error.response?.data?.message || 'Failed to take ticket'
       };
     }
+  },
+
+  // Create notification
+  async createNotification(notificationData) {
+    try {
+      const response = await api.post('/api/notifications', notificationData);
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to create notification',
+      };
+    }
+  },
+
+  // Trigger daily trip reminders manually
+  async triggerDailyReminders() {
+    try {
+      const response = await api.post('/api/admin/notifications/trigger-daily-reminders');
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      console.error('Error triggering daily reminders:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || error.message || 'Failed to trigger daily reminders',
+      };
+    }
   }
 };
 

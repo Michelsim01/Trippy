@@ -9,4 +9,5 @@ public enum NotificationType {
     PASSWORD_RESET,
     UPDATE_INFO,
     EMAIL_UPDATE,
+    KYC_STATUS
 }
