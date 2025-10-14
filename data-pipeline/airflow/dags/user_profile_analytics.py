@@ -17,12 +17,12 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-# Creates an Airflow workflow that runs automatically every 6 hours
+# Creates an Airflow workflow that runs automatically every 24 hours
 dag = DAG(
     'user_profile_analytics',
     default_args=default_args,
     description='Analyze user behavior and create preference profiles',
-    schedule=timedelta(hours=6),  # Run every 6 hours
+    schedule=timedelta(hours=24),  # Run every 24 hours
     start_date=datetime(2024, 10, 1),
     catchup=False,
     tags=['analytics', 'recommendations', 'user-profiling'],
@@ -149,11 +149,26 @@ def process_user_features(**context):
             'avg_rating_given': float(user_reviews['avg_rating_given'].iloc[0]) if len(user_reviews) > 0 else 0.0,
             
             # Interest categories (one-hot encoded based on survey data if available)
-            'interest_adventure': 1 if len(user_survey) > 0 and any('hiking' in str(interest) or 'climbing' in str(interest) for interest in user_survey['interests'].iloc[0] or []) else 0,
-            'interest_cultural': 1 if len(user_survey) > 0 and any('museum' in str(interest) or 'historical' in str(interest) for interest in user_survey['interests'].iloc[0] or []) else 0,
-            'interest_relaxation': 1 if len(user_survey) > 0 and any('spa' in str(interest) or 'wellness' in str(interest) for interest in user_survey['interests'].iloc[0] or []) else 0,
-            'interest_social': 1 if len(user_survey) > 0 and any('group' in str(interest) or 'festival' in str(interest) for interest in user_survey['interests'].iloc[0] or []) else 0,
-            'interest_nature': 1 if len(user_survey) > 0 and any('wildlife' in str(interest) or 'photography' in str(interest) for interest in user_survey['interests'].iloc[0] or []) else 0,
+            'interest_adventure': 1 if len(user_survey) > 0 and any(
+                any(keyword in str(interest).lower() for keyword in ['adventure', 'mountains'])
+                for interest in user_survey['interests'].iloc[0] or []
+            ) else 0,
+            'interest_cultural': 1 if len(user_survey) > 0 and any(
+                any(keyword in str(interest).lower() for keyword in ['culture', 'history', 'art', 'architecture'])
+                for interest in user_survey['interests'].iloc[0] or []
+            ) else 0,
+            'interest_relaxation': 1 if len(user_survey) > 0 and any(
+                any(keyword in str(interest).lower() for keyword in ['beaches', 'music'])
+                for interest in user_survey['interests'].iloc[0] or []
+            ) else 0,
+            'interest_social': 1 if len(user_survey) > 0 and any(
+                any(keyword in str(interest).lower() for keyword in ['food'])
+                for interest in user_survey['interests'].iloc[0] or []
+            ) else 0,
+            'interest_nature': 1 if len(user_survey) > 0 and any(
+                any(keyword in str(interest).lower() for keyword in ['nature', 'wildlife', 'photography'])
+                for interest in user_survey['interests'].iloc[0] or []
+            ) else 0,
             
             # Budget preference (encoded based on numerical ranges)
             'budget_score': encode_budget_score(user_survey['experience_budget'].iloc[0]) if len(user_survey) > 0 else 2
@@ -217,6 +232,7 @@ def cluster_users(**context):
     
     return {
         'user_clusters': df[['user_id', 'cluster']].to_json(orient='records'), # Save user cluster assignments
+        'user_features': df.to_json(orient='records'),  # Save all user features
         'cluster_profiles': json.dumps(cluster_profiles) # Save cluster profiles
     }
 
@@ -226,6 +242,7 @@ def save_analytics_results(**context):
     # Get clustering results
     results = context['ti'].xcom_pull(task_ids='cluster_users')
     user_clusters = json.loads(results['user_clusters'])
+    user_features = json.loads(results['user_features'])
     cluster_profiles = json.loads(results['cluster_profiles'])
     
     pg_hook = PostgresHook(postgres_conn_id='trippy_db')
@@ -253,6 +270,9 @@ def save_analytics_results(**context):
         user_id = user_cluster['user_id']
         cluster_id = user_cluster['cluster']
         
+        # Get the full feature vector for this user
+        user_feature_data = next((u for u in user_features if u['user_id'] == user_id), {})
+        
         upsert_user_sql = """
         INSERT INTO user_analytics_profile (user_id, cluster_id, profile_data, last_updated)
         VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
@@ -263,7 +283,7 @@ def save_analytics_results(**context):
             last_updated = CURRENT_TIMESTAMP
         """
         
-        pg_hook.run(upsert_user_sql, parameters=[user_id, cluster_id, json.dumps({})])
+        pg_hook.run(upsert_user_sql, parameters=[user_id, cluster_id, json.dumps(user_feature_data)])
     
     # Save cluster profiles
     for cluster_id, profile in cluster_profiles.items():
