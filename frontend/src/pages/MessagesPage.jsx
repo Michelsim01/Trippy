@@ -487,6 +487,7 @@ const MessagesPage = () => {
                                                     setNewMessage={setNewMessage}
                                                     onSendMessage={handleSendMessage}
                                                     onKeyDown={handleInputKeyDown}
+                                                    isScheduleCancelled={selectedConversation?.isTripChat && selectedConversation?.schedule?.isAvailable === false}
                                                 />
                                             </div>
                                         </>
@@ -547,6 +548,7 @@ const MessagesPage = () => {
                                             setNewMessage={setNewMessage}
                                             onSendMessage={handleSendMessage}
                                             onKeyDown={handleInputKeyDown}
+                                            isScheduleCancelled={selectedConversation?.isTripChat && selectedConversation?.schedule?.isAvailable === false}
                                         />
                                     </div>
                                 </>
