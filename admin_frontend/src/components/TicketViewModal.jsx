@@ -1,66 +1,117 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { X, Calendar, User, Mail, Tag, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
 import { adminService } from '../services/adminService';
+import ConfirmationModal from './ConfirmationModal';
 
 const TicketViewModal = ({ ticket, isOpen, onClose, onTicketAction }) => {
+  const [confirmationModal, setConfirmationModal] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    type: 'warning',
+    action: null
+  });
+  const [errorMessage, setErrorMessage] = useState('');
+
   if (!isOpen || !ticket) return null;
 
-  const handleTakeTicket = async () => {
-    try {
-      const response = await adminService.takeTicket(ticket.id);
-      if (response.success) {
-        // Refresh the parent component to update the ticket list
-        if (onTicketAction) {
-          onTicketAction();
-        }
-        onClose();
-      } else {
-        alert(`Failed to take ticket: ${response.error}`);
-      }
-    } catch (error) {
-      console.error('Error taking ticket:', error);
-      alert('Error taking ticket. Please try again.');
-    }
+  const showConfirmation = (title, message, type, action) => {
+    setConfirmationModal({
+      isOpen: true,
+      title,
+      message,
+      type,
+      action
+    });
   };
 
-  const handleResolveTicket = async () => {
-    try {
-      const response = await adminService.updateTicketStatus(ticket.id, 'RESOLVED');
-      if (response.success) {
-        // Refresh the parent component to update the ticket list
-        if (onTicketAction) {
-          onTicketAction();
-        }
-        onClose();
-      } else {
-        alert(`Failed to resolve ticket: ${response.error}`);
-      }
-    } catch (error) {
-      console.error('Error resolving ticket:', error);
-      alert('Error resolving ticket. Please try again.');
+  const handleConfirmAction = async () => {
+    if (confirmationModal.action) {
+      await confirmationModal.action();
     }
+    setConfirmationModal({ isOpen: false, title: '', message: '', type: 'warning', action: null });
   };
 
-  const handleDeleteTicket = async () => {
-    if (!window.confirm(`Are you sure you want to delete ticket #${ticket.id}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleCancelAction = () => {
+    setConfirmationModal({ isOpen: false, title: '', message: '', type: 'warning', action: null });
+  };
 
-    try {
-      const response = await adminService.deleteTicket(ticket.id);
-      if (response.success) {
-        // Refresh the parent component to update the ticket list
-        if (onTicketAction) {
-          onTicketAction();
+  const handleTakeTicket = () => {
+    showConfirmation(
+      'Take Ticket',
+      `Are you sure you want to take ticket #${ticket.id}? This will assign the ticket to you and change its status to "In Progress".`,
+      'info',
+      async () => {
+        try {
+          setErrorMessage('');
+          const response = await adminService.takeTicket(ticket.id);
+          if (response.success) {
+            // Refresh the parent component to update the ticket list
+            if (onTicketAction) {
+              onTicketAction();
+            }
+            onClose();
+          } else {
+            setErrorMessage(`Failed to take ticket: ${response.error}`);
+          }
+        } catch (error) {
+          console.error('Error taking ticket:', error);
+          setErrorMessage('Error taking ticket. Please try again.');
         }
-        onClose();
-      } else {
-        alert(`Failed to delete ticket: ${response.error}`);
       }
-    } catch (error) {
-      console.error('Error deleting ticket:', error);
-      alert('Error deleting ticket. Please try again.');
-    }
+    );
+  };
+
+  const handleResolveTicket = () => {
+    showConfirmation(
+      'Resolve Ticket',
+      `Are you sure you want to resolve ticket #${ticket.id}? This will mark the ticket as resolved and close it.`,
+      'success',
+      async () => {
+        try {
+          setErrorMessage('');
+          const response = await adminService.updateTicketStatus(ticket.id, 'RESOLVED');
+          if (response.success) {
+            // Refresh the parent component to update the ticket list
+            if (onTicketAction) {
+              onTicketAction();
+            }
+            onClose();
+          } else {
+            setErrorMessage(`Failed to resolve ticket: ${response.error}`);
+          }
+        } catch (error) {
+          console.error('Error resolving ticket:', error);
+          setErrorMessage('Error resolving ticket. Please try again.');
+        }
+      }
+    );
+  };
+
+  const handleDeleteTicket = () => {
+    showConfirmation(
+      'Delete Ticket',
+      `Are you sure you want to delete ticket #${ticket.id}? This action cannot be undone.`,
+      'danger',
+      async () => {
+        try {
+          setErrorMessage('');
+          const response = await adminService.deleteTicket(ticket.id);
+          if (response.success) {
+            // Refresh the parent component to update the ticket list
+            if (onTicketAction) {
+              onTicketAction();
+            }
+            onClose();
+          } else {
+            setErrorMessage(`Failed to delete ticket: ${response.error}`);
+          }
+        } catch (error) {
+          console.error('Error deleting ticket:', error);
+          setErrorMessage('Error deleting ticket. Please try again.');
+        }
+      }
+    );
   };
 
   const formatDate = (dateString) => {
@@ -114,6 +165,7 @@ const TicketViewModal = ({ ticket, isOpen, onClose, onTicketAction }) => {
   };
 
   return (
+    <>
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
@@ -126,6 +178,20 @@ const TicketViewModal = ({ ticket, isOpen, onClose, onTicketAction }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
+
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mx-6 mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-800">{errorMessage}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <div className="p-6 space-y-6">
@@ -274,6 +340,18 @@ const TicketViewModal = ({ ticket, isOpen, onClose, onTicketAction }) => {
         </div>
       </div>
     </div>
+
+    {/* Confirmation Modal */}
+    <ConfirmationModal
+      isOpen={confirmationModal.isOpen}
+      onClose={handleCancelAction}
+      onConfirm={handleConfirmAction}
+      title={confirmationModal.title}
+      message={confirmationModal.message}
+      confirmText={confirmationModal.type === 'danger' ? 'Delete' : 'Confirm'}
+      type={confirmationModal.type}
+    />
+    </>
   );
 };
 
