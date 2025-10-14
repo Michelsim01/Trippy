@@ -42,7 +42,12 @@ const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-neutrals-1 text-lg truncate">
-                {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
+                <span className={isTripChat && conversation?.schedule?.isAvailable === false ? 'line-through' : ''}>
+                  {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
+                </span>
+                {isTripChat && conversation?.schedule?.isAvailable === false && (
+                  <span className="text-red-600 font-medium ml-2">(CANCELLED)</span>
+                )}
               </h3>
               {isTripChat && (
                 <span className="flex-shrink-0 bg-primary-6 text-primary-4 text-xs px-2 py-0.5 rounded">
@@ -94,7 +99,12 @@ const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-neutrals-1 text-lg truncate">
-                {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
+                <span className={isTripChat && conversation?.schedule?.isAvailable === false ? 'line-through' : ''}>
+                  {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
+                </span>
+                {isTripChat && conversation?.schedule?.isAvailable === false && (
+                  <span className="text-red-600 font-medium ml-2">(CANCELLED)</span>
+                )}
               </h3>
               {isTripChat && (
                 <span className="flex-shrink-0 bg-primary-6 text-primary-4 text-xs px-2 py-0.5 rounded">
