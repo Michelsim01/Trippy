@@ -1,7 +1,6 @@
 # Capstone Project - Full Stack Application
 
 [![CI Pipeline](https://github.com/Michelsim01/capstone_project/actions/workflows/ci.yml/badge.svg)](https://github.com/Michelsim01/capstone_project/actions/workflows/ci.yml)
-[![Quick CI](https://github.com/Michelsim01/capstone_project/actions/workflows/quick-ci.yml/badge.svg)](https://github.com/Michelsim01/capstone_project/actions/workflows/quick-ci.yml)
 
 A full-stack web application built with React (frontend) and Spring Boot (backend) with PostgreSQL database.
 

@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ master, main ]
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 jobs:
   # Backend CI Job
   backend:
@@ -170,6 +175,10 @@ jobs:
   # Security and quality checks
   security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     
     steps:
     - uses: actions/checkout@v4
@@ -182,8 +191,22 @@ jobs:
         format: 'sarif'
         output: 'trivy-results.sarif'
         
+    - name: Check SARIF file
+      run: |
+        if [ -f trivy-results.sarif ]; then
+          echo "✅ SARIF file created successfully"
+          echo "File size: $(wc -c < trivy-results.sarif) bytes"
+          echo "First few lines:"
+          head -10 trivy-results.sarif || echo "Could not read SARIF file"
+        else
+          echo "❌ SARIF file not found"
+          exit 1
+        fi
+        
     - name: Upload Trivy scan results to GitHub Security tab
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
+        token: ${{ secrets.GITHUB_TOKEN }}
+        wait-for-processing: true

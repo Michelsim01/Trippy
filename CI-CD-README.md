@@ -34,17 +34,6 @@ Triggered on:
    - Trivy vulnerability scanner
    - Results uploaded to GitHub Security tab
 
-### ⚡ Quick CI Pipeline (`quick-ci.yml`)
-
-Triggered on:
-- Push to feature branches (`feature/*`, `bugfix/*`)
-- Pull requests to `develop` branch
-
-**Purpose:** Fast feedback for development branches
-- Compilation checks only
-- Linting
-- No full builds or tests
-
 ## 🚫 Email Test Exclusion
 
 The CI pipeline excludes email-related tests to avoid external dependencies:
