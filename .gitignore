@@ -62,7 +62,7 @@ ml-service/.env
 Thumbs.db
 
 # ========= Secrets / env =========
-backend/src/main/resources/application.properties  # COMMENTED OUT - needed for CI/CD
+backend/src/main/resources/application.properties
 frontend/.env
 data-pipeline/.env
 ml-service/.env
@@ -87,12 +87,3 @@ admin_frontend/lerna-debug.log*
 admin_frontend/*.local
 backend/uploads/reviews/
 admin_frontend/public/Logo.png
-
-# ========= CI/CD and Build Artifacts =========
-# Keep workflow files but ignore build outputs
-*.jar
-*.war
-**/target/surefire-reports/
-**/coverage/
-**/build/reports/
-.github/workflows/.logs
