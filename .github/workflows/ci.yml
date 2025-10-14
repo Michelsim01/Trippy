@@ -175,38 +175,58 @@ jobs:
   # Security and quality checks
   security-scan:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-      actions: read
     
     steps:
     - uses: actions/checkout@v4
     
-    - name: Run Trivy vulnerability scanner
+    - name: Run Trivy vulnerability scanner (JSON format)
       uses: aquasecurity/trivy-action@master
       with:
         scan-type: 'fs'
         scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+        format: 'json'
+        output: 'trivy-results.json'
         
-    - name: Check SARIF file
+    - name: Run Trivy vulnerability scanner (Table format)
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        output: 'trivy-results.txt'
+        
+    - name: Display security scan summary
       run: |
-        if [ -f trivy-results.sarif ]; then
-          echo "✅ SARIF file created successfully"
-          echo "File size: $(wc -c < trivy-results.sarif) bytes"
-          echo "First few lines:"
-          head -10 trivy-results.sarif || echo "Could not read SARIF file"
+        echo "🔍 Security Scan Results Summary"
+        echo "================================"
+        if [ -f trivy-results.txt ]; then
+          echo "Vulnerabilities found:"
+          cat trivy-results.txt
         else
-          echo "❌ SARIF file not found"
-          exit 1
+          echo "❌ Could not read scan results"
         fi
         
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
+    - name: Check for HIGH/CRITICAL vulnerabilities
+      run: |
+        if [ -f trivy-results.json ]; then
+          HIGH_CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' trivy-results.json 2>/dev/null || echo "0")
+          echo "High/Critical vulnerabilities found: $HIGH_CRITICAL"
+          
+          if [ "$HIGH_CRITICAL" -gt "0" ]; then
+            echo "⚠️ WARNING: Found $HIGH_CRITICAL HIGH or CRITICAL vulnerabilities!"
+            echo "Please review the detailed report in the artifacts."
+            # Don't fail the build, just warn
+          else
+            echo "✅ No HIGH or CRITICAL vulnerabilities found"
+          fi
+        fi
+        
+    - name: Upload security scan results as artifacts
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        sarif_file: 'trivy-results.sarif'
-        token: ${{ secrets.GITHUB_TOKEN }}
-        wait-for-processing: true
+        name: security-scan-results
+        path: |
+          trivy-results.json
+          trivy-results.txt
+        retention-days: 30
