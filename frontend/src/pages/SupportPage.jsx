@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Navbar from '../components/Navbar'
 import Sidebar from '../components/Sidebar'
 import Footer from '../components/Footer'
+import ConfirmationModal from '../components/ConfirmationModal'
 import { supportService } from '../services/supportService'
 
 const TICKET_TYPES = [
@@ -24,6 +25,7 @@ export default function SupportPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [checking, setChecking] = useState(false)
   const [suspensionInfo, setSuspensionInfo] = useState(null)
+  const [showConfirmation, setShowConfirmation] = useState(false)
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen)
   const closeSidebar = () => setIsSidebarOpen(false)
@@ -60,8 +62,13 @@ export default function SupportPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setShowConfirmation(true)
+  }
+
+  const handleConfirmSubmit = async () => {
     setIsSubmitting(true)
     setStatusMsg('')
+    setShowConfirmation(false)
     try {
       const ticketData = { userEmail, userName, ticketType, description }
       console.log('Frontend sending ticket data:', ticketData)
@@ -80,6 +87,10 @@ export default function SupportPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleCancelSubmit = () => {
+    setShowConfirmation(false)
   }
 
   return (
@@ -183,6 +194,19 @@ export default function SupportPage() {
           <Footer />
         </main>
       </div>
+
+      {/* Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showConfirmation}
+        onClose={handleCancelSubmit}
+        onConfirm={handleConfirmSubmit}
+        title="Submit Support Ticket"
+        message={`Are you sure you want to submit this ${TICKET_TYPES.find(t => t.value === ticketType)?.label.toLowerCase()} ticket? We will review your request and get back to you via email.`}
+        confirmText="Submit Ticket"
+        cancelText="Cancel"
+        type="info"
+        loading={isSubmitting}
+      />
     </div>
   )
 }
