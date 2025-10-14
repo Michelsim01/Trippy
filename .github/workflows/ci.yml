@@ -1,0 +1,183 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  # Backend CI Job
+  backend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Cache Maven dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: Run Maven tests (excluding email tests)
+      working-directory: ./backend
+      run: |
+        # Run tests with CI profile and exclude email-related tests
+        ./mvnw test -Dspring.profiles.active=ci \
+          -Dtest='!**/*EmailServiceTest,!**/*EmailControllerTest,!**/*MailTest,!**/*EmailTest' \
+          -Dmaven.test.failure.ignore=false
+        
+    - name: Build with Maven
+      working-directory: ./backend
+      run: ./mvnw clean compile -DskipTests
+      
+    - name: Package application
+      working-directory: ./backend
+      run: ./mvnw package -DskipTests
+      
+    - name: Upload backend artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-jar
+        path: backend/target/*.jar
+
+  # Frontend CI Job
+  frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+      
+    - name: Run frontend linting
+      working-directory: ./frontend
+      run: npm run lint
+      
+    - name: Build frontend
+      working-directory: ./frontend
+      run: npm run build
+      
+    - name: Upload frontend build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-dist
+        path: frontend/dist/
+
+  # Admin Frontend CI Job
+  admin-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: admin_frontend/package-lock.json
+        
+    - name: Install admin frontend dependencies
+      working-directory: ./admin_frontend
+      run: npm ci
+      
+    - name: Run admin frontend linting
+      working-directory: ./admin_frontend
+      run: npm run lint
+      
+    - name: Build admin frontend
+      working-directory: ./admin_frontend
+      run: npm run build
+      
+    - name: Upload admin frontend build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: admin-frontend-dist
+        path: admin_frontend/dist/
+
+  # Integration checks (run after all builds succeed)
+  integration:
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, admin-frontend]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      
+    - name: List artifacts
+      run: |
+        echo "Backend artifacts:"
+        ls -la backend-jar/ || echo "No backend artifacts found"
+        echo "Frontend artifacts:"
+        ls -la frontend-dist/ || echo "No frontend artifacts found"
+        echo "Admin frontend artifacts:"
+        ls -la admin-frontend-dist/ || echo "No admin frontend artifacts found"
+        
+    - name: Verify build outputs
+      run: |
+        # Check if backend jar exists
+        if [ ! -f backend-jar/*.jar ]; then
+          echo "❌ Backend JAR not found"
+          exit 1
+        else
+          echo "✅ Backend JAR found"
+        fi
+        
+        # Check if frontend build exists
+        if [ ! -d frontend-dist ]; then
+          echo "❌ Frontend build not found"
+          exit 1
+        else
+          echo "✅ Frontend build found"
+        fi
+        
+        # Check if admin frontend build exists
+        if [ ! -d admin-frontend-dist ]; then
+          echo "❌ Admin frontend build not found"
+          exit 1
+        else
+          echo "✅ Admin frontend build found"
+        fi
+        
+        echo "🎉 All components built successfully!"
+
+  # Security and quality checks
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

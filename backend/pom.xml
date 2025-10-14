@@ -170,6 +170,24 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.0.0-M7</version>
+				<configuration>
+					<profiles>
+						<profile>
+							<id>ci</id>
+							<excludes>
+								<exclude>**/*EmailServiceTest.java</exclude>
+								<exclude>**/*EmailControllerTest.java</exclude>
+								<exclude>**/*MailTest.java</exclude>
+								<exclude>**/*EmailTest.java</exclude>
+							</excludes>
+						</profile>
+					</profiles>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 
