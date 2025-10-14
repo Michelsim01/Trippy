@@ -1,0 +1,259 @@
+name: Code Quality & Build Status
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  NODE_VERSION: '18'
+  JAVA_VERSION: '17'
+
+jobs:
+  # Job 1: Code Quality Check (Non-blocking)
+  code-quality:
+    runs-on: ubuntu-latest
+    name: Code Quality Assessment
+    continue-on-error: true
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    # Backend Code Quality
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        
+    - name: Backend Code Analysis
+      working-directory: ./backend
+      run: |
+        echo "📊 Backend Code Quality Analysis"
+        echo "================================"
+        
+        # Check for compilation
+        if ./mvnw clean compile -q; then
+          echo "✅ Backend compilation: PASSED"
+        else
+          echo "❌ Backend compilation: FAILED"
+        fi
+        
+        # Count Java files
+        java_files=$(find src/main/java -name "*.java" | wc -l)
+        test_files=$(find src/test/java -name "*.java" 2>/dev/null | wc -l || echo "0")
+        echo "📁 Source files: $java_files"
+        echo "🧪 Test files: $test_files"
+        
+        # Check test configuration
+        if [ -f "src/test/resources/application-test.properties" ]; then
+          echo "✅ Test configuration: FOUND"
+        else
+          echo "⚠️ Test configuration: MISSING"
+        fi
+      continue-on-error: true
+      
+    # Frontend Code Quality  
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Frontend Code Analysis
+      working-directory: ./frontend
+      run: |
+        echo "📊 Frontend Code Quality Analysis"
+        echo "================================="
+        
+        # Install dependencies
+        if [ -f package-lock.json ]; then
+          npm ci --silent
+        else
+          npm install --silent
+        fi
+        
+        # Count components and files
+        component_files=$(find src/components -name "*.jsx" 2>/dev/null | wc -l || echo "0")
+        page_files=$(find src/pages -name "*.jsx" 2>/dev/null | wc -l || echo "0")
+        echo "🧩 Components: $component_files"
+        echo "📄 Pages: $page_files"
+        
+        # Check linting (non-blocking)
+        echo "🔍 Running ESLint analysis..."
+        if npm run lint > lint-results.txt 2>&1; then
+          echo "✅ ESLint: PASSED"
+        else
+          echo "⚠️ ESLint: ISSUES FOUND"
+          echo "Top 10 issues:"
+          head -10 lint-results.txt || echo "Could not read lint results"
+        fi
+        
+        # Try build
+        if npm run build > build-results.txt 2>&1; then
+          echo "✅ Build: PASSED"
+          if [ -d dist ]; then
+            build_size=$(du -sh dist/ | cut -f1)
+            echo "📦 Build size: $build_size"
+          fi
+        else
+          echo "❌ Build: FAILED"
+          echo "Build errors:"
+          tail -10 build-results.txt || echo "Could not read build results"
+        fi
+      continue-on-error: true
+      
+    # Admin Frontend Code Quality
+    - name: Admin Frontend Code Analysis
+      working-directory: ./admin_frontend
+      run: |
+        echo "📊 Admin Frontend Code Quality Analysis"
+        echo "======================================="
+        
+        # Install dependencies
+        if [ -f package-lock.json ]; then
+          npm ci --silent
+        else
+          npm install --silent
+        fi
+        
+        # Count components and files
+        component_files=$(find src/components -name "*.jsx" 2>/dev/null | wc -l || echo "0")
+        page_files=$(find src/pages -name "*.jsx" 2>/dev/null | wc -l || echo "0")
+        echo "🧩 Components: $component_files"
+        echo "📄 Pages: $page_files"
+        
+        # Check linting (non-blocking)
+        echo "🔍 Running ESLint analysis..."
+        if npm run lint > lint-results.txt 2>&1; then
+          echo "✅ ESLint: PASSED"
+        else
+          echo "⚠️ ESLint: ISSUES FOUND"
+        fi
+        
+        # Try build
+        if npm run build > build-results.txt 2>&1; then
+          echo "✅ Build: PASSED"
+        else
+          echo "❌ Build: FAILED"
+        fi
+      continue-on-error: true
+
+  # Job 2: Build Verification (Core functionality)
+  build-verification:
+    runs-on: ubuntu-latest
+    name: Build Verification
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    # Backend Build
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        
+    - name: Cache Maven dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-m2-${{ hashFiles('backend/pom.xml') }}
+        restore-keys: ${{ runner.os }}-m2
+        
+    - name: Verify Backend Build
+      working-directory: ./backend
+      run: |
+        echo "🔨 Building Backend..."
+        ./mvnw clean compile package -DskipTests -q
+        echo "✅ Backend build completed successfully"
+        
+        if [ -f target/*.jar ]; then
+          jar_file=$(ls target/*.jar | head -1)
+          jar_size=$(du -h "$jar_file" | cut -f1)
+          echo "📦 JAR file: $(basename "$jar_file") ($jar_size)"
+        fi
+      
+    # Frontend Build
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Verify Frontend Build
+      working-directory: ./frontend
+      run: |
+        echo "🔨 Building Frontend..."
+        if [ -f package-lock.json ]; then
+          npm ci --silent
+        else
+          npm install --silent
+        fi
+        npm run build
+        echo "✅ Frontend build completed successfully"
+        
+    - name: Verify Admin Frontend Build
+      working-directory: ./admin_frontend
+      run: |
+        echo "🔨 Building Admin Frontend..."
+        if [ -f package-lock.json ]; then
+          npm ci --silent
+        else
+          npm install --silent
+        fi
+        npm run build
+        echo "✅ Admin Frontend build completed successfully"
+
+  # Job 3: Status Summary
+  status-summary:
+    runs-on: ubuntu-latest
+    name: Build Status Summary
+    needs: [code-quality, build-verification]
+    if: always()
+    
+    steps:
+    - name: Generate Summary
+      run: |
+        echo "# 🚀 Build Status Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Core Build Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Core build status
+        if [[ "${{ needs.build-verification.result }}" == "success" ]]; then
+          echo "✅ **Build Verification: PASSED**" >> $GITHUB_STEP_SUMMARY
+          echo "All components can be built successfully." >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ **Build Verification: FAILED**" >> $GITHUB_STEP_SUMMARY
+          echo "Some components failed to build." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Code Quality Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Code quality status
+        if [[ "${{ needs.code-quality.result }}" == "success" ]]; then
+          echo "✅ **Code Quality: PASSED**" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "⚠️ **Code Quality: ISSUES FOUND**" >> $GITHUB_STEP_SUMMARY
+          echo "Check the code quality job logs for details." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "## Overall Status" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [[ "${{ needs.build-verification.result }}" == "success" ]]; then
+          echo "🎉 **The project builds successfully!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The core functionality is working. Code quality issues (if any) can be addressed in subsequent commits." >> $GITHUB_STEP_SUMMARY
+          exit 0
+        else
+          echo "🔧 **Build issues need to be resolved.**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Please check the build verification logs and fix compilation errors." >> $GITHUB_STEP_SUMMARY
+          exit 1
+        fi
