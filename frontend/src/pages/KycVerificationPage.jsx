@@ -4,6 +4,8 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
 import { kycService } from '../services/kycService';
+import { notificationService } from '../services/notificationService';
+import swal from 'sweetalert2';
 
 const idTypes = [
     { value: "nric", label: "NRIC" },
@@ -17,11 +19,6 @@ export default function KycVerificationPage() {
     
     // Get user ID from auth context
     const currentUserId = authUser?.id;
-
-
-    function handleKycClick() {
-        navigate('/kyc-verification');
-    }
 
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
@@ -70,29 +67,29 @@ export default function KycVerificationPage() {
     }, [isAuthenticated, authLoading, currentUserId, navigate]);
 
     // Check KYC status to prevent resubmission
-    useEffect(() => {
-        const checkKycStatus = async () => {
-            if (!currentUserId) return;
+    useEffect(() => {/* Lines 74-93 omitted */}, [isAuthenticated, currentUserId, navigate]);
 
-            try {
-                const kycDetails = await kycService.getKycStatus(currentUserId);
+    const sendKycNotification = async () => {
+        try {
+            const notificationData = {
+                title: 'KYC Application Submitted',
+                message: 'Your KYC verification application has been submitted successfully and is under review.',
+                userId: currentUserId,
+                type: 'UPDATE_INFO',
+            };
 
-                // If KYC has been submitted (not NOT_STARTED), redirect to submitted page
-                if (kycDetails.kycStatus !== 'NOT_STARTED') {
-                    navigate('/kyc-submitted');
-                }
-            } catch (error) {
-                console.error('Error checking KYC status:', error);
-                // Continue to allow access if there's an error checking status
+            const result = await notificationService.createNotification(notificationData);
+            
+            if (result.success) {
+                console.log('KYC Notification sent successfully:', result.data);
+            } else {
+                console.error('Error sending KYC notification:', result.error);
             }
-        };
-
-        if (isAuthenticated && currentUserId) {
-            checkKycStatus();
         }
-    }, [isAuthenticated, currentUserId, navigate]);
-
-    function handleChange(e) {
+        catch (error) {
+            console.error('Error sending KYC notification:', error);
+        }
+    };    function handleChange(e) {
         const { name, value, type, checked } = e.target;
         setForm((prev) => {
             const newForm = {
@@ -244,15 +241,21 @@ export default function KycVerificationPage() {
     async function handleSubmit(e) {
         e.preventDefault();
         if (!form.declaration || !form.consent) {
-            alert(
-                "Please confirm that the information is true and consent to data collection."
-            );
+            swal.fire({
+                icon: 'warning',
+                title: 'Confirmation Required',
+                text: 'Please confirm that the information is true and consent to data collection.'
+            });
             return;
         }
 
         if (!currentUserId || !isAuthenticated || !token) {
             setError('Authentication required to submit KYC verification');
-            alert("Authentication required. Please log in again.");
+            swal.fire({
+                icon: 'warning',
+                title: 'Authentication Required',
+                text: 'Please log in again.'
+            });
             setTimeout(() => {
                 navigate('/signin');
             }, 2000);
@@ -269,7 +272,13 @@ export default function KycVerificationPage() {
             // Use unified submit method - document is always required
             await kycService.submitKyc(currentUserId, form);
 
-            alert("KYC submitted successfully! Your application is under review.");
+            // Send notification after successful submission
+            await sendKycNotification();
+            swal.fire({
+                icon: 'success',
+                title: 'KYC Submitted',
+                text: 'Your KYC application has been submitted successfully!'
+            });
             navigate("/kyc-submitted");
         } catch (error) {
             console.error('KYC submission failed:', error);
@@ -282,7 +291,11 @@ export default function KycVerificationPage() {
             } else {
                 setErrors({ submit: error.message });
                 setError(`Submission failed: ${error.message}`);
-                alert(`Submission failed: ${error.message}`);
+                swal.fire({
+                    icon: 'error',
+                    title: 'Submission Failed',
+                    text: `Submission failed: ${error.message}`
+                });
             }
         } finally {
             setSubmitting(false);
