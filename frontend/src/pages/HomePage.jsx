@@ -40,12 +40,6 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
     // Use only real data from database
     const allExperiences = experiences || [];
 
-    // Debug: Log what DiscoverWeekly receives
-    console.log('DiscoverWeekly - Received experiences:', experiences);
-    console.log('DiscoverWeekly - Experiences length:', experiences?.length);
-    console.log('DiscoverWeekly - Loading:', loading);
-    console.log('DiscoverWeekly - Error:', error);
-
     // Filter experiences by category
     const displayExperiences = selectedCategory === 'ALL'
         ? allExperiences
@@ -166,15 +160,8 @@ const HomePage = () => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                
-                // Debug: Log user authentication
-                console.log('HomePage - User:', user);
-                console.log('HomePage - User ID:', user?.userId);
-                console.log('HomePage - User ID (alt):', user?.id);
-                console.log('HomePage - Token:', localStorage.getItem('token'));
-                
+            
                 // Fetch experiences and wishlist items in parallel with authentication
-                console.log('HomePage - Starting API calls...');
                 const [experiencesData, wishlistResponse] = await Promise.all([
                     experienceApi.getAllExperiences(),
                     fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId || user?.id}`, {
@@ -188,10 +175,6 @@ const HomePage = () => {
                     })
                 ]);
 
-                console.log('HomePage - Raw experiences data:', experiencesData);
-                console.log('HomePage - Experiences data length:', experiencesData?.length);
-                console.log('HomePage - First experience:', experiencesData?.[0]);
-                
                 // Fetch schedule data for all experiences
                 const schedulePromises = experiencesData.map(exp => 
                     experienceApi.getExperienceSchedules(exp.experienceId)
@@ -206,47 +189,14 @@ const HomePage = () => {
                     schedulesMap[exp.experienceId] = schedulesData[index];
                 });
                 
-                console.log('HomePage - Schedules map:', schedulesMap);
                 setSchedules(schedulesMap);
                 
-                // Transform experiences data to match our component structure
-                const transformedExperiences = experiencesData.map(exp => {
-                    // Fix broken image URLs
-                    let imageUrl = exp.coverPhotoUrl || "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80";
-                    if (imageUrl && imageUrl.includes('localhost:3845')) {
-                        const fallbackImages = [
-                            "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-                            "https://images.unsplash.com/photo-1502602898669-a38738f73650?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-                            "https://images.unsplash.com/photo-1545892204-e37749721199?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-                            "https://images.unsplash.com/photo-1503377992-e1123f72969b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
-                            "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-                        ];
-                        imageUrl = fallbackImages[exp.experienceId % fallbackImages.length];
-                    }
-                    
-                    return {
-                        experienceId: exp.experienceId,
-                        id: exp.experienceId,
-                        title: exp.title,
-                        location: exp.location,
-                        price: exp.price,
-                        averageRating: exp.averageRating,
-                        imageUrl: imageUrl,
-                        shortDescription: exp.shortDescription,
-                        duration: exp.duration,
-                        category: exp.category,
-                        status: exp.status,
-                        totalReviews: exp.totalReviews,
-                        // Use the API field as-is. Backend (Jackson) should send camelCase: participantsAllowed
-                        participantsAllowed: exp.participantsAllowed
-                    };
+                // Add compatibility field
+                experiencesData.forEach(exp => {
+                    exp.id = exp.experienceId; // Add id field for compatibility
                 });
 
-                console.log('HomePage - Transformed experiences:', transformedExperiences);
-                console.log('HomePage - Transformed experiences length:', transformedExperiences?.length);
-                console.log('HomePage - Setting experiences state...');
-                setExperiences(transformedExperiences);
-                console.log('HomePage - Experiences state set');
+                setExperiences(experiencesData);
 
                 // Handle wishlist response
                 if (wishlistResponse.ok) {
@@ -296,14 +246,6 @@ const HomePage = () => {
         setSelectedCategory(category);
     };
 
-    // Debug: Log authentication status
-    console.log('HomePage - Auth Debug:', {
-        authLoading,
-        isAuthenticated,
-        user,
-        token: localStorage.getItem('token'),
-        userFromStorage: localStorage.getItem('user')
-    });
 
     // Show loading while authentication is being checked
     if (authLoading) {
