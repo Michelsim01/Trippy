@@ -157,7 +157,15 @@ def analyze_content_features(**context):
     
     experience_df = pd.read_json(data['experience_data'])
     review_df = pd.read_json(data['review_data'])
-    itinerary_df = pd.read_json(data['itinerary_data'])
+    
+    # Handle potentially empty itinerary data
+    itinerary_json = data['itinerary_data']
+    if itinerary_json and itinerary_json != '[]':
+        itinerary_df = pd.read_json(itinerary_json)
+    else:
+        # Create empty DataFrame with expected columns
+        itinerary_df = pd.DataFrame(columns=['experience_id', 'stop_orders', 'stop_types', 
+                                              'location_names', 'durations', 'total_stops'])
     
     content_features = []
     
