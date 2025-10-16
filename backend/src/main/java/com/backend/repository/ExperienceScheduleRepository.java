@@ -26,4 +26,7 @@ public interface ExperienceScheduleRepository extends JpaRepository<ExperienceSc
     );
 
     List<ExperienceSchedule> findByExperience_ExperienceId(Long experienceId);
+
+    // Find experience schedules that start within a date range
+    List<ExperienceSchedule> findByStartDateTimeBetween(LocalDateTime startDate, LocalDateTime endDate);
 }

@@ -2,7 +2,6 @@ package com.backend.entity;
 
 public enum TripPointsTransaction {
     REVIEW("Review", "Left a review"),
-    EXPERIENCE_COMPLETION("Experience Completion", "Completed experience"),
     REDEMPTION("Redemption", "Redeemed points"),
     BONUS("Bonus", "Bonus points"),
     REFUND("Refund", "Points refunded");
@@ -37,8 +36,6 @@ public enum TripPointsTransaction {
         switch (this) {
             case REVIEW:
                 return "⭐ " + description;
-            case EXPERIENCE_COMPLETION:
-                return "🎯 " + description;
             case REDEMPTION:
                 return "🎁 " + description;
             case BONUS:

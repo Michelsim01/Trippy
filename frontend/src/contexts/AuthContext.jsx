@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { authService } from '../services/authService'
 import { userService } from '../services/userService'
+import { userSurveyService } from '../services/userSurveyService'
 
 // Create the AuthContext
 const AuthContext = createContext()
@@ -24,11 +25,32 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [token, setToken] = useState(localStorage.getItem('token'))
+  const [hasSurveyCompleted, setHasSurveyCompleted] = useState(false)
+  const [isSurveyLoading, setIsSurveyLoading] = useState(false)
 
   // Check if user is authenticated on app startup
   useEffect(() => {
     checkAuthStatus()
   }, [])
+
+  // Check survey completion status
+  const checkSurveyCompletion = async (userId) => {
+    if (!userId) return false
+    
+    try {
+      setIsSurveyLoading(true)
+      const surveyResponse = await userSurveyService.checkUserSurveyExists(userId)
+      const completed = surveyResponse.success && surveyResponse.data.exists
+      setHasSurveyCompleted(completed)
+      return completed
+    } catch (error) {
+      console.error('Error checking survey completion:', error)
+      setHasSurveyCompleted(false)
+      return false
+    } finally {
+      setIsSurveyLoading(false)
+    }
+  }
 
   // Check authentication status
   const checkAuthStatus = async () => {
@@ -58,6 +80,8 @@ export const AuthProvider = ({ children }) => {
                 // Only set authenticated if email is verified
                 if (user.emailVerified) {
                   setIsAuthenticated(true)
+                  // Check survey completion for authenticated user
+                  await checkSurveyCompletion(user.id)
                 } else {
                   setIsAuthenticated(false)
                 }
@@ -115,6 +139,12 @@ export const AuthProvider = ({ children }) => {
       // Call backend API
       const response = await authService.login(email, password)
       
+      // Check for account suspension error
+      if (!response.success && response.errorType === 'ACCOUNT_SUSPENDED') {
+        // Return suspension error for UI to handle
+        return { success: false, error: response.error, errorType: 'ACCOUNT_SUSPENDED' }
+      }
+      
       // If login is successful, extract the data and check if email is verified
       if (response.success) {
         // Destructure the response data
@@ -150,7 +180,16 @@ export const AuthProvider = ({ children }) => {
             // Only set authenticated if email is verified
             if (user.emailVerified) {
               setIsAuthenticated(true)
-              navigate('/home')
+              
+              // Check if user has completed survey before redirecting
+              const surveyCompleted = await checkSurveyCompletion(userId)
+              if (surveyCompleted) {
+                // User has completed survey, go to home
+                navigate('/home')
+              } else {
+                // User hasn't completed survey, go to survey page
+                navigate('/survey')
+              }
             } else {
               setIsAuthenticated(false)
               navigate('/email-verification')
@@ -179,7 +218,22 @@ export const AuthProvider = ({ children }) => {
             // Only set authenticated if email is verified
             if (user.emailVerified) {
               setIsAuthenticated(true)
-              navigate('/home')
+              
+              // Check if user has completed survey before redirecting
+              try {
+                const surveyResponse = await userSurveyService.checkUserSurveyExists(userId)
+                if (surveyResponse.success && surveyResponse.data.exists) {
+                  // User has completed survey, go to home
+                  navigate('/home')
+                } else {
+                  // User hasn't completed survey, go to survey page
+                  navigate('/survey')
+                }
+              } catch (surveyError) {
+                console.error('Error checking user survey:', surveyError)
+                // If survey check fails, default to home page
+                navigate('/home')
+              }
             } else {
               setIsAuthenticated(false)
               navigate('/email-verification')
@@ -209,7 +263,16 @@ export const AuthProvider = ({ children }) => {
           // Only set authenticated if email is verified
           if (user.emailVerified) {
             setIsAuthenticated(true)
-            navigate('/home')
+            
+            // Check if user has completed survey before redirecting
+            const surveyCompleted = await checkSurveyCompletion(userId)
+            if (surveyCompleted) {
+              // User has completed survey, go to home
+              navigate('/home')
+            } else {
+              // User hasn't completed survey, go to survey page
+              navigate('/survey')
+            }
           } else {
             setIsAuthenticated(false)
             navigate('/email-verification')
@@ -279,6 +342,8 @@ export const AuthProvider = ({ children }) => {
       setToken(null)
       setUser(null)
       setIsAuthenticated(false)
+      setHasSurveyCompleted(false)
+      setIsSurveyLoading(false)
       
       // Navigate to welcome page
       navigate('/')
@@ -302,12 +367,15 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isLoading,
     token,
+    hasSurveyCompleted,
+    isSurveyLoading,
     
     // Functions
     login,
     register,
     logout,
-    checkAuthStatus
+    checkAuthStatus,
+    checkSurveyCompletion
   }
 
   return (

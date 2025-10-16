@@ -12,10 +12,6 @@ public class ChatMember {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "trip_chat_id")
-    private TripChat tripChat;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "passwordResetToken", "emailVerificationToken", "chatMembers", "experiences", "bookings", "reviews", "sentMessages", "notifications", "wishlistItems", "tripPointsTransactions", "userSurvey", "transactions", "articleComments", "travelArticles"})
     private User user;
@@ -32,8 +28,6 @@ public class ChatMember {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
-    public TripChat getTripChat() { return tripChat; }
-    public void setTripChat(TripChat tripChat) { this.tripChat = tripChat; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
     public ChatRoleEnum getRole() { return role; }

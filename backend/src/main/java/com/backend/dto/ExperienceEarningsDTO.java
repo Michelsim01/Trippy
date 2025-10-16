@@ -9,17 +9,19 @@ public class ExperienceEarningsDTO {
     private BigDecimal totalEarnings;
     private BigDecimal pendingEarnings;
     private BigDecimal paidOutEarnings;
+    private BigDecimal pendingDeductions;
     private List<ScheduleEarningsDTO> schedules;
 
     public ExperienceEarningsDTO() {}
 
     public ExperienceEarningsDTO(Long experienceId, String experienceTitle, BigDecimal totalEarnings,
-                                BigDecimal pendingEarnings, BigDecimal paidOutEarnings, List<ScheduleEarningsDTO> schedules) {
+                                BigDecimal pendingEarnings, BigDecimal paidOutEarnings, BigDecimal pendingDeductions, List<ScheduleEarningsDTO> schedules) {
         this.experienceId = experienceId;
         this.experienceTitle = experienceTitle;
         this.totalEarnings = totalEarnings;
         this.pendingEarnings = pendingEarnings;
         this.paidOutEarnings = paidOutEarnings;
+        this.pendingDeductions = pendingDeductions;
         this.schedules = schedules;
     }
 
@@ -37,6 +39,9 @@ public class ExperienceEarningsDTO {
 
     public BigDecimal getPaidOutEarnings() { return paidOutEarnings; }
     public void setPaidOutEarnings(BigDecimal paidOutEarnings) { this.paidOutEarnings = paidOutEarnings; }
+
+    public BigDecimal getPendingDeductions() { return pendingDeductions; }
+    public void setPendingDeductions(BigDecimal pendingDeductions) { this.pendingDeductions = pendingDeductions; }
 
     public List<ScheduleEarningsDTO> getSchedules() { return schedules; }
     public void setSchedules(List<ScheduleEarningsDTO> schedules) { this.schedules = schedules; }

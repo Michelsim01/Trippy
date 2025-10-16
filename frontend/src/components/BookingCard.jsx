@@ -75,6 +75,8 @@ const BookingCard = ({ booking }) => {
             CONFIRMED: { bg: 'bg-green-100', text: 'text-green-800', label: 'Confirmed' },
             PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
             CANCELLED: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_TOURIST: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_GUIDE: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
             COMPLETED: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' }
         };
 

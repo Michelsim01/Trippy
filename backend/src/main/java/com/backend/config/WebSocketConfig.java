@@ -21,10 +21,16 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        // Personal chat WebSocket endpoint
         registry.addHandler(chatWebSocketHandler, "/ws/chat/**")
-                .setAllowedOrigins("*");
-        
+                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:5174");
+
+        // Trip chat WebSocket endpoint
+        registry.addHandler(chatWebSocketHandler, "/ws/trip-chat/**")
+                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:5174");
+
+        // User notification WebSocket endpoint
         registry.addHandler(userNotificationWebSocketHandler, "/ws/user/*/notifications")
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:5173", "http://localhost:5174");
     }
 }

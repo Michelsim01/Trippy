@@ -6,20 +6,24 @@ public class GuideEarningsDTO {
     private BigDecimal totalEarnings;
     private BigDecimal pendingEarnings;
     private BigDecimal paidOutEarnings;
+    private BigDecimal pendingDeductions;
     private Integer totalBookings;
     private Integer pendingBookings;
     private Integer completedBookings;
+    private Integer cancelledBookings;
 
     public GuideEarningsDTO() {}
 
-    public GuideEarningsDTO(BigDecimal totalEarnings, BigDecimal pendingEarnings, BigDecimal paidOutEarnings,
-                           Integer totalBookings, Integer pendingBookings, Integer completedBookings) {
+    public GuideEarningsDTO(BigDecimal totalEarnings, BigDecimal pendingEarnings, BigDecimal paidOutEarnings, BigDecimal pendingDeductions,
+                           Integer totalBookings, Integer pendingBookings, Integer completedBookings, Integer cancelledBookings) {
         this.totalEarnings = totalEarnings;
         this.pendingEarnings = pendingEarnings;
         this.paidOutEarnings = paidOutEarnings;
+        this.pendingDeductions = pendingDeductions;
         this.totalBookings = totalBookings;
         this.pendingBookings = pendingBookings;
         this.completedBookings = completedBookings;
+        this.cancelledBookings = cancelledBookings;
     }
 
     public BigDecimal getTotalEarnings() { return totalEarnings; }
@@ -31,6 +35,9 @@ public class GuideEarningsDTO {
     public BigDecimal getPaidOutEarnings() { return paidOutEarnings; }
     public void setPaidOutEarnings(BigDecimal paidOutEarnings) { this.paidOutEarnings = paidOutEarnings; }
 
+    public BigDecimal getPendingDeductions() { return pendingDeductions; }
+    public void setPendingDeductions(BigDecimal pendingDeductions) { this.pendingDeductions = pendingDeductions; }
+
     public Integer getTotalBookings() { return totalBookings; }
     public void setTotalBookings(Integer totalBookings) { this.totalBookings = totalBookings; }
 
@@ -39,4 +46,7 @@ public class GuideEarningsDTO {
 
     public Integer getCompletedBookings() { return completedBookings; }
     public void setCompletedBookings(Integer completedBookings) { this.completedBookings = completedBookings; }
+
+    public Integer getCancelledBookings() { return cancelledBookings; }
+    public void setCancelledBookings(Integer cancelledBookings) { this.cancelledBookings = cancelledBookings; }
 }

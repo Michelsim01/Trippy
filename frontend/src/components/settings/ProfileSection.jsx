@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { authService } from '../../services/authService';
+import { notificationService } from '../../services/notificationService';
 import swal from 'sweetalert2';
 
 const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
@@ -52,75 +53,23 @@ const ProfileSection = ({ userData: propUserData, onUserDataUpdate }) => {
 
     const successfulUpdateNotification = async () => {
         try {
-            console.log('Sending notification for userId:', userId);
-            const notificationPayload = {
+            const notificationData = {
                 title: 'Personal Info Updated',
                 message: 'Your personal information has been updated successfully.',
                 userId: userId,
                 type: 'UPDATE_INFO',
             };
-            console.log('Notification payload:', notificationPayload);
 
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8080/api/notifications`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(notificationPayload),
-            });
-
-            console.log('Notification response status:', response.status);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Notification error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+            const result = await notificationService.createNotification(notificationData);
+            
+            if (result.success) {
+                console.log('Notification sent successfully:', result.data);
+            } else {
+                console.error('Error sending notification:', result.error);
             }
-
-            const data = await response.json();
-            console.log('Notification sent successfully:', data);
         }
         catch (error) {
             console.error('Error sending notification:', error);
-        }
-    };
-
-    const successfulEmailUpdateNotification = async () => {
-        try {
-            console.log('Sending email update notification for userId:', userId);
-            const notificationPayload = {
-                title: 'Email Updated',
-                message: 'Your email address has been updated successfully.',
-                userId: userId,
-                type: 'EMAIL_UPDATE',
-            };
-            console.log('Email notification payload:', notificationPayload);
-
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:8080/api/notifications`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify(notificationPayload),
-            });
-
-            console.log('Email notification response status:', response.status);
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('Email notification error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-            }
-
-            const data = await response.json();
-            console.log('Email notification sent successfully:', data);
-        }
-        catch (error) {
-            console.error('Error sending email notification:', error);
         }
     };
 

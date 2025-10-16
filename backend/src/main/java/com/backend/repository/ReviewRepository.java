@@ -2,6 +2,8 @@ package com.backend.repository;
 
 import com.backend.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.util.List;
 
@@ -21,4 +23,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // Find reviews by multiple experience IDs (for getting reviews received on user's experiences)
     List<Review> findByExperience_ExperienceIdIn(List<Long> experienceIds);
+    
+    // Count reviews by experience ID
+    @Query("SELECT COUNT(r) FROM Review r WHERE r.experience.experienceId = :experienceId")
+    Long countByExperienceId(@Param("experienceId") Long experienceId);
 }

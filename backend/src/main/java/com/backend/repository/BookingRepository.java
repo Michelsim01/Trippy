@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -58,4 +59,54 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.experience.guide.id = :guideId ORDER BY b.bookingDate DESC")
     List<Booking> findByGuideIdOrderByBookingDateDesc(@Param("guideId") Long guideId);
+
+    // Calculate total revenue (service_fee) for bookings within date range
+    @Query("SELECT COALESCE(SUM(b.serviceFee), 0) FROM Booking b WHERE b.createdAt BETWEEN :startDate AND :endDate")
+    BigDecimal calculateRevenueByDateRange(@Param("startDate") LocalDateTime startDate, 
+                                         @Param("endDate") LocalDateTime endDate);
+
+    // Count bookings created within date range
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.createdAt BETWEEN :startDate AND :endDate")
+    Long countByCreatedAtBetween(@Param("startDate") LocalDateTime startDate, 
+                                @Param("endDate") LocalDateTime endDate);
+
+    // Count bookings by traveler ID
+    Long countByTraveler_Id(Long travelerId);
+    
+    // Count bookings by experience ID through experience schedule
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.experienceSchedule.experience.experienceId = :experienceId")
+    Long countByExperienceId(@Param("experienceId") Long experienceId);
+
+    // Count bookings by status
+    Long countByStatus(BookingStatus status);
+
+    // Fetch all bookings with eager fetching of user and experienceSchedule.experience
+    @Query("SELECT b FROM Booking b JOIN FETCH b.traveler u JOIN FETCH b.experienceSchedule es JOIN FETCH es.experience e ORDER BY b.bookingId DESC")
+    List<Booking> findAllWithUserDetailsAndExperienceDetails();
+
+    // Native query to get booking data with specific fields only
+    @Query(value = "SELECT b.booking_id, b.number_of_participants, b.total_amount, b.status, b.created_at, " +
+           "u.user_id, u.first_name, u.last_name, u.email, " +
+           "e.experience_id, e.title, " +
+           "es.start_date_time, es.end_date_time " +
+           "FROM booking b " +
+           "JOIN users u ON b.traveler_id = u.user_id " +
+           "JOIN experience_schedule es ON b.experience_schedule_id = es.schedule_id " +
+           "JOIN experiences e ON es.experience_id = e.experience_id " +
+           "ORDER BY b.booking_id DESC", nativeQuery = true)
+    List<Object[]> findAllBookingDetailsForAdmin();
+
+    // Calculate total pending cancellation fees for a guide
+    @Query("SELECT COALESCE(SUM(b.guideCancellationFee), 0) FROM Booking b " +
+           "JOIN b.experienceSchedule s " +
+           "JOIN s.experience e " +
+           "WHERE e.guide.id = :guideId AND b.guideCancellationFee > 0")
+    BigDecimal calculatePendingCancellationFees(@Param("guideId") Long guideId);
+
+    // Find all CONFIRMED bookings for a specific schedule
+    @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.scheduleId = :scheduleId AND b.status = 'CONFIRMED'")
+    List<Booking> findConfirmedBookingsByScheduleId(@Param("scheduleId") Long scheduleId);
+
+    // Find all bookings for a specific experience schedule
+    List<Booking> findByExperienceSchedule_ScheduleId(Long scheduleId);
 }

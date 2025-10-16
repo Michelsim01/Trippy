@@ -4,12 +4,16 @@ import com.backend.dto.request.LoginRequest;
 import com.backend.dto.request.RegisterRequest;
 import com.backend.dto.response.AuthResponse;
 import com.backend.dto.response.RegistrationResponse;
+import com.backend.entity.User;
+import com.backend.repository.UserRepository;
 import com.backend.service.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*; 
+import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import java.util.Optional; 
 
 /**
  * REST Controller for handling authentication requests.
@@ -17,11 +21,14 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
 public class AuthController {
     
     @Autowired
     private AuthService authService;
+    
+    @Autowired
+    private UserRepository userRepository;
     
     /**
      * Endpoint for user login.
@@ -33,6 +40,17 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
+            // Check if user exists and is suspended before attempting authentication
+            Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
+            if (userOptional.isPresent()) {
+                User user = userOptional.get();
+                if (user.getIsActive() == null || !user.getIsActive()) {
+                    // User exists but is suspended - return specific error for frontend to handle
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(Map.of("error", "ACCOUNT_SUSPENDED", "message", "Your account has been suspended. Please contact support to appeal."));
+                }
+            }
+            
             AuthResponse authResponse = authService.login(loginRequest);
             return ResponseEntity.ok(authResponse);
         } catch (org.springframework.security.core.AuthenticationException e) {

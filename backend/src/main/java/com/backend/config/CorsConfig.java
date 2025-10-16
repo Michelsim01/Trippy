@@ -13,7 +13,12 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/api/**")
-                    .allowedOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:5174")
+                    .allowedOriginPatterns(
+                        "http://localhost:3000",   // React development server (default port)
+                        "http://localhost:3001",   // Alternative React development port
+                        "http://localhost:5173",   // Vite development server (default port)
+                        "http://localhost:5174"    // Alternative Vite development port
+                    )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                     .allowedHeaders("*")
                     .allowCredentials(true);

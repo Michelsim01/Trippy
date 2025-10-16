@@ -12,8 +12,6 @@ frontend/lerna-debug.log*
 frontend/*.local
 frontend/.idea/
 frontend/.DS_Store
-# If you want to commit VS Code recommendations only, uncomment next line
-# !frontend/.vscode/extensions.json
 
 # ========= Backend (Spring Boot/Maven) =========
 backend/target/
@@ -34,6 +32,27 @@ backend/nbdist/
 backend/.nb-gradle/
 backend/build/
 
+# ========= Data Pipeline (Airflow/Python) =========
+data-pipeline/venv/
+data-pipeline/airflow/airflow.db
+data-pipeline/airflow/airflow.db-journal
+data-pipeline/airflow/logs/
+data-pipeline/airflow/airflow-webserver.pid
+data-pipeline/airflow/standalone_admin_password.txt
+data-pipeline/__pycache__/
+data-pipeline/**/__pycache__/
+data-pipeline/*.pyc
+data-pipeline/**/*.pyc
+data-pipeline/.pytest_cache/
+data-pipeline/.env
+
+# ========= ML Service (if you add it later) =========
+ml-service/venv/
+ml-service/__pycache__/
+ml-service/**/__pycache__/
+ml-service/*.pyc
+ml-service/.env
+
 # ========= IDEs / OS (repo-wide) =========
 .idea/
 .vscode/
@@ -45,9 +64,26 @@ Thumbs.db
 # ========= Secrets / env =========
 backend/src/main/resources/application.properties
 frontend/.env
+data-pipeline/.env
+ml-service/.env
 
 # ========= Personal docs =========
 docs/changelog.md
 docs/claude.md
 docs/folder-structure.txt
 docs/personaldocs.md
+
+# ========= Admin Frontend =========
+admin_frontend/node_modules/
+admin_frontend/.vite/
+admin_frontend/dist/
+admin_frontend/dist-ssr/
+admin_frontend/*.log
+admin_frontend/npm-debug.log*
+admin_frontend/yarn-debug.log*
+admin_frontend/yarn-error.log*
+admin_frontend/pnpm-debug.log*
+admin_frontend/lerna-debug.log*
+admin_frontend/*.local
+backend/uploads/reviews/
+admin_frontend/public/Logo.png

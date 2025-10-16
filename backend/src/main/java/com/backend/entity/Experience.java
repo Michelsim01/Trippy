@@ -56,6 +56,12 @@ public class Experience {
 
     private String location;
 
+    @Column(precision = 10, scale = 8)
+    private BigDecimal latitude;
+
+    @Column(precision = 11, scale = 8)
+    private BigDecimal longitude;
+
     private String country;
 
     @Enumerated(EnumType.STRING)
@@ -225,6 +231,22 @@ public class Experience {
 
     public void setLocation(String location) {
         this.location = location;
+    }
+
+    public BigDecimal getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(BigDecimal latitude) {
+        this.latitude = latitude;
+    }
+
+    public BigDecimal getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(BigDecimal longitude) {
+        this.longitude = longitude;
     }
 
     public String getCountry() {

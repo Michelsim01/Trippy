@@ -367,11 +367,11 @@ const BookingWidget = ({
             </div>
             <div className="flex justify-between">
               <span className="text-neutrals-4">Service fee</span>
-              <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
+              <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.04)}</span>
             </div>
             <div className="border-t border-neutrals-6 pt-2 flex justify-between font-semibold">
               <span className="text-neutrals-2">Total</span>
-              <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
+              <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.04)}</span>
             </div>
           </div>
         </div>
@@ -432,11 +432,11 @@ const BookingWidget = ({
             </div>
             <div className="flex justify-between">
               <span className="text-neutrals-4">Service fee</span>
-              <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
+              <span className="text-neutrals-2">${Math.round(((displayData.price || 89) * guests) * 0.04)}</span>
             </div>
             <div className="border-t border-neutrals-6 pt-2 flex justify-between font-semibold">
               <span className="text-neutrals-2">Total</span>
-              <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.1)}</span>
+              <span className="text-neutrals-2">${((displayData.price || 89) * guests) + Math.round(((displayData.price || 89) * guests) * 0.04)}</span>
             </div>
           </div>
         </div>

@@ -12,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,12 @@ public class BookingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private TripPointsService tripPointsService;
+
+    @Autowired
+    private TripChatService tripChatService;
 
     /**
      * Validate a booking request before creating the actual booking.
@@ -94,10 +101,16 @@ public class BookingService {
                     experience.getPrice(),
                     bookingRequest.getNumberOfParticipants());
 
-            boolean priceValid = pricing.validatePricing(
-                    bookingRequest.getBaseAmount(),
-                    bookingRequest.getServiceFee(),
-                    bookingRequest.getTotalAmount());
+            // Account for trippoints discount in total validation
+            BigDecimal expectedTotal = pricing.getTotalAmount();
+            BigDecimal trippointsDiscount = bookingRequest.getTrippointsDiscount();
+            if (trippointsDiscount != null && trippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                expectedTotal = expectedTotal.subtract(trippointsDiscount);
+            }
+
+            boolean priceValid = pricing.getBaseAmount().compareTo(bookingRequest.getBaseAmount()) == 0 &&
+                    pricing.getServiceFee().compareTo(bookingRequest.getServiceFee()) == 0 &&
+                    expectedTotal.compareTo(bookingRequest.getTotalAmount()) == 0;
 
             validation.setPriceValid(priceValid);
             validation.setExperiencePrice(experience.getPrice());
@@ -192,6 +205,7 @@ public class BookingService {
             booking.setBaseAmount(bookingRequest.getBaseAmount());
             booking.setServiceFee(bookingRequest.getServiceFee());
             booking.setTotalAmount(bookingRequest.getTotalAmount());
+            booking.setTrippointsDiscount(bookingRequest.getTrippointsDiscount());
 
             // Generate confirmation code
             booking.setConfirmationCode(generateConfirmationCode());
@@ -259,6 +273,16 @@ public class BookingService {
             if (paymentResult.getStatus() == TransactionStatus.COMPLETED) {
                 booking.setStatus(BookingStatus.CONFIRMED);
 
+                // Process trippoints redemption if applicable
+                if (booking.getTrippointsDiscount() != null &&
+                        booking.getTrippointsDiscount().compareTo(java.math.BigDecimal.ZERO) > 0) {
+
+                    int pointsToRedeem = booking.getTrippointsDiscount()
+                            .multiply(new java.math.BigDecimal("100")).intValue();
+
+                    tripPointsService.redeemPoints(booking.getTraveler().getId(), pointsToRedeem);
+                }
+
                 ExperienceSchedule schedule = booking.getExperienceSchedule();
                 int availableSpots = schedule.getAvailableSpots() - booking.getNumberOfParticipants();
                 schedule.setAvailableSpots(availableSpots);
@@ -268,6 +292,24 @@ public class BookingService {
                     schedule.setIsAvailable(false);
                 }
                 experienceScheduleRepository.save(schedule); // Single save with both updates
+
+                // Create or get trip chat channel and add participants
+                try {
+                    // Add the guide to the trip chat (creates chat if it doesn't exist)
+                    Long guideId = schedule.getExperience().getGuide().getId();
+                    tripChatService.addGuideToTripChat(schedule.getScheduleId(), guideId);
+
+                    // Add the traveler to the trip chat
+                    tripChatService.addUserToTripChat(
+                        schedule.getScheduleId(),
+                        booking.getTraveler().getId(),
+                        booking.getBookingId()
+                    );
+                } catch (Exception e) {
+                    // Log error but don't fail the booking if chat creation fails
+                    System.err.println("Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    e.printStackTrace();
+                }
             } else {
                 // if payment fails, keep the booking status as PENDING
                 booking.setStatus(BookingStatus.PENDING);
@@ -377,21 +419,184 @@ public class BookingService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
 
-        if (booking.getStatus() == BookingStatus.CANCELLED) {
+        if (booking.getStatus() == BookingStatus.CANCELLED ||
+                booking.getStatus() == BookingStatus.CANCELLED_BY_TOURIST ||
+                booking.getStatus() == BookingStatus.CANCELLED_BY_GUIDE) {
             throw new IllegalStateException("Booking is already cancelled");
         }
 
-        // Update booking status
-        booking.setStatus(BookingStatus.CANCELLED);
+        // Calculate refund amount based on cancellation policy
+        BigDecimal refundAmount = calculateTouristRefundAmount(booking);
+
+        // Update booking status - auto-approved for tourists
+        booking.setStatus(BookingStatus.CANCELLED_BY_TOURIST);
         booking.setCancellationReason(cancellationReason);
         booking.setCancelledAt(LocalDateTime.now());
+        booking.setRefundAmount(refundAmount);
         booking.setUpdatedAt(LocalDateTime.now());
-
-        // Note: Refund logic should be implemented based on business requirements
 
         booking = bookingRepository.save(booking);
 
+        // Restore available spots to the experience schedule
+        ExperienceSchedule schedule = booking.getExperienceSchedule();
+        int restoredSpots = schedule.getAvailableSpots() + booking.getNumberOfParticipants();
+        schedule.setAvailableSpots(restoredSpots);
+
+        // Update the isAvailable flag if spots are now available
+        if (restoredSpots > 0 && !schedule.getIsAvailable()) {
+            schedule.setIsAvailable(true);
+        }
+        experienceScheduleRepository.save(schedule);
+
+        // Create refund transaction for admin portal visibility
+        if (refundAmount.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                paymentService.createRefundTransaction(booking, refundAmount);
+            } catch (Exception e) {
+                // Log the error but don't fail the booking cancellation
+                System.err.println("Failed to create refund transaction: " + e.getMessage());
+            }
+        }
+
+        // Remove user from trip chat if this was a trip booking
+        try {
+            tripChatService.removeUserFromTripChat(bookingId);
+        } catch (Exception e) {
+            // Log the error but don't fail the booking cancellation
+            System.err.println("Failed to remove user from trip chat: " + e.getMessage());
+        }
+
         return createBookingResponseDTO(booking);
+    }
+
+    /**
+     * Calculate refund amount for tourist cancellation based on policy:
+     * - Free: 24 hours after purchase (full base amount)
+     * - 7+ days before: Full base amount refund (service fee not refunded)
+     * - 3-6 days before: 50% base amount refund (service fee not refunded)
+     * - <3 days: Non-refundable
+     */
+    private BigDecimal calculateTouristRefundAmount(Booking booking) {
+        if (booking.getBookingDate() == null || booking.getExperienceSchedule() == null) {
+            return BigDecimal.ZERO;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime bookingCreated = booking.getBookingDate();
+        LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
+
+        BigDecimal baseAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
+
+        // Calculate hours since booking was created
+        long hoursFromBooking = java.time.Duration.between(bookingCreated, now).toHours();
+
+        // Calculate hours until experience starts
+        long hoursToExperience = java.time.Duration.between(now, experienceStart).toHours();
+        double daysToExperience = hoursToExperience / 24.0;
+
+        // Free cancellation: Within 24 hours of booking
+        if (hoursFromBooking <= 24) {
+            return baseAmount; // Full base amount refund
+        }
+
+        // Standard cancellation policies based on time until experience
+        if (daysToExperience >= 7) {
+            // Full base amount refund (service fee never refunded)
+            return baseAmount;
+        } else if (daysToExperience >= 3) {
+            // 50% base amount refund (service fee never refunded)
+            return baseAmount.multiply(new BigDecimal("0.5"));
+        } else {
+            // Non-refundable
+            return BigDecimal.ZERO;
+        }
+    }
+
+    /**
+     * Cancel an experience schedule by guide and apply cancellation fees
+     *
+     * @param scheduleId the ID of the schedule to cancel
+     * @param reason     the reason for cancellation
+     * @param guideId    the ID of the guide performing the cancellation
+     * @return GuideCancellationResponseDTO containing cancellation results
+     */
+    @Transactional
+    public GuideCancellationResponseDTO cancelScheduleByGuide(Long scheduleId, String reason, Long guideId) {
+        try {
+            // Find the schedule and verify ownership
+            ExperienceSchedule schedule = experienceScheduleRepository.findById(scheduleId)
+                    .orElseThrow(() -> new IllegalArgumentException("Experience schedule not found"));
+
+            if (!schedule.getExperience().getGuide().getId().equals(guideId)) {
+                throw new IllegalArgumentException("You can only cancel your own experience schedules");
+            }
+
+            // Find all CONFIRMED bookings for this schedule
+            List<Booking> confirmedBookings = bookingRepository.findConfirmedBookingsByScheduleId(scheduleId);
+
+            if (confirmedBookings.isEmpty()) {
+                throw new IllegalStateException("No confirmed bookings found for this schedule");
+            }
+
+            BigDecimal totalCancellationFee = BigDecimal.ZERO;
+            int affectedBookings = confirmedBookings.size();
+
+            // Process each booking
+            for (Booking booking : confirmedBookings) {
+                // Calculate cancellation fee for this booking
+                BigDecimal cancellationFee = calculateGuideCancellationFee(booking);
+                totalCancellationFee = totalCancellationFee.add(cancellationFee);
+
+                // Update booking status and details
+                booking.setStatus(BookingStatus.CANCELLED_BY_GUIDE);
+                booking.setCancellationReason(reason);
+                booking.setCancelledAt(LocalDateTime.now());
+                booking.setRefundAmount(booking.getTotalAmount()); // Full refund to customer
+                booking.setGuideCancellationFee(cancellationFee);
+                booking.setUpdatedAt(LocalDateTime.now());
+
+                bookingRepository.save(booking);
+
+                // Create refund transaction for admin portal visibility
+                try {
+                    paymentService.createRefundTransaction(booking, booking.getRefundAmount());
+                } catch (Exception e) {
+                    // Log the error but don't fail the schedule cancellation
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                }
+            }
+
+            // Mark schedule as unavailable
+            schedule.setIsAvailable(false);
+            experienceScheduleRepository.save(schedule);
+
+            return new GuideCancellationResponseDTO(scheduleId, affectedBookings, totalCancellationFee, reason);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to cancel schedule: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Calculate guide cancellation fee based on timing policy:
+     * - ≤48 hours before: 50% of booking total
+     * - 2-30 days before: 25% of booking total
+     * - >30 days before: 10% of booking total
+     */
+    private BigDecimal calculateGuideCancellationFee(Booking booking) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
+
+        long hoursUntilStart = java.time.Duration.between(now, experienceStart).toHours();
+        BigDecimal totalAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
+
+        if (hoursUntilStart <= 48) {
+            return totalAmount.multiply(new BigDecimal("0.50")); // 50%
+        } else if (hoursUntilStart <= (30 * 24)) { // 30 days in hours
+            return totalAmount.multiply(new BigDecimal("0.25")); // 25%
+        } else {
+            return totalAmount.multiply(new BigDecimal("0.10")); // 10%
+        }
     }
 
     // Helper methods
@@ -609,6 +814,7 @@ public class BookingService {
         response.setBaseAmount(booking.getBaseAmount());
         response.setServiceFee(booking.getServiceFee());
         response.setTotalAmount(booking.getTotalAmount());
+        response.setRefundAmount(booking.getRefundAmount());
 
         // Payment information is already set via PaymentTransactionDTO
 

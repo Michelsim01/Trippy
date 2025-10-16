@@ -29,6 +29,7 @@ public class Booking {
     private String cancellationReason;
     private LocalDateTime cancelledAt;
     private BigDecimal refundAmount;
+    private BigDecimal guideCancellationFee; // Fee charged to guide for cancelling
     private String confirmationCode;
 
     // Contact Information - may differ from user profile
@@ -40,7 +41,8 @@ public class Booking {
     // Payment Breakdown
     private BigDecimal baseAmount; // Experience price
     private BigDecimal serviceFee; // Platform fee
-    // totalAmount = baseAmount + serviceFee
+    private BigDecimal trippointsDiscount; // Amount discounted via trippoints
+    // totalAmount = baseAmount + serviceFee - trippointsDiscount
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -220,5 +222,21 @@ public class Booking {
 
     public void setServiceFee(BigDecimal serviceFee) {
         this.serviceFee = serviceFee;
+    }
+
+    public BigDecimal getTrippointsDiscount() {
+        return trippointsDiscount;
+    }
+
+    public void setTrippointsDiscount(BigDecimal trippointsDiscount) {
+        this.trippointsDiscount = trippointsDiscount;
+    }
+
+    public BigDecimal getGuideCancellationFee() {
+        return guideCancellationFee;
+    }
+
+    public void setGuideCancellationFee(BigDecimal guideCancellationFee) {
+        this.guideCancellationFee = guideCancellationFee;
     }
 }

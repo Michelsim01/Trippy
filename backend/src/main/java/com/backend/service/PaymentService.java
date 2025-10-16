@@ -1,7 +1,6 @@
 package com.backend.service;
 
 import com.backend.dto.*;
-import com.backend.dto.request.*;
 import com.backend.entity.*;
 import com.backend.repository.*;
 import com.backend.integration.stripe.*;
@@ -48,9 +47,6 @@ public class PaymentService {
 
     /**
      * Process a payment for a given booking using a Stripe payment token.
-     * 
-     * Convenience overload when you already have the Booking entity loaded
-     * and only need to supply the Stripe token.
      *
      * @param booking      the booking being paid for (must not be null)
      * @param paymentToken the client-side generated Stripe token (must not be
@@ -61,31 +57,6 @@ public class PaymentService {
      */
     @Transactional
     public PaymentTransactionDTO processPayment(Booking booking, String paymentToken) {
-        return processPayment(booking, paymentToken, null);
-    }
-
-    /**
-     * Process a payment for a given booking using a Stripe payment token and
-     * payment details.
-     *
-     * This method is designed for controller endpoints that receive a
-     * PaymentRequestDTO
-     * from the frontend. It validates the request fields (bookingId, Stripe token,
-     * etc.)
-     * and delegates to the DTO-driven payment flow.
-     *
-     * @param booking        the booking being paid for (must not be null)
-     * @param paymentToken   the client-side generated Stripe token (must not be
-     *                       null/empty)
-     * @param paymentDetails the payment details containing cardholder name, last
-     *                       four digits, etc.
-     * @return a DTO representing the processed transaction
-     * @throws IllegalArgumentException if booking or token are invalid
-     * @throws RuntimeException         if the Stripe payment fails
-     */
-    @Transactional
-    public PaymentTransactionDTO processPayment(Booking booking, String paymentToken,
-            PaymentRequestDTO paymentDetails) {
         if (booking == null) {
             throw new IllegalArgumentException("Booking cannot be null");
         }
@@ -98,7 +69,7 @@ public class PaymentService {
             validatePaymentAmount(booking);
 
             // Create transaction record
-            Transaction transaction = createTransaction(booking, TransactionType.PAYMENT, paymentDetails);
+            Transaction transaction = createTransaction(booking, TransactionType.PAYMENT);
 
             // Save initial transaction
             transaction = transactionRepository.save(transaction);
@@ -106,9 +77,7 @@ public class PaymentService {
             // Process payment with Stripe
             StripePaymentResult paymentResult = processStripePayment(
                     booking.getTotalAmount(),
-                    paymentToken,
-                    booking.getConfirmationCode(),
-                    paymentDetails);
+                    paymentToken);
 
             // Update transaction with Stripe response
             transaction.setStripeChargeId(paymentResult.getChargeId());
@@ -142,108 +111,17 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Process a payment request coming directly from an API call.
-     *
-     * This method is designed for controller endpoints that receive a
-     * PaymentRequestDTO
-     * from the frontend. It validates the request fields (bookingId, Stripe token,
-     * etc.)
-     * and delegates to the DTO-driven payment flow.
-     *
-     * @param paymentRequest the payment request payload sent by the client
-     * @return a DTO representing the processed transaction
-     * @throws IllegalArgumentException if required fields are missing
-     * @throws RuntimeException         if the Stripe payment fails
-     */
-    @Transactional
-    public PaymentTransactionDTO processPayment(PaymentRequestDTO paymentRequest) {
-        // This method uses PaymentRequestDTO directly as requested
-        if (paymentRequest == null) {
-            throw new IllegalArgumentException("PaymentRequestDTO cannot be null");
-        }
-        if (paymentRequest.getBookingId() == null) {
-            throw new IllegalArgumentException("Booking ID is required");
-        }
-        if (paymentRequest.getStripeToken() == null || paymentRequest.getStripeToken().trim().isEmpty()) {
-            throw new IllegalArgumentException("Stripe token is required");
-        }
 
-        return processPaymentWithRequest(paymentRequest);
-    }
+
 
     /**
-     * Internal helper method for processing a payment based solely on
-     * PaymentRequestDTO.
+     * Process a payment with Stripe using the provided amount and payment token.
      *
-     * Creates a new Transaction record, charges Stripe, updates the transaction
-     * with
-     * the Stripe response (charge ID, card details, status), and returns a DTO
-     * summary.
-     *
-     * Intended to be called only by processPayment(PaymentRequestDTO).
-     *
-     * @param paymentRequest the payment request containing bookingId, amount,
-     *                       token, etc.
-     * @return a DTO representing the processed transaction
-     */
-    @Transactional
-    private PaymentTransactionDTO processPaymentWithRequest(PaymentRequestDTO paymentRequest) {
-        try {
-            // Create transaction record
-            Transaction transaction = createTransactionFromRequest(paymentRequest);
-
-            // Save initial transaction
-            transaction = transactionRepository.save(transaction);
-
-            // Process payment with Stripe
-            StripePaymentResult paymentResult = processStripePaymentWithRequest(paymentRequest);
-
-            // Update transaction with Stripe response
-            transaction.setStripeChargeId(paymentResult.getChargeId());
-
-            if (paymentResult.isSuccessful()) {
-                transaction.setStatus(TransactionStatus.COMPLETED);
-                transaction.setProcessedAt(LocalDateTime.now());
-
-                // Update card details from Stripe response
-                if (paymentResult.getLastFourDigits() != null) {
-                    transaction.setLastFourDigits(paymentResult.getLastFourDigits());
-                }
-                if (paymentResult.getCardBrand() != null) {
-                    transaction.setCardBrand(paymentResult.getCardBrand());
-                }
-            } else {
-                transaction.setStatus(TransactionStatus.FAILED);
-            }
-
-            transaction.setUpdatedAt(LocalDateTime.now());
-            transaction = transactionRepository.save(transaction);
-
-            if (!paymentResult.isSuccessful()) {
-                throw new RuntimeException("Payment failed");
-            }
-
-            return convertToPaymentTransactionDTO(transaction);
-
-        } catch (Exception e) {
-            throw new RuntimeException("Payment processing failed: " + e.getMessage(), e);
-        }
-    }
-
-    /**
-     * Process a payment with Stripe using the provided amount, payment token,
-     * description, and payment details.
-     *
-     * @param amount         the amount to charge
-     * @param paymentToken   the Stripe payment token
-     * @param description    the description of the payment
-     * @param paymentDetails the payment details containing cardholder name, booking
-     *                       ID, etc.
+     * @param amount       the amount to charge
+     * @param paymentToken the Stripe payment token
      * @return a StripePaymentResult containing the result of the payment
      */
-    private StripePaymentResult processStripePayment(BigDecimal amount, String paymentToken,
-            String description, PaymentRequestDTO paymentDetails) {
+    private StripePaymentResult processStripePayment(BigDecimal amount, String paymentToken) {
         try {
             // Convert amount to cents (Stripe requires integer cents)
             long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValue();
@@ -253,15 +131,7 @@ public class PaymentService {
                     .setAmount(amountInCents)
                     .setCurrency("sgd")
                     .setSource(paymentToken)
-                    .setDescription(description != null ? description : "Trippy Experience Booking");
-
-            // Add metadata if payment details available
-            if (paymentDetails != null) {
-                paramsBuilder.putMetadata("booking_id", paymentDetails.getBookingId().toString());
-                if (paymentDetails.getCardholderName() != null) {
-                    paramsBuilder.putMetadata("cardholder_name", paymentDetails.getCardholderName());
-                }
-            }
+                    .setDescription("Trippy Experience Booking");
 
             ChargeCreateParams params = paramsBuilder.build();
 
@@ -297,70 +167,6 @@ public class PaymentService {
         }
     }
 
-    /**
-     * Process a payment with Stripe using the provided payment request.
-     *
-     * @param paymentRequest the payment request containing bookingId, amount,
-     *                       token, etc.
-     * @return a StripePaymentResult containing the result of the payment
-     */
-    private StripePaymentResult processStripePaymentWithRequest(PaymentRequestDTO paymentRequest) {
-        try {
-            // Convert amount to cents (Stripe requires integer cents)
-            long amountInCents = paymentRequest.getAmount().multiply(BigDecimal.valueOf(100)).longValue();
-
-            // Create charge parameters
-            ChargeCreateParams.Builder paramsBuilder = ChargeCreateParams.builder()
-                    .setAmount(amountInCents)
-                    .setCurrency("sgd")
-                    .setSource(paymentRequest.getStripeToken())
-                    .setDescription(
-                            paymentRequest.getPaymentDescription() != null ? paymentRequest.getPaymentDescription()
-                                    : "Trippy Experience Booking");
-
-            // Add metadata
-            paramsBuilder.putMetadata("booking_id", paymentRequest.getBookingId().toString());
-            if (paymentRequest.getCardholderName() != null) {
-                paramsBuilder.putMetadata("cardholder_name", paymentRequest.getCardholderName());
-            }
-
-            ChargeCreateParams params = paramsBuilder.build();
-
-            // Create charge with Stripe
-            Charge charge = Charge.create(params);
-
-            // Build result from Stripe response
-            StripePaymentResult result = new StripePaymentResult();
-            result.setSuccessful("succeeded".equals(charge.getStatus()));
-            result.setChargeId(charge.getId());
-
-            // Extract card details from charge or use provided details
-            if (charge.getPaymentMethodDetails() != null &&
-                    charge.getPaymentMethodDetails().getCard() != null) {
-                result.setLastFourDigits(charge.getPaymentMethodDetails().getCard().getLast4());
-                result.setCardBrand(charge.getPaymentMethodDetails().getCard().getBrand());
-            } else {
-                // Fallback to provided details
-                result.setLastFourDigits(paymentRequest.getLastFourDigits());
-                result.setCardBrand(paymentRequest.getCardBrand());
-            }
-
-            if (!result.isSuccessful()) {
-                System.err.println("Stripe payment failed for charge: " + result.getChargeId() + ". Status: "
-                        + charge.getStatus());
-                throw new RuntimeException("Payment failed - transaction rolled back");
-            }
-
-            return result;
-
-        } catch (StripeException e) {
-            System.err.println("Stripe API error during payment processing with request: " + e.getMessage());
-            throw new RuntimeException("Payment processing failed - transaction rolled back: " + e.getMessage());
-        } catch (Exception e) {
-            System.err.println("Unexpected error during payment processing with request: " + e.getMessage());
-            throw new RuntimeException("Payment processing failed - transaction rolled back: " + e.getMessage());
-        }
-    }
 
     // ================================
     // REFUND PROCESSING METHODS
@@ -505,6 +311,77 @@ public class PaymentService {
     }
 
     /**
+     * Create a refund transaction for a cancelled booking.
+     *
+     * This method creates a completed refund transaction record that will appear
+     * in the admin portal for tracking purposes.
+     *
+     * @param booking the booking being refunded
+     * @param refundAmount the amount being refunded
+     * @return the created and saved refund transaction
+     */
+    @Transactional
+    public Transaction createRefundTransaction(Booking booking, BigDecimal refundAmount) {
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking cannot be null");
+        }
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Refund amount must be non-negative");
+        }
+
+        Transaction refundTransaction = new Transaction();
+        refundTransaction.setBooking(booking);
+        refundTransaction.setUser(booking.getTraveler());
+        refundTransaction.setAmount(refundAmount);
+        refundTransaction.setType(TransactionType.REFUND);
+        refundTransaction.setStatus(TransactionStatus.COMPLETED);
+        refundTransaction.setPaymentMethod(DEFAULT_PAYMENT_METHOD);
+        refundTransaction.setExternalTransactionId(generateTransactionId());
+        refundTransaction.setCreatedAt(LocalDateTime.now());
+        refundTransaction.setUpdatedAt(LocalDateTime.now());
+        refundTransaction.setProcessedAt(LocalDateTime.now());
+
+        return transactionRepository.save(refundTransaction);
+    }
+
+    /**
+     * Create a payout transaction for a completed booking.
+     *
+     * This method creates a completed payout transaction record that will appear
+     * in the admin portal for tracking guide earnings.
+     *
+     * @param booking the completed booking being paid out
+     * @param guide the guide receiving the payout
+     * @return the created and saved payout transaction
+     */
+    @Transactional
+    public Transaction createPayoutTransaction(Booking booking, User guide) {
+        if (booking == null) {
+            throw new IllegalArgumentException("Booking cannot be null");
+        }
+        if (guide == null) {
+            throw new IllegalArgumentException("Guide cannot be null");
+        }
+        if (booking.getBaseAmount() == null || booking.getBaseAmount().compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Booking base amount must be non-negative");
+        }
+
+        Transaction payoutTransaction = new Transaction();
+        payoutTransaction.setBooking(booking);
+        payoutTransaction.setUser(guide); // Link to guide, not traveler
+        payoutTransaction.setAmount(booking.getBaseAmount()); // Base amount excludes service fees
+        payoutTransaction.setType(TransactionType.PAYOUT);
+        payoutTransaction.setStatus(TransactionStatus.COMPLETED);
+        payoutTransaction.setPaymentMethod(DEFAULT_PAYMENT_METHOD);
+        payoutTransaction.setExternalTransactionId(generateTransactionId());
+        payoutTransaction.setCreatedAt(LocalDateTime.now());
+        payoutTransaction.setUpdatedAt(LocalDateTime.now());
+        payoutTransaction.setProcessedAt(LocalDateTime.now());
+
+        return transactionRepository.save(payoutTransaction);
+    }
+
+    /**
      * Validate the payment amount for a given booking.
      *
      * This method uses the BookingPricingDTO to validate the payment amount.
@@ -519,15 +396,21 @@ public class PaymentService {
                 booking.getNumberOfParticipants(),
                 serviceFeeRate);
 
-        // Validate amounts using DTO method
-        boolean isValid = pricing.validatePricing(
-                booking.getBaseAmount(),
-                booking.getServiceFee(),
-                booking.getTotalAmount());
+        // Account for trippoints discount in total validation
+        BigDecimal expectedTotal = pricing.getTotalAmount();
+        BigDecimal trippointsDiscount = booking.getTrippointsDiscount();
+        if (trippointsDiscount != null && trippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            expectedTotal = expectedTotal.subtract(trippointsDiscount);
+        }
+
+        // Validate individual components and adjusted total
+        boolean isValid = pricing.getBaseAmount().compareTo(booking.getBaseAmount()) == 0 &&
+                pricing.getServiceFee().compareTo(booking.getServiceFee()) == 0 &&
+                expectedTotal.compareTo(booking.getTotalAmount()) == 0;
 
         if (!isValid) {
             throw new IllegalArgumentException("Payment amount validation failed. Expected total: "
-                    + pricing.getTotalAmount() + ", Submitted total: " + booking.getTotalAmount());
+                    + expectedTotal + ", Submitted total: " + booking.getTotalAmount());
         }
 
         return true;
@@ -542,40 +425,15 @@ public class PaymentService {
         return "TXN-" + UUID.randomUUID().toString().substring(0, 12).toUpperCase();
     }
 
-    /**
-     * Create a transaction from a payment request.
-     *
-     * @param paymentRequest the payment request containing bookingId, amount,
-     *                       token, etc.
-     * @return a Transaction entity
-     */
-    private Transaction createTransactionFromRequest(PaymentRequestDTO paymentRequest) {
-        Transaction transaction = new Transaction();
-        // Note: You'll need to fetch the booking entity using
-        // paymentRequest.getBookingId()
-        // transaction.setBooking(bookingRepository.findById(paymentRequest.getBookingId()).orElseThrow());
-        transaction.setAmount(paymentRequest.getAmount());
-        transaction.setType(TransactionType.PAYMENT);
-        transaction.setStatus(TransactionStatus.PENDING);
-        transaction.setPaymentMethod(paymentRequest.getPaymentMethod());
-        transaction.setExternalTransactionId(generateTransactionId());
-        transaction.setCreatedAt(LocalDateTime.now());
-        transaction.setLastFourDigits(paymentRequest.getLastFourDigits());
-        transaction.setCardBrand(paymentRequest.getCardBrand());
-
-        return transaction;
-    }
 
     /**
-     * Create a transaction from a booking and payment details.
+     * Create a transaction from a booking.
      *
-     * @param booking        the booking to create the transaction for
-     * @param type           the type of transaction
-     * @param paymentDetails the payment details containing cardholder name, last
-     *                       four digits, etc.
+     * @param booking the booking to create the transaction for
+     * @param type    the type of transaction
      * @return a Transaction entity
      */
-    private Transaction createTransaction(Booking booking, TransactionType type, PaymentRequestDTO paymentDetails) {
+    private Transaction createTransaction(Booking booking, TransactionType type) {
         Transaction transaction = new Transaction();
         transaction.setBooking(booking);
         transaction.setUser(booking.getTraveler());
@@ -585,12 +443,6 @@ public class PaymentService {
         transaction.setPaymentMethod(DEFAULT_PAYMENT_METHOD);
         transaction.setExternalTransactionId(generateTransactionId());
         transaction.setCreatedAt(LocalDateTime.now());
-
-        // Set payment details if provided
-        if (paymentDetails != null) {
-            transaction.setLastFourDigits(paymentDetails.getLastFourDigits());
-            transaction.setCardBrand(paymentDetails.getCardBrand());
-        }
 
         return transaction;
     }

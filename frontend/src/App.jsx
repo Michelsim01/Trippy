@@ -46,10 +46,12 @@ import SearchResultsPage from './pages/SearchResultsPage'
 import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
+import SupportPage from './pages/SupportPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
 import WriteReviewPage from './pages/WriteReviewPage'
+import SurveyPage from './pages/SurveyPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -60,7 +62,7 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
 
 // AppRoutes component that uses authentication context
 function AppRoutes() {
-  const { isAuthenticated, isLoading, user } = useAuth()
+  const { isAuthenticated, isLoading, user, hasSurveyCompleted, isSurveyLoading } = useAuth()
   
   // Global chat notifications for navbar badge updates on all pages
   const { chatNotifications, clearChatNotifications } = useChatNotifications(user?.id || user?.userId)
@@ -81,7 +83,7 @@ function AppRoutes() {
   }, [chatNotifications, clearChatNotifications]);
 
   // Show loading spinner while checking authentication
-  if (isLoading) {
+  if (isLoading || isSurveyLoading) {
     return (
       <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
         <div className="text-center">
@@ -92,12 +94,23 @@ function AppRoutes() {
     )
   }
 
+  // Helper function to check if user needs to complete survey
+  const requiresSurveyCompletion = (component) => {
+    if (!isAuthenticated) {
+      return <Navigate to="/" replace />
+    }
+    if (!hasSurveyCompleted) {
+      return <Navigate to="/survey" replace />
+    }
+    return component
+  }
+
   return (
     <Routes>
       {/* Public routes */}
       <Route
         path="/"
-        element={isAuthenticated ? <Navigate to="/home" replace /> : <WelcomePage />}
+        element={isAuthenticated ? (hasSurveyCompleted ? <Navigate to="/home" replace /> : <Navigate to="/survey" replace />) : <WelcomePage />}
       />
       <Route
         path="/signup"
@@ -128,44 +141,48 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route
+        path="/support"
+        element={<SupportPage />}
+      />
+      <Route
         path="/home"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <HomePage />}
+        element={requiresSurveyCompletion(<HomePage />)}
       />
       <Route
         path="/search"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <SearchResultsPage />}
+        element={requiresSurveyCompletion(<SearchResultsPage />)}
       />
       <Route
         path="/notifications"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <NotificationsPage />}
+        element={requiresSurveyCompletion(<NotificationsPage />)}
       />
       <Route
         path="/wishlist"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <WishlistPage />}
+        element={requiresSurveyCompletion(<WishlistPage />)}
       />
       <Route
         path="/messages"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <MessagesPage />}
+        element={requiresSurveyCompletion(<MessagesPage />)}
       />
       <Route
         path="/my-bookings"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <MyBookingsPage />}
+        element={requiresSurveyCompletion(<MyBookingsPage />)}
       />
       <Route
         path="/booking/:bookingId"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <BookingDetailPage />}
+        element={requiresSurveyCompletion(<BookingDetailPage />)}
       />
       <Route
         path="/my-tours"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <MyToursPage />}
+        element={requiresSurveyCompletion(<MyToursPage />)}
       />
       <Route
         path="/profile/:id"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <ProfilePage />}
+        element={requiresSurveyCompletion(<ProfilePage />)}
       />
       <Route
         path="/blog"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <BlogPage />}
+        element={requiresSurveyCompletion(<BlogPage />)}
       />
       <Route
         path="/blog/:id"
@@ -183,91 +200,93 @@ function AppRoutes() {
       {/*create experience*/}
       <Route
         path="/create-experience"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/create-experience/basic-info" replace />}
+        element={requiresSurveyCompletion(<Navigate to="/create-experience/basic-info" replace />)}
       />
       <Route
         path="/create-experience/basic-info"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceBasicInfoPage />}
+        element={requiresSurveyCompletion(<CreateExperienceBasicInfoPage />)}
       />
       <Route
         path="/create-experience/details"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceDetailsPage />}
+        element={requiresSurveyCompletion(<CreateExperienceDetailsPage />)}
       />
       <Route
         path="/create-experience/pricing"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperiencePricingPage />}
+        element={requiresSurveyCompletion(<CreateExperiencePricingPage />)}
       />
       <Route
         path="/create-experience/availability"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceAvailabilityPage />}
+        element={requiresSurveyCompletion(<CreateExperienceAvailabilityPage />)}
       />
       <Route
         path="/create-experience/success"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateExperienceSuccessPage />}
+        element={requiresSurveyCompletion(<CreateExperienceSuccessPage />)}
       />
       <Route
         path="/experience/:id"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <ExperienceDetailsPage />}
+        element={requiresSurveyCompletion(<ExperienceDetailsPage />)}
       />
 
       {/* Edit Experience Flow */}
       <Route
         path="/edit-experience/:id"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="basic-info" replace />}
+        element={requiresSurveyCompletion(<Navigate to="basic-info" replace />)}
       />
       <Route
         path="/edit-experience/:id/basic-info"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceBasicInfoPage />}
+        element={requiresSurveyCompletion(<EditExperienceBasicInfoPage />)}
       />
       <Route
         path="/edit-experience/:id/details"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceDetailsPage />}
+        element={requiresSurveyCompletion(<EditExperienceDetailsPage />)}
       />
       <Route
         path="/edit-experience/:id/pricing"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperiencePricingPage />}
+        element={requiresSurveyCompletion(<EditExperiencePricingPage />)}
       />
       <Route
         path="/edit-experience/:id/availability"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <EditExperienceAvailabilityPage />}
+        element={requiresSurveyCompletion(<EditExperienceAvailabilityPage />)}
       />
       <Route
         path="/calendar"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <CalendarPage />}
+        element={requiresSurveyCompletion(<CalendarPage />)}
       />
       <Route
         path="/about"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <AboutPage />}
+        element={requiresSurveyCompletion(<AboutPage />)}
       />
       <Route
         path="/contact"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <ContactPage />}
+        element={requiresSurveyCompletion(<ContactPage />)}
       />
       <Route
         path="/settings"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <SettingsPage />}
+        element={requiresSurveyCompletion(<SettingsPage />)}
       />
-
-
+      <Route
+        path="/survey"
+        element={!isAuthenticated ? <Navigate to="/" replace /> : (hasSurveyCompleted ? <Navigate to="/home" replace /> : <SurveyPage />)}
+      />
       <Route
         path="/kyc-onboarding"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycOnboardingPage />}
+        element={requiresSurveyCompletion(<KycOnboardingPage />)}
       />
 
       <Route
         path="/kyc-verification"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycVerificationPage />}
+        element={requiresSurveyCompletion(<KycVerificationPage />)}
       />
 
       <Route
         path="/kyc-submitted"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : <KycSubmittedPage />}
+        element={requiresSurveyCompletion(<KycSubmittedPage />)}
       />
 
       {/* Checkout Flow */}
       <Route
         path="/checkout/*"
-        element={!isAuthenticated ? <Navigate to="/" replace /> : (
+        element={requiresSurveyCompletion(
           <CheckoutProvider>
             <Routes>
               <Route path="contact" element={<CheckoutContactPage />} />
@@ -281,7 +300,7 @@ function AppRoutes() {
           {/* Write Review Page */}
           <Route
             path="/write-review/:bookingId"
-            element={!isAuthenticated ? <Navigate to="/" replace /> : <WriteReviewPage />}
+            element={requiresSurveyCompletion(<WriteReviewPage />)}
           />
 
       {/* Error Pages */}

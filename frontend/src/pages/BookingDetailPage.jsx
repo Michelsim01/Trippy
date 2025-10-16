@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useReviews } from '../contexts/ReviewContext';
-import { ArrowLeft, Calendar, Users, MapPin, Clock, ExternalLink, MessageCircle, Users as UsersChat, Star } from 'lucide-react';
+import { Calendar, Users, MapPin, ExternalLink, Users as UsersChat, Star } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
@@ -20,7 +20,6 @@ const BookingDetailPage = () => {
     const [error, setError] = useState(null);
     const [showCancellationForm, setShowCancellationForm] = useState(false);
     const [cancellationReason, setCancellationReason] = useState('');
-    const [cancellationDetails, setCancellationDetails] = useState('');
     const [hasWrittenReview, setHasWrittenReview] = useState(false);
 
     useEffect(() => {
@@ -55,6 +54,7 @@ const BookingDetailPage = () => {
                     numberOfParticipants: data.numberOfParticipants,
                     totalAmount: data.totalAmount,
                     serviceFee: data.serviceFee,
+                    refundAmount: data.refundAmount,
                     bookingDate: data.bookingDate,
                     cancellationReason: data.cancellationReason,
                     cancelledAt: data.cancelledAt,
@@ -127,7 +127,7 @@ const BookingDetailPage = () => {
                         </svg>
                     </div>
                     <h3 className="text-lg font-medium text-neutrals-2 mb-2">{error}</h3>
-                    <p className="text-neutrals-4 mb-6">We couldn't load this booking. Please try again or go back to your bookings.</p>
+                    <p className="text-neutrals-4 mb-6">We couldn't load this booking. Please try again.</p>
                     <div className="space-x-4">
                         <Button
                             variant="outline"
@@ -135,13 +135,6 @@ const BookingDetailPage = () => {
                             onClick={() => window.location.reload()}
                         >
                             Try Again
-                        </Button>
-                        <Button
-                            variant="primary"
-                            size="md"
-                            onClick={() => navigate('/my-bookings')}
-                        >
-                            Back to My Bookings
                         </Button>
                     </div>
                 </div>
@@ -210,6 +203,8 @@ const BookingDetailPage = () => {
             CONFIRMED: { bg: 'bg-green-100', text: 'text-green-800', label: 'Confirmed' },
             PENDING: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Pending' },
             CANCELLED: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_TOURIST: { bg: 'bg-red-100', text: 'text-red-800', label: 'Cancelled' },
+            CANCELLED_BY_GUIDE: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Cancelled by Guide' },
             COMPLETED: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Completed' }
         };
 
@@ -249,28 +244,29 @@ const BookingDetailPage = () => {
 
         const totalAmount = booking.totalAmount || 0;
         const serviceFee = booking.serviceFee || 0;
+        const baseAmount = (totalAmount - serviceFee) || 0; // Extract base amount from total
 
         // Free cancellation: Within 24 hours of booking
         if (hoursFromBooking <= 24) {
             return {
-                amount: totalAmount,
+                amount: baseAmount,
                 policy: 'Free Cancellation',
-                explanation: 'Full refund (within 24 hours of purchase)'
+                explanation: 'Full base amount refund (within 24 hours of purchase)'
             };
         }
 
         // Standard cancellation policies based on time until experience
         if (daysToExperience >= 7) {
             return {
-                amount: totalAmount - serviceFee,
+                amount: baseAmount,
                 policy: '7+ Days Before',
-                explanation: 'Full refund minus service fee'
+                explanation: 'Full base amount refund (service fee not refunded)'
             };
         } else if (daysToExperience >= 3) {
             return {
-                amount: (totalAmount * 0.5) - serviceFee,
+                amount: baseAmount * 0.5,
                 policy: '3-6 Days Before',
-                explanation: '50% refund minus service fee'
+                explanation: '50% base amount refund (service fee not refunded)'
             };
         } else {
             return {
@@ -289,19 +285,63 @@ const BookingDetailPage = () => {
     };
 
     // Handle cancellation form submission
-    const handleCancellationSubmit = () => {
-        // Phase 3: This will make API call to submit cancellation
-        console.log('Cancellation submitted:', {
-            bookingId: booking.bookingId,
-            reason: cancellationReason,
-            details: cancellationDetails
-        });
+    const handleCancellationSubmit = async () => {
+        try {
+            const response = await fetch(`http://localhost:8080/api/bookings/${booking.bookingId}/cancel?reason=${encodeURIComponent(cancellationReason)}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
 
-        // For now, just show success message and hide form
-        alert('Cancellation request submitted successfully. You will receive a confirmation email shortly.');
-        setShowCancellationForm(false);
-        setCancellationReason('');
-        setCancellationDetails('');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const updatedBooking = await response.json();
+
+            // Transform to match expected structure (same as initial fetch)
+            const transformedBooking = {
+                bookingId: updatedBooking.bookingId,
+                confirmationCode: updatedBooking.confirmationCode,
+                status: updatedBooking.status,
+                numberOfParticipants: updatedBooking.numberOfParticipants,
+                totalAmount: updatedBooking.totalAmount,
+                serviceFee: updatedBooking.serviceFee,
+                refundAmount: updatedBooking.refundAmount,
+                bookingDate: updatedBooking.bookingDate,
+                cancellationReason: updatedBooking.cancellationReason,
+                cancelledAt: updatedBooking.cancelledAt,
+                experience: {
+                    experienceId: updatedBooking.experienceId,
+                    title: updatedBooking.experienceTitle,
+                    country: updatedBooking.experienceCountry,
+                    coverPhotoUrl: updatedBooking.experienceCoverPhotoUrl,
+                    shortDescription: updatedBooking.experienceDescription,
+                    importantInfo: updatedBooking.experienceImportantInfo,
+                    location: updatedBooking.experienceLocation
+                },
+                experienceSchedule: {
+                    startDateTime: updatedBooking.startDateTime,
+                    endDateTime: updatedBooking.endDateTime
+                }
+            };
+
+            // Update the booking state with transformed data
+            setBooking(transformedBooking);
+
+            // Show success message with refund amount
+            const refundAmount = updatedBooking.refundAmount || 0;
+            alert(`Cancellation completed. Refund of $${Math.round(refundAmount)} will be processed within 5 working days.`);
+
+            // Hide form and reset
+            setShowCancellationForm(false);
+            setCancellationReason('');
+        } catch (error) {
+            console.error('Error cancelling booking:', error);
+            alert('Failed to cancel booking. Please try again.');
+        }
     };
 
     return (
@@ -320,16 +360,6 @@ const BookingDetailPage = () => {
 
             <main className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : ''}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                    {/* Back Button */}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate('/my-bookings')}
-                        className="flex items-center gap-2 mb-6 !px-0"
-                    >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back to My Bookings</span>
-                    </Button>
 
                     {/* Page Header */}
                     <div className="mb-8">
@@ -407,6 +437,19 @@ const BookingDetailPage = () => {
                                             {formatPrice(booking.totalAmount)}
                                         </span>
                                     </div>
+
+                                    {/* Refund Amount - Show for cancelled bookings */}
+                                    {(booking.status === 'CANCELLED' ||
+                                      booking.status === 'CANCELLED_BY_TOURIST' ||
+                                      booking.status === 'CANCELLED_BY_GUIDE') &&
+                                     booking.refundAmount !== null && booking.refundAmount !== undefined && (
+                                        <div className="flex items-center justify-between pt-4 border-t border-neutrals-6">
+                                            <span className="text-neutrals-3">Refund Amount</span>
+                                            <span className="text-2xl font-bold text-green-600">
+                                                {formatPrice(booking.refundAmount)}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -526,15 +569,13 @@ const BookingDetailPage = () => {
                                                     <span className="text-neutrals-2 font-medium">{refundInfo.policy}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span className="text-neutrals-4">Original Amount:</span>
-                                                    <span className="text-neutrals-2">{formatPrice(booking.totalAmount)}</span>
+                                                    <span className="text-neutrals-4">Base Amount:</span>
+                                                    <span className="text-neutrals-2">{formatPrice(booking.totalAmount - booking.serviceFee)}</span>
                                                 </div>
-                                                {refundInfo.policy !== 'Free Cancellation' && refundInfo.amount > 0 && (
-                                                    <div className="flex justify-between">
-                                                        <span className="text-neutrals-4">Service Fee:</span>
-                                                        <span className="text-neutrals-2">-{formatPrice(booking.serviceFee)}</span>
-                                                    </div>
-                                                )}
+                                                <div className="flex justify-between">
+                                                    <span className="text-neutrals-4">Service Fee:</span>
+                                                    <span className="text-neutrals-2">Non-refundable</span>
+                                                </div>
                                                 <div className="pt-2 border-t border-neutrals-6">
                                                     <div className="flex justify-between">
                                                         <span className="font-medium text-neutrals-2">Refund Amount:</span>
@@ -568,20 +609,6 @@ const BookingDetailPage = () => {
                                             </select>
                                         </div>
 
-                                        {/* Additional Details */}
-                                        <div>
-                                            <label className="block text-sm font-medium text-neutrals-2 mb-2">
-                                                Additional details (optional)
-                                            </label>
-                                            <textarea
-                                                value={cancellationDetails}
-                                                onChange={(e) => setCancellationDetails(e.target.value)}
-                                                placeholder="Please provide any additional information..."
-                                                rows={3}
-                                                className="w-full p-3 border border-neutrals-6 rounded-lg focus:border-primary-1 focus:outline-none resize-none"
-                                                style={{ padding: '6px' }}
-                                            />
-                                        </div>
 
                                         {/* Action Buttons */}
                                         <div className="space-y-2">
@@ -592,7 +619,7 @@ const BookingDetailPage = () => {
                                                 disabled={!cancellationReason}
                                                 className="w-full bg-red-600 hover:bg-red-700 focus:ring-red-600"
                                             >
-                                                Submit Cancellation Request
+                                                Confirm Cancellation
                                             </Button>
                                             <Button
                                                 variant="secondary"
@@ -609,8 +636,10 @@ const BookingDetailPage = () => {
                                 {!canCancel && (
                                     <div className="text-center py-4">
                                         <p className="text-neutrals-4 text-sm">
-                                            {booking.status === 'CANCELLED'
+                                            {booking.status === 'CANCELLED' || booking.status === 'CANCELLED_BY_TOURIST'
                                                 ? 'This booking has been cancelled and your refund will be shortly processed.'
+                                                : booking.status === 'CANCELLED_BY_GUIDE'
+                                                ? 'Your tour was cancelled by the guide. Full refund has been processed.'
                                                 : 'This booking cannot be cancelled.'
                                             }
                                         </p>
@@ -621,10 +650,11 @@ const BookingDetailPage = () => {
                                 <div className="mt-6 pt-6 border-t border-neutrals-6">
                                     <h4 className="font-medium text-neutrals-2 mb-2">Cancellation Policy</h4>
                                     <div className="text-xs text-neutrals-4 space-y-1">
-                                        <p><strong>Free:</strong> 24 hours after purchase</p>
-                                        <p><strong>7+ days before:</strong> Full refund (minus service fee)</p>
-                                        <p><strong>3-6 days before:</strong> 50% refund (minus service fee)</p>
+                                        <p><strong>Free:</strong> 24 hours after purchase (full base amount)</p>
+                                        <p><strong>7+ days before:</strong> Full base amount refund</p>
+                                        <p><strong>3-6 days before:</strong> 50% base amount refund</p>
                                         <p><strong>&lt;3 days:</strong> Non-refundable</p>
+                                        <p className="italic mt-2">Service fees are non-refundable in all cases</p>
                                     </div>
                                 </div>
                             </div>
