@@ -77,9 +77,9 @@ spring.datasource.password=secret
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.format_sql=false
 
 # JWT Configuration
 jwt.secret=trippy-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
