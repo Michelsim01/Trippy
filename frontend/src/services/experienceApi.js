@@ -341,6 +341,69 @@ export const experienceApi = {
       console.error('Get schedule booking statuses API error:', error);
       throw new Error(`Failed to get schedule booking statuses: ${error.message}`);
     }
+  },
+
+  /**
+   * Get personalized Discover Weekly recommendations
+   * @param {number} userId - The user ID
+   * @returns {Promise<Array>} List of recommended experiences
+   */
+  getDiscoverWeeklyRecommendations: async (userId) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/recommendations/discover-weekly?userId=${userId}`,
+        {
+          method: 'GET',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        // If recommendations fail, fallback to all experiences
+        console.warn('Recommendations API failed, falling back to all experiences');
+        return experienceApi.getAllExperiences();
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get recommendations API error:', error);
+      // Fallback to all experiences if recommendations fail
+      try {
+        return await experienceApi.getAllExperiences();
+      } catch (fallbackError) {
+        console.error('Fallback to all experiences also failed:', fallbackError);
+        throw new Error(`Failed to fetch recommendations: ${error.message}`);
+      }
+    }
+  },
+
+  /**
+   * Get similar experiences for a given experience
+   * @param {number} experienceId - The experience ID
+   * @param {number} limit - Number of similar experiences to return (default: 10)
+   * @returns {Promise<Array>} List of similar experiences
+   */
+  getSimilarExperiences: async (experienceId, limit = 10) => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/recommendations/similar/${experienceId}?limit=${limit}`,
+        {
+          method: 'GET',
+          headers: getAuthHeaders(),
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Get similar experiences API error:', error);
+      return [];
+    }
   }
 };
 

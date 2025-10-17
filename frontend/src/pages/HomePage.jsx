@@ -34,7 +34,7 @@ const WelcomeBanner = () => {
     );
 };
 
-const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange }) => {
+const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error, selectedCategory, onCategoryChange, profileSummary }) => {
     const scrollContainerRef = useRef(null);
 
     // Use only real data from database
@@ -56,9 +56,15 @@ const DiscoverWeekly = ({ experiences, wishlistItems, schedules, loading, error,
                     <h2 className="text-[32px] lg:text-[40px] font-bold text-neutrals-1 leading-[40px] lg:leading-[48px] tracking-[-0.32px] mb-5">
                         Discover Weekly
                     </h2>
-                    <p className="text-[16px] text-neutrals-4 leading-[24px]">
+                    <p className="text-[16px] text-neutrals-4 leading-[24px] mb-2">
                         For your Next Trip
                     </p>
+                    {/* User Profile Summary */}
+                    {!loading && !error && profileSummary && (
+                        <p className="text-[14px] text-neutrals-3 leading-[20px] italic max-w-xl">
+                            {profileSummary}
+                        </p>
+                    )}
                 </div>
 
                 {/* Filter */}
@@ -155,15 +161,16 @@ const HomePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('ALL'); // Add category state
+    const [profileSummary, setProfileSummary] = useState(null); // User profile summary
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-            
-                // Fetch experiences and wishlist items in parallel with authentication
+
+                // Fetch personalized recommendations and wishlist items in parallel
                 const [experiencesData, wishlistResponse] = await Promise.all([
-                    experienceApi.getAllExperiences(),
+                    experienceApi.getDiscoverWeeklyRecommendations(user?.userId || user?.id),
                     fetch(`http://localhost:8080/api/wishlist-items/user/${user?.userId || user?.id}`, {
                         method: 'GET',
                         headers: {
@@ -174,6 +181,26 @@ const HomePage = () => {
                         credentials: 'include',
                     })
                 ]);
+
+                // Fetch profile summary (asynchronously, won't block page load)
+                fetch(`http://localhost:8080/api/recommendations/profile-summary?userId=${user?.userId || user?.id}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    credentials: 'include'
+                })
+                    .then(response => response.ok ? response.json() : null)
+                    .then(data => {
+                        if (data && data.summary) {
+                            setProfileSummary(data.summary);
+                        }
+                    })
+                    .catch(() => {
+                        // Silently fail - profile summary is optional
+                    });
 
                 // Fetch schedule data for all experiences
                 const schedulePromises = experiencesData.map(exp => 
@@ -295,7 +322,7 @@ const HomePage = () => {
                     />
                     <main className="w-full">
                         <WelcomeBanner />
-                        <DiscoverWeekly 
+                        <DiscoverWeekly
                             experiences={experiences}
                             wishlistItems={wishlistItems}
                             schedules={schedules}
@@ -303,6 +330,7 @@ const HomePage = () => {
                             error={error}
                             selectedCategory={selectedCategory}
                             onCategoryChange={handleCategoryChange}
+                            profileSummary={profileSummary}
                         />
                         <div className="h-px bg-neutrals-6 w-full" />
                         <Footer />
@@ -321,7 +349,7 @@ const HomePage = () => {
                 <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
                 <main className="w-full">
                     <WelcomeBanner />
-                    <DiscoverWeekly 
+                    <DiscoverWeekly
                         experiences={experiences}
                         wishlistItems={wishlistItems}
                         schedules={schedules}
@@ -329,6 +357,7 @@ const HomePage = () => {
                         error={error}
                         selectedCategory={selectedCategory}
                         onCategoryChange={handleCategoryChange}
+                        profileSummary={profileSummary}
                     />
                     <div className="h-px bg-neutrals-6 w-full" />
                     <Footer />
