@@ -109,7 +109,7 @@ public class AuthService {
         try {
             // Check if user already exists in main user table
             if (userRepository.existsByEmail(registerRequest.getEmail())) {
-                throw new Exception("User with email " + registerRequest.getEmail() + " already exists");
+                throw new Exception("An account with this email address already exists. Please use a different email or try signing in instead.");
             }
             
             // Check if there's already a pending registration for this email
@@ -122,7 +122,7 @@ public class AuthService {
             boolean isAdminRegistration = registerRequest.getAdminCode() != null && !registerRequest.getAdminCode().trim().isEmpty();
             if (isAdminRegistration) {
                 if (!"99999".equals(registerRequest.getAdminCode())) {
-                    throw new Exception("Invalid admin code. Access denied.");
+                    throw new Exception("Invalid admin code. Please contact your system administrator for the correct code.");
                 }
             }
             

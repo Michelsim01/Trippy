@@ -121,9 +121,24 @@ export const AuthProvider = ({ children }) => {
       };
     } catch (error) {
       console.error('Signup failed:', error);
+      
+      // Handle different error response formats
+      let errorMessage = 'Signup failed';
+      
+      if (error.response?.data) {
+        // Backend returns error as plain string in response body
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || error.message || 'Signup failed' 
+        error: errorMessage
       };
     }
   };

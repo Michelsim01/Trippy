@@ -130,6 +130,11 @@ const AdminSignupPage = () => {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-red-600 text-sm">{error}</p>
+                  {error.includes('already exists') && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Already have an account? <Link to="/admin/login" className="underline hover:text-red-700">Sign in here</Link>
+                    </p>
+                  )}
                 </div>
               )}
 
