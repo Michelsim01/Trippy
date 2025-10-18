@@ -96,6 +96,10 @@ public class User {
     @Column(name = "is_admin", nullable = false)
     private Boolean isAdmin = false;
     
+    // Trip points field for efficient access
+    @Column(name = "trip_points", nullable = false)
+    private Integer tripPoints = 0;
+    
     // KYC fields
     @Enumerated(EnumType.STRING)
     @Column(name = "kyc_status", nullable = false)
@@ -246,6 +250,14 @@ public class User {
     
     public void setIsAdmin(Boolean isAdmin) {
         this.isAdmin = isAdmin;
+    }
+    
+    public Integer getTripPoints() {
+        return tripPoints;
+    }
+    
+    public void setTripPoints(Integer tripPoints) {
+        this.tripPoints = tripPoints;
     }
     
     public KycStatus getKycStatus() {

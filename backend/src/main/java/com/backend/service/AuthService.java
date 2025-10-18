@@ -118,6 +118,14 @@ public class AuthService {
                 pendingUserRepository.deleteByEmail(registerRequest.getEmail());
             }
             
+            // Validate admin code if provided
+            boolean isAdminRegistration = registerRequest.getAdminCode() != null && !registerRequest.getAdminCode().trim().isEmpty();
+            if (isAdminRegistration) {
+                if (!"99999".equals(registerRequest.getAdminCode())) {
+                    throw new Exception("Invalid admin code. Access denied.");
+                }
+            }
+            
             // Generate verification token
             String verificationToken = emailVerificationService.generateVerificationToken();
             
@@ -127,7 +135,8 @@ public class AuthService {
                 passwordEncoder.encode(registerRequest.getPassword()),
                 registerRequest.getFirstName(),
                 registerRequest.getLastName(),
-                verificationToken
+                verificationToken,
+                registerRequest.getAdminCode()
             );
             
             // Save pending user to temporary storage

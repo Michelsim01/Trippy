@@ -3,7 +3,6 @@ import { Star, Check, Flag, Edit } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { useTripPoints } from '../../contexts/TripPointsContext';
-import { tripPointsService } from '../../services/tripPointsService';
 
 const UserRole = {
     TOURIST: 'tourist',
@@ -35,50 +34,13 @@ const ProfileCard = ({
         }
     }, [propUserData]);
 
-    // Fetch TripPoints for the profile user
-    const fetchProfileTripPoints = async () => {
-        if (!userId || !isAuthenticated) return;
-        
-        try {
-            const response = await tripPointsService.getUserPointsBalance(userId);
-            if (response.success) {
-                setProfileTripPoints(response.data.pointsBalance || 0);
-            } else {
-                console.warn('Failed to fetch profile TripPoints:', response.error);
-                setProfileTripPoints(0);
-            }
-        } catch (error) {
-            console.error('Error fetching profile TripPoints:', error);
-            setProfileTripPoints(0);
+    // Get TripPoints from user data (optimized - no separate API call needed)
+    useEffect(() => {
+        if (userData && userData.tripPoints !== undefined) {
+            setProfileTripPoints(userData.tripPoints || 0);
         }
-    };
+    }, [userData]);
 
-    useEffect(() => {
-        fetchProfileTripPoints();
-    }, [userId, isAuthenticated]);
-
-    // Refresh TripPoints when component becomes visible (for remounting issue)
-    useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (!document.hidden && isCurrentUserProfile) {
-                fetchProfileTripPoints();
-            }
-        };
-
-        const handleFocus = () => {
-            if (isCurrentUserProfile) {
-                fetchProfileTripPoints();
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        window.addEventListener('focus', handleFocus);
-        
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            window.removeEventListener('focus', handleFocus);
-        };
-    }, [isCurrentUserProfile]);
 
     useEffect(() => {
         const fetchUserData = async () => {

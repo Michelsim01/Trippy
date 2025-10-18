@@ -109,9 +109,8 @@ export const AuthProvider = ({ children }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: formData.password
-        // Note: Backend doesn't support isAdmin or phoneNumber in registration
-        // Admin privileges would need to be granted after email verification
+        password: formData.password,
+        adminCode: formData.adminCode
       });
 
       // Registration creates a pending user, not an immediate login

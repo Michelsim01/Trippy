@@ -263,7 +263,10 @@ public class EmailVerificationService {
             user.setLastName(pendingUser.getLastName());
             user.setIsActive(true);
             user.setIsEmailVerified(true); // Mark as verified
-            user.setIsAdmin(false);
+            
+            // Set admin status based on admin code
+            boolean isAdmin = pendingUser.getAdminCode() != null && !pendingUser.getAdminCode().trim().isEmpty();
+            user.setIsAdmin(isAdmin);
             user.setCanCreateExperiences(false);
             user.setCreatedAt(LocalDateTime.now());
             // KYC status is set to NOT_STARTED by default in the entity

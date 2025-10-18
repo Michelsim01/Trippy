@@ -36,6 +36,10 @@ public class PendingUser {
     @Column(name = "expires_at", nullable = false)
     private LocalDateTime expiresAt;
     
+    // Admin code for admin registration
+    @Column(name = "admin_code")
+    private String adminCode;
+    
     // Constructors
     public PendingUser() {
     }
@@ -46,6 +50,17 @@ public class PendingUser {
         this.firstName = firstName;
         this.lastName = lastName;
         this.verificationToken = verificationToken;
+        this.createdAt = LocalDateTime.now();
+        this.expiresAt = LocalDateTime.now().plusHours(24); // Expire after 24 hours
+    }
+    
+    public PendingUser(String email, String password, String firstName, String lastName, String verificationToken, String adminCode) {
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.verificationToken = verificationToken;
+        this.adminCode = adminCode;
         this.createdAt = LocalDateTime.now();
         this.expiresAt = LocalDateTime.now().plusHours(24); // Expire after 24 hours
     }
@@ -113,6 +128,14 @@ public class PendingUser {
     
     public void setExpiresAt(LocalDateTime expiresAt) {
         this.expiresAt = expiresAt;
+    }
+    
+    public String getAdminCode() {
+        return adminCode;
+    }
+    
+    public void setAdminCode(String adminCode) {
+        this.adminCode = adminCode;
     }
     
     /**
