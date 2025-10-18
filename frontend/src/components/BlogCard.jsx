@@ -45,7 +45,7 @@ const BlogCard = ({
     // only allow admins to edit their blogs
     const handleEditClick = (e) => {
         e.stopPropagation();
-        navigate(`/edit-blog/${blog.articleId}`);
+        navigate(`/create-blog?edit=${blog.articleId}`);
     };
 
     // Format date for display

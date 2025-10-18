@@ -50,8 +50,8 @@ api.interceptors.response.use(
 
 // Blog service functions
 export const blogService = {
-  // Get all travel articles/blogs
-  getAllBlogs: async (params = {}) => {
+  // Get all published travel articles/blogs for public view
+  getPublishedBlogs: async (params = {}) => {
     try {
       // Build query parameters for filtering
       const queryParams = new URLSearchParams()
@@ -59,28 +59,30 @@ export const blogService = {
       if (params.category && params.category !== 'ALL') {
         queryParams.append('category', params.category)
       }
-      if (params.search) {
-        queryParams.append('search', params.search)
-      }
-      if (params.status) {
-        queryParams.append('status', params.status)
-      }
-      if (params.tags) {
-        queryParams.append('tags', params.tags)
-      }
 
       const queryString = queryParams.toString()
-      const url = `/api/travel-articles${queryString ? `?${queryString}` : ''}`
+      const url = `/api/travel-articles/published${queryString ? `?${queryString}` : ''}`
 
       const response = await api.get(url)
       const blogs = response.data
 
+      // Filter by search on frontend (for now)
+      let filteredBlogs = blogs
+      if (params.search) {
+        const searchLower = params.search.toLowerCase()
+        filteredBlogs = blogs.filter(blog =>
+          blog.title.toLowerCase().includes(searchLower) ||
+          blog.content.toLowerCase().includes(searchLower) ||
+          (blog.tags && blog.tags.some(tag => tag.toLowerCase().includes(searchLower)))
+        )
+      }
+
       // Ensure full URLs for images in all blogs
-      return blogs.map(blog => {
+      return filteredBlogs.map(blog => {
         if (blog.thumbnailUrl && !blog.thumbnailUrl.startsWith('http')) {
           blog.thumbnailUrl = `http://localhost:8080${blog.thumbnailUrl}`
         }
-        if (blog.imagesUrl) {
+        if (blog.imagesUrl && Array.isArray(blog.imagesUrl)) {
           blog.imagesUrl = blog.imagesUrl.map(url =>
             url.startsWith('http') ? url : `http://localhost:8080${url}`
           )
@@ -88,22 +90,56 @@ export const blogService = {
         return blog
       })
     } catch (error) {
-      console.error('Error fetching all blogs:', error)
+      console.error('Error fetching published blogs:', error)
       throw new Error(error.response?.data?.message || 'Failed to fetch blogs')
     }
   },
 
-  // Get a single blog by ID
-  getBlogById: async (id) => {
+  // Get all blogs (for backwards compatibility)
+  getAllBlogs: async (params = {}) => {
+    return blogService.getPublishedBlogs(params)
+  },
+
+  // Get draft blogs by author
+  getDraftsByAuthor: async (authorId) => {
     try {
-      const response = await api.get(`/api/travel-articles/${id}`)
+      if (!authorId) {
+        throw new Error('Author ID is required')
+      }
+
+      const response = await api.get(`/api/travel-articles/drafts?authorId=${authorId}`)
+      const drafts = response.data
+
+      // Ensure full URLs for images
+      return drafts.map(draft => {
+        if (draft.thumbnailUrl && !draft.thumbnailUrl.startsWith('http')) {
+          draft.thumbnailUrl = `http://localhost:8080${draft.thumbnailUrl}`
+        }
+        if (draft.imagesUrl && Array.isArray(draft.imagesUrl)) {
+          draft.imagesUrl = draft.imagesUrl.map(url =>
+            url.startsWith('http') ? url : `http://localhost:8080${url}`
+          )
+        }
+        return draft
+      })
+    } catch (error) {
+      console.error('Error fetching drafts:', error)
+      throw new Error(error.response?.data?.message || 'Failed to fetch drafts')
+    }
+  },
+
+  // Get a single blog by ID
+  getBlogById: async (id, userId = null) => {
+    try {
+      const url = userId ? `/api/travel-articles/${id}?userId=${userId}` : `/api/travel-articles/${id}`
+      const response = await api.get(url)
       const blog = response.data
 
       // Ensure full URLs for images
       if (blog.thumbnailUrl && !blog.thumbnailUrl.startsWith('http')) {
         blog.thumbnailUrl = `http://localhost:8080${blog.thumbnailUrl}`
       }
-      if (blog.imagesUrl) {
+      if (blog.imagesUrl && Array.isArray(blog.imagesUrl)) {
         blog.imagesUrl = blog.imagesUrl.map(url =>
           url.startsWith('http') ? url : `http://localhost:8080${url}`
         )
@@ -112,6 +148,9 @@ export const blogService = {
       return blog
     } catch (error) {
       console.error('Error fetching blog by ID:', error)
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to view this blog')
+      }
       throw new Error(error.response?.data?.message || 'Failed to fetch blog')
     }
   },
@@ -136,38 +175,69 @@ export const blogService = {
   },
 
   // Update an existing blog
-  updateBlog: async (id, blogData) => {
+  updateBlog: async (id, blogData, userId) => {
     try {
+      if (!userId) {
+        throw new Error('User ID is required for updating blog')
+      }
+
       // Update the updatedAt timestamp
       const blogPayload = {
         ...blogData,
         updatedAt: new Date().toISOString()
       }
 
-      const response = await api.put(`/api/travel-articles/${id}`, blogPayload)
+      const response = await api.put(`/api/travel-articles/${id}?userId=${userId}`, blogPayload)
       return response.data
     } catch (error) {
       console.error('Error updating blog:', error)
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to update this blog')
+      }
       throw new Error(error.response?.data?.message || 'Failed to update blog')
     }
   },
 
   // Delete a blog
-  deleteBlog: async (id) => {
+  deleteBlog: async (id, userId) => {
     try {
-      await api.delete(`/api/travel-articles/${id}`)
+      if (!userId) {
+        throw new Error('User ID is required for deleting blog')
+      }
+
+      await api.delete(`/api/travel-articles/${id}?userId=${userId}`)
       return { success: true }
     } catch (error) {
       console.error('Error deleting blog:', error)
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to delete this blog')
+      }
       throw new Error(error.response?.data?.message || 'Failed to delete blog')
     }
   },
 
-  // Get blogs by author (will need to be implemented in backend)
-  getBlogsByAuthor: async (authorId) => {
+  // Get blogs by author
+  getBlogsByAuthor: async (authorId, status = null) => {
     try {
-      const response = await api.get(`/api/travel-articles/author/${authorId}`)
-      return response.data
+      const url = status
+        ? `/api/travel-articles/author/${authorId}?status=${status}`
+        : `/api/travel-articles/author/${authorId}`
+
+      const response = await api.get(url)
+      const blogs = response.data
+
+      // Ensure full URLs for images
+      return blogs.map(blog => {
+        if (blog.thumbnailUrl && !blog.thumbnailUrl.startsWith('http')) {
+          blog.thumbnailUrl = `http://localhost:8080${blog.thumbnailUrl}`
+        }
+        if (blog.imagesUrl && Array.isArray(blog.imagesUrl)) {
+          blog.imagesUrl = blog.imagesUrl.map(url =>
+            url.startsWith('http') ? url : `http://localhost:8080${url}`
+          )
+        }
+        return blog
+      })
     } catch (error) {
       console.error('Error fetching blogs by author:', error)
       throw new Error(error.response?.data?.message || 'Failed to fetch author blogs')

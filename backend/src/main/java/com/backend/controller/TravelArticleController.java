@@ -2,6 +2,8 @@ package com.backend.controller;
 
 import com.backend.entity.TravelArticle;
 import com.backend.entity.User;
+import com.backend.entity.ArticleStatusEnum;
+import com.backend.entity.ArticleCategoryEnum;
 import com.backend.repository.TravelArticleRepository;
 import com.backend.repository.UserRepository;
 
@@ -48,16 +50,77 @@ public class TravelArticleController {
         }
     }
 
+    @GetMapping("/published")
+    public ResponseEntity<List<TravelArticle>> getPublishedArticles(@RequestParam(required = false) String category) {
+        try {
+            List<TravelArticle> articles;
+            if (category != null && !category.isEmpty()) {
+                ArticleCategoryEnum categoryEnum = ArticleCategoryEnum.valueOf(category.toUpperCase());
+                articles = travelArticleRepository.findByStatusAndCategory(ArticleStatusEnum.PUBLISHED, categoryEnum);
+            } else {
+                articles = travelArticleRepository.findByStatusOrderByCreatedAtDesc(ArticleStatusEnum.PUBLISHED);
+            }
+            return ResponseEntity.ok(articles);
+        } catch (Exception e) {
+            System.err.println("Error retrieving published articles: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/drafts")
+    public ResponseEntity<List<TravelArticle>> getDraftsByAuthor(@RequestParam Long authorId) {
+        try {
+            if (authorId == null || authorId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+            List<TravelArticle> drafts = travelArticleRepository.findByAuthorIdAndStatusOrderByCreatedAtDesc(authorId, ArticleStatusEnum.DRAFT);
+            return ResponseEntity.ok(drafts);
+        } catch (Exception e) {
+            System.err.println("Error retrieving drafts for author " + authorId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/author/{authorId}")
+    public ResponseEntity<List<TravelArticle>> getArticlesByAuthor(@PathVariable Long authorId, @RequestParam(required = false) String status) {
+        try {
+            if (authorId == null || authorId <= 0) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            List<TravelArticle> articles;
+            if (status != null && !status.isEmpty()) {
+                ArticleStatusEnum statusEnum = ArticleStatusEnum.valueOf(status.toUpperCase());
+                articles = travelArticleRepository.findByAuthorIdAndStatusOrderByCreatedAtDesc(authorId, statusEnum);
+            } else {
+                articles = travelArticleRepository.findByAuthorId(authorId);
+            }
+            return ResponseEntity.ok(articles);
+        } catch (Exception e) {
+            System.err.println("Error retrieving articles for author " + authorId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<TravelArticle> getTravelArticleById(@PathVariable Long id) {
+    public ResponseEntity<TravelArticle> getTravelArticleById(@PathVariable Long id, @RequestParam(required = false) Long userId) {
         try {
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest().build();
             }
 
-            Optional<TravelArticle> article = travelArticleRepository.findById(id);
-            if (article.isPresent()) {
-                return ResponseEntity.ok(article.get());
+            Optional<TravelArticle> articleOpt = travelArticleRepository.findById(id);
+            if (articleOpt.isPresent()) {
+                TravelArticle article = articleOpt.get();
+
+                // If article is a draft, only allow access if the user is the author
+                if (article.getStatus() == ArticleStatusEnum.DRAFT) {
+                    if (userId == null || !article.getAuthor().getId().equals(userId)) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                    }
+                }
+
+                return ResponseEntity.ok(article);
             } else {
                 return ResponseEntity.notFound().build();
             }
@@ -89,8 +152,8 @@ public class TravelArticleController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<TravelArticle> updateTravelArticle(@PathVariable Long id,
-            @RequestBody TravelArticle travelArticle) {
+    public ResponseEntity<?> updateTravelArticle(@PathVariable Long id,
+            @RequestBody TravelArticle travelArticle, @RequestParam(required = false) Long userId) {
         try {
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest().build();
@@ -100,28 +163,48 @@ public class TravelArticleController {
                 return ResponseEntity.badRequest().build();
             }
 
-            if (!travelArticleRepository.existsById(id)) {
+            Optional<TravelArticle> existingArticleOpt = travelArticleRepository.findById(id);
+            if (!existingArticleOpt.isPresent()) {
                 return ResponseEntity.notFound().build();
             }
 
+            TravelArticle existingArticle = existingArticleOpt.get();
+
+            // Check if user is the author
+            if (userId == null || !existingArticle.getAuthor().getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only the author can update this article");
+            }
+
+            // Preserve the author and created date
             travelArticle.setArticleId(id);
+            travelArticle.setAuthor(existingArticle.getAuthor());
+            travelArticle.setCreatedAt(existingArticle.getCreatedAt());
+
             TravelArticle savedArticle = travelArticleRepository.save(travelArticle);
             return ResponseEntity.ok(savedArticle);
         } catch (Exception e) {
             System.err.println("Error updating travel article with ID " + id + ": " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating article");
         }
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteTravelArticle(@PathVariable Long id) {
+    public ResponseEntity<?> deleteTravelArticle(@PathVariable Long id, @RequestParam(required = false) Long userId) {
         try {
             if (id == null || id <= 0) {
                 return ResponseEntity.badRequest().build();
             }
 
-            if (!travelArticleRepository.existsById(id)) {
+            Optional<TravelArticle> articleOpt = travelArticleRepository.findById(id);
+            if (!articleOpt.isPresent()) {
                 return ResponseEntity.notFound().build();
+            }
+
+            TravelArticle article = articleOpt.get();
+
+            // Check if user is the author
+            if (userId == null || !article.getAuthor().getId().equals(userId)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Only the author can delete this article");
             }
 
             travelArticleRepository.deleteById(id);

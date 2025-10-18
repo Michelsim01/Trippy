@@ -1,6 +1,8 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
+import com.backend.converter.StringListConverter;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.ArrayList;
@@ -14,25 +16,40 @@ public class TravelArticle {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private User author;
 
     private String title;
+
     @Column(columnDefinition = "TEXT")
     private String content;
+
     private String slug;
-    @ElementCollection
+
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
     private List<String> tags;
+
     @Enumerated(EnumType.STRING)
     private ArticleStatusEnum status;
+
     @Enumerated(EnumType.STRING)
     private ArticleCategoryEnum category;
+
     private Integer viewsCount;
-    @ElementCollection
+
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
     private List<String> imagesUrl;
-    @ElementCollection
+
+    @Convert(converter = StringListConverter.class)
+    @Column(columnDefinition = "TEXT")
     private List<String> videosUrl;
+
     private String thumbnailUrl;
+
     private LocalDateTime createdAt;
+    
     private LocalDateTime updatedAt;
 
     public Long getArticleId() { return articleId; }

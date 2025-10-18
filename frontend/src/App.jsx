@@ -28,6 +28,7 @@ import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
 import BlogDetailPage from './pages/BlogDetailPage'
 import CreateBlogPage from './pages/CreateBlogPage'
+import DraftsPage from './pages/DraftsPage'
 import CreateExperienceBasicInfoPage from './pages/CreateExperienceBasicInfoPage'
 import CreateExperienceDetailsPage from './pages/CreateExperienceDetailsPage'
 import CreateExperiencePricingPage from './pages/CreateExperiencePricingPage'
@@ -195,6 +196,10 @@ function AppRoutes() {
       <Route
         path="/create-blog/basic-info"
         element={!isAuthenticated ? <Navigate to="/" replace /> : <CreateBlogPage />}
+      />
+      <Route
+        path="/drafts"
+        element={requiresSurveyCompletion(<DraftsPage />)}
       />
 
       {/*create experience*/}

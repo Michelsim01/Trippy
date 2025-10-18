@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import BlogCard from '../components/BlogCard';
@@ -29,41 +29,36 @@ const BlogPage = () => {
     // Fetch blogs on mount and when filters change
     useEffect(() => {
         fetchBlogs();
-    }, [selectedCategory]);
+    }, [selectedCategory, searchTerm]);
 
     const fetchBlogs = async () => {
         setLoading(true);
         setError(null);
         try {
             const params = {
-                status: 'PUBLISHED', // Only show published blogs
-                category: selectedCategory !== 'ALL' ? selectedCategory : undefined
+                category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
+                search: searchTerm
             };
 
-            const data = await blogService.getAllBlogs(params);
+            // Use getPublishedBlogs to only fetch published blogs from server
+            const data = await blogService.getPublishedBlogs(params);
 
-            // Filter blogs based on search term locally
-            let filteredBlogs = data;
-            if (searchTerm) {
-                filteredBlogs = data.filter(blog =>
-                    blog.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                    blog.content?.toLowerCase().includes(searchTerm.toLowerCase())
-                );
-            }
+            setBlogs(data);
 
-            setBlogs(filteredBlogs);
-
-            // Set the first blog as spotlight (or the one with most views)
-            if (filteredBlogs.length > 0) {
-                const spotlight = filteredBlogs.reduce((prev, current) =>
+            // Set spotlight blog (highest view count)
+            if (data.length > 0) {
+                const spotlight = data.reduce((prev, current) =>
                     (current.viewsCount || 0) > (prev.viewsCount || 0) ? current : prev
                 );
                 setSpotlightBlog(spotlight);
+            } else {
+                setSpotlightBlog(null);
             }
         } catch (error) {
             console.error('Error fetching blogs:', error);
             setError('Failed to load blogs. Please try again later.');
             setBlogs([]);
+            setSpotlightBlog(null);
         } finally {
             setLoading(false);
         }
@@ -120,15 +115,26 @@ const BlogPage = () => {
                                     <p className="text-neutrals-4">Discover travel stories, tips, and inspiration from fellow travelers</p>
                                 </div>
                                 {canCreateBlog && (
-                                    <button
-                                        onClick={handleCreateBlog}
-                                        className="btn btn-primary btn-md mt-4 sm:mt-0"
-                                    >
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                        Write New Blog
-                                    </button>
+                                    <div className="flex gap-3 mt-4 sm:mt-0">
+                                        <Link
+                                            to="/drafts"
+                                            className="flex items-center gap-2 px-4 py-2 border-2 border-primary-1 text-primary-1 rounded-lg hover:bg-primary-1 hover:text-white transition-colors font-semibold"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                            </svg>
+                                            My Drafts
+                                        </Link>
+                                        <button
+                                            onClick={handleCreateBlog}
+                                            className="btn btn-primary btn-md"
+                                        >
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                            Write New Blog
+                                        </button>
+                                    </div>
                                 )}
                             </div>
 
@@ -265,13 +271,40 @@ const BlogPage = () => {
                                         </div>
                                     ) : (
                                         <div className="text-center py-12 bg-white rounded-lg">
-                                            <p className="text-neutrals-4 text-lg">No blogs found.</p>
+                                            <div className="text-gray-400 mb-4">
+                                                <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <h3 className="text-xl font-semibold text-neutrals-3 mb-2">
+                                                {searchTerm || selectedCategory !== 'ALL'
+                                                    ? 'No blogs match your search'
+                                                    : 'No published blogs yet'
+                                                }
+                                            </h3>
+                                            <p className="text-neutrals-4 mb-6">
+                                                {searchTerm || selectedCategory !== 'ALL'
+                                                    ? 'Try adjusting your search terms or browse different categories.'
+                                                    : 'Be the first to share your travel experiences!'
+                                                }
+                                            </p>
                                             {canCreateBlog && (
                                                 <button
                                                     onClick={handleCreateBlog}
-                                                    className="mt-4 px-6 py-2 bg-primary-1 text-white rounded-lg hover:bg-primary-2 transition-colors"
+                                                    className="px-6 py-3 bg-primary-1 text-white rounded-lg hover:bg-primary-2 transition-colors font-semibold"
                                                 >
-                                                    Be the first to write a blog!
+                                                    Write Your First Blog
+                                                </button>
+                                            )}
+                                            {(searchTerm || selectedCategory !== 'ALL') && (
+                                                <button
+                                                    onClick={() => {
+                                                        setSearchTerm('');
+                                                        setSelectedCategory('ALL');
+                                                    }}
+                                                    className="ml-4 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                                                >
+                                                    Clear Filters
                                                 </button>
                                             )}
                                         </div>

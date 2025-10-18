@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar, Eye, User } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Calendar, Eye, User, Edit, Trash2 } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -27,14 +27,21 @@ const BlogDetailPage = () => {
         const fetchBlog = async () => {
             try {
                 setLoading(true);
-                const blogData = await blogService.getBlogById(id);
+                const userId = user?.id;
+                const blogData = await blogService.getBlogById(id, userId);
                 setBlog(blogData);
 
-                // Increment view count
-                blogService.incrementViews(id);
+                // Increment view count only for published blogs
+                if (blogData.status === 'PUBLISHED') {
+                    blogService.incrementViews(id);
+                }
             } catch (err) {
                 console.error('Error fetching blog:', err);
-                setError('Failed to load blog post');
+                if (err.message.includes('permission')) {
+                    setError('You do not have permission to view this blog post');
+                } else {
+                    setError('Failed to load blog post');
+                }
             } finally {
                 setLoading(false);
             }
@@ -43,7 +50,7 @@ const BlogDetailPage = () => {
         if (id) {
             fetchBlog();
         }
-    }, [id]);
+    }, [id, user]);
 
     const formatDate = (dateString) => {
         if (!dateString) return 'Unknown date';
@@ -54,6 +61,22 @@ const BlogDetailPage = () => {
             day: 'numeric'
         });
     };
+
+    const handleDelete = async () => {
+        if (!window.confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await blogService.deleteBlog(id, user?.id);
+            navigate('/blog');
+        } catch (err) {
+            console.error('Error deleting blog:', err);
+            alert('Failed to delete blog post: ' + err.message);
+        }
+    };
+
+    const isAuthor = user && blog && blog.author?.id === user.id;
 
     if (loading) {
         return (
@@ -201,20 +224,47 @@ const BlogDetailPage = () => {
                                                         <Eye size={14} />
                                                         <span>{blog.viewsCount || 0} views</span>
                                                     </div>
+                                                    {blog.status === 'DRAFT' && (
+                                                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
+                                                            Draft
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Tags if thumbnail exists */}
-                                        {blog.thumbnailUrl && blog.tags?.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 max-w-xs">
-                                                {blog.tags.map((tag, index) => (
-                                                    <span key={index} className="px-3 py-1 bg-neutrals-7 text-neutrals-2 rounded-full text-sm">
-                                                        #{tag}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <div className="flex items-center gap-4">
+                                            {/* Tags if thumbnail exists */}
+                                            {blog.thumbnailUrl && blog.tags?.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 max-w-xs">
+                                                    {blog.tags.map((tag, index) => (
+                                                        <span key={index} className="px-3 py-1 bg-neutrals-7 text-neutrals-2 rounded-full text-sm">
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {/* Author Actions */}
+                                            {isAuthor && (
+                                                <div className="flex gap-2">
+                                                    <Link
+                                                        to={`/create-blog?edit=${blog.articleId}`}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors text-sm font-medium"
+                                                    >
+                                                        <Edit size={16} />
+                                                        Edit
+                                                    </Link>
+                                                    <button
+                                                        onClick={handleDelete}
+                                                        className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                        Delete
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
 
                                     {/* Content */}

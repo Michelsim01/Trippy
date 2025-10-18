@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     ArrowLeft,
     ArrowRight,
@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 const CreateBlogPage = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
+    const [searchParams] = useSearchParams();
     const fileInputRef = useRef(null);
 
     // UI State
@@ -34,6 +35,8 @@ const CreateBlogPage = () => {
     const [saving, setSaving] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
 
     // Form Data State
     const [blogData, setBlogData] = useState({
@@ -56,6 +59,102 @@ const CreateBlogPage = () => {
     useEffect(() => {
         setError(null);
     }, [currentStep]);
+
+    // Load blog data for editing
+    useEffect(() => {
+        const editId = searchParams.get('edit');
+        if (editId && user?.id) {
+            setIsEditMode(true);
+            loadBlogForEdit(editId);
+        }
+    }, [searchParams, user?.id]);
+
+    const loadBlogForEdit = async (blogId) => {
+        try {
+            setLoading(true);
+            setError(null);
+            const blog = await blogService.getBlogById(blogId, user?.id);
+
+            // Parse content back to blocks for editing
+            const parsedBlocks = parseContentToBlocks(blog.content);
+
+            setBlogData({
+                title: blog.title || '',
+                category: blog.category || 'TRAVEL',
+                tags: blog.tags || [],
+                thumbnailUrl: blog.thumbnailUrl || '',
+                content: blog.content || '',
+                status: blog.status || 'DRAFT'
+            });
+
+            setContentBlocks(parsedBlocks);
+        } catch (error) {
+            console.error('Error loading blog for edit:', error);
+            setError('Failed to load blog for editing. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const parseContentToBlocks = (htmlContent) => {
+        if (!htmlContent || htmlContent.trim() === '') {
+            return [{ id: 1, type: 'paragraph', content: '' }];
+        }
+
+        // Simple HTML parsing to convert back to blocks
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+
+        const blocks = [];
+        let blockId = 1;
+
+        const elements = tempDiv.children;
+        for (let i = 0; i < elements.length; i++) {
+            const element = elements[i];
+            const tagName = element.tagName.toLowerCase();
+
+            if (tagName === 'h2') {
+                blocks.push({
+                    id: blockId++,
+                    type: 'heading',
+                    content: element.textContent || ''
+                });
+            } else if (tagName === 'p') {
+                blocks.push({
+                    id: blockId++,
+                    type: 'paragraph',
+                    content: element.textContent || ''
+                });
+            } else if (tagName === 'blockquote') {
+                blocks.push({
+                    id: blockId++,
+                    type: 'quote',
+                    content: element.textContent || ''
+                });
+            } else if (tagName === 'ul') {
+                const listItems = Array.from(element.querySelectorAll('li')).map(li => li.textContent);
+                blocks.push({
+                    id: blockId++,
+                    type: 'list',
+                    content: listItems.join('\n')
+                });
+            } else if (tagName === 'figure') {
+                const img = element.querySelector('img');
+                const caption = element.querySelector('figcaption');
+                if (img) {
+                    blocks.push({
+                        id: blockId++,
+                        type: 'image',
+                        content: '',
+                        imageUrl: img.src || '',
+                        caption: caption ? caption.textContent : ''
+                    });
+                }
+            }
+        }
+
+        return blocks.length > 0 ? blocks : [{ id: 1, type: 'paragraph', content: '' }];
+    };
 
     // ===== UI HANDLERS =====
     const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
@@ -224,7 +323,13 @@ const CreateBlogPage = () => {
                 author: { id: user?.id || user?.userId }
             };
 
-            await blogService.createBlog(blogPayload);
+            if (isEditMode) {
+                const editId = searchParams.get('edit');
+                await blogService.updateBlog(editId, blogPayload, user?.id);
+            } else {
+                await blogService.createBlog(blogPayload);
+            }
+
             navigate('/blog');
         } catch (error) {
             console.error('Error saving blog:', error);
@@ -237,7 +342,9 @@ const CreateBlogPage = () => {
     // ===== RENDER STEP CONTENT =====
     const renderStep1 = () => (
         <div className="space-y-6">
-            <h2 className="text-2xl font-semibold text-neutrals-1">Basic Information</h2>
+            <h2 className="text-2xl font-semibold text-neutrals-1">
+                {isEditMode ? 'Edit Blog Information' : 'Basic Information'}
+            </h2>
 
             {/* Title */}
             <div>
@@ -346,8 +453,12 @@ const CreateBlogPage = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h2 className="text-2xl font-semibold text-neutrals-1">Write Your Content</h2>
-                    <p className="text-neutrals-4 text-sm mt-1">Create engaging content with our rich text editor</p>
+                    <h2 className="text-2xl font-semibold text-neutrals-1">
+                        {isEditMode ? 'Edit Your Content' : 'Write Your Content'}
+                    </h2>
+                    <p className="text-neutrals-4 text-sm mt-1">
+                        {isEditMode ? 'Update your blog content with our rich text editor' : 'Create engaging content with our rich text editor'}
+                    </p>
                 </div>
                 <div className="flex gap-2">
                     <ContentBlockButton
@@ -416,7 +527,9 @@ const CreateBlogPage = () => {
         return (
             <div className="space-y-8">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold text-neutrals-1">Preview Your Blog</h2>
+                    <h2 className="text-2xl font-semibold text-neutrals-1">
+                        {isEditMode ? 'Preview Your Updated Blog' : 'Preview Your Blog'}
+                    </h2>
                     <div className="flex items-center gap-2 text-sm text-neutrals-4">
                         <Eye size={16} />
                         <span>Preview Mode</span>
@@ -438,7 +551,7 @@ const CreateBlogPage = () => {
                         className="px-8 py-4 bg-white border-2 border-neutrals-6 text-neutrals-1 rounded-xl hover:border-neutrals-4 hover:shadow-md transition-all duration-200 disabled:opacity-50 flex items-center gap-2 font-medium"
                     >
                         <Save size={20} />
-                        {saving && blogData.status === 'DRAFT' ? 'Saving...' : 'Save as Draft'}
+                        {saving && blogData.status === 'DRAFT' ? 'Saving...' : isEditMode ? 'Save Changes' : 'Save as Draft'}
                     </button>
                     <button
                         onClick={handlePublish}
@@ -448,12 +561,12 @@ const CreateBlogPage = () => {
                         {saving && blogData.status === 'PUBLISHED' ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                Publishing...
+                                {isEditMode ? 'Updating...' : 'Publishing...'}
                             </>
                         ) : (
                             <>
                                 <Eye size={20} />
-                                Publish Blog
+                                {isEditMode ? 'Update Blog' : 'Publish Blog'}
                             </>
                         )}
                     </button>
@@ -470,6 +583,18 @@ const CreateBlogPage = () => {
             default: return renderStep1();
         }
     };
+
+    // Show loading state when loading blog for edit
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-neutrals-8 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-1 mx-auto"></div>
+                    <p className="mt-4 text-neutrals-4">Loading blog for editing...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-neutrals-8">
