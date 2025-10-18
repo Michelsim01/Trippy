@@ -137,7 +137,7 @@ const BlogCard = ({
                         {blog.title}
                     </h3>
                     <p className="text-[14px] text-neutrals-3 leading-[20px] line-clamp-3 mb-4">
-                        {blog.content ? blog.content.substring(0, 150) + '...' : 'No description available'}
+                        {blog.content ? blog.content.replace(/<[^>]*>/g, '').substring(0, 150) + '...' : 'No description available'}
                     </p>
                 </div>
 

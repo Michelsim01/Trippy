@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Search, RefreshCw } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import BlogCard from '../components/BlogCard';
@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 const BlogPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [blogs, setBlogs] = useState([]);
     const [spotlightBlog, setSpotlightBlog] = useState(null);
@@ -17,6 +18,7 @@ const BlogPage = () => {
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('ALL');
+    const [lastRefresh, setLastRefresh] = useState(Date.now());
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -30,6 +32,43 @@ const BlogPage = () => {
     useEffect(() => {
         fetchBlogs();
     }, [selectedCategory, searchTerm]);
+
+    // Refresh blogs when navigating to this page from create/edit pages
+    useEffect(() => {
+        const handleFocus = () => {
+            // Check if we're returning from a create/edit page
+            const now = Date.now();
+            const timeSinceLastRefresh = now - lastRefresh;
+
+            // Only refresh if it's been more than 1 second since last refresh
+            // to avoid excessive API calls
+            if (timeSinceLastRefresh > 1000) {
+                console.log('Page focused - refreshing blogs...');
+                setLastRefresh(now);
+                fetchBlogs();
+            }
+        };
+
+        // Listen for window focus events (when user comes back to tab)
+        window.addEventListener('focus', handleFocus);
+
+        // Also trigger refresh when location changes to this page
+        // This handles navigation from other pages within the app
+        if (location.pathname === '/blog') {
+            const now = Date.now();
+            const timeSinceLastRefresh = now - lastRefresh;
+
+            if (timeSinceLastRefresh > 1000) {
+                console.log('Navigated to blog page - refreshing blogs...');
+                setLastRefresh(now);
+                fetchBlogs();
+            }
+        }
+
+        return () => {
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, [location.pathname, lastRefresh]);
 
     const fetchBlogs = async () => {
         setLoading(true);
@@ -89,7 +128,14 @@ const BlogPage = () => {
     const canCreateBlog = user?.canCreateExperiences && user?.kycStatus === 'APPROVED';
 
     const handleCreateBlog = () => {
-        navigate('/create-blog/basic-info');
+        navigate('/create-blog');
+    };
+
+    // Manual refresh function
+    const handleManualRefresh = () => {
+        console.log('Manual refresh triggered...');
+        setLastRefresh(Date.now());
+        fetchBlogs();
     };
 
     return (
@@ -110,9 +156,22 @@ const BlogPage = () => {
                         <div className="max-w-7xl mx-auto">
                             {/* Header Section with Create Button */}
                             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-                                <div>
-                                    <h1 className="text-3xl font-bold text-neutrals-1 mb-2">Travel Blog</h1>
-                                    <p className="text-neutrals-4">Discover travel stories, tips, and inspiration from fellow travelers</p>
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <h1 className="text-3xl font-bold text-neutrals-1 mb-2">Travel Blog</h1>
+                                        <p className="text-neutrals-4">Discover travel stories, tips, and inspiration from fellow travelers</p>
+                                    </div>
+                                    <button
+                                        onClick={handleManualRefresh}
+                                        disabled={loading}
+                                        className="p-2 text-neutrals-4 hover:text-primary-1 hover:bg-primary-1/10 rounded-lg transition-colors disabled:opacity-50"
+                                        title="Refresh blogs"
+                                    >
+                                        <RefreshCw
+                                            size={20}
+                                            className={loading ? 'animate-spin' : ''}
+                                        />
+                                    </button>
                                 </div>
                                 {canCreateBlog && (
                                     <div className="flex gap-3 mt-4 sm:mt-0">
@@ -217,7 +276,7 @@ const BlogPage = () => {
                                                         {spotlightBlog.title}
                                                     </h3>
                                                     <p className="text-neutrals-3 line-clamp-4 mb-6">
-                                                        {spotlightBlog.content?.substring(0, 200)}...
+                                                        {spotlightBlog.content?.replace(/<[^>]*>/g, '').substring(0, 200)}...
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center justify-between text-sm text-neutrals-4">
@@ -259,7 +318,7 @@ const BlogPage = () => {
                                     <h2 className="text-2xl font-semibold text-neutrals-1 mb-6">All Blogs</h2>
                                     {blogs.length > 0 ? (
                                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                            {blogs.filter(blog => blog.articleId !== spotlightBlog?.articleId).map((blog) => (
+                                            {blogs.map((blog) => (
                                                 <BlogCard
                                                     key={blog.articleId}
                                                     blog={blog}
@@ -330,7 +389,20 @@ const BlogPage = () => {
                         {/* Mobile Header with Create Button */}
                         <div className="flex flex-col mb-6">
                             <div className="flex justify-between items-start mb-2">
-                                <h1 className="text-3xl font-bold text-neutrals-1">Travel Blog</h1>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-3xl font-bold text-neutrals-1">Travel Blog</h1>
+                                    <button
+                                        onClick={handleManualRefresh}
+                                        disabled={loading}
+                                        className="p-1 text-neutrals-4 hover:text-primary-1 hover:bg-primary-1/10 rounded-lg transition-colors disabled:opacity-50"
+                                        title="Refresh blogs"
+                                    >
+                                        <RefreshCw
+                                            size={16}
+                                            className={loading ? 'animate-spin' : ''}
+                                        />
+                                    </button>
+                                </div>
                                 {canCreateBlog && (
                                     <button
                                         onClick={handleCreateBlog}
