@@ -33,18 +33,31 @@ backend/.nb-gradle/
 backend/build/
 
 # ========= Data Pipeline (Airflow/Python) =========
+# Python virtual environment
 data-pipeline/venv/
-data-pipeline/airflow/airflow.db
-data-pipeline/airflow/airflow.db-journal
-data-pipeline/airflow/logs/
-data-pipeline/airflow/airflow-webserver.pid
-data-pipeline/airflow/standalone_admin_password.txt
 data-pipeline/__pycache__/
 data-pipeline/**/__pycache__/
 data-pipeline/*.pyc
 data-pipeline/**/*.pyc
 data-pipeline/.pytest_cache/
 data-pipeline/.env
+
+# Airflow - generated/runtime files
+data-pipeline/airflow/*.db
+data-pipeline/airflow/*.db-shm
+data-pipeline/airflow/*.db-wal
+data-pipeline/airflow/*.log
+data-pipeline/airflow/*.pid
+data-pipeline/airflow/airflow.cfg
+data-pipeline/airflow/webserver_config.py
+data-pipeline/airflow/logs/
+data-pipeline/airflow/plugins/
+data-pipeline/airflow/__pycache__/
+data-pipeline/airflow/standalone_admin_password.txt
+
+# Airflow 3.x specific files (no longer used but keeping for safety)
+data-pipeline/airflow/simple_auth_manager_passwords.json*
+data-pipeline/airflow/*.generated
 
 # ========= ML Service (if you add it later) =========
 ml-service/venv/

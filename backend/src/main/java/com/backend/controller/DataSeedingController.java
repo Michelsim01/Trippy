@@ -2,6 +2,7 @@ package com.backend.controller;
 
 import com.backend.service.DataSeedingService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
+@Profile("!test")
 public class DataSeedingController {
 
     @Autowired

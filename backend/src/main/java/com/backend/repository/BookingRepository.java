@@ -109,4 +109,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Find all bookings for a specific experience schedule
     List<Booking> findByExperienceSchedule_ScheduleId(Long scheduleId);
+
+    // Find bookings by traveler ID and status (for recommendation system)
+    List<Booking> findByTraveler_IdAndStatus(Long travelerId, BookingStatus status);
 }

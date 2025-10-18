@@ -77,9 +77,9 @@ spring.datasource.password=secret
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
+spring.jpa.show-sql=false
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.format_sql=false
 
 # JWT Configuration
 jwt.secret=trippy-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
@@ -117,17 +117,26 @@ VITE_API_BASE_URL=http://localhost:8080
 VITE_STRIPE_PUBLIC_KEY=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
 ```
 
-### 2. Start the Database
-Navigate to the backend directory and start PostgreSQL using Docker Compose:
+### 2. Start Services with Docker Compose
+
+From the **root directory**, start all services (database, Airflow):
+
 ```bash
-cd backend
 docker-compose up -d
 ```
-This will start PostgreSQL on port 5332 with:
 
-- Database: appdb
-- Username: app
-- Password: secret
+This will start:
+- **PostgreSQL** (port 5332) - Application database
+  - Database: appdb
+  - Username: app
+  - Password: secret
+- **Airflow Webserver** (port 8081) - Data pipeline UI
+- **Airflow Scheduler** - DAG execution engine
+
+Check that all services are healthy:
+```bash
+docker-compose ps
+```
 
 ### 3. Run the Backend
 Seed the data:
@@ -154,11 +163,21 @@ npm run dev
 ```
 The frontend will start on http://localhost:3000
 
+### 5. Access Airflow (Optional - for Data Pipeline)
+
+Airflow UI will be available at http://localhost:8081
+
+- **Username**: `admin`
+- **Password**: `admin`
+
+See [data-pipeline/README.md](data-pipeline/README.md) for more details on configuring and using Airflow.
+
 ### Verify Everything Works
 
-- Database is running: docker ps should show postgres-spring container
-- Backend is running
-- Frontend is running
+- Database is running: `docker ps` should show postgres-spring and airflow containers
+- Backend is running: http://localhost:8080
+- Frontend is running: http://localhost:3000
+- Airflow is running: http://localhost:8081
 
 ## Testing Payment Integration
 
