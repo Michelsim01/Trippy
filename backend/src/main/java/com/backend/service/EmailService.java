@@ -21,13 +21,17 @@ public class EmailService {
     @Value("${frontend.url:http://localhost:5173}")
     private String frontendUrl;
 
+    @Value("${admin.frontend.url:http://localhost:5174}")
+    private String adminFrontendUrl;
+
     /**
      * Send password reset email with HTML template
      * @param toEmail - recipient email address
      * @param resetToken - password reset token
      * @param firstName - user's first name
+     * @param isAdmin - whether the user is an admin
      */
-    public void sendPasswordResetEmail(String toEmail, String resetToken, String firstName) {
+    public void sendPasswordResetEmail(String toEmail, String resetToken, String firstName, Boolean isAdmin) {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -38,7 +42,7 @@ public class EmailService {
             helper.setSubject("Reset Your Password - Trippy");
 
             // Create HTML content
-            String htmlContent = createPasswordResetHtmlContent(firstName, resetToken);
+            String htmlContent = createPasswordResetHtmlContent(firstName, resetToken, isAdmin);
             helper.setText(htmlContent, true);
 
             // Send email
@@ -130,8 +134,11 @@ public class EmailService {
     /**
      * Create HTML content for password reset email
      */
-    private String createPasswordResetHtmlContent(String firstName, String resetToken) {
-        String resetLink = frontendUrl + "/reset-password?token=" + resetToken;
+    private String createPasswordResetHtmlContent(String firstName, String resetToken, Boolean isAdmin) {
+        // Determine the correct frontend URL based on user type
+        String baseUrl = (isAdmin != null && isAdmin) ? adminFrontendUrl : frontendUrl;
+        String resetPath = (isAdmin != null && isAdmin) ? "/admin/reset-password" : "/reset-password";
+        String resetLink = baseUrl + resetPath + "?token=" + resetToken;
         
         return String.format("""
             <!DOCTYPE html>

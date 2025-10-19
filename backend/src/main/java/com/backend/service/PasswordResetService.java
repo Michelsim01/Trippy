@@ -58,7 +58,7 @@ public class PasswordResetService {
         
         // Send password reset email
         try {
-            emailService.sendPasswordResetEmail(user.getEmail(), resetToken, user.getFirstName());
+            emailService.sendPasswordResetEmail(user.getEmail(), resetToken, user.getFirstName(), user.getIsAdmin());
         } catch (Exception e) {
             // Log the error but don't fail the token generation
             System.err.println("Failed to send password reset email: " + e.getMessage());
