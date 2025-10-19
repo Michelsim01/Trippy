@@ -790,10 +790,49 @@ public class DataSeedingService {
             3, new ExperienceCategory[]{ExperienceCategory.GUIDED_TOUR, ExperienceCategory.WORKSHOP, ExperienceCategory.OTHERS}
         );
         
-        // Create past schedules for completed bookings (increase to 200 for better variety)
-        List<ExperienceSchedule> pastSchedules = createPastSchedules(schedules, 200);
+        // Create past schedules for completed bookings (increase to 300 for better variety across all experiences)
+        List<ExperienceSchedule> pastSchedules = createPastSchedules(schedules, 300);
         
-        // Create bookings for each traveler based on their cluster profile
+        // STEP 1: Ensure at least 80 unique experiences get completed bookings (for reviews/ratings)
+        // Group past schedules by experience
+        java.util.Map<Long, List<ExperienceSchedule>> schedulesByExperience = new java.util.HashMap<>();
+        for (ExperienceSchedule schedule : pastSchedules) {
+            Long expId = schedule.getExperience().getExperienceId();
+            schedulesByExperience.computeIfAbsent(expId, k -> new ArrayList<>()).add(schedule);
+        }
+        
+        // Get list of unique experience IDs and shuffle for random distribution
+        List<Long> experienceIds = new ArrayList<>(schedulesByExperience.keySet());
+        java.util.Collections.shuffle(experienceIds);
+        
+        // Ensure first 80 experiences each get at least 2-3 completed bookings
+        java.util.Set<Long> coveredExperiences = new java.util.HashSet<>();
+        int targetExperiencesWithRatings = Math.min(80, experienceIds.size());
+        
+        for (int i = 0; i < targetExperiencesWithRatings && i < travelers.size(); i++) {
+            Long expId = experienceIds.get(i % experienceIds.size());
+            List<ExperienceSchedule> expSchedules = schedulesByExperience.get(expId);
+            
+            if (expSchedules != null && !expSchedules.isEmpty()) {
+                // Create 2-3 bookings for this experience from different travelers
+                int bookingsForExp = 2 + random.nextInt(2);
+                for (int j = 0; j < bookingsForExp && (i * bookingsForExp + j) < travelers.size(); j++) {
+                    User traveler = travelers.get((i * bookingsForExp + j) % travelers.size());
+                    ExperienceSchedule schedule = expSchedules.get(random.nextInt(expSchedules.size()));
+                    
+                    Booking booking = createBookingWithDetails(traveler, schedule, BookingStatus.COMPLETED);
+                    booking.setBookingDate(schedule.getStartDateTime().minusDays(random.nextInt(30) + 1));
+                    booking.setCreatedAt(booking.getBookingDate());
+                    bookings.add(bookingRepository.save(booking));
+                    
+                    coveredExperiences.add(expId);
+                }
+            }
+        }
+        
+        System.out.println("Guaranteed bookings for " + coveredExperiences.size() + " unique experiences for ratings coverage");
+        
+        // STEP 2: Create additional cluster-specific bookings for each traveler
         for (User traveler : travelers) {
             int cluster = getUserCluster(traveler.getId());
             int[] bookingRange = clusterBookingRange.get(cluster);
@@ -1199,6 +1238,13 @@ public class DataSeedingService {
             }
         }
         
+        // Log unique experiences with reviews
+        long uniqueExperiencesWithReviews = reviews.stream()
+            .map(r -> r.getExperience().getExperienceId())
+            .distinct()
+            .count();
+        System.out.println("Created " + reviews.size() + " reviews across " + uniqueExperiencesWithReviews + " unique experiences");
+        
         return reviews;
     }
 
@@ -1271,7 +1317,15 @@ public class DataSeedingService {
             userRepository.save(guide);
         }
         
-        System.out.println("Updated ratings for " + experiences.size() + " experiences and " + guides.size() + " guides");
+        // Count experiences with ratings
+        long experiencesWithRatings = experiences.stream()
+            .filter(exp -> exp.getAverageRating() != null && exp.getAverageRating().compareTo(BigDecimal.ZERO) > 0)
+            .count();
+        
+        System.out.println("Updated ratings for " + experiences.size() + " total experiences");
+        System.out.println("  - " + experiencesWithRatings + " experiences have ratings (Target: 80/100)");
+        System.out.println("  - " + (experiences.size() - experiencesWithRatings) + " experiences without ratings");
+        System.out.println("Updated ratings for " + guides.size() + " guides");
     }
 
     /**
@@ -1280,12 +1334,12 @@ public class DataSeedingService {
     private List<UserSurvey> createUserSurveys(List<User> users) {
         List<UserSurvey> surveys = new ArrayList<>();
         
-        // Define cluster-specific travel styles
+        // Define cluster-specific travel styles (matching frontend: social, business, family, romantic)
         java.util.Map<Integer, String[]> clusterTravelStyles = java.util.Map.of(
-            0, new String[]{"Luxury Traveler", "Cultural Explorer"},
-            1, new String[]{"Budget Traveler", "Family Traveler"},
-            2, new String[]{"Adventure Seeker", "Eco Traveler"},
-            3, new String[]{"Cultural Explorer", "Family Traveler"}
+            0, new String[]{"romantic", "business"},        // Luxury Cultural Explorers
+            1, new String[]{"social", "family"},            // Budget Social Travelers
+            2, new String[]{"social", "business"},          // Adventure Enthusiasts
+            3, new String[]{"family", "romantic"}           // Light Casual Travelers
         );
         
         // Define cluster-specific budgets
@@ -1293,15 +1347,15 @@ public class DataSeedingService {
             0, new String[]{"Premium", "Luxury"},
             1, new String[]{"Budget-Friendly", "Moderate"},
             2, new String[]{"Moderate", "Premium"},
-            3, new String[]{"Moderate"}
+            3, new String[]{"Budget-Friendly", "Moderate"}  // Light casual travelers can be budget-conscious too
         );
         
-        // Define cluster-specific interests
+        // Define cluster-specific interests (matching frontend IDs) - each cluster has 5 interests
         java.util.Map<Integer, List<String>> clusterInterests = java.util.Map.of(
-            0, Arrays.asList("Culture", "History", "Art", "Architecture"),
-            1, Arrays.asList("Food", "Beaches", "Music"),
-            2, Arrays.asList("Adventure", "Mountains", "Nature", "Wildlife"),
-            3, Arrays.asList("Photography", "Food", "Beaches")
+            0, Arrays.asList("culture", "art", "shopping", "wellness", "entertainment"),      // Luxury Cultural Explorers
+            1, Arrays.asList("food", "beach", "nightlife", "entertainment", "sports"), // Budget Social Travelers
+            2, Arrays.asList("adventure", "wildlife", "photography", "sports", "culture"), // Adventure Enthusiasts
+            3, Arrays.asList("photography", "food", "beach", "wellness", "shopping")     // Light Casual Travelers
         );
         
         // Define cluster-specific introductions
@@ -1326,13 +1380,11 @@ public class DataSeedingService {
             survey.setTravelStyle(clusterTravelStyles.get(cluster)[random.nextInt(clusterTravelStyles.get(cluster).length)]);
             survey.setExperienceBudget(clusterBudgets.get(cluster)[random.nextInt(clusterBudgets.get(cluster).length)]);
             
-            // Assign cluster-specific interests (randomize order but use cluster interests)
+            // Assign all 5 cluster-specific interests (randomize order)
             List<String> interests = new ArrayList<>(clusterInterests.get(cluster));
             java.util.Collections.shuffle(interests);
-            // Cluster 0 & 2: 4-5 interests, Cluster 1: 3-4 interests, Cluster 3: 2-3 interests
-            int interestCount = cluster == 0 || cluster == 2 ? (4 + random.nextInt(2)) : 
-                                (cluster == 1 ? 3 + random.nextInt(2) : 2 + random.nextInt(2));
-            survey.setInterests(interests.subList(0, Math.min(interestCount, interests.size())));
+            // Each user picks exactly 5 interests
+            survey.setInterests(interests);
             
             survey.setCompletedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
             
