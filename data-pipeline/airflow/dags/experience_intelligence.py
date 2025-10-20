@@ -45,14 +45,62 @@ dag = DAG(
     tags=['analytics', 'recommendations', 'experience-intelligence'],
 )
 
-def extract_experience_data(**context):
-    """Extract experience, review, and booking data for intelligence processing"""
+def get_last_run_timestamp(**context):
+    """Get timestamp of last successful pipeline run for incremental processing"""
     
     pg_hook = PostgresHook(postgres_conn_id='trippy_db')
     
+    # Create watermark table if it doesn't exist (shared with other pipelines)
+    create_watermark_table = """
+    CREATE TABLE IF NOT EXISTS pipeline_watermarks (
+        pipeline_name VARCHAR(100) PRIMARY KEY,
+        last_run_timestamp TIMESTAMP NOT NULL,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+    pg_hook.run(create_watermark_table)
+    
+    # Get last run timestamp for this pipeline
+    result = pg_hook.get_first("""
+        SELECT last_run_timestamp 
+        FROM pipeline_watermarks 
+        WHERE pipeline_name = 'experience_intelligence'
+    """)
+    
+    # Determine if this is a full refresh day (every Monday)
+    execution_date = context['execution_date']
+    is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
+    
+    # If it's Monday or no previous run, do full refresh (return very old date)
+    if is_full_refresh or not result:
+        last_run = datetime(2024, 1, 1)
+        refresh_type = "FULL_REFRESH"
+    else:
+        last_run = result[0]
+        refresh_type = "INCREMENTAL"
+    
+    print(f"Pipeline mode: {refresh_type}")
+    print(f"Processing data since: {last_run}")
+    
+    return {
+        'last_run_timestamp': last_run.isoformat(),
+        'is_full_refresh': is_full_refresh
+    }
+
+def extract_experience_data(**context):
+    """Extract experience, review, and booking data for intelligence processing (incremental or full)"""
+    
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
+    
+    # Get last run timestamp from previous task
+    watermark_data = context['ti'].xcom_pull(task_ids='get_last_run_timestamp')
+    last_run = watermark_data['last_run_timestamp']
+    is_full_refresh = watermark_data['is_full_refresh']
+    
     # Extract comprehensive experience data
-    experience_query = """
-    SELECT 
+    # In incremental mode: get experiences updated/created since last run OR with new reviews/bookings
+    experience_query = f"""
+    SELECT DISTINCT
         e.experience_id,
         e.title,
         e.short_description,
@@ -76,7 +124,11 @@ def extract_experience_data(**context):
     FROM experiences e
     LEFT JOIN users u ON e.guide_id = u.user_id
     LEFT JOIN experience_tags et ON e.experience_id = et.experience_experience_id
+    LEFT JOIN review r ON e.experience_id = r.experience_id
+    LEFT JOIN experience_schedule es ON e.experience_id = es.experience_id
+    LEFT JOIN booking b ON es.schedule_id = b.experience_schedule_id
     WHERE e.status = 'ACTIVE'
+    {f"AND (e.created_at > '{last_run}' OR e.updated_at > '{last_run}' OR r.created_at > '{last_run}' OR b.booking_date > '{last_run}')" if not is_full_refresh else ""}
     GROUP BY e.experience_id, e.title, e.short_description, e.full_description, 
              e.highlights, e.category, e.price, e.duration, e.location, 
              e.latitude, e.longitude, e.country, e.participants_allowed, 
@@ -84,8 +136,27 @@ def extract_experience_data(**context):
              u.first_name, u.last_name
     """
     
-    # Extract review data with sentiment indicators
-    review_query = """
+    # Execute experience query first to get the list of experiences to process
+    experience_df = pd.read_sql(experience_query, pg_hook.get_sqlalchemy_engine())
+    
+    print(f"Extracted {len(experience_df)} experiences for processing")
+    
+    # If no experiences to process, return empty data
+    if len(experience_df) == 0:
+        return {
+            'experience_data': '[]',
+            'review_data': '[]',
+            'booking_data': '[]',
+            'itinerary_data': '[]',
+            'is_full_refresh': is_full_refresh
+        }
+    
+    # Get list of experience IDs to process
+    experience_ids = experience_df['experience_id'].tolist()
+    experience_ids_str = ','.join(map(str, experience_ids))
+    
+    # Extract review data with sentiment indicators (ALL reviews for selected experiences)
+    review_query = f"""
     SELECT 
         r.experience_id,
         r.rating,
@@ -96,11 +167,12 @@ def extract_experience_data(**context):
     FROM review r
     JOIN users u ON r.reviewer_id = u.user_id
     WHERE r.comment IS NOT NULL AND r.comment != ''
+    AND r.experience_id IN ({experience_ids_str})
     ORDER BY r.created_at DESC
     """
     
-    # Extract booking patterns and popularity data
-    booking_query = """ 
+    # Extract booking patterns and popularity data (ALL bookings for selected experiences)
+    booking_query = f""" 
     SELECT 
         e.experience_id,
         COUNT(b.booking_id) as total_bookings,
@@ -119,11 +191,12 @@ def extract_experience_data(**context):
     FROM experiences e
     LEFT JOIN experience_schedule es ON e.experience_id = es.experience_id
     LEFT JOIN booking b ON es.schedule_id = b.experience_schedule_id
+    WHERE e.experience_id IN ({experience_ids_str})
     GROUP BY e.experience_id
     """
     
-    # Extract itinerary data for content richness
-    itinerary_query = """
+    # Extract itinerary data for content richness (only for selected experiences)
+    itinerary_query = f"""
     SELECT 
         ei.experience_id,
         array_agg(ei.stop_order ORDER BY ei.stop_order) as stop_orders,
@@ -132,21 +205,26 @@ def extract_experience_data(**context):
         array_agg(ei.duration ORDER BY ei.stop_order) as durations,
         COUNT(*) as total_stops
     FROM experience_itinerary ei
+    WHERE ei.experience_id IN ({experience_ids_str})
     GROUP BY ei.experience_id
     """
     
-    # Execute queries
-    experience_df = pd.read_sql(experience_query, pg_hook.get_sqlalchemy_engine())
+    # Execute remaining queries
     review_df = pd.read_sql(review_query, pg_hook.get_sqlalchemy_engine())
     booking_df = pd.read_sql(booking_query, pg_hook.get_sqlalchemy_engine())
     itinerary_df = pd.read_sql(itinerary_query, pg_hook.get_sqlalchemy_engine())
+    
+    print(f"Extracted {len(review_df)} reviews")
+    print(f"Extracted booking data for {len(booking_df)} experiences")
+    print(f"Extracted itinerary data for {len(itinerary_df)} experiences")
     
     # Save to XCom for next task
     return {
         'experience_data': experience_df.to_json(orient='records'),
         'review_data': review_df.to_json(orient='records'),
         'booking_data': booking_df.to_json(orient='records'),
-        'itinerary_data': itinerary_df.to_json(orient='records')
+        'itinerary_data': itinerary_df.to_json(orient='records'),
+        'is_full_refresh': is_full_refresh
     }
 
 def analyze_content_features(**context):
@@ -547,45 +625,140 @@ def calculate_recommendation_weight(popularity_score, sentiment_score, avg_ratin
     return weight * 100  # Scale to 0-100
 
 def compute_experience_similarities(**context):
-    """Compute experience similarities for recommendation engine"""
+    """Compute experience similarities for recommendation engine
     
-    # Get intelligence data
+    NOTE: This function always computes similarities using ALL experiences by merging:
+    - Existing experiences from the database
+    - New/updated experiences from the current run (not yet saved to DB)
+    
+    This ensures new experiences are compared against the full catalog, not just other
+    new experiences. Only the processed experiences get their similarity records updated
+    in the database.
+    """
+    
+    # Get intelligence data from current run (might be only a few experiences in incremental mode)
     intelligence_json = context['ti'].xcom_pull(task_ids='analyze_sentiment_and_popularity')
     intelligence_data = json.loads(intelligence_json)
     
-    # Prepare content for similarity analysis
-    experience_texts = []
-    experience_ids = []
+    # Get ALL experiences from database for complete similarity computation
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
     
-    for exp in intelligence_data:
-        content_features = exp['content_features']
-        
-        # Combine relevant text features for similarity
-        similarity_text = []
-        
-        # Add category and activity keywords
-        if exp['category']:
-            similarity_text.append(exp['category'])
-        
-        # Add activity keywords
-        activity_keywords = content_features.get('activity_keywords', {})
-        for category, keywords in activity_keywords.items():
-            similarity_text.extend(keywords)
-        
-        # Add difficulty and duration info
-        similarity_text.append(content_features.get('difficulty_indicators', ''))
-        similarity_text.append(content_features.get('duration_category', ''))
-        similarity_text.append(content_features.get('price_category', ''))
-        similarity_text.append(content_features.get('location_type', ''))
-        
-        # Add processed content
-        if content_features.get('processed_content'):
-            similarity_text.append(content_features['processed_content'][:500])  # Limit length
-        
-        experience_texts.append(' '.join(filter(None, similarity_text)))
-        experience_ids.append(exp['experience_id'])
+    # Create experience_intelligence table if it doesn't exist (needed for first run)
+    create_intelligence_table = """
+    CREATE TABLE IF NOT EXISTS experience_intelligence (
+        experience_id BIGINT PRIMARY KEY,
+        intelligence_data JSONB,
+        popularity_score DECIMAL(5,2),
+        sentiment_score DECIMAL(4,3),
+        recommendation_weight DECIMAL(5,2),
+        content_completeness_score INTEGER,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+    pg_hook.run(create_intelligence_table)
     
-    # Compute TF-IDF vectors
+    # Load ALL experience intelligence data from database for similarity comparison
+    all_experiences_query = """
+    SELECT 
+        experience_id,
+        intelligence_data
+    FROM experience_intelligence
+    ORDER BY experience_id
+    """
+    
+    all_exp_df = pd.read_sql(all_experiences_query, pg_hook.get_sqlalchemy_engine())
+    
+    # If table is empty (first run), use only current run's data
+    if len(all_exp_df) == 0:
+        print("First run detected: experience_intelligence table is empty")
+        print(f"Computing similarities using {len(intelligence_data)} experiences from current run only")
+        
+        # Use current run's intelligence data for similarity computation
+        experience_texts = []
+        experience_ids = []
+        
+        for exp in intelligence_data:
+            content_features = exp.get('content_features', {})
+            
+            # Combine relevant text features for similarity
+            similarity_text = []
+            
+            # Add category and activity keywords
+            if exp.get('category'):
+                similarity_text.append(exp['category'])
+            
+            # Add activity keywords
+            activity_keywords = content_features.get('activity_keywords', {})
+            for category, keywords in activity_keywords.items():
+                similarity_text.extend(keywords)
+            
+            # Add difficulty and duration info
+            similarity_text.append(content_features.get('difficulty_indicators', ''))
+            similarity_text.append(content_features.get('duration_category', ''))
+            similarity_text.append(content_features.get('price_category', ''))
+            similarity_text.append(content_features.get('location_type', ''))
+            
+            # Add processed content
+            if content_features.get('processed_content'):
+                similarity_text.append(content_features['processed_content'][:500])
+            
+            experience_texts.append(' '.join(filter(None, similarity_text)))
+            experience_ids.append(exp['experience_id'])
+    else:
+        # Normal mode: MERGE database experiences with current run's new experiences
+        print(f"Loaded {len(all_exp_df)} experiences from database")
+        print(f"Current run processing {len(intelligence_data)} experiences")
+        
+        # Get IDs of experiences being processed in current run
+        current_exp_ids = {exp['experience_id'] for exp in intelligence_data}
+        
+        # Merge: existing experiences from DB + new experiences from current run
+        all_experiences = []
+        
+        # Add existing experiences from database (excluding any that are in current run to avoid duplicates)
+        for _, row in all_exp_df.iterrows():
+            if row['experience_id'] not in current_exp_ids:
+                all_experiences.append(row['intelligence_data'])
+        
+        # Add all experiences from current run (includes both new and updated)
+        all_experiences.extend(intelligence_data)
+        
+        print(f"Computing similarities using {len(all_experiences)} total experiences (merged)")
+        print(f"Will update similarity records for {len(intelligence_data)} processed experiences")
+        
+        # Prepare content for similarity analysis using ALL experiences
+        experience_texts = []
+        experience_ids = []
+        
+        for exp_data in all_experiences:
+            content_features = exp_data.get('content_features', {})
+            
+            # Combine relevant text features for similarity
+            similarity_text = []
+            
+            # Add category and activity keywords
+            if exp_data.get('category'):
+                similarity_text.append(exp_data['category'])
+            
+            # Add activity keywords
+            activity_keywords = content_features.get('activity_keywords', {})
+            for category, keywords in activity_keywords.items():
+                similarity_text.extend(keywords)
+            
+            # Add difficulty and duration info
+            similarity_text.append(content_features.get('difficulty_indicators', ''))
+            similarity_text.append(content_features.get('duration_category', ''))
+            similarity_text.append(content_features.get('price_category', ''))
+            similarity_text.append(content_features.get('location_type', ''))
+            
+            # Add processed content
+            if content_features.get('processed_content'):
+                similarity_text.append(content_features['processed_content'][:500])  # Limit length
+            
+            experience_texts.append(' '.join(filter(None, similarity_text)))
+            experience_ids.append(exp_data['experience_id'])
+    
+    # Compute TF-IDF vectors for ALL experiences
     vectorizer = TfidfVectorizer(
         max_features=1000,
         stop_words='english',
@@ -594,14 +767,16 @@ def compute_experience_similarities(**context):
     )
     
     if len(experience_texts) > 1:
-        # Convert text to TF-IDF vectors
+        # Convert text to TF-IDF vectors (for ALL experiences in database)
         tfidf_matrix = vectorizer.fit_transform(experience_texts)
         
-        # Compute cosine similarity matrix
+        # Compute cosine similarity matrix (full matrix for ALL experiences)
         similarity_matrix = cosine_similarity(tfidf_matrix)
         
-        # Create similarity recommendations for each experience
-        similarities = {}
+        print(f"Computed {similarity_matrix.shape[0]}x{similarity_matrix.shape[1]} similarity matrix")
+        
+        # Create similarity recommendations for ALL experiences
+        all_similarities = {}
         for i, exp_id in enumerate(experience_ids):
             # Get top 10 similar experiences (excluding self)
             similar_indices = similarity_matrix[i].argsort()[-11:-1][::-1]  # Top 10, reverse order
@@ -614,13 +789,15 @@ def compute_experience_similarities(**context):
                 if similarity_matrix[i][idx] > 0.1  # Only include meaningful similarities
             ]
             
-            similarities[exp_id] = similar_experiences
+            all_similarities[exp_id] = similar_experiences
+        
+        # Only add similarity data to the experiences processed in THIS run
+        for exp in intelligence_data:
+            exp['similar_experiences'] = all_similarities.get(exp['experience_id'], [])
     else:
-        similarities = {}
-    
-    # Add similarity data to intelligence records
-    for exp in intelligence_data:
-        exp['similar_experiences'] = similarities.get(exp['experience_id'], [])
+        # Not enough experiences to compute similarities
+        for exp in intelligence_data:
+            exp['similar_experiences'] = []
     
     return json.dumps(intelligence_data)
 
@@ -715,7 +892,42 @@ def save_intelligence_results(**context):
     print(f"Successfully processed intelligence data for {len(intelligence_data)} experiences")
     return "Experience intelligence pipeline completed successfully"
 
+def update_watermark(**context):
+    """Update the pipeline watermark with current timestamp"""
+    
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
+    
+    # Use CURRENT_TIMESTAMP from database (no timezone conversion)
+    # This ensures watermark matches the timestamps in the database tables
+    upsert_watermark = """
+    INSERT INTO pipeline_watermarks (pipeline_name, last_run_timestamp, last_updated)
+    VALUES (%s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (pipeline_name)
+    DO UPDATE SET 
+        last_run_timestamp = CURRENT_TIMESTAMP,
+        last_updated = CURRENT_TIMESTAMP
+    """
+    
+    pg_hook.run(upsert_watermark, parameters=['experience_intelligence'])
+    
+    # Get the updated timestamp for logging
+    result = pg_hook.get_first("""
+        SELECT last_run_timestamp 
+        FROM pipeline_watermarks 
+        WHERE pipeline_name = 'experience_intelligence'
+    """)
+    
+    updated_time = result[0] if result else 'unknown'
+    print(f"Updated watermark to: {updated_time}")
+    return "Watermark updated successfully"
+
 # Define tasks
+get_watermark_task = PythonOperator(
+    task_id='get_last_run_timestamp',
+    python_callable=get_last_run_timestamp,
+    dag=dag,
+)
+
 extract_task = PythonOperator(
     task_id='extract_experience_data',
     python_callable=extract_experience_data,
@@ -746,5 +958,12 @@ save_task = PythonOperator(
     dag=dag,
 )
 
+update_watermark_task = PythonOperator(
+    task_id='update_watermark',
+    python_callable=update_watermark,
+    dag=dag,
+)
+
 # Define task dependencies
-extract_task >> content_analysis_task >> sentiment_popularity_task >> similarity_task >> save_task
+# Flow: Get last run time -> Extract data -> Analyze content -> Analyze sentiment -> Compute similarities -> Save -> Update watermark
+get_watermark_task >> extract_task >> content_analysis_task >> sentiment_popularity_task >> similarity_task >> save_task >> update_watermark_task

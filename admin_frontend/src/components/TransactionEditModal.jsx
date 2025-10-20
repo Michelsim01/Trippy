@@ -48,34 +48,41 @@ const TransactionEditModal = ({ transaction, isOpen, onClose, onTransactionUpdat
     });
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
+  const handleSave = () => {
+    showConfirmation(
+      'Save Transaction Changes',
+      'Are you sure you want to save these changes to the transaction? This will update the transaction amount and status.',
+      'warning',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          setSuccess(null);
 
-      const updateData = {
-        amount: parseFloat(formData.amount),
-        status: formData.status
-      };
+          const updateData = {
+            amount: parseFloat(formData.amount),
+            status: formData.status
+          };
 
-      const response = await adminService.updateTransaction(transaction.id, updateData);
-      
-      if (response.success) {
-        setSuccess('Transaction updated successfully!');
-        setTimeout(() => {
-          onTransactionUpdated();
-          onClose();
-        }, 1500);
-      } else {
-        setError(response.error || 'Failed to update transaction');
+          const response = await adminService.updateTransaction(transaction.id, updateData);
+          
+          if (response.success) {
+            setSuccess('Transaction updated successfully!');
+            setTimeout(() => {
+              onTransactionUpdated();
+              onClose();
+            }, 1500);
+          } else {
+            setError(response.error || 'Failed to update transaction');
+          }
+        } catch (err) {
+          console.error('Error updating transaction:', err);
+          setError(err.response?.data?.message || 'Failed to update transaction');
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error('Error updating transaction:', err);
-      setError(err.response?.data?.message || 'Failed to update transaction');
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   const handleDelete = () => {

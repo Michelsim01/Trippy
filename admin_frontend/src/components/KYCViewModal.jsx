@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { X, CheckCircle, XCircle, FileText, Calendar, Mail, Phone, MapPin, User, AlertCircle } from 'lucide-react';
+import { X, CheckCircle, XCircle, FileText, Calendar, Mail, Phone, MapPin, User, AlertCircle, ZoomIn } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 
 const KYCViewModal = ({ submission, onClose, onApprove, onDecline }) => {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showDeclineModal, setShowDeclineModal] = useState(false);
   const [declineMessage, setDeclineMessage] = useState('');
+  const [showEnlargedImage, setShowEnlargedImage] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -36,6 +37,10 @@ const KYCViewModal = ({ submission, onClose, onApprove, onDecline }) => {
     onDecline(submission.id, declineMessage);
     setShowDeclineModal(false);
     setDeclineMessage('');
+  };
+
+  const handleDeclineMessageChange = (e) => {
+    setDeclineMessage(e.target.value);
   };
 
   const getStatusBadge = (status) => {
@@ -152,23 +157,42 @@ const KYCViewModal = ({ submission, onClose, onApprove, onDecline }) => {
                 {/* KYC Document */}
                 {submission.fileUrl && (
                   <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center mb-2">
-                      <FileText className="w-5 h-5 text-blue-600 mr-2" />
-                      <h4 className="font-medium text-gray-900">{submission.docType || 'Document'}</h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        <FileText className="w-5 h-5 text-blue-600 mr-2" />
+                        <h4 className="font-medium text-gray-900">{submission.docType || 'Document'}</h4>
+                      </div>
+                      <button
+                        onClick={() => setShowEnlargedImage(true)}
+                        className="flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                        title="Click to enlarge"
+                      >
+                        <ZoomIn className="w-4 h-4 mr-1" />
+                        Enlarge
+                      </button>
                     </div>
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">Type: {submission.docType || 'N/A'}</p>
                       <p className="text-sm text-gray-600">Side: {submission.docSide || 'N/A'}</p>
                       <div className="mt-2">
-                        <img
-                          src={`http://localhost:8080${submission.fileUrl}`}
-                          alt={`${submission.docType || 'Document'} - ${submission.docSide || 'Front'}`}
-                          className="w-full h-32 object-cover rounded border"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'block';
-                          }}
-                        />
+                        <div 
+                          className="cursor-pointer group relative"
+                          onClick={() => setShowEnlargedImage(true)}
+                          title="Click to enlarge image"
+                        >
+                          <img
+                            src={`http://localhost:8080${submission.fileUrl}`}
+                            alt={`${submission.docType || 'Document'} - ${submission.docSide || 'Front'}`}
+                            className="w-full max-h-96 object-contain rounded border hover:shadow-lg transition-shadow"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'block';
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-200 rounded flex items-center justify-center">
+                            <ZoomIn className="w-8 h-8 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                        </div>
                         <div className="w-full h-32 bg-gray-100 rounded border flex items-center justify-center text-gray-500 text-sm" style={{display: 'none'}}>
                           Image not available
                         </div>
@@ -255,9 +279,47 @@ const KYCViewModal = ({ submission, onClose, onApprove, onDecline }) => {
         showTextArea={true}
         textAreaLabel="Reason for rejection (optional)"
         textAreaValue={declineMessage}
-        textAreaOnChange={setDeclineMessage}
+        textAreaOnChange={handleDeclineMessageChange}
         textAreaPlaceholder="Please provide a reason for rejecting this document..."
       />
+
+      {/* Enlarged Image Modal */}
+      {showEnlargedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[60] p-4">
+          <div className="relative max-w-7xl max-h-[95vh] w-full">
+            <button
+              onClick={() => setShowEnlargedImage(false)}
+              className="absolute top-4 right-4 z-10 bg-white bg-opacity-90 hover:bg-opacity-100 rounded-full p-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="bg-white rounded-lg p-4 max-h-[95vh] overflow-auto">
+              <div className="text-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  {submission.docType || 'Document'} - {submission.docSide || 'Front'}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {submission.userName} - {submission.email}
+                </p>
+              </div>
+              <div className="flex justify-center">
+                <img
+                  src={`http://localhost:8080${submission.fileUrl}`}
+                  alt={`${submission.docType || 'Document'} - ${submission.docSide || 'Front'}`}
+                  className="max-w-full max-h-[80vh] object-contain rounded border shadow-lg"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'block';
+                  }}
+                />
+                <div className="max-w-full max-h-[80vh] bg-gray-100 rounded border flex items-center justify-center text-gray-500 text-lg" style={{display: 'none'}}>
+                  Image not available
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

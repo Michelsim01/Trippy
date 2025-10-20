@@ -58,7 +58,7 @@ class PasswordResetServiceTest {
         assertNotNull(testUser.getPasswordResetTokenExpiresAt());
         assertTrue(testUser.getPasswordResetTokenExpiresAt().isAfter(LocalDateTime.now()));
         verify(userRepository).save(testUser);
-        verify(emailService).sendPasswordResetEmail(eq("test@example.com"), anyString(), eq("Test"));
+        verify(emailService).sendPasswordResetEmail(eq("test@example.com"), anyString(), eq("Test"), any(Boolean.class));
     }
 
     @Test
@@ -71,7 +71,7 @@ class PasswordResetServiceTest {
             () -> passwordResetService.generatePasswordResetToken("nonexistent@example.com"));
         assertEquals("User not found with email: nonexistent@example.com", exception.getMessage());
         verify(userRepository, never()).save(any());
-        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString(), anyString());
+        verify(emailService, never()).sendPasswordResetEmail(anyString(), anyString(), anyString(), any(Boolean.class));
     }
 
     @Test

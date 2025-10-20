@@ -50,35 +50,42 @@ const BookingEditModal = ({ booking, isOpen, onClose, onBookingUpdated }) => {
     });
   };
 
-  const handleSave = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      setSuccess(null);
+  const handleSave = () => {
+    showConfirmation(
+      'Save Booking Changes',
+      'Are you sure you want to save these changes to the booking? This will update the number of participants, total amount, and status.',
+      'warning',
+      async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          setSuccess(null);
 
-      const updateData = {
-        numberOfParticipants: parseInt(formData.numberOfParticipants),
-        totalAmount: parseFloat(formData.totalAmount),
-        status: formData.status
-      };
+          const updateData = {
+            numberOfParticipants: parseInt(formData.numberOfParticipants),
+            totalAmount: parseFloat(formData.totalAmount),
+            status: formData.status
+          };
 
-      const response = await adminService.updateBooking(booking.id, updateData);
-      
-      if (response.success) {
-        setSuccess('Booking updated successfully!');
-        setTimeout(() => {
-          onBookingUpdated();
-          onClose();
-        }, 1500);
-      } else {
-        setError(response.error || 'Failed to update booking');
+          const response = await adminService.updateBooking(booking.id, updateData);
+          
+          if (response.success) {
+            setSuccess('Booking updated successfully!');
+            setTimeout(() => {
+              onBookingUpdated();
+              onClose();
+            }, 1500);
+          } else {
+            setError(response.error || 'Failed to update booking');
+          }
+        } catch (err) {
+          console.error('Error updating booking:', err);
+          setError(err.response?.data?.message || 'Failed to update booking');
+        } finally {
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      console.error('Error updating booking:', err);
-      setError(err.response?.data?.message || 'Failed to update booking');
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
   const handleDelete = () => {

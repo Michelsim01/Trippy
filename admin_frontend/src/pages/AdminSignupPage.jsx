@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const AdminSignupPage = () => {
   const [formData, setFormData] = useState({
@@ -9,12 +10,15 @@ const AdminSignupPage = () => {
     lastName: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    adminCode: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -47,6 +51,14 @@ const AdminSignupPage = () => {
       setError('Passwords do not match');
       return false;
     }
+    if (!formData.adminCode.trim()) {
+      setError('Admin code is required');
+      return false;
+    }
+    if (formData.adminCode !== '99999') {
+      setError('Invalid admin code');
+      return false;
+    }
     return true;
   };
 
@@ -64,10 +76,10 @@ const AdminSignupPage = () => {
     
     if (result.success) {
       if (result.requiresVerification) {
-        // Show success message and redirect to login
+        // Show success modal instead of alert
+        setSuccessMessage(result.message);
+        setShowSuccessModal(true);
         setError(''); // Clear any previous errors
-        alert(result.message);
-        navigate('/admin/login');
       } else {
         navigate('/admin/dashboard');
       }
@@ -118,6 +130,11 @@ const AdminSignupPage = () => {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-red-600 text-sm">{error}</p>
+                  {error.includes('already exists') && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Already have an account? <Link to="/admin/login" className="underline hover:text-red-700">Sign in here</Link>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -231,6 +248,28 @@ const AdminSignupPage = () => {
                 </div>
               </div>
 
+              <div>
+                <label htmlFor="adminCode" className="block text-sm font-medium text-gray-700 mb-2">
+                  Admin Code
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    id="adminCode"
+                    name="adminCode"
+                    value={formData.adminCode}
+                    onChange={handleChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                    placeholder="Enter admin code"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Contact your system administrator for the admin code
+                </p>
+              </div>
+
               <button
                 type="submit"
                 disabled={isLoading}
@@ -259,6 +298,25 @@ const AdminSignupPage = () => {
           </div>
         </div>
       </div>
+      
+      {/* Success Modal */}
+      <ConfirmationModal
+        isOpen={showSuccessModal}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigate('/admin/login');
+        }}
+        onConfirm={() => {
+          setShowSuccessModal(false);
+          navigate('/admin/login');
+        }}
+        title="Registration Successful!"
+        message={successMessage}
+        confirmText="OK"
+        cancelText=""
+        type="success"
+        showTextArea={false}
+      />
     </div>
   );
 };

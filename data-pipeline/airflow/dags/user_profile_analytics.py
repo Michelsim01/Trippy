@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
+from scipy.spatial.distance import cdist
 import json
 
 default_args = {
@@ -28,13 +29,60 @@ dag = DAG(
     tags=['analytics', 'recommendations', 'user-profiling'],
 )
 
-def extract_user_data(**context):
-    """Extract user survey, booking, and interaction data"""
+def get_last_run_timestamp(**context):
+    """Get timestamp of last successful pipeline run for incremental processing"""
     
     pg_hook = PostgresHook(postgres_conn_id='trippy_db')
     
-    # Extract user survey data
-    survey_query = """
+    # Create watermark table if it doesn't exist
+    create_watermark_table = """
+    CREATE TABLE IF NOT EXISTS pipeline_watermarks (
+        pipeline_name VARCHAR(100) PRIMARY KEY,
+        last_run_timestamp TIMESTAMP NOT NULL,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+    pg_hook.run(create_watermark_table)
+    
+    # Get last run timestamp for this pipeline
+    result = pg_hook.get_first("""
+        SELECT last_run_timestamp 
+        FROM pipeline_watermarks 
+        WHERE pipeline_name = 'user_profile_analytics'
+    """)
+    
+    # Determine if this is a full refresh day (every Monday)
+    execution_date = context['execution_date']
+    is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
+    
+    # If it's Monday or no previous run, do full refresh (return very old date)
+    if is_full_refresh or not result:
+        last_run = datetime(2024, 1, 1)
+        refresh_type = "FULL_REFRESH"
+    else:
+        last_run = result[0]
+        refresh_type = "INCREMENTAL"
+    
+    print(f"Pipeline mode: {refresh_type}")
+    print(f"Processing data since: {last_run}")
+    
+    return {
+        'last_run_timestamp': last_run.isoformat(),
+        'is_full_refresh': is_full_refresh
+    }
+
+def extract_user_data(**context):
+    """Extract user survey, booking, and interaction data (incremental or full)"""
+    
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
+    
+    # Get last run timestamp from previous task
+    watermark_data = context['ti'].xcom_pull(task_ids='get_last_run_timestamp')
+    last_run = watermark_data['last_run_timestamp']
+    is_full_refresh = watermark_data['is_full_refresh']
+    
+    # Extract user survey data (incremental: only new/completed surveys)
+    survey_query = f"""
     SELECT 
         us.user_id,
         us.travel_style,
@@ -43,11 +91,13 @@ def extract_user_data(**context):
         array_agg(usi.interests) as interests
     FROM user_survey us
     LEFT JOIN user_survey_interests usi ON us.survey_id = usi.user_survey_survey_id
+    {f"WHERE us.completed_at > '{last_run}'" if not is_full_refresh else ""}
     GROUP BY us.user_id, us.travel_style, us.experience_budget, us.completed_at
     """
     
-    # Extract booking behavior data
-    booking_query = """
+    # Extract booking behavior data (incremental: only users with new bookings)
+    # Note: We still aggregate ALL bookings for these users to get accurate totals
+    booking_query = f"""
     SELECT 
         b.traveler_id as user_id,
         COUNT(*) as total_bookings,
@@ -59,11 +109,12 @@ def extract_user_data(**context):
     FROM booking b
     JOIN experience_schedule es ON b.experience_schedule_id = es.schedule_id
     JOIN experiences e ON es.experience_id = e.experience_id
+    {f"WHERE b.traveler_id IN (SELECT DISTINCT traveler_id FROM booking WHERE booking_date > '{last_run}')" if not is_full_refresh else ""}
     GROUP BY b.traveler_id
     """
     
-    # Extract review data for sentiment analysis
-    review_query = """
+    # Extract review data (incremental: only users with new reviews)
+    review_query = f"""
     SELECT 
         r.reviewer_id,
         COUNT(*) as total_reviews,
@@ -71,6 +122,7 @@ def extract_user_data(**context):
         array_agg(e.category) as reviewed_categories
     FROM review r
     JOIN experiences e ON r.experience_id = e.experience_id
+    {f"WHERE r.reviewer_id IN (SELECT DISTINCT reviewer_id FROM review WHERE created_at > '{last_run}')" if not is_full_refresh else ""}
     GROUP BY r.reviewer_id
     """
     
@@ -79,11 +131,16 @@ def extract_user_data(**context):
     booking_df = pd.read_sql(booking_query, pg_hook.get_sqlalchemy_engine())
     review_df = pd.read_sql(review_query, pg_hook.get_sqlalchemy_engine())
     
+    print(f"Extracted {len(booking_df)} users with booking activity")
+    print(f"Extracted {len(survey_df)} user surveys")
+    print(f"Extracted {len(review_df)} users with review activity")
+    
     # Save to XCom for next task
     return {
         'survey_data': survey_df.to_json(orient='records'),
         'booking_data': booking_df.to_json(orient='records'),
-        'review_data': review_df.to_json(orient='records')
+        'review_data': review_df.to_json(orient='records'),
+        'is_full_refresh': is_full_refresh
     }
 
 # Encodes the budget score based on the numerical ranges
@@ -148,30 +205,36 @@ def process_user_features(**context):
             'review_activity': int(user_reviews['total_reviews'].iloc[0]) if len(user_reviews) > 0 else 0,
             'avg_rating_given': float(user_reviews['avg_rating_given'].iloc[0]) if len(user_reviews) > 0 else 0.0,
             
-            # Interest categories (one-hot encoded based on survey data if available)
+            # Interest categories (one-hot encoded matching frontend interest IDs)
             'interest_adventure': 1 if len(user_survey) > 0 and any(
-                any(keyword in str(interest).lower() for keyword in ['adventure', 'mountains'])
+                str(interest).lower() in ['adventure', 'sports']
                 for interest in user_survey['interests'].iloc[0] or []
             ) else 0,
             'interest_cultural': 1 if len(user_survey) > 0 and any(
-                any(keyword in str(interest).lower() for keyword in ['culture', 'history', 'art', 'architecture'])
+                str(interest).lower() in ['culture', 'art', 'shopping']
                 for interest in user_survey['interests'].iloc[0] or []
             ) else 0,
             'interest_relaxation': 1 if len(user_survey) > 0 and any(
-                any(keyword in str(interest).lower() for keyword in ['beaches', 'music'])
+                str(interest).lower() in ['beach', 'wellness']
                 for interest in user_survey['interests'].iloc[0] or []
             ) else 0,
             'interest_social': 1 if len(user_survey) > 0 and any(
-                any(keyword in str(interest).lower() for keyword in ['food'])
+                str(interest).lower() in ['food', 'nightlife', 'entertainment']
                 for interest in user_survey['interests'].iloc[0] or []
             ) else 0,
             'interest_nature': 1 if len(user_survey) > 0 and any(
-                any(keyword in str(interest).lower() for keyword in ['nature', 'wildlife', 'photography'])
+                str(interest).lower() in ['wildlife', 'photography']
                 for interest in user_survey['interests'].iloc[0] or []
             ) else 0,
             
             # Budget preference (encoded based on numerical ranges)
-            'budget_score': encode_budget_score(user_survey['experience_budget'].iloc[0]) if len(user_survey) > 0 else 2
+            'budget_score': encode_budget_score(user_survey['experience_budget'].iloc[0]) if len(user_survey) > 0 else 2,
+            
+            # Travel style one-hot encoding (4 categories: social, business, family, romantic)
+            'travel_style_social': 1 if len(user_survey) > 0 and user_survey['travel_style'].iloc[0].lower() == 'social' else 0,
+            'travel_style_business': 1 if len(user_survey) > 0 and user_survey['travel_style'].iloc[0].lower() == 'business' else 0,
+            'travel_style_family': 1 if len(user_survey) > 0 and user_survey['travel_style'].iloc[0].lower() == 'family' else 0,
+            'travel_style_romantic': 1 if len(user_survey) > 0 and user_survey['travel_style'].iloc[0].lower() == 'romantic' else 0
         }
         
         features.append(feature_vector)
@@ -179,20 +242,34 @@ def process_user_features(**context):
     return json.dumps(features)
 
 def cluster_users(**context):
-    """Perform K-means clustering on user features"""
+    """Perform K-means clustering (full refresh) or assign to existing clusters (incremental)"""
     
     # Get processed features
     features_json = context['ti'].xcom_pull(task_ids='process_user_features')
     features = json.loads(features_json)
     
+    # Get data extraction results to check if full refresh
+    extraction_data = context['ti'].xcom_pull(task_ids='extract_user_data')
+    is_full_refresh = extraction_data['is_full_refresh']
+    
     df = pd.DataFrame(features)
+    
+    # If no users to process, return early
+    if len(df) == 0:
+        print("No users to process. Skipping clustering.")
+        return {
+            'user_clusters': json.dumps([]),
+            'user_features': json.dumps([]),
+            'cluster_profiles': json.dumps({})
+        }
     
     # Select numerical features for clustering
     clustering_features = [
         'interests_count', 'total_bookings', 'avg_booking_amount', 
         'completion_rate', 'countries_visited', 'review_activity', 
         'avg_rating_given', 'interest_adventure', 'interest_cultural', 
-        'interest_relaxation', 'interest_social', 'interest_nature', 'budget_score'
+        'interest_relaxation', 'interest_social', 'interest_nature', 'budget_score',
+        'travel_style_social', 'travel_style_business', 'travel_style_family', 'travel_style_romantic'
     ]
     
     # Fill NaN values with 0
@@ -202,33 +279,162 @@ def cluster_users(**context):
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     
-    # Perform K-means clustering (4 clusters for different traveler types)
-    kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
-    clusters = kmeans.fit_predict(X_scaled)
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
+    
+    # Create cluster_models table if it doesn't exist (needed for both modes)
+    pg_hook.run("""
+        CREATE TABLE IF NOT EXISTS cluster_models (
+            model_name VARCHAR(100) PRIMARY KEY,
+            model_data JSONB,
+            last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    if is_full_refresh:
+        print("FULL REFRESH MODE: Re-clustering all users")
+        
+        # Perform K-means clustering (4 clusters for different traveler types)
+        kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+        clusters = kmeans.fit_predict(X_scaled)
+        
+        # Save cluster centers and scaler parameters for incremental updates
+        cluster_model_data = {
+            'cluster_centers': kmeans.cluster_centers_.tolist(),
+            'scaler_mean': scaler.mean_.tolist(),
+            'scaler_scale': scaler.scale_.tolist(),
+            'n_clusters': 4
+        }
+        
+        # Save model to database
+        pg_hook.run("""
+            INSERT INTO cluster_models (model_name, model_data, last_updated)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (model_name)
+            DO UPDATE SET 
+                model_data = EXCLUDED.model_data,
+                last_updated = CURRENT_TIMESTAMP
+        """, parameters=['user_clustering_model', json.dumps(cluster_model_data)])
+        
+    else:
+        print("INCREMENTAL MODE: Assigning new users to existing clusters")
+        
+        # Load existing cluster model from database
+        model_result = pg_hook.get_first("""
+            SELECT model_data FROM cluster_models WHERE model_name = 'user_clustering_model'
+        """)
+        
+        if not model_result:
+            print("WARNING: No existing cluster model found. Falling back to full clustering.")
+            # Fallback to full clustering
+            kmeans = KMeans(n_clusters=4, random_state=42, n_init=10)
+            clusters = kmeans.fit_predict(X_scaled)
+            
+            # Save the model for future incremental runs
+            cluster_model_data = {
+                'cluster_centers': kmeans.cluster_centers_.tolist(),
+                'scaler_mean': scaler.mean_.tolist(),
+                'scaler_scale': scaler.scale_.tolist(),
+                'n_clusters': 4
+            }
+            
+            pg_hook.run("""
+                INSERT INTO cluster_models (model_name, model_data, last_updated)
+                VALUES (%s, %s, CURRENT_TIMESTAMP)
+                ON CONFLICT (model_name)
+                DO UPDATE SET 
+                    model_data = EXCLUDED.model_data,
+                    last_updated = CURRENT_TIMESTAMP
+            """, parameters=['user_clustering_model', json.dumps(cluster_model_data)])
+            
+            print("Saved cluster model to database for future incremental runs")
+        else:
+            # Load saved cluster centers and scaler
+            model_data = model_result[0]
+            cluster_centers = np.array(model_data['cluster_centers'])
+            
+            # Recreate scaler with saved parameters
+            saved_scaler = StandardScaler()
+            saved_scaler.mean_ = np.array(model_data['scaler_mean'])
+            saved_scaler.scale_ = np.array(model_data['scaler_scale'])
+            
+            # Re-scale features using saved scaler parameters
+            X_scaled = (X - saved_scaler.mean_) / saved_scaler.scale_
+            
+            # Assign new users to nearest existing cluster
+            distances = cdist(X_scaled, cluster_centers, metric='euclidean')
+            clusters = np.argmin(distances, axis=1)
+            
+            print(f"Assigned {len(clusters)} new users to existing clusters")
     
     # Add cluster labels to user data
     df['cluster'] = clusters
     
-    # Create cluster profiles
+    # Create cluster profiles based on ALL users in database (not just new ones)
+    # This ensures cluster profiles always represent the complete user base
+    print("Calculating cluster profiles from all users in database...")
+    
+    all_users_query = """
+    SELECT 
+        user_id,
+        cluster_id,
+        profile_data
+    FROM user_analytics_profile
+    """
+    all_users_df = pd.read_sql(all_users_query, pg_hook.get_sqlalchemy_engine())
+    
     cluster_profiles = {}
-    for cluster_id in range(4):
-        cluster_users = df[df['cluster'] == cluster_id]
-        
-        profile = {
-            'cluster_id': int(cluster_id),
-            'user_count': len(cluster_users),
-            'avg_budget_score': float(cluster_users['budget_score'].mean()),
-            'dominant_travel_style': cluster_users['travel_style'].mode().iloc[0] if len(cluster_users) > 0 else 'unknown',
-            'avg_booking_amount': float(cluster_users['avg_booking_amount'].mean()),
-            'interest_preferences': {
-                'adventure': float(cluster_users['interest_adventure'].mean()),
-                'cultural': float(cluster_users['interest_cultural'].mean()),
-                'relaxation': float(cluster_users['interest_relaxation'].mean()),
-                'social': float(cluster_users['interest_social'].mean()),
-                'nature': float(cluster_users['interest_nature'].mean())
+    if len(all_users_df) > 0:
+        # Extract features from profile_data JSONB column
+        all_users_features = []
+        for _, row in all_users_df.iterrows():
+            profile = row['profile_data']
+            feature_dict = {
+                'user_id': row['user_id'],
+                'cluster': row['cluster_id'],
+                'budget_score': profile.get('budget_score', 2),
+                'avg_booking_amount': profile.get('avg_booking_amount', 0),
+                'travel_style': profile.get('travel_style', 'unknown'),
+                'travel_style_social': profile.get('travel_style_social', 0),
+                'travel_style_business': profile.get('travel_style_business', 0),
+                'travel_style_family': profile.get('travel_style_family', 0),
+                'travel_style_romantic': profile.get('travel_style_romantic', 0),
+                'interest_adventure': profile.get('interest_adventure', 0),
+                'interest_cultural': profile.get('interest_cultural', 0),
+                'interest_relaxation': profile.get('interest_relaxation', 0),
+                'interest_social': profile.get('interest_social', 0),
+                'interest_nature': profile.get('interest_nature', 0)
             }
-        }
-        cluster_profiles[cluster_id] = profile
+            all_users_features.append(feature_dict)
+        
+        all_users_full_df = pd.DataFrame(all_users_features)
+        
+        # Calculate profiles for each cluster based on ALL users
+        for cluster_id in range(4):
+            cluster_users = all_users_full_df[all_users_full_df['cluster'] == cluster_id]
+            
+            if len(cluster_users) > 0:
+                profile = {
+                    'cluster_id': int(cluster_id),
+                    'user_count': len(cluster_users),
+                    'avg_budget_score': float(cluster_users['budget_score'].mean()),
+                    'dominant_travel_style': cluster_users['travel_style'].mode().iloc[0] if len(cluster_users) > 0 else 'unknown',
+                    'avg_booking_amount': float(cluster_users['avg_booking_amount'].mean()),
+                    'travel_style_preferences': {
+                        'social': float(cluster_users['travel_style_social'].mean()),
+                        'business': float(cluster_users['travel_style_business'].mean()),
+                        'family': float(cluster_users['travel_style_family'].mean()),
+                        'romantic': float(cluster_users['travel_style_romantic'].mean())
+                    },
+                    'interest_preferences': {
+                        'adventure': float(cluster_users['interest_adventure'].mean()),
+                        'cultural': float(cluster_users['interest_cultural'].mean()),
+                        'relaxation': float(cluster_users['interest_relaxation'].mean()),
+                        'social': float(cluster_users['interest_social'].mean()),
+                        'nature': float(cluster_users['interest_nature'].mean())
+                    }
+                }
+                cluster_profiles[cluster_id] = profile
+                print(f"Cluster {cluster_id}: {len(cluster_users)} total users")
     
     return {
         'user_clusters': df[['user_id', 'cluster']].to_json(orient='records'), # Save user cluster assignments
@@ -301,7 +507,42 @@ def save_analytics_results(**context):
     print(f"Successfully updated profiles for {len(user_clusters)} users across {len(cluster_profiles)} clusters")
     return "Analytics pipeline completed successfully"
 
+def update_watermark(**context):
+    """Update the pipeline watermark with current timestamp"""
+    
+    pg_hook = PostgresHook(postgres_conn_id='trippy_db')
+    
+    # Use CURRENT_TIMESTAMP from database (no timezone conversion)
+    # This ensures watermark matches the timestamps in the database tables
+    upsert_watermark = """
+    INSERT INTO pipeline_watermarks (pipeline_name, last_run_timestamp, last_updated)
+    VALUES (%s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (pipeline_name)
+    DO UPDATE SET 
+        last_run_timestamp = CURRENT_TIMESTAMP,
+        last_updated = CURRENT_TIMESTAMP
+    """
+    
+    pg_hook.run(upsert_watermark, parameters=['user_profile_analytics'])
+    
+    # Get the updated timestamp for logging
+    result = pg_hook.get_first("""
+        SELECT last_run_timestamp 
+        FROM pipeline_watermarks 
+        WHERE pipeline_name = 'user_profile_analytics'
+    """)
+    
+    updated_time = result[0] if result else 'unknown'
+    print(f"Updated watermark to: {updated_time}")
+    return "Watermark updated successfully"
+
 # Define tasks
+get_watermark_task = PythonOperator(
+    task_id='get_last_run_timestamp',
+    python_callable=get_last_run_timestamp,
+    dag=dag,
+)
+
 extract_task = PythonOperator(
     task_id='extract_user_data',
     python_callable=extract_user_data,
@@ -326,5 +567,12 @@ save_task = PythonOperator(
     dag=dag,
 )
 
+update_watermark_task = PythonOperator(
+    task_id='update_watermark',
+    python_callable=update_watermark,
+    dag=dag,
+)
+
 # Define task dependencies
-extract_task >> process_task >> cluster_task >> save_task
+# Flow: Get last run time -> Extract data -> Process -> Cluster -> Save -> Update watermark
+get_watermark_task >> extract_task >> process_task >> cluster_task >> save_task >> update_watermark_task

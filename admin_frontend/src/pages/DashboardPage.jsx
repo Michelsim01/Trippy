@@ -46,7 +46,8 @@ const DashboardPage = () => {
   const [categoriesData, setCategoriesData] = useState(null);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [topExperiences, setTopExperiences] = useState([]);
-  const [pendingExperiences, setPendingExperiences] = useState([]);
+  const [kycMetrics, setKycMetrics] = useState({ pendingSubmissions: 0 });
+  const [ticketMetrics, setTicketMetrics] = useState({ openTickets: 0 });
   const [dashboardLoading, setDashboardLoading] = useState(true);
 
   useEffect(() => {
@@ -65,11 +66,12 @@ const DashboardPage = () => {
         }
 
         // Fetch chart data and dashboard data
-        const [revenueResponse, categoriesResponse, topExperiencesResponse, pendingExperiencesResponse] = await Promise.all([
+        const [revenueResponse, categoriesResponse, topExperiencesResponse, kycMetricsResponse, ticketMetricsResponse] = await Promise.all([
           adminService.getRevenueChartData(),
           adminService.getCategoriesChartData(),
           adminService.getTopPerformingExperiences(),
-          adminService.getPendingExperiences()
+          adminService.getKYCMetrics(),
+          adminService.getTicketMetrics()
         ]);
 
         if (revenueResponse.success) {
@@ -84,8 +86,12 @@ const DashboardPage = () => {
           setTopExperiences(topExperiencesResponse.data);
         }
 
-        if (pendingExperiencesResponse.success) {
-          setPendingExperiences(pendingExperiencesResponse.data);
+        if (kycMetricsResponse.success) {
+          setKycMetrics(kycMetricsResponse.data);
+        }
+
+        if (ticketMetricsResponse.success) {
+          setTicketMetrics(ticketMetricsResponse.data);
         }
 
       } catch (err) {
@@ -473,56 +479,66 @@ const DashboardPage = () => {
           )}
         </div>
 
-        {/* Pending Experiences */}
+        {/* Pending Actions */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Pending Approvals</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Pending Actions</h3>
             <AlertCircle className="w-5 h-5 text-orange-500" />
           </div>
           {dashboardLoading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : pendingExperiences.length > 0 ? (
-            <div className="space-y-3">
-              {pendingExperiences.map((experience, index) => (
-                <div key={experience.id} className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{experience.title}</p>
-                    <div className="flex items-center space-x-4 mt-1">
-                      <span className="text-xs text-gray-500">{experience.category}</span>
-                      <span className="text-xs text-gray-500">{experience.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2 mt-1">
-                      <span className="text-xs text-gray-500">by {experience.guideName}</span>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">
-                          {new Date(experience.submittedAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button className="p-1 text-green-600 hover:text-green-700" title="Approve">
-                      <CheckCircle className="w-4 h-4" />
-                    </button>
-                    <button className="p-1 text-red-600 hover:text-red-700" title="Reject">
-                      <AlertCircle className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-4">
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
+              <div className="animate-pulse">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              </div>
             </div>
           ) : (
-            <div className="text-center py-8">
-              <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <p className="text-gray-500">No pending approvals</p>
+            <div className="space-y-4">
+              {/* KYC Submissions */}
+              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                    <Users className="w-4 h-4 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">KYC Submissions</p>
+                    <p className="text-xs text-gray-500">Awaiting verification</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-orange-600">{kycMetrics.pendingSubmissions || 0}</p>
+                  <p className="text-xs text-gray-500">pending</p>
+                </div>
+              </div>
+
+              {/* Open Tickets */}
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Support Tickets</p>
+                    <p className="text-xs text-gray-500">Requiring attention</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-blue-600">{ticketMetrics.openTickets || 0}</p>
+                  <p className="text-xs text-gray-500">open</p>
+                </div>
+              </div>
+
+              {/* Show message if no pending actions */}
+              {(kycMetrics.pendingSubmissions || 0) === 0 && (ticketMetrics.openTickets || 0) === 0 && (
+                <div className="text-center py-8">
+                  <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+                  <p className="text-gray-500">No pending actions</p>
+                </div>
+              )}
             </div>
           )}
         </div>
