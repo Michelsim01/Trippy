@@ -30,6 +30,9 @@ public class RegisterRequest {
              message = "Password must contain at least one lowercase letter, one uppercase letter, and one number")
     private String password;
     
+    // Admin code for admin registration
+    private String adminCode;
+    
     
     // Default constructor
     public RegisterRequest() {}
@@ -40,6 +43,15 @@ public class RegisterRequest {
         this.lastName = lastName;
         this.email = email;
         this.password = password;
+    }
+    
+    // Constructor with admin code
+    public RegisterRequest(String firstName, String lastName, String email, String password, String adminCode) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.password = password;
+        this.adminCode = adminCode;
     }
     
     // Getters and setters
@@ -74,6 +86,14 @@ public class RegisterRequest {
     
     public void setPassword(String password) {
         this.password = password;
+    }
+    
+    public String getAdminCode() {
+        return adminCode;
+    }
+    
+    public void setAdminCode(String adminCode) {
+        this.adminCode = adminCode;
     }
     
     

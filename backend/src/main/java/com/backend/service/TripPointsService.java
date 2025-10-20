@@ -27,9 +27,19 @@ public class TripPointsService {
     private UserRepository userRepository;
 
     /**
-     * Get current balance for a user
+     * Get current balance for a user (optimized - from User table)
      */
     public Integer getPointsBalance(Long userId) {
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        return user.getTripPoints() != null ? user.getTripPoints() : 0;
+    }
+
+    /**
+     * Get current balance for a user (legacy method - from TripPoints table)
+     * This method is kept for backward compatibility and data consistency checks
+     */
+    public Integer getPointsBalanceFromTransactions(Long userId) {
         Integer balance = tripPointsRepository.getCurrentBalanceByUserId(userId);
         return balance != null ? balance : 0;
     }
@@ -79,7 +89,10 @@ public class TripPointsService {
             throw new IllegalArgumentException("Points to redeem must be positive");
         }
         
-        Integer currentBalance = getPointsBalance(userId);
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        
+        Integer currentBalance = user.getTripPoints() != null ? user.getTripPoints() : 0;
         if (currentBalance < pointsToRedeem) {
             throw new IllegalArgumentException("Insufficient points balance");
         }
@@ -94,13 +107,20 @@ public class TripPointsService {
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
         
-        Integer currentBalance = getPointsBalance(userId);
+        Integer currentBalance = user.getTripPoints() != null ? user.getTripPoints() : 0;
         Integer newBalance = currentBalance + pointsChange;
         
         TripPoints transaction = new TripPoints(user, transactionType, pointsChange, newBalance);
         transaction.setReferenceId(referenceId);
         
-        return tripPointsRepository.save(transaction);
+        // Save the transaction
+        TripPoints savedTransaction = tripPointsRepository.save(transaction);
+        
+        // Update the user's trip_points field for efficient access
+        user.setTripPoints(newBalance);
+        userRepository.save(user);
+        
+        return savedTransaction;
     }
 
     /**

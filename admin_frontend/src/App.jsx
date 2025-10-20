@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminSignupPage from './pages/AdminSignupPage';
+import AdminForgotPasswordPage from './pages/AdminForgotPasswordPage';
+import AdminResetPasswordPage from './pages/AdminResetPasswordPage';
 import AdminLayout from './components/AdminLayout';
 import DashboardPage from './pages/DashboardPage';
 import UserManagementPage from './pages/UserManagementPage';
@@ -72,6 +74,14 @@ const AppRoutes = () => {
       <Route 
         path="/admin/signup" 
         element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminSignupPage />} 
+      />
+      <Route 
+        path="/admin/forgot-password" 
+        element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminForgotPasswordPage />} 
+      />
+      <Route 
+        path="/admin/reset-password" 
+        element={isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <AdminResetPasswordPage />} 
       />
       <Route 
         path="/admin/dashboard" 

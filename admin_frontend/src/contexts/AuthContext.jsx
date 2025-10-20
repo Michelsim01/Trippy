@@ -96,9 +96,26 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Login failed:', error);
+      
+      // Handle different error response formats
+      let errorMessage = 'Login failed';
+      
+      if (error.response?.data) {
+        // Backend returns error as plain string in response body
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.response.data.error) {
+          errorMessage = error.response.data.error;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || error.message || 'Login failed' 
+        error: errorMessage
       };
     }
   };
@@ -109,9 +126,8 @@ export const AuthProvider = ({ children }) => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
-        password: formData.password
-        // Note: Backend doesn't support isAdmin or phoneNumber in registration
-        // Admin privileges would need to be granted after email verification
+        password: formData.password,
+        adminCode: formData.adminCode
       });
 
       // Registration creates a pending user, not an immediate login
@@ -122,9 +138,24 @@ export const AuthProvider = ({ children }) => {
       };
     } catch (error) {
       console.error('Signup failed:', error);
+      
+      // Handle different error response formats
+      let errorMessage = 'Signup failed';
+      
+      if (error.response?.data) {
+        // Backend returns error as plain string in response body
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return { 
         success: false, 
-        error: error.response?.data?.message || error.message || 'Signup failed' 
+        error: errorMessage
       };
     }
   };
@@ -138,6 +169,85 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const forgotPassword = async (email) => {
+    try {
+      const response = await axios.post('http://localhost:8080/api/auth/forgot-password', { email });
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      // Handle different error response formats
+      let errorMessage = 'Failed to send reset instructions';
+      
+      if (error.response?.data) {
+        // Backend returns error as plain string in response body
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  };
+
+  const validateResetToken = async (token) => {
+    try {
+      const response = await axios.get(`http://localhost:8080/api/auth/validate-reset-token?token=${token}`);
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Invalid or expired token',
+      };
+    }
+  };
+
+  const resetPassword = async (token, newPassword) => {
+    try {
+      const response = await axios.post('http://localhost:8080/api/auth/reset-password', {
+        token,
+        newPassword
+      });
+      
+      return {
+        success: true,
+        data: response.data,
+      };
+    } catch (error) {
+      // Handle different error response formats
+      let errorMessage = 'Failed to reset password';
+      
+      if (error.response?.data) {
+        // Backend returns error as plain string in response body
+        if (typeof error.response.data === 'string') {
+          errorMessage = error.response.data;
+        } else if (error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
@@ -145,7 +255,10 @@ export const AuthProvider = ({ children }) => {
     token,
     login,
     signup,
-    logout
+    logout,
+    forgotPassword,
+    validateResetToken,
+    resetPassword
   };
 
   return (

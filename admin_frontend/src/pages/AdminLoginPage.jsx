@@ -69,6 +69,16 @@ const AdminLoginPage = () => {
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                   <p className="text-red-600 text-sm">{error}</p>
+                  {error.includes('No account found') && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Don't have an admin account? <Link to="/admin/signup" className="underline hover:text-red-700">Create one here</Link>
+                    </p>
+                  )}
+                  {error.includes('Incorrect password') && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Forgot your password? <Link to="/admin/forgot-password" className="underline hover:text-red-700">Reset it here</Link>
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -120,9 +130,9 @@ const AdminLoginPage = () => {
                   <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
-                <a href="#" className="text-sm text-blue-600 hover:text-blue-500">
+                <Link to="/admin/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
                   Forgot Password?
-                </a>
+                </Link>
               </div>
 
               <button

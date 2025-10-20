@@ -27,12 +27,16 @@ Triggered on:
    - Production build
    
 4. **Integration Verification**
-   - Ensures all artifacts are created
-   - Validates build outputs
+   - Cross-component dependency validation
+   - Artifact integrity checks
+   - End-to-end build verification
+   - Deployment readiness validation
    
 5. **Security Scanning**
-   - Trivy vulnerability scanner
-   - Results uploaded to GitHub Security tab
+   - Comprehensive vulnerability assessment
+   - Multi-format security reporting
+   - Dependency security validation
+   - SARIF integration with GitHub Security
 
 ## 🚫 Email Test Exclusion
 
@@ -83,7 +87,151 @@ After successful CI runs, the following artifacts are available:
 - `frontend/package.json`: Build and lint scripts
 - `admin_frontend/package.json`: Build and lint scripts
 
-## 🚨 Troubleshooting
+## � Integration Verification - Detailed Process
+
+### **What Integration Verification Does:**
+
+1. **Cross-Component Dependency Validation**
+   - Runs **after** all individual component builds succeed
+   - Uses GitHub Actions `needs: [backend, frontend, admin-frontend]` dependency
+   - Ensures no component can pass integration if any dependency fails
+
+2. **Artifact Download & Validation**
+   ```bash
+   # Downloads all build artifacts from previous jobs
+   - backend-jar/*.jar
+   - frontend-dist/ (Vite production build)
+   - admin-frontend-dist/ (Vite production build)
+   ```
+
+3. **File System Integrity Checks**
+   - **Backend JAR Validation**: Verifies Spring Boot executable JAR exists
+   - **Frontend Build Validation**: Confirms Vite dist folder with static assets
+   - **Admin Frontend Build Validation**: Ensures admin interface build artifacts
+   - **Fail-Fast Logic**: Exits immediately if any component missing
+
+4. **Deployment Readiness Assessment**
+   - Validates all components can be deployed together
+   - Ensures no broken cross-dependencies
+   - Confirms artifact completeness for production deployment
+
+### **Integration Verification Flow:**
+```mermaid
+graph TD
+    A[Backend Build] --> D[Integration Job]
+    B[Frontend Build] --> D
+    C[Admin Frontend Build] --> D
+    D --> E[Download All Artifacts]
+    E --> F[List & Inspect Artifacts]
+    F --> G[Verify JAR Exists]
+    G --> H[Verify Frontend Dist]
+    H --> I[Verify Admin Dist]
+    I --> J[✅ All Components Ready]
+    G --> K[❌ Fail Pipeline]
+    H --> K
+    I --> K
+```
+
+## 🛡️ Security Scanning - Comprehensive Analysis
+
+### **Trivy Security Scanner Implementation:**
+
+1. **Dual-Format Scanning**
+   - **JSON Format**: Machine-readable results for automation
+   - **Table Format**: Human-readable console output
+
+2. **Filesystem Scan Scope**
+   ```yaml
+   scan-type: 'fs'        # Filesystem scan
+   scan-ref: '.'          # Entire project root
+   ```
+
+3. **What Trivy Scans:**
+   - **Dependencies**: Maven (pom.xml), npm (package.json, package-lock.json)
+   - **Container Images**: Dockerfile analysis
+   - **Configuration Files**: Infrastructure as Code vulnerabilities
+   - **Source Code**: Static analysis for known vulnerability patterns
+
+### **Vulnerability Assessment Process:**
+
+1. **Multi-Level Severity Classification**
+   ```bash
+   LOW → MEDIUM → HIGH → CRITICAL
+   ```
+
+2. **Critical/High Vulnerability Detection**
+   ```bash
+   HIGH_CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | 
+     select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length' 
+     trivy-results.json)
+   ```
+
+3. **Smart Failure Handling**
+   - **Warns** about HIGH/CRITICAL vulnerabilities
+   - **Continues** build (doesn't block deployment)
+   - **Uploads** detailed reports for review
+
+### **Security Report Artifacts:**
+
+1. **trivy-results.json**
+   - Structured vulnerability data
+   - CVE details, CVSS scores
+   - Package-level vulnerability mapping
+   - Fix recommendations
+
+2. **trivy-results.txt**
+   - Console-friendly vulnerability summary
+   - Quick vulnerability overview
+   - Severity-grouped findings
+
+### **GitHub Security Integration:**
+
+- **Retention**: Security reports kept for 30 days
+- **Accessibility**: Available in Actions artifacts
+- **Automation-Ready**: JSON format enables further processing
+- **Visibility**: Security tab integration (if SARIF format added)
+
+### **Example Security Scan Output:**
+```
+🔍 Security Scan Results Summary
+================================
+High/Critical vulnerabilities found: 3
+
+⚠️ WARNING: Found 3 HIGH or CRITICAL vulnerabilities!
+Please review the detailed report in the artifacts.
+
+Vulnerabilities by Severity:
+- CRITICAL: 1 (Spring Boot vulnerable dependency)
+- HIGH: 2 (npm packages with known exploits)
+- MEDIUM: 15 (various dependency issues)
+- LOW: 45 (informational findings)
+```
+
+## �🚨 Troubleshooting
+
+### **Integration Verification Issues:**
+
+1. **Artifact Missing Errors**
+   - Check individual job logs for build failures
+   - Verify upload-artifact paths match download expectations
+   - Ensure working-directory is correct in build steps
+
+2. **Cross-Component Dependencies**
+   - Review `needs:` dependencies in workflow
+   - Check if any component job failed silently
+   - Validate artifact naming consistency
+
+### **Security Scanning Issues:**
+
+1. **Trivy Scanner Failures**
+   - Network connectivity to vulnerability databases
+   - File permissions for scanning directories
+   - Insufficient disk space for scan results
+
+2. **High Vulnerability Counts**
+   - Review dependency versions for known CVEs
+   - Update packages to patched versions
+   - Consider vulnerability suppression for false positives
 
 ### Common Issues
 
@@ -98,6 +246,64 @@ After successful CI runs, the following artifacts are available:
 
 3. **Build failures**
    - Check Node.js version (should be 18+)
+
+## 🎯 Integration Verification Benefits
+
+### **Why Integration Verification Matters:**
+
+1. **🔄 Cross-Component Compatibility**
+   - Ensures frontend can communicate with backend APIs
+   - Validates admin interface works with same backend
+   - Catches integration issues early in development
+
+2. **📦 Deployment Confidence**
+   - Guarantees all necessary files exist for deployment
+   - Validates artifact integrity before production
+   - Reduces failed deployment scenarios
+
+3. **🔍 Comprehensive Testing**
+   - Goes beyond unit tests to system-level validation
+   - Tests the complete application stack
+   - Identifies issues that only appear when components interact
+
+## 🛡️ Security Scanning Benefits
+
+### **Proactive Security Management:**
+
+1. **🚨 Early Vulnerability Detection**
+   - Identifies security issues before production deployment
+   - Catches vulnerable dependencies during development
+   - Provides automated security monitoring
+
+2. **📊 Comprehensive Coverage**
+   - **Backend**: Java dependencies, Spring Boot vulnerabilities
+   - **Frontend**: npm package vulnerabilities, JavaScript security issues
+   - **Infrastructure**: Docker and configuration security
+
+3. **🔧 Actionable Intelligence**
+   - Provides specific CVE details and fix recommendations
+   - Prioritizes vulnerabilities by severity (CRITICAL → LOW)
+   - Includes remediation guidance for developers
+
+### **Security Scan Coverage Examples:**
+
+**Backend Vulnerabilities:**
+- Spring Boot version vulnerabilities
+- Maven dependency CVEs
+- Java runtime security issues
+- Database driver vulnerabilities
+
+**Frontend Vulnerabilities:**
+- npm package security issues
+- React/Vite framework vulnerabilities
+- JavaScript dependency chain issues
+- Build tool security problems
+
+**Infrastructure Vulnerabilities:**
+- Docker base image issues
+- Configuration security misconfigurations
+- File permission problems
+- Network security concerns
    - Clear node_modules and reinstall: `rm -rf node_modules && npm install`
 
 ### Manual Testing Commands

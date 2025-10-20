@@ -5,146 +5,212 @@ import com.backend.dto.request.RegisterRequest;
 import com.backend.dto.response.AuthResponse;
 import com.backend.dto.response.RegistrationResponse;
 import com.backend.entity.User;
+import com.backend.entity.PendingUser;
 import com.backend.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
+import com.backend.repository.PendingUserRepository;
+import com.backend.util.JwtUtil;
+
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
 
-/**
- * Test class for AuthService.
- * Tests the core authentication business logic.
- */
-@SpringBootTest
-@ActiveProfiles("test")
-@Transactional
-public class AuthServiceTest {
+@ExtendWith(MockitoExtension.class)
+class AuthServiceTest {
 
-    @Autowired
+    @Mock
+    private UserRepository userRepository;
+    
+    @Mock
+    private PendingUserRepository pendingUserRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    
+    @Mock
+    private JwtUtil jwtUtil;
+    
+    @Mock
+    private EmailVerificationService emailVerificationService;
+    
+    @Mock
+    private AuthenticationManager authenticationManager;
+
+    @InjectMocks
     private AuthService authService;
 
-    @Autowired
-    private UserRepository userRepository;
+    @Test
+    void testRegister_SuccessfulRegistration_ReturnsSuccessResponse() throws Exception {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password");
+        request.setFirstName("John");
+        request.setLastName("Doe");
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(pendingUserRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
+        when(emailVerificationService.generateVerificationToken()).thenReturn("verification-token");
 
-    @BeforeEach
-    void setUp() {
-        // Clear database before each test
-        userRepository.deleteAll();
+        PendingUser savedPendingUser = new PendingUser("test@example.com", "encodedPassword", 
+                                                      "John", "Doe", "verification-token");
+        when(pendingUserRepository.save(any(PendingUser.class))).thenReturn(savedPendingUser);
+
+        // Act
+        RegistrationResponse result = authService.register(request);
+
+        // Assert
+        assertNotNull(result);
+        assertTrue(result.isSuccess());
+        assertEquals("Registration successful! Please check your email to verify your account.", result.getMessage());
+        assertEquals("test@example.com", result.getEmail());
+
+        verify(userRepository).existsByEmail("test@example.com");
+        verify(pendingUserRepository).existsByEmail("test@example.com");
+        verify(passwordEncoder).encode("password");
+        verify(pendingUserRepository).save(any(PendingUser.class));
+        verify(emailVerificationService).sendVerificationEmail("test@example.com", "verification-token");
+    }
+    
+    @Test
+    void testRegister_EmailAlreadyExists_ThrowsException() {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password");
+
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(true);
+
+        // Act & Assert
+        Exception exception = assertThrows(Exception.class, () -> authService.register(request));
+        assertEquals("User with email test@example.com already exists", exception.getMessage());
+
+        verify(userRepository).existsByEmail("test@example.com");
+        verify(pendingUserRepository, never()).save(any(PendingUser.class));
     }
 
     @Test
-    void testUserRegistration() throws Exception {
-        // Given
-        RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setFirstName("Test");
-        registerRequest.setLastName("User");
-        registerRequest.setEmail("test@example.com");
-        registerRequest.setPassword("Password123");
+    void testRegister_EmailSendingFails_ThrowsException() throws Exception {
+        // Arrange
+        RegisterRequest request = new RegisterRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password");
+        request.setFirstName("John");
+        request.setLastName("Doe");
 
-        // When
-        RegistrationResponse response = authService.register(registerRequest);
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(pendingUserRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("password")).thenReturn("encodedPassword");
+        when(emailVerificationService.generateVerificationToken()).thenReturn("verification-token");
 
-        // Then
-        assertNotNull(response);
-        assertTrue(response.isSuccess());
-        assertEquals("test@example.com", response.getEmail());
-        assertNotNull(response.getMessage());
+        PendingUser savedPendingUser = new PendingUser("test@example.com", "encodedPassword", 
+                                                      "John", "Doe", "verification-token");
+        when(pendingUserRepository.save(any(PendingUser.class))).thenReturn(savedPendingUser);
+        doThrow(new RuntimeException("Email service unavailable"))
+            .when(emailVerificationService).sendVerificationEmail(anyString(), anyString());
 
-        // Verify pending user was saved (not actual user yet)
-        // The actual user will be created after email verification
+        // Act & Assert
+        Exception exception = assertThrows(Exception.class, () -> authService.register(request));
+        assertEquals("Failed to send verification email. Please try again.", exception.getMessage());
+
+        verify(pendingUserRepository).delete(savedPendingUser);
     }
 
     @Test
-    void testUserLogin() throws Exception {
-        // Given - Create a user first
+    void testLogin_CorrectCredentials_ReturnsAuthResponse() throws Exception {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password");
+
         User user = new User();
-        user.setEmail("login@example.com");
-        user.setPassword(passwordEncoder.encode("Password123"));
-        user.setFirstName("Login");
-        user.setLastName("User");
-        user.setIsActive(true);
-        user.setIsEmailVerified(false);
-        user.setIsAdmin(false);
-        user.setCanCreateExperiences(false);
-        userRepository.save(user);
+        user.setId(1L);
+        user.setEmail("test@example.com");
+        user.setFirstName("John");
+        user.setLastName("Doe");
+        user.setIsEmailVerified(true);
 
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("login@example.com");
-        loginRequest.setPassword("Password123");
+        UserDetails userDetails = mock(UserDetails.class);
+        Authentication authentication = mock(Authentication.class);
 
-        // When
-        AuthResponse response = authService.login(loginRequest);
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenReturn(authentication);
+        when(authentication.getPrincipal()).thenReturn(userDetails);
+        when(authentication.getAuthorities()).thenAnswer(invocation -> List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(user));
+        when(jwtUtil.generateToken(userDetails)).thenReturn("jwt-token");
 
-        // Then
-        assertNotNull(response);
-        assertNotNull(response.getToken());
-        assertEquals("Bearer", response.getType());
-        assertEquals("Login User", response.getUsername());
-        assertEquals("login@example.com", response.getEmail());
+        // Act
+        AuthResponse result = authService.login(request);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals("jwt-token", result.getToken());
+        assertEquals("Bearer", result.getType());
+        assertEquals("John Doe", result.getUsername());
+        assertEquals("test@example.com", result.getEmail());
+        assertEquals(List.of("ROLE_USER"), result.getRoles());
+        assertTrue(result.isEmailVerified());
+        assertEquals(1L, result.getUserId());
+
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(userRepository).findByEmail("test@example.com");
+        verify(userRepository).save(user); // Verify last login time was updated
+        verify(jwtUtil).generateToken(userDetails);
     }
 
     @Test
-    void testRegistrationWithDuplicateEmail() {
-        // Given - Create first user
-        User existingUser = new User();
-        existingUser.setEmail("duplicate@example.com");
-        existingUser.setPassword(passwordEncoder.encode("Password123"));
-        existingUser.setFirstName("Existing");
-        existingUser.setLastName("User");
-        existingUser.setIsActive(true);
-        userRepository.save(existingUser);
+    void testLogin_InvalidCredentials_ThrowsException() {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("wrongPassword");
 
-        RegisterRequest registerRequest = new RegisterRequest();
-        registerRequest.setFirstName("New");
-        registerRequest.setLastName("User");
-        registerRequest.setEmail("duplicate@example.com");
-        registerRequest.setPassword("Password123");
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenThrow(new RuntimeException("Authentication failed"));
 
-        // When & Then
-        Exception exception = assertThrows(Exception.class, () -> {
-            authService.register(registerRequest);
-        });
+        // Act & Assert
+        Exception exception = assertThrows(Exception.class, () -> authService.login(request));
+        assertEquals("Authentication failed", exception.getMessage());
 
-        assertTrue(exception.getMessage().contains("already exists"));
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(userRepository, never()).findByEmail(anyString());
     }
 
     @Test
-    void testLoginWithInvalidCredentials() {
-        // Given
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setEmail("nonexistent@example.com");
-        loginRequest.setPassword("wrongpassword");
+    void testLogin_UserNotFoundAfterAuthentication_ThrowsException() throws Exception {
+        // Arrange
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password");
 
-        // When & Then
-        Exception exception = assertThrows(Exception.class, () -> {
-            authService.login(loginRequest);
-        });
+        Authentication authentication = mock(Authentication.class);
 
-        assertTrue(exception.getMessage().contains("Invalid credentials"));
-    }
+        when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
+            .thenReturn(authentication);
+        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.empty());
 
-    @Test
-    void testDefaultUserRole() throws Exception {
-        // Test that all users are automatically assigned ROLE_TRAVELER
-        RegisterRequest userRequest = new RegisterRequest();
-        userRequest.setFirstName("Test");
-        userRequest.setLastName("User");
-        userRequest.setEmail("testuser@example.com");
-        userRequest.setPassword("Password123");
+        // Act & Assert
+        Exception exception = assertThrows(Exception.class, () -> authService.login(request));
+        assertEquals("User not found", exception.getMessage());
 
-        RegistrationResponse response = authService.register(userRequest);
-        assertTrue(response.isSuccess());
-        assertEquals("testuser@example.com", response.getEmail());
-        
-        // Verify pending user registration was processed
-        // Actual user will be created after email verification
+        verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+        verify(userRepository).findByEmail("test@example.com");
     }
 }

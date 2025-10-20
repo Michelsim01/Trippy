@@ -3,6 +3,7 @@ package com.backend.service;
 import com.backend.entity.*;
 import com.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -16,6 +17,7 @@ import java.util.Random;
 import java.util.UUID;
 
 @Service
+@Profile("!test")
 public class DataSeedingService {
 
     @Autowired
@@ -168,6 +170,7 @@ public class DataSeedingService {
             guide.setKycStatus(KycStatus.APPROVED);
             guide.setKycApprovedAt(LocalDateTime.now().minusDays(random.nextInt(180)));
             guide.setAverageRating(BigDecimal.ZERO); // Will be calculated when reviews are created
+            guide.setTripPoints(0); // Initialize trip points to 0
             guide.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(365)));
             guide.setUpdatedAt(LocalDateTime.now());
 
@@ -223,6 +226,7 @@ public class DataSeedingService {
             traveler.setCanCreateExperiences(false);
             traveler.setKycStatus(KycStatus.NOT_STARTED);
             traveler.setAverageRating(BigDecimal.ZERO); // Travelers don't have ratings, but initialize to 0
+            traveler.setTripPoints(0); // Initialize trip points to 0
             traveler.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(365)));
             traveler.setUpdatedAt(LocalDateTime.now());
 

@@ -40,22 +40,25 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
-            // Check if user exists and is suspended before attempting authentication
+            // Check if user exists first
             Optional<User> userOptional = userRepository.findByEmail(loginRequest.getEmail());
-            if (userOptional.isPresent()) {
-                User user = userOptional.get();
-                if (user.getIsActive() == null || !user.getIsActive()) {
-                    // User exists but is suspended - return specific error for frontend to handle
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                            .body(Map.of("error", "ACCOUNT_SUSPENDED", "message", "Your account has been suspended. Please contact support to appeal."));
-                }
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("No account found with this email address. Please check your email or create a new account.");
+            }
+            
+            User user = userOptional.get();
+            if (user.getIsActive() == null || !user.getIsActive()) {
+                // User exists but is suspended - return specific error for frontend to handle
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body(Map.of("error", "ACCOUNT_SUSPENDED", "message", "Your account has been suspended. Please contact support to appeal."));
             }
             
             AuthResponse authResponse = authService.login(loginRequest);
             return ResponseEntity.ok(authResponse);
         } catch (org.springframework.security.core.AuthenticationException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Invalid email or password");
+                    .body("Incorrect password. Please try again.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Login failed. Please try again.");
