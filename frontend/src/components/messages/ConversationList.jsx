@@ -27,10 +27,10 @@ const ConversationItem = ({ conversation, isSelected, onSelect }) => {
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="font-medium text-neutrals-1 truncate text-sm">
-                <span className={isTripChat && conversation?.schedule?.isAvailable === false ? 'line-through' : ''}>
+                <span className={isTripChat && conversation?.schedule?.cancelled === true ? 'line-through' : ''}>
                   {isTripChat ? conversation.title : (conversation.participantName || "Guide")}
                 </span>
-                {isTripChat && conversation?.schedule?.isAvailable === false && (
+                {isTripChat && conversation?.schedule?.cancelled === true && (
                   <span className="text-red-600 font-medium ml-1">(CANCELLED)</span>
                 )}
               </h3>

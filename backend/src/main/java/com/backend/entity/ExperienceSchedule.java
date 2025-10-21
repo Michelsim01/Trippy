@@ -25,6 +25,10 @@ public class ExperienceSchedule {
 
     private Integer availableSpots;
     private Boolean isAvailable;
+
+    @Column(name = "cancelled", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean cancelled = false;
+
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "experienceSchedule", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -86,6 +90,14 @@ public class ExperienceSchedule {
 
     public void setIsAvailable(Boolean isAvailable) {
         this.isAvailable = isAvailable;
+    }
+
+    public Boolean getCancelled() {
+        return cancelled;
+    }
+
+    public void setCancelled(Boolean cancelled) {
+        this.cancelled = cancelled;
     }
 
     public LocalDateTime getCreatedAt() {

@@ -566,8 +566,9 @@ public class BookingService {
                 }
             }
 
-            // Mark schedule as unavailable
+            // Mark schedule as unavailable and cancelled
             schedule.setIsAvailable(false);
+            schedule.setCancelled(true);
             experienceScheduleRepository.save(schedule);
 
             return new GuideCancellationResponseDTO(scheduleId, affectedBookings, totalCancellationFee, reason);

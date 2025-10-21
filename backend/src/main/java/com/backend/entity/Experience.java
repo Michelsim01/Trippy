@@ -67,14 +67,14 @@ public class Experience {
     @Enumerated(EnumType.STRING)
     private ExperienceStatus status;
 
-    @Column(name = "total_stars")
-    private BigDecimal totalStars;
+    @Column(name = "total_stars", columnDefinition = "NUMERIC DEFAULT 0")
+    private BigDecimal totalStars = BigDecimal.ZERO;
 
-    @Column(name = "total_reviews")
-    private Integer totalReviews;
+    @Column(name = "total_reviews", columnDefinition = "INTEGER DEFAULT 0")
+    private Integer totalReviews = 0;
 
-    @Column(name = "average_rating")
-    private BigDecimal averageRating;
+    @Column(name = "average_rating", columnDefinition = "NUMERIC DEFAULT 0")
+    private BigDecimal averageRating = BigDecimal.ZERO;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;

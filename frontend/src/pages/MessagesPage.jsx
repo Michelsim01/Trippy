@@ -464,35 +464,44 @@ const MessagesPage = () => {
                         <div className="flex-1 flex flex-col bg-neutrals-8 min-h-0">
                             {selectedChat ? (
                                 // Chat interface for selected chat
-                                <div className="flex-1 flex flex-col min-h-0">
-                                    <ChatHeader conversation={selectedConversation} />
-                                    {loadingMessages ? (
-                                        <div className="flex-1 flex items-center justify-center bg-neutrals-8">
-                                            <div className="text-neutrals-4">Loading messages...</div>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
-                                            <div className="px-4 pb-4">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                                        <span className="text-xs text-neutrals-4">
-                                                            {isConnected ? 'Live chat connected' : 'Using standard messaging'}
-                                                        </span>
-                                                    </div>
+                                (() => {
+                                    // Check if the schedule was cancelled by the guide
+                                    const isCancelledByGuide = selectedConversation?.isTripChat &&
+                                        selectedConversation?.schedule?.cancelled === true;
+
+                                    return (
+                                        <div className="flex-1 flex flex-col min-h-0">
+                                            <ChatHeader conversation={selectedConversation} isCancelledByGuide={isCancelledByGuide} />
+                                            {loadingMessages ? (
+                                                <div className="flex-1 flex items-center justify-center bg-neutrals-8">
+                                                    <div className="text-neutrals-4">Loading messages...</div>
                                                 </div>
-                                                <MessageInput 
-                                                    newMessage={newMessage}
-                                                    setNewMessage={setNewMessage}
-                                                    onSendMessage={handleSendMessage}
-                                                    onKeyDown={handleInputKeyDown}
-                                                    isScheduleCancelled={selectedConversation?.isTripChat && selectedConversation?.schedule?.isAvailable === false}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                            ) : (
+                                                <>
+                                                    <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
+                                                    <div className="px-4 pb-4">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                                <span className="text-xs text-neutrals-4">
+                                                                    {isConnected ? 'Live chat connected' : 'Using standard messaging'}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                        <MessageInput
+                                                            newMessage={newMessage}
+                                                            setNewMessage={setNewMessage}
+                                                            onSendMessage={handleSendMessage}
+                                                            onKeyDown={handleInputKeyDown}
+                                                            isCancelledByGuide={isCancelledByGuide}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
+                                })()
+
                             ) : (
                                 // No chat selected state
                                 <EmptyState 
@@ -521,39 +530,49 @@ const MessagesPage = () => {
                     {/* If a chat is selected, show chat interface, else show conversation list */}
                     {selectedChat ? (
                         // Mobile Chat Interface
-                        <div className="flex flex-col h-[calc(100vh-56px)] bg-neutrals-8 min-h-0">
-                            <ChatHeader 
-                                conversation={selectedConversation} 
-                                onBack={() => setSelectedChat(null)}
-                                showBackButton={true}
-                            />
-                            {loadingMessages ? (
-                                <div className="flex-1 flex items-center justify-center bg-neutrals-8">
-                                    <div className="text-neutrals-4">Loading messages...</div>
-                                </div>
-                            ) : (
-                                <>
-                                    <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
-                                    <div className="px-4 pb-4">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                                <span className="text-xs text-neutrals-4">
-                                                    {isConnected ? 'Live chat connected' : 'Using standard messaging'}
-                                                </span>
-                                            </div>
+                        (() => {
+                            // Check if the schedule was cancelled by the guide
+                            const isCancelledByGuide = selectedConversation?.isTripChat &&
+                                selectedConversation?.schedule?.cancelled === true;
+
+                            return (
+                                <div className="flex flex-col h-[calc(100vh-56px)] bg-neutrals-8 min-h-0">
+                                    <ChatHeader
+                                        conversation={selectedConversation}
+                                        onBack={() => setSelectedChat(null)}
+                                        showBackButton={true}
+                                        isCancelledByGuide={isCancelledByGuide}
+                                    />
+                                    {loadingMessages ? (
+                                        <div className="flex-1 flex items-center justify-center bg-neutrals-8">
+                                            <div className="text-neutrals-4">Loading messages...</div>
                                         </div>
-                                        <MessageInput 
-                                            newMessage={newMessage}
-                                            setNewMessage={setNewMessage}
-                                            onSendMessage={handleSendMessage}
-                                            onKeyDown={handleInputKeyDown}
-                                            isScheduleCancelled={selectedConversation?.isTripChat && selectedConversation?.schedule?.isAvailable === false}
-                                        />
-                                    </div>
-                                </>
-                            )}
-                        </div>
+                                    ) : (
+                                        <>
+                                            <MessageList messages={chatMessages[selectedChat] || []} isTripChannel={selectedConversation?.isTripChat} />
+                                            <div className="px-4 pb-4">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                        <span className="text-xs text-neutrals-4">
+                                                            {isConnected ? 'Live chat connected' : 'Using standard messaging'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <MessageInput
+                                                    newMessage={newMessage}
+                                                    setNewMessage={setNewMessage}
+                                                    onSendMessage={handleSendMessage}
+                                                    onKeyDown={handleInputKeyDown}
+                                                    isCancelledByGuide={isCancelledByGuide}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            );
+                        })()
+
                     ) : (
                         // Mobile Conversation List
                         <>

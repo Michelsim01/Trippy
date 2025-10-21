@@ -1,7 +1,7 @@
 import React from 'react';
 
-const MessageInput = ({ newMessage, setNewMessage, onSendMessage, onKeyDown, isScheduleCancelled = false }) => {
-  if (isScheduleCancelled) {
+const MessageInput = ({ newMessage, setNewMessage, onSendMessage, onKeyDown, isCancelledByGuide = false }) => {
+  if (isCancelledByGuide) {
     return (
       <div className="p-4 border-t border-neutrals-6 bg-neutrals-7">
         <div className="text-center text-neutrals-3 text-sm py-3">

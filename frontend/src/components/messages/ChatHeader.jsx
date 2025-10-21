@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
+const ChatHeader = ({ conversation, onBack, showBackButton = false, isCancelledByGuide = false }) => {
   const isTripChat = conversation?.isTripChat;
   const experienceId = isTripChat
     ? conversation?.schedule?.experience?.experienceId
@@ -42,11 +42,11 @@ const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-neutrals-1 text-lg truncate">
-                <span className={isTripChat && conversation?.schedule?.isAvailable === false ? 'line-through' : ''}>
+                <span className={isCancelledByGuide ? 'line-through' : ''}>
                   {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
                 </span>
-                {isTripChat && conversation?.schedule?.isAvailable === false && (
-                  <span className="text-red-600 font-medium ml-2">(CANCELLED)</span>
+                {isCancelledByGuide && (
+                  <span className="text-red-600 font-medium ml-2">(CANCELLED BY GUIDE)</span>
                 )}
               </h3>
               {isTripChat && (
@@ -99,11 +99,11 @@ const ChatHeader = ({ conversation, onBack, showBackButton = false }) => {
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-1">
               <h3 className="font-medium text-neutrals-1 text-lg truncate">
-                <span className={isTripChat && conversation?.schedule?.isAvailable === false ? 'line-through' : ''}>
+                <span className={isCancelledByGuide ? 'line-through' : ''}>
                   {isTripChat ? conversation?.title : (conversation?.participantName || "Guide")}
                 </span>
-                {isTripChat && conversation?.schedule?.isAvailable === false && (
-                  <span className="text-red-600 font-medium ml-2">(CANCELLED)</span>
+                {isCancelledByGuide && (
+                  <span className="text-red-600 font-medium ml-2">(CANCELLED BY GUIDE)</span>
                 )}
               </h3>
               {isTripChat && (
