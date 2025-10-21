@@ -276,7 +276,8 @@ def cluster_users(**context):
         return {
             'user_clusters': json.dumps([]),
             'user_features': json.dumps([]),
-            'cluster_profiles': json.dumps({})
+            'cluster_profiles': json.dumps({}),
+            'update_cluster_profiles': False  # Don't update profiles when no users processed
         }
     
     # Select numerical features for clustering
