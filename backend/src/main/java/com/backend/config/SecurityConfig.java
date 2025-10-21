@@ -150,6 +150,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/locations/**").permitAll() // Allow location search for forms
                 .requestMatchers("/api/support/**").permitAll() // Public support endpoints
                 .requestMatchers("/uploads/**").permitAll()
+                .requestMatchers("/api/travel-articles/upload-image").permitAll() // Allow blog image uploads
+                .requestMatchers("/api/travel-articles/images/**").permitAll() // Allow blog image access
                 
                 // WebSocket endpoints (no authentication required for connection)
                 .requestMatchers("/ws/**").permitAll()
@@ -171,6 +173,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/user/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 .requestMatchers("/api/users/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 .requestMatchers("/api/experiences/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
+                .requestMatchers("/api/travel-articles/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN") // Allow all users to create/manage blogs
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()

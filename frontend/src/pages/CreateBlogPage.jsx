@@ -37,6 +37,7 @@ const CreateBlogPage = () => {
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [uploadingThumbnail, setUploadingThumbnail] = useState(false);
 
     // Form Data State
     const [blogData, setBlogData] = useState({
@@ -185,6 +186,34 @@ const CreateBlogPage = () => {
         }));
     };
 
+    // ===== THUMBNAIL UPLOAD HANDLERS =====
+    const handleThumbnailUpload = async (file) => {
+        if (!file) return;
+
+        setUploadingThumbnail(true);
+        setError(null);
+
+        try {
+            const imageUrl = await blogService.uploadImage(file);
+            setBlogData(prev => ({
+                ...prev,
+                thumbnailUrl: imageUrl
+            }));
+        } catch (error) {
+            console.error('Error uploading thumbnail:', error);
+            setError(error.message);
+        } finally {
+            setUploadingThumbnail(false);
+        }
+    };
+
+    const handleThumbnailRemove = () => {
+        setBlogData(prev => ({
+            ...prev,
+            thumbnailUrl: ''
+        }));
+    };
+
     // ===== CONTENT BLOCK HANDLERS =====
     const addContentBlock = (type) => {
         const newBlock = {
@@ -203,6 +232,23 @@ const CreateBlogPage = () => {
                 block.id === id ? { ...block, [field]: value } : block
             )
         );
+    };
+
+    const handleContentImageUpload = async (blockId, file) => {
+        if (!file) return;
+
+        setUploadingImage(true);
+        setError(null);
+
+        try {
+            const imageUrl = await blogService.uploadImage(file);
+            updateContentBlock(blockId, 'imageUrl', imageUrl);
+        } catch (error) {
+            console.error('Error uploading content image:', error);
+            setError(error.message);
+        } finally {
+            setUploadingImage(false);
+        }
     };
 
     const removeContentBlock = (id) => {
@@ -435,16 +481,57 @@ const CreateBlogPage = () => {
                 />
             </div>
 
-            {/* Thumbnail Upload Placeholder */}
+            {/* Thumbnail Upload */}
             <div>
                 <label className="block text-sm font-medium text-neutrals-2 mb-2">
                     Thumbnail Image
                 </label>
-                <div className="w-full h-64 border-2 border-dashed border-neutrals-6 rounded-lg flex flex-col items-center justify-center text-neutrals-4">
-                    <Upload size={48} className="mb-3" />
-                    <p className="font-medium">Thumbnail upload coming soon</p>
-                    <p className="text-sm">Feature temporarily disabled</p>
-                </div>
+                {blogData.thumbnailUrl ? (
+                    <div className="relative">
+                        <img
+                            src={blogData.thumbnailUrl}
+                            alt="Thumbnail preview"
+                            className="w-full h-64 object-cover rounded-lg"
+                        />
+                        <button
+                            onClick={handleThumbnailRemove}
+                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full transition-colors"
+                            title="Remove thumbnail"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                ) : (
+                    <div
+                        className="w-full h-64 border-2 border-dashed border-neutrals-6 rounded-lg flex flex-col items-center justify-center text-neutrals-4 hover:border-primary-1 hover:text-primary-1 transition-colors cursor-pointer"
+                        onClick={() => fileInputRef.current?.click()}
+                    >
+                        {uploadingThumbnail ? (
+                            <>
+                                <div className="w-12 h-12 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mb-3"></div>
+                                <p className="font-medium">Uploading...</p>
+                            </>
+                        ) : (
+                            <>
+                                <Upload size={48} className="mb-3" />
+                                <p className="font-medium">Click to upload thumbnail</p>
+                                <p className="text-sm">PNG, JPG up to 10MB</p>
+                            </>
+                        )}
+                    </div>
+                )}
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                            handleThumbnailUpload(file);
+                        }
+                    }}
+                    className="hidden"
+                />
             </div>
         </div>
     );
@@ -481,15 +568,11 @@ const CreateBlogPage = () => {
                         icon={<List size={20} />}
                         title="Add List"
                     />
-                    {/* Image button disabled for now */}
-                    <div className="relative">
-                        <ContentBlockButton
-                            onClick={() => {}}
-                            icon={<ImageIcon size={20} />}
-                            title="Add Image (Coming Soon)"
-                            disabled={true}
-                        />
-                    </div>
+                    <ContentBlockButton
+                        onClick={() => addContentBlock('image')}
+                        icon={<ImageIcon size={20} />}
+                        title="Add Image"
+                    />
                 </div>
             </div>
 
@@ -505,6 +588,8 @@ const CreateBlogPage = () => {
                         onRemove={() => removeContentBlock(block.id)}
                         onMoveUp={() => moveBlockUp(index)}
                         onMoveDown={() => moveBlockDown(index)}
+                        onImageUpload={(file) => handleContentImageUpload(block.id, file)}
+                        uploadingImage={uploadingImage}
                     />
                 ))}
             </div>
@@ -556,7 +641,7 @@ const CreateBlogPage = () => {
                     <button
                         onClick={handlePublish}
                         disabled={saving}
-                        className="px-8 py-4 bg-gradient-to-r from-primary-1 to-primary-2 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 font-medium"
+                        className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl hover:shadow-lg hover:scale-105 transition-all duration-200 disabled:opacity-50 flex items-center gap-2 font-medium"
                     >
                         {saving && blogData.status === 'PUBLISHED' ? (
                             <>
@@ -685,7 +770,9 @@ const ContentBlock = ({
     onUpdate,
     onRemove,
     onMoveUp,
-    onMoveDown
+    onMoveDown,
+    onImageUpload,
+    uploadingImage
 }) => (
     <div className="relative group bg-white p-6 rounded-lg border border-neutrals-6 hover:border-primary-1/50 hover:shadow-md transition-all duration-200">
         {/* Move Controls */}
@@ -767,10 +854,60 @@ const ContentBlock = ({
         )}
 
         {block.type === 'image' && (
-            <div className="w-full h-48 border-2 border-dashed border-neutrals-6 rounded-lg flex flex-col items-center justify-center text-neutrals-4">
-                <ImageIcon size={36} className="mb-2" />
-                <p className="font-medium">Image upload coming soon</p>
-                <p className="text-xs">Feature temporarily disabled</p>
+            <div className="w-full">
+                {block.imageUrl ? (
+                    <div className="relative">
+                        <img
+                            src={block.imageUrl}
+                            alt={block.caption || 'Blog image'}
+                            className="w-full h-auto max-h-96 object-cover rounded-lg"
+                        />
+                        <button
+                            onClick={() => onUpdate('imageUrl', '')}
+                            className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white p-1 rounded-full transition-colors"
+                            title="Remove image"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                ) : (
+                    <div
+                        className="w-full h-48 border-2 border-dashed border-neutrals-6 rounded-lg flex flex-col items-center justify-center text-neutrals-4 hover:border-primary-1 hover:text-primary-1 transition-colors cursor-pointer"
+                        onClick={() => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => {
+                                const file = e.target.files?.[0];
+                                if (file && onImageUpload) {
+                                    onImageUpload(file);
+                                }
+                            };
+                            input.click();
+                        }}
+                    >
+                        {uploadingImage ? (
+                            <>
+                                <div className="w-12 h-12 border-4 border-primary-1 border-t-transparent rounded-full animate-spin mb-2"></div>
+                                <p className="font-medium">Uploading...</p>
+                            </>
+                        ) : (
+                            <>
+                                <ImageIcon size={36} className="mb-2" />
+                                <p className="font-medium">Click to upload image</p>
+                                <p className="text-xs">PNG, JPG up to 10MB</p>
+                            </>
+                        )}
+                    </div>
+                )}
+                {/* Caption input */}
+                <input
+                    type="text"
+                    value={block.caption || ''}
+                    onChange={(e) => onUpdate('caption', e.target.value)}
+                    placeholder="Add a caption (optional)"
+                    className="w-full mt-3 px-3 py-2 text-sm text-neutrals-3 bg-neutrals-8 border border-neutrals-6 rounded-lg focus:outline-none focus:border-primary-1 transition-colors"
+                />
             </div>
         )}
     </div>

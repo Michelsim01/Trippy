@@ -38,6 +38,10 @@ public class TravelArticle {
 
     private Integer viewsCount;
 
+    private Integer likesCount = 0;
+
+    private Integer commentsCount = 0;
+
     @Convert(converter = StringListConverter.class)
     @Column(columnDefinition = "TEXT")
     private List<String> imagesUrl;
@@ -70,6 +74,10 @@ public class TravelArticle {
     public void setCategory(ArticleCategoryEnum category) { this.category = category; }
     public Integer getViewsCount() { return viewsCount; }
     public void setViewsCount(Integer viewsCount) { this.viewsCount = viewsCount; }
+    public Integer getLikesCount() { return likesCount; }
+    public void setLikesCount(Integer likesCount) { this.likesCount = likesCount; }
+    public Integer getCommentsCount() { return commentsCount; }
+    public void setCommentsCount(Integer commentsCount) { this.commentsCount = commentsCount; }
     public java.util.List<String> getImagesUrl() { return imagesUrl; }
     public void setImagesUrl(java.util.List<String> imagesUrl) { this.imagesUrl = imagesUrl; }
     public java.util.List<String> getVideosUrl() { return videosUrl; }

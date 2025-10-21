@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Calendar, Eye, User, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar, Eye, User, Edit, Trash2, Heart, MessageCircle, Send } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -15,12 +15,97 @@ const BlogDetailPage = () => {
     const [error, setError] = useState(null);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+    // Like and comment state
+    const [isLiked, setIsLiked] = useState(false);
+    const [likesCount, setLikesCount] = useState(0);
+    const [comments, setComments] = useState([]);
+    const [newComment, setNewComment] = useState('');
+    const [loadingLike, setLoadingLike] = useState(false);
+    const [loadingComment, setLoadingComment] = useState(false);
+
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
     const closeSidebar = () => {
         setIsSidebarOpen(false);
+    };
+
+    // Fetch like status and comments
+    const fetchLikeStatus = async () => {
+        if (!user?.id || !id) return;
+        try {
+            const likeData = await blogService.getLikeStatus(id, user.id);
+            setIsLiked(likeData.isLiked);
+            setLikesCount(likeData.likesCount);
+        } catch (error) {
+            console.error('Error fetching like status:', error);
+        }
+    };
+
+    const fetchComments = async () => {
+        if (!id) return;
+        try {
+            const commentsData = await blogService.getComments(id);
+            console.log('Fetched comments:', commentsData);
+            setComments(commentsData || []);
+        } catch (error) {
+            console.error('Error fetching comments:', error);
+            setComments([]); // Set empty array on error
+        }
+    };
+
+    // Handle like toggle
+    const handleLikeToggle = async () => {
+        if (!user?.id || loadingLike) return;
+
+        setLoadingLike(true);
+        try {
+            const response = await blogService.toggleLike(id, user.id);
+            setIsLiked(response.isLiked);
+            setLikesCount(response.likesCount);
+        } catch (error) {
+            console.error('Error toggling like:', error);
+        } finally {
+            setLoadingLike(false);
+        }
+    };
+
+    // Handle comment submission
+    const handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        if (!user?.id || !newComment.trim() || loadingComment) return;
+
+        setLoadingComment(true);
+        try {
+            const newCommentData = await blogService.createComment(id, user.id, newComment.trim());
+            setComments([...comments, newCommentData]);
+            setNewComment('');
+            // Update blog comment count
+            if (blog) {
+                setBlog({ ...blog, commentsCount: (blog.commentsCount || 0) + 1 });
+            }
+        } catch (error) {
+            console.error('Error creating comment:', error);
+        } finally {
+            setLoadingComment(false);
+        }
+    };
+
+    // Handle comment deletion
+    const handleCommentDelete = async (commentId) => {
+        if (!user?.id) return;
+
+        try {
+            await blogService.deleteComment(commentId, user.id);
+            setComments(comments.filter(comment => comment.commentId !== commentId));
+            // Update blog comment count
+            if (blog) {
+                setBlog({ ...blog, commentsCount: Math.max((blog.commentsCount || 1) - 1, 0) });
+            }
+        } catch (error) {
+            console.error('Error deleting comment:', error);
+        }
     };
 
     useEffect(() => {
@@ -35,6 +120,10 @@ const BlogDetailPage = () => {
                 if (blogData.status === 'PUBLISHED') {
                     blogService.incrementViews(id);
                 }
+
+                // Fetch like status and comments
+                fetchLikeStatus();
+                fetchComments();
             } catch (err) {
                 console.error('Error fetching blog:', err);
                 if (err.message.includes('permission')) {
@@ -268,8 +357,265 @@ const BlogDetailPage = () => {
                                     </div>
 
                                     {/* Content */}
-                                    <div className="prose prose-lg prose-headings:text-neutrals-1 prose-p:text-neutrals-2 prose-a:text-primary-1 prose-strong:text-neutrals-1 prose-img:rounded-lg prose-img:shadow-md max-w-none">
-                                        <div dangerouslySetInnerHTML={{ __html: blog.content }} />
+                                    <div className="max-w-none">
+                                        <div
+                                            dangerouslySetInnerHTML={{ __html: blog.content }}
+                                            className="blog-content"
+                                            style={{
+                                                '--heading-color': '#1a1a1a',
+                                                '--text-color': '#374151',
+                                                '--quote-color': '#1e40af',
+                                                '--quote-bg': '#eff6ff',
+                                                '--quote-border': '#3b82f6',
+                                                '--list-bullet': '#3b82f6'
+                                            }}
+                                        />
+                                    </div>
+
+                                    <style>{`
+                                        .blog-content h2 {
+                                            font-size: 2rem;
+                                            font-weight: 700;
+                                            line-height: 1.3;
+                                            margin: 2rem 0 1rem 0;
+                                            color: var(--heading-color);
+                                            border-bottom: 2px solid #e5e7eb;
+                                            padding-bottom: 0.5rem;
+                                        }
+
+                                        .blog-content p {
+                                            font-size: 1.125rem;
+                                            line-height: 1.75;
+                                            margin: 1.5rem 0;
+                                            color: var(--text-color);
+                                            text-align: justify;
+                                        }
+
+                                        .blog-content blockquote {
+                                            border-left: 4px solid var(--quote-border);
+                                            background-color: var(--quote-bg);
+                                            padding: 1.5rem 2rem;
+                                            margin: 2rem 0;
+                                            border-radius: 0 8px 8px 0;
+                                            font-style: italic;
+                                            font-size: 1.125rem;
+                                            color: var(--quote-color);
+                                            position: relative;
+                                        }
+
+                                        .blog-content blockquote::before {
+                                            content: '"';
+                                            font-size: 4rem;
+                                            color: var(--quote-border);
+                                            position: absolute;
+                                            top: -0.5rem;
+                                            left: 1rem;
+                                            line-height: 1;
+                                            opacity: 0.3;
+                                        }
+
+                                        .blog-content ul {
+                                            margin: 1.5rem 0;
+                                            padding-left: 0;
+                                            list-style: none;
+                                        }
+
+                                        .blog-content ul li {
+                                            position: relative;
+                                            padding-left: 2rem;
+                                            margin: 0.75rem 0;
+                                            font-size: 1.125rem;
+                                            line-height: 1.6;
+                                            color: var(--text-color);
+                                        }
+
+                                        .blog-content ul li::before {
+                                            content: '•';
+                                            color: var(--list-bullet);
+                                            font-weight: bold;
+                                            position: absolute;
+                                            left: 0.5rem;
+                                            font-size: 1.5rem;
+                                            line-height: 1.2;
+                                        }
+
+                                        .blog-content figure {
+                                            margin: 2.5rem 0;
+                                            text-align: center;
+                                        }
+
+                                        .blog-content figure img {
+                                            width: 100%;
+                                            height: auto;
+                                            border-radius: 12px;
+                                            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                                            transition: transform 0.3s ease;
+                                        }
+
+                                        .blog-content figure img:hover {
+                                            transform: scale(1.02);
+                                        }
+
+                                        .blog-content figcaption {
+                                            margin-top: 1rem;
+                                            font-style: italic;
+                                            color: #6b7280;
+                                            font-size: 0.95rem;
+                                            text-align: center;
+                                        }
+
+                                        .blog-content > *:first-child {
+                                            margin-top: 0;
+                                        }
+
+                                        .blog-content > *:last-child {
+                                            margin-bottom: 0;
+                                        }
+
+                                        @media (max-width: 768px) {
+                                            .blog-content h2 {
+                                                font-size: 1.75rem;
+                                            }
+
+                                            .blog-content p,
+                                            .blog-content blockquote,
+                                            .blog-content ul li {
+                                                font-size: 1rem;
+                                            }
+
+                                            .blog-content blockquote {
+                                                padding: 1rem 1.5rem;
+                                            }
+                                        }
+                                    `}</style>
+
+                                    {/* Like Button and Comments Section */}
+                                    <div className="mt-8 pt-6 border-t border-neutrals-6">
+                                        {/* Like and Engagement Stats */}
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="flex items-center gap-6">
+                                                {/* Like Button */}
+                                                {user && (
+                                                    <button
+                                                        onClick={handleLikeToggle}
+                                                        disabled={loadingLike}
+                                                        className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                                                            isLiked
+                                                                ? 'bg-red-50 text-red-600 hover:bg-red-100'
+                                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        } ${loadingLike ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                    >
+                                                        <Heart
+                                                            size={20}
+                                                            className={`transition-all duration-200 ${
+                                                                isLiked ? 'fill-current text-red-600' : ''
+                                                            }`}
+                                                        />
+                                                        <span>{likesCount} {likesCount === 1 ? 'Like' : 'Likes'}</span>
+                                                    </button>
+                                                )}
+
+                                                {/* Comments Count */}
+                                                <div className="flex items-center gap-2 text-gray-600">
+                                                    <MessageCircle size={20} />
+                                                    <span>{comments.length} {comments.length === 1 ? 'Comment' : 'Comments'}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Comments Section */}
+                                        <div className="space-y-6">
+                                            <h3 className="text-xl font-semibold text-neutrals-1">Comments</h3>
+
+                                            {/* Add Comment Form */}
+                                            {user ? (
+                                                <form onSubmit={handleCommentSubmit} className="bg-gray-50 rounded-lg p-4">
+                                                    <div className="flex items-start gap-3">
+                                                        <div className="w-10 h-10 bg-gradient-to-br from-primary-1 to-primary-2 rounded-full flex items-center justify-center">
+                                                            <span className="text-white font-semibold text-sm">
+                                                                {user.firstName?.[0] || user.username?.[0] || 'U'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <textarea
+                                                                value={newComment}
+                                                                onChange={(e) => setNewComment(e.target.value)}
+                                                                placeholder="Add a comment..."
+                                                                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-primary-1 focus:border-transparent"
+                                                                rows="3"
+                                                            />
+                                                            <div className="flex justify-end mt-2">
+                                                                <button
+                                                                    type="submit"
+                                                                    disabled={!newComment.trim() || loadingComment}
+                                                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                                                                        newComment.trim() && !loadingComment
+                                                                            ? 'bg-primary-1 text-white hover:bg-primary-2'
+                                                                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                                                    }`}
+                                                                >
+                                                                    <Send size={16} />
+                                                                    {loadingComment ? 'Posting...' : 'Post Comment'}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            ) : (
+                                                <div className="bg-gray-50 rounded-lg p-4 text-center">
+                                                    <p className="text-gray-600">
+                                                        <Link to="/" className="text-primary-1 hover:text-primary-2 font-medium">
+                                                            Sign in
+                                                        </Link>
+                                                        {' '}to leave a comment
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Comments List */}
+                                            <div className="space-y-4">
+                                                {comments.length === 0 ? (
+                                                    <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
+                                                ) : (
+                                                    comments.map((comment, index) => (
+                                                        <div key={comment.commentId || `comment-${index}`} className="bg-white border border-gray-200 rounded-lg p-4">
+                                                            <div className="flex items-start justify-between">
+                                                                <div className="flex items-start gap-3 flex-1">
+                                                                    <div className="w-8 h-8 bg-gradient-to-br from-primary-1 to-primary-2 rounded-full flex items-center justify-center">
+                                                                        <span className="text-white font-semibold text-xs">
+                                                                            {comment.user?.firstName?.[0] || comment.user?.username?.[0] || 'U'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="flex-1">
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className="font-medium text-neutrals-1">
+                                                                                {comment.user?.firstName && comment.user?.lastName
+                                                                                    ? `${comment.user.firstName} ${comment.user.lastName}`
+                                                                                    : comment.user?.username || 'Anonymous'}
+                                                                            </span>
+                                                                            <span className="text-sm text-gray-500">
+                                                                                {new Date(comment.createdAt).toLocaleDateString()}
+                                                                            </span>
+                                                                        </div>
+                                                                        <p className="text-neutrals-2">{comment.content}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {/* Delete button for comment owner */}
+                                                                {user && comment.user?.id === user.id && (
+                                                                    <button
+                                                                        onClick={() => handleCommentDelete(comment.commentId)}
+                                                                        className="text-red-500 hover:text-red-700 p-1"
+                                                                        title="Delete comment"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     {/* Reading stats */}
@@ -317,8 +663,19 @@ const BlogDetailPage = () => {
                             )}
                             <div className="p-4">
                                 <h1 className="text-2xl font-bold text-neutrals-1 mb-4">{blog.title}</h1>
-                                <div className="prose max-w-none">
-                                    <div dangerouslySetInnerHTML={{ __html: blog.content }} />
+                                <div className="max-w-none">
+                                    <div
+                                        dangerouslySetInnerHTML={{ __html: blog.content }}
+                                        className="blog-content"
+                                        style={{
+                                            '--heading-color': '#1a1a1a',
+                                            '--text-color': '#374151',
+                                            '--quote-color': '#1e40af',
+                                            '--quote-bg': '#eff6ff',
+                                            '--quote-border': '#3b82f6',
+                                            '--list-bullet': '#3b82f6'
+                                        }}
+                                    />
                                 </div>
                             </div>
                         </article>

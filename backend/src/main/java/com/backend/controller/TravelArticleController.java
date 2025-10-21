@@ -4,8 +4,12 @@ import com.backend.entity.TravelArticle;
 import com.backend.entity.User;
 import com.backend.entity.ArticleStatusEnum;
 import com.backend.entity.ArticleCategoryEnum;
+import com.backend.entity.ArticleLike;
+import com.backend.entity.ArticleComment;
 import com.backend.repository.TravelArticleRepository;
 import com.backend.repository.UserRepository;
+import com.backend.repository.ArticleLikeRepository;
+import com.backend.service.ArticleCommentService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.Resource;
@@ -36,6 +40,12 @@ public class TravelArticleController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ArticleLikeRepository articleLikeRepository;
+
+    @Autowired
+    private ArticleCommentService articleCommentService;
 
     private final String UPLOAD_DIR = "uploads/blog-images/";
 
@@ -294,6 +304,206 @@ public class TravelArticleController {
 
         } catch (Exception e) {
             return ResponseEntity.status(500).build();
+        }
+    }
+
+    // ====================
+    // VIEW COUNT ENDPOINTS
+    // ====================
+
+    @PostMapping("/{id}/view")
+    public ResponseEntity<Map<String, Object>> incrementViewCount(@PathVariable Long id) {
+        try {
+            Optional<TravelArticle> articleOpt = travelArticleRepository.findById(id);
+            if (articleOpt.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Article not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            TravelArticle article = articleOpt.get();
+            Integer currentViews = article.getViewsCount();
+            if (currentViews == null) {
+                currentViews = 0;
+            }
+            article.setViewsCount(currentViews + 1);
+            travelArticleRepository.save(article);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("viewsCount", article.getViewsCount());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to increment view count");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ====================
+    // LIKE/UNLIKE ENDPOINTS
+    // ====================
+
+    @PostMapping("/{id}/like")
+    public ResponseEntity<Map<String, Object>> toggleLike(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            Optional<TravelArticle> articleOpt = travelArticleRepository.findById(id);
+            if (articleOpt.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "Article not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            Optional<User> userOpt = userRepository.findById(userId);
+            if (userOpt.isEmpty()) {
+                Map<String, Object> error = new HashMap<>();
+                error.put("error", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+            }
+
+            TravelArticle article = articleOpt.get();
+            User user = userOpt.get();
+
+            // Check if user already liked this article
+            Optional<ArticleLike> existingLike = articleLikeRepository.findByTravelArticleAndUser(article, user);
+
+            boolean isLiked;
+            if (existingLike.isPresent()) {
+                // Unlike: remove the like
+                articleLikeRepository.delete(existingLike.get());
+                isLiked = false;
+            } else {
+                // Like: create new like
+                ArticleLike like = new ArticleLike();
+                like.setTravelArticle(article);
+                like.setUser(user);
+                articleLikeRepository.save(like);
+                isLiked = true;
+            }
+
+            // Update article likes count
+            long likesCount = articleLikeRepository.countByTravelArticle(article);
+            article.setLikesCount((int) likesCount);
+            travelArticleRepository.save(article);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("isLiked", isLiked);
+            response.put("likesCount", article.getLikesCount());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to toggle like");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @GetMapping("/{id}/like-status")
+    public ResponseEntity<Map<String, Object>> getLikeStatus(@PathVariable Long id, @RequestParam Long userId) {
+        try {
+            boolean isLiked = articleLikeRepository.existsByArticleIdAndUserId(id, userId);
+            long likesCount = articleLikeRepository.countByArticleId(id);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("isLiked", isLiked);
+            response.put("likesCount", likesCount);
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to get like status");
+            error.put("message", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ====================
+    // COMMENT ENDPOINTS
+    // ====================
+
+    @GetMapping("/{id}/comments")
+    public ResponseEntity<List<ArticleComment>> getComments(@PathVariable Long id) {
+        try {
+            List<ArticleComment> comments = articleCommentService.getCommentsByArticleId(id);
+            return ResponseEntity.ok(comments);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<ArticleComment> createComment(
+            @PathVariable Long id,
+            @RequestParam Long userId,
+            @RequestParam String content) {
+        try {
+            ArticleComment comment = articleCommentService.createComment(id, userId, content);
+            return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PutMapping("/comments/{commentId}")
+    public ResponseEntity<ArticleComment> updateComment(
+            @PathVariable Long commentId,
+            @RequestParam Long userId,
+            @RequestParam String content) {
+        try {
+            ArticleComment comment = articleCommentService.updateComment(commentId, userId, content);
+            return ResponseEntity.ok(comment);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @DeleteMapping("/comments/{commentId}")
+    public ResponseEntity<Map<String, Object>> deleteComment(
+            @PathVariable Long commentId,
+            @RequestParam Long userId) {
+        try {
+            articleCommentService.deleteComment(commentId, userId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Comment deleted successfully");
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to delete comment");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    @PostMapping("/comments/{commentId}/like")
+    public ResponseEntity<Map<String, Object>> toggleCommentLike(
+            @PathVariable Long commentId,
+            @RequestParam Long userId) {
+        try {
+            ArticleComment comment = articleCommentService.toggleCommentLike(commentId, userId);
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("likesCount", comment.getLikesCount());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("error", "Failed to toggle comment like");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
 }

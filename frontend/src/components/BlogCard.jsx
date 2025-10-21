@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit, Trash2, Eye, Calendar } from 'lucide-react';
+import { Edit, Trash2, Eye, Calendar, Heart, MessageCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { blogService, BLOG_CATEGORIES } from '../services/blogService';
 
@@ -87,7 +87,7 @@ const BlogCard = ({
                 <div
                     className="absolute inset-0 bg-cover bg-center bg-no-repeat"
                     style={{
-                        backgroundImage: `url(${blog.thumbnailUrl || blog.imagesUrl?.[0] || '/api/placeholder/400/300'})`,
+                        backgroundImage: `url(${blog.thumbnailUrl || blog.imagesUrl?.[0] || 'https://via.placeholder.com/400x300/e5e7eb/9ca3af?text=No+Image'})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center'
                     }}
@@ -144,15 +144,25 @@ const BlogCard = ({
                 {/* Divider */}
                 <div className="h-px bg-neutrals-6 rounded-[1px]" />
 
-                {/* Footer with Date and Views */}
+                {/* Footer with Date, Views, Likes, and Comments */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-[12px] text-neutrals-4">
                         <Calendar className="w-4 h-4" />
                         <span>{formatDate(blog.createdAt)}</span>
                     </div>
-                    <div className="flex items-center gap-2 text-[12px] text-neutrals-4">
-                        <Eye className="w-4 h-4" />
-                        <span>{blog.viewsCount || 0} views</span>
+                    <div className="flex items-center gap-4 text-[12px] text-neutrals-4">
+                        <div className="flex items-center gap-1">
+                            <Eye className="w-4 h-4" />
+                            <span>{blog.viewsCount || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Heart className="w-4 h-4" />
+                            <span>{blog.likesCount || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>{blog.commentsCount || 0}</span>
+                        </div>
                     </div>
                 </div>
 

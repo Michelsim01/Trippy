@@ -87,6 +87,13 @@ export const blogService = {
             url.startsWith('http') ? url : `http://localhost:8080${url}`
           )
         }
+        // Also fix image URLs in blog content HTML
+        if (blog.content) {
+          blog.content = blog.content.replace(
+            /src="(\/api\/travel-articles\/images\/[^"]+)"/g,
+            'src="http://localhost:8080$1"'
+          )
+        }
         return blog
       })
     } catch (error) {
@@ -120,6 +127,13 @@ export const blogService = {
             url.startsWith('http') ? url : `http://localhost:8080${url}`
           )
         }
+        // Also fix image URLs in blog content HTML
+        if (draft.content) {
+          draft.content = draft.content.replace(
+            /src="(\/api\/travel-articles\/images\/[^"]+)"/g,
+            'src="http://localhost:8080$1"'
+          )
+        }
         return draft
       })
     } catch (error) {
@@ -142,6 +156,13 @@ export const blogService = {
       if (blog.imagesUrl && Array.isArray(blog.imagesUrl)) {
         blog.imagesUrl = blog.imagesUrl.map(url =>
           url.startsWith('http') ? url : `http://localhost:8080${url}`
+        )
+      }
+      // Also fix image URLs in blog content HTML
+      if (blog.content) {
+        blog.content = blog.content.replace(
+          /src="(\/api\/travel-articles\/images\/[^"]+)"/g,
+          'src="http://localhost:8080$1"'
         )
       }
 
@@ -244,7 +265,7 @@ export const blogService = {
     }
   },
 
-  // Increment view count (will need to be implemented in backend)
+  // Increment view count
   incrementViews: async (id) => {
     try {
       const response = await api.post(`/api/travel-articles/${id}/view`)
@@ -253,6 +274,140 @@ export const blogService = {
       console.error('Error incrementing views:', error)
       // Don't throw error for view count, it's not critical
       return null
+    }
+  },
+
+  // Like/Unlike article
+  toggleLike: async (articleId, userId) => {
+    try {
+      const response = await api.post(`/api/travel-articles/${articleId}/like`, null, {
+        params: { userId }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error toggling like:', error)
+      throw error
+    }
+  },
+
+  // Get like status for article
+  getLikeStatus: async (articleId, userId) => {
+    try {
+      const response = await api.get(`/api/travel-articles/${articleId}/like-status`, {
+        params: { userId }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error getting like status:', error)
+      throw error
+    }
+  },
+
+  // Get comments for article
+  getComments: async (articleId) => {
+    try {
+      const response = await api.get(`/api/travel-articles/${articleId}/comments`)
+      return response.data
+    } catch (error) {
+      console.error('Error getting comments:', error)
+      throw error
+    }
+  },
+
+  // Create new comment
+  createComment: async (articleId, userId, content) => {
+    try {
+      const response = await api.post(`/api/travel-articles/${articleId}/comments`, null, {
+        params: { userId, content }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error creating comment:', error)
+      throw error
+    }
+  },
+
+  // Update existing comment
+  updateComment: async (commentId, userId, content) => {
+    try {
+      const response = await api.put(`/api/travel-articles/comments/${commentId}`, null, {
+        params: { userId, content }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error updating comment:', error)
+      throw error
+    }
+  },
+
+  // Delete comment
+  deleteComment: async (commentId, userId) => {
+    try {
+      const response = await api.delete(`/api/travel-articles/comments/${commentId}`, {
+        params: { userId }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error deleting comment:', error)
+      throw error
+    }
+  },
+
+  // Like/Unlike comment
+  toggleCommentLike: async (commentId, userId) => {
+    try {
+      const response = await api.post(`/api/travel-articles/comments/${commentId}/like`, null, {
+        params: { userId }
+      })
+      return response.data
+    } catch (error) {
+      console.error('Error toggling comment like:', error)
+      throw error
+    }
+  },
+
+  // Upload image for blog content or thumbnail
+  uploadImage: async (file) => {
+    try {
+      // Validate file
+      if (!file) {
+        throw new Error('No file selected')
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Only image files are allowed')
+      }
+
+      // Check file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxSize) {
+        throw new Error('File size too large. Maximum 10MB allowed')
+      }
+
+      // Create FormData for multipart upload
+      const formData = new FormData()
+      formData.append('file', file)
+
+      // Upload to backend
+      const response = await api.post('/api/travel-articles/upload-image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      })
+
+      // Return the image URL
+      const imageUrl = response.data.url
+
+      // Ensure full URL for display
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        return `http://localhost:8080${imageUrl}`
+      }
+
+      return imageUrl
+    } catch (error) {
+      console.error('Error uploading image:', error)
+      throw new Error(error.response?.data?.error || error.message || 'Failed to upload image')
     }
   }
 }

@@ -124,8 +124,8 @@ const BlogPage = () => {
         }
     };
 
-    // Check if user can create blogs (similar to experience creation)
-    const canCreateBlog = user?.canCreateExperiences && user?.kycStatus === 'APPROVED';
+    // Allow all authenticated users to create blogs
+    const canCreateBlog = !!user;
 
     const handleCreateBlog = () => {
         navigate('/create-blog');
@@ -257,7 +257,7 @@ const BlogPage = () => {
                                         <div className="flex flex-col lg:flex-row">
                                             <div className="lg:w-2/3 h-64 lg:h-96 bg-neutrals-2">
                                                 <img
-                                                    src={spotlightBlog.thumbnailUrl || spotlightBlog.imagesUrl?.[0] || '/api/placeholder/800/400'}
+                                                    src={spotlightBlog.thumbnailUrl || spotlightBlog.imagesUrl?.[0] || 'https://via.placeholder.com/800x400/e5e7eb/9ca3af?text=No+Image'}
                                                     alt={spotlightBlog.title}
                                                     className="w-full h-full object-cover"
                                                 />

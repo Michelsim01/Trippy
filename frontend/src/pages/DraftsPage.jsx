@@ -112,12 +112,20 @@ const DraftsPage = () => {
                     <h1 className="text-3xl font-bold text-neutrals-1 font-dm-sans">My Drafts</h1>
                     <p className="text-neutrals-4 mt-2 font-dm-sans">Manage your unpublished blog posts</p>
                   </div>
-                  <Link
-                    to="/create-blog"
-                    className="bg-primary-1 hover:bg-opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans"
-                  >
-                    Create New Blog
-                  </Link>
+                  <div className="flex gap-3">
+                    <Link
+                      to="/blog"
+                      className="bg-neutrals-7 hover:bg-neutrals-6 text-neutrals-1 px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans"
+                    >
+                      View All Blogs
+                    </Link>
+                    <Link
+                      to="/create-blog"
+                      className="bg-primary-1 hover:bg-opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans"
+                    >
+                      Create New Blog
+                    </Link>
+                  </div>
                 </div>
               </div>
 
@@ -235,12 +243,20 @@ const DraftsPage = () => {
                   <h1 className="text-2xl font-bold text-neutrals-1 font-dm-sans">My Drafts</h1>
                   <p className="text-neutrals-4 mt-2 font-dm-sans">Manage your unpublished blog posts</p>
                 </div>
-                <Link
-                  to="/create-blog"
-                  className="bg-primary-1 hover:bg-opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans text-center"
-                >
-                  Create New Blog
-                </Link>
+                <div className="flex gap-3">
+                  <Link
+                    to="/blog"
+                    className="bg-neutrals-7 hover:bg-neutrals-6 text-neutrals-1 px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans text-center flex-1"
+                  >
+                    View All Blogs
+                  </Link>
+                  <Link
+                    to="/create-blog"
+                    className="bg-primary-1 hover:bg-opacity-90 text-white px-6 py-3 rounded-lg font-semibold transition-colors font-dm-sans text-center flex-1"
+                  >
+                    Create New Blog
+                  </Link>
+                </div>
               </div>
             </div>
 

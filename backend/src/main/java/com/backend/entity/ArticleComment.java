@@ -1,6 +1,7 @@
 package com.backend.entity;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,10 +13,12 @@ public class ArticleComment {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "article_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "comments", "likes", "author"})
     private TravelArticle travelArticle;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password", "email", "kycDocuments", "experiences", "bookings", "articleComments", "reviews", "supportTickets"})
     private User user;
 
     @Column(nullable = false, columnDefinition = "TEXT")
