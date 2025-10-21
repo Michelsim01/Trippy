@@ -14,37 +14,39 @@ BEGIN;
 -- =====================================================
 -- 1. INSERT 10 NEW USERS
 -- =====================================================
-INSERT INTO users (user_id, email, password, first_name, last_name, is_active, is_admin, can_create_experiences, is_email_verified, kyc_status, created_at, updated_at)
+-- NOTE: All test users use password "Password123"
+-- BCrypt hash copied from existing seeded users in database
+INSERT INTO users (user_id, email, password, first_name, last_name, is_active, is_admin, can_create_experiences, is_email_verified, kyc_status, trip_points, created_at, updated_at)
 VALUES 
 -- User 1: Budget Adventurer
-(1001, 'test.user1@incremental.test', '$2a$10$dummyhashedpassword1', 'Alex', 'Chen', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1001, 'test.user1@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Alex', 'Chen', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 2: Luxury Cultural Traveler
-(1002, 'test.user2@incremental.test', '$2a$10$dummyhashedpassword2', 'Maria', 'Rodriguez', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1002, 'test.user2@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Maria', 'Rodriguez', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 3: Nature Enthusiast
-(1003, 'test.user3@incremental.test', '$2a$10$dummyhashedpassword3', 'John', 'Smith', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1003, 'test.user3@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'John', 'Smith', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 4: Food & Culture Lover
-(1004, 'test.user4@incremental.test', '$2a$10$dummyhashedpassword4', 'Yuki', 'Tanaka', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1004, 'test.user4@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Yuki', 'Tanaka', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 5: Adventure Seeker
-(1005, 'test.user5@incremental.test', '$2a$10$dummyhashedpassword5', 'Emma', 'Johnson', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1005, 'test.user5@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Emma', 'Johnson', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 6: Relaxation Focused
-(1006, 'test.user6@incremental.test', '$2a$10$dummyhashedpassword6', 'Lucas', 'Silva', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1006, 'test.user6@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Lucas', 'Silva', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 7: Social Traveler
-(1007, 'test.user7@incremental.test', '$2a$10$dummyhashedpassword7', 'Sophie', 'Martin', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1007, 'test.user7@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Sophie', 'Martin', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 8: Photography Enthusiast
-(1008, 'test.user8@incremental.test', '$2a$10$dummyhashedpassword8', 'David', 'Kim', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1008, 'test.user8@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'David', 'Kim', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 9: Budget Backpacker
-(1009, 'test.user9@incremental.test', '$2a$10$dummyhashedpassword9', 'Isabella', 'Santos', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+(1009, 'test.user9@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Isabella', 'Santos', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
 
 -- User 10: Premium Adventure
-(1010, 'test.user10@incremental.test', '$2a$10$dummyhashedpassword10', 'Oliver', 'Brown', true, false, false, true, 'NOT_STARTED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+(1010, 'test.user10@incremental.test', '$2a$10$z868RNVt.gfwbfCOlITMCeTdZNDBzJZD/mgsVWFZq8UxNMlBtj4gu', 'Oliver', 'Brown', true, false, false, true, 'NOT_STARTED', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 SELECT 'Inserted 10 new users (1001-1010)' AS status;
 

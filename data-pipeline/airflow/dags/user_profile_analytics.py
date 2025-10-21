@@ -55,6 +55,21 @@ def get_last_run_timestamp(**context):
     execution_date = context['execution_date']
     is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
     
+    # Check if cluster_profiles table exists and has data
+    # If empty, force full refresh (auto-recovery mechanism)
+    cluster_profile_count = pg_hook.get_first("""
+        SELECT COUNT(*) 
+        FROM information_schema.tables 
+        WHERE table_name = 'cluster_profiles'
+    """)
+    
+    if cluster_profile_count and cluster_profile_count[0] > 0:
+        # Table exists, check if it has data
+        profile_count = pg_hook.get_first("SELECT COUNT(*) FROM cluster_profiles")
+        if profile_count and profile_count[0] == 0:
+            print("WARNING: cluster_profiles table is empty. Forcing full refresh for recovery.")
+            is_full_refresh = True
+    
     # If it's Monday or no previous run, do full refresh (return very old date)
     if is_full_refresh or not result:
         last_run = datetime(2024, 1, 1)
@@ -82,6 +97,7 @@ def extract_user_data(**context):
     is_full_refresh = watermark_data['is_full_refresh']
     
     # Extract user survey data (incremental: only new/completed surveys)
+    # No where clause if is full_refresh mode
     survey_query = f"""
     SELECT 
         us.user_id,
@@ -91,7 +107,7 @@ def extract_user_data(**context):
         array_agg(usi.interests) as interests
     FROM user_survey us
     LEFT JOIN user_survey_interests usi ON us.survey_id = usi.user_survey_survey_id
-    {f"WHERE us.completed_at > '{last_run}'" if not is_full_refresh else ""}
+    {f"WHERE us.completed_at > '{last_run}'" if not is_full_refresh else ""}  
     GROUP BY us.user_id, us.travel_style, us.experience_budget, us.completed_at
     """
     
@@ -369,55 +385,23 @@ def cluster_users(**context):
     # Add cluster labels to user data
     df['cluster'] = clusters
     
-    # Create cluster profiles based on ALL users in database (not just new ones)
-    # This ensures cluster profiles always represent the complete user base
-    print("Calculating cluster profiles from all users in database...")
-    
-    all_users_query = """
-    SELECT 
-        user_id,
-        cluster_id,
-        profile_data
-    FROM user_analytics_profile
-    """
-    all_users_df = pd.read_sql(all_users_query, pg_hook.get_sqlalchemy_engine())
-    
+    # Calculate cluster profiles based on mode
     cluster_profiles = {}
-    if len(all_users_df) > 0:
-        # Extract features from profile_data JSONB column
-        all_users_features = []
-        for _, row in all_users_df.iterrows():
-            profile = row['profile_data']
-            feature_dict = {
-                'user_id': row['user_id'],
-                'cluster': row['cluster_id'],
-                'budget_score': profile.get('budget_score', 2),
-                'avg_booking_amount': profile.get('avg_booking_amount', 0),
-                'travel_style': profile.get('travel_style', 'unknown'),
-                'travel_style_social': profile.get('travel_style_social', 0),
-                'travel_style_business': profile.get('travel_style_business', 0),
-                'travel_style_family': profile.get('travel_style_family', 0),
-                'travel_style_romantic': profile.get('travel_style_romantic', 0),
-                'interest_adventure': profile.get('interest_adventure', 0),
-                'interest_cultural': profile.get('interest_cultural', 0),
-                'interest_relaxation': profile.get('interest_relaxation', 0),
-                'interest_social': profile.get('interest_social', 0),
-                'interest_nature': profile.get('interest_nature', 0)
-            }
-            all_users_features.append(feature_dict)
+    
+    if is_full_refresh:
+        # FULL REFRESH: Calculate profiles from ALL users in current batch
+        # This ensures cluster profiles are aligned with the new cluster model
+        print("Calculating cluster profiles from all users in full refresh...")
         
-        all_users_full_df = pd.DataFrame(all_users_features)
-        
-        # Calculate profiles for each cluster based on ALL users
         for cluster_id in range(4):
-            cluster_users = all_users_full_df[all_users_full_df['cluster'] == cluster_id]
+            cluster_users = df[df['cluster'] == cluster_id]
             
             if len(cluster_users) > 0:
                 profile = {
                     'cluster_id': int(cluster_id),
                     'user_count': len(cluster_users),
                     'avg_budget_score': float(cluster_users['budget_score'].mean()),
-                    'dominant_travel_style': cluster_users['travel_style'].mode().iloc[0] if len(cluster_users) > 0 else 'unknown',
+                    'dominant_travel_style': cluster_users['travel_style'].mode().iloc[0] if len(cluster_users['travel_style'].mode()) > 0 else 'unknown',
                     'avg_booking_amount': float(cluster_users['avg_booking_amount'].mean()),
                     'travel_style_preferences': {
                         'social': float(cluster_users['travel_style_social'].mean()),
@@ -434,12 +418,31 @@ def cluster_users(**context):
                     }
                 }
                 cluster_profiles[cluster_id] = profile
-                print(f"Cluster {cluster_id}: {len(cluster_users)} total users")
+                print(f"Cluster {cluster_id}: {len(cluster_users)} users")
+    else:
+        # INCREMENTAL: Don't recalculate cluster profiles (use existing from last full refresh)
+        # Only user assignments are updated, profiles remain stable until next Monday
+        print("INCREMENTAL MODE: Skipping cluster profile recalculation (will use existing profiles from last full refresh)")
+        print(f"Assigned {len(df)} users to existing clusters")
+        
+        # Optionally: Load existing cluster profiles to return (for consistency)
+        existing_profiles_query = """
+        SELECT cluster_id, profile_data 
+        FROM cluster_profiles
+        ORDER BY cluster_id
+        """
+        existing_profiles_df = pd.read_sql(existing_profiles_query, pg_hook.get_sqlalchemy_engine())
+        
+        if len(existing_profiles_df) > 0:
+            for _, row in existing_profiles_df.iterrows():
+                cluster_profiles[row['cluster_id']] = row['profile_data']
+            print(f"Loaded {len(cluster_profiles)} existing cluster profiles from database")
     
     return {
         'user_clusters': df[['user_id', 'cluster']].to_json(orient='records'), # Save user cluster assignments
         'user_features': df.to_json(orient='records'),  # Save all user features
-        'cluster_profiles': json.dumps(cluster_profiles) # Save cluster profiles
+        'cluster_profiles': json.dumps(cluster_profiles), # Save cluster profiles
+        'update_cluster_profiles': is_full_refresh  # Only update profiles on full refresh
     }
 
 def save_analytics_results(**context):
@@ -450,6 +453,7 @@ def save_analytics_results(**context):
     user_clusters = json.loads(results['user_clusters'])
     user_features = json.loads(results['user_features'])
     cluster_profiles = json.loads(results['cluster_profiles'])
+    update_cluster_profiles = results['update_cluster_profiles']
     
     pg_hook = PostgresHook(postgres_conn_id='trippy_db')
     
@@ -491,20 +495,25 @@ def save_analytics_results(**context):
         
         pg_hook.run(upsert_user_sql, parameters=[user_id, cluster_id, json.dumps(user_feature_data)])
     
-    # Save cluster profiles
-    for cluster_id, profile in cluster_profiles.items():
-        upsert_cluster_sql = """
-        INSERT INTO cluster_profiles (cluster_id, profile_data, last_updated)
-        VALUES (%s, %s, CURRENT_TIMESTAMP)
-        ON CONFLICT (cluster_id)
-        DO UPDATE SET 
-            profile_data = EXCLUDED.profile_data,
-            last_updated = CURRENT_TIMESTAMP
-        """
-        
-        pg_hook.run(upsert_cluster_sql, parameters=[cluster_id, json.dumps(profile)])
+    # Save cluster profiles ONLY on full refresh (to ensure consistency with cluster model)
+    if update_cluster_profiles:
+        print("Updating cluster profiles (full refresh mode)...")
+        for cluster_id, profile in cluster_profiles.items():
+            upsert_cluster_sql = """
+            INSERT INTO cluster_profiles (cluster_id, profile_data, last_updated)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+            ON CONFLICT (cluster_id)
+            DO UPDATE SET 
+                profile_data = EXCLUDED.profile_data,
+                last_updated = CURRENT_TIMESTAMP
+            """
+            
+            pg_hook.run(upsert_cluster_sql, parameters=[cluster_id, json.dumps(profile)])
+        print(f"Updated {len(cluster_profiles)} cluster profiles")
+    else:
+        print("Incremental mode: Cluster profiles unchanged (will be updated on next full refresh)")
     
-    print(f"Successfully updated profiles for {len(user_clusters)} users across {len(cluster_profiles)} clusters")
+    print(f"Successfully updated profiles for {len(user_clusters)} users")
     return "Analytics pipeline completed successfully"
 
 def update_watermark(**context):

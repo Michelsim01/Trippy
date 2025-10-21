@@ -71,6 +71,21 @@ def get_last_run_timestamp(**context):
     execution_date = context['execution_date']
     is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
     
+    # Check if experience_intelligence table exists and has data
+    # If empty, force full refresh (auto-recovery mechanism)
+    intelligence_table_count = pg_hook.get_first("""
+        SELECT COUNT(*) 
+        FROM information_schema.tables 
+        WHERE table_name = 'experience_intelligence'
+    """)
+    
+    if intelligence_table_count and intelligence_table_count[0] > 0:
+        # Table exists, check if it has data
+        intelligence_count = pg_hook.get_first("SELECT COUNT(*) FROM experience_intelligence")
+        if intelligence_count and intelligence_count[0] == 0:
+            print("WARNING: experience_intelligence table is empty. Forcing full refresh for recovery.")
+            is_full_refresh = True
+    
     # If it's Monday or no previous run, do full refresh (return very old date)
     if is_full_refresh or not result:
         last_run = datetime(2024, 1, 1)
@@ -624,6 +639,34 @@ def calculate_recommendation_weight(popularity_score, sentiment_score, avg_ratin
     
     return weight * 100  # Scale to 0-100
 
+def build_similarity_text(exp_data):
+    """Build text representation for similarity computation from experience data"""
+    content_features = exp_data.get('content_features', {})
+    
+    # Combine relevant text features for similarity
+    similarity_text = []
+    
+    # Add category and activity keywords
+    if exp_data.get('category'):
+        similarity_text.append(exp_data['category'])
+    
+    # Add activity keywords
+    activity_keywords = content_features.get('activity_keywords', {})
+    for category, keywords in activity_keywords.items():
+        similarity_text.extend(keywords)
+    
+    # Add difficulty and duration info
+    similarity_text.append(content_features.get('difficulty_indicators', ''))
+    similarity_text.append(content_features.get('duration_category', ''))
+    similarity_text.append(content_features.get('price_category', ''))
+    similarity_text.append(content_features.get('location_type', ''))
+    
+    # Add processed content
+    if content_features.get('processed_content'):
+        similarity_text.append(content_features['processed_content'][:500])  # Limit length
+    
+    return ' '.join(filter(None, similarity_text))
+
 def compute_experience_similarities(**context):
     """Compute experience similarities for recommendation engine
     
@@ -674,36 +717,8 @@ def compute_experience_similarities(**context):
         print(f"Computing similarities using {len(intelligence_data)} experiences from current run only")
         
         # Use current run's intelligence data for similarity computation
-        experience_texts = []
-        experience_ids = []
-        
-        for exp in intelligence_data:
-            content_features = exp.get('content_features', {})
-            
-            # Combine relevant text features for similarity
-            similarity_text = []
-            
-            # Add category and activity keywords
-            if exp.get('category'):
-                similarity_text.append(exp['category'])
-            
-            # Add activity keywords
-            activity_keywords = content_features.get('activity_keywords', {})
-            for category, keywords in activity_keywords.items():
-                similarity_text.extend(keywords)
-            
-            # Add difficulty and duration info
-            similarity_text.append(content_features.get('difficulty_indicators', ''))
-            similarity_text.append(content_features.get('duration_category', ''))
-            similarity_text.append(content_features.get('price_category', ''))
-            similarity_text.append(content_features.get('location_type', ''))
-            
-            # Add processed content
-            if content_features.get('processed_content'):
-                similarity_text.append(content_features['processed_content'][:500])
-            
-            experience_texts.append(' '.join(filter(None, similarity_text)))
-            experience_ids.append(exp['experience_id'])
+        experience_texts = [build_similarity_text(exp) for exp in intelligence_data]
+        experience_ids = [exp['experience_id'] for exp in intelligence_data]
     else:
         # Normal mode: MERGE database experiences with current run's new experiences
         print(f"Loaded {len(all_exp_df)} experiences from database")
@@ -727,43 +742,17 @@ def compute_experience_similarities(**context):
         print(f"Will update similarity records for {len(intelligence_data)} processed experiences")
         
         # Prepare content for similarity analysis using ALL experiences
-        experience_texts = []
-        experience_ids = []
-        
-        for exp_data in all_experiences:
-            content_features = exp_data.get('content_features', {})
-            
-            # Combine relevant text features for similarity
-            similarity_text = []
-            
-            # Add category and activity keywords
-            if exp_data.get('category'):
-                similarity_text.append(exp_data['category'])
-            
-            # Add activity keywords
-            activity_keywords = content_features.get('activity_keywords', {})
-            for category, keywords in activity_keywords.items():
-                similarity_text.extend(keywords)
-            
-            # Add difficulty and duration info
-            similarity_text.append(content_features.get('difficulty_indicators', ''))
-            similarity_text.append(content_features.get('duration_category', ''))
-            similarity_text.append(content_features.get('price_category', ''))
-            similarity_text.append(content_features.get('location_type', ''))
-            
-            # Add processed content
-            if content_features.get('processed_content'):
-                similarity_text.append(content_features['processed_content'][:500])  # Limit length
-            
-            experience_texts.append(' '.join(filter(None, similarity_text)))
-            experience_ids.append(exp_data['experience_id'])
+        experience_texts = [build_similarity_text(exp_data) for exp_data in all_experiences]
+        experience_ids = [exp_data['experience_id'] for exp_data in all_experiences]
     
     # Compute TF-IDF vectors for ALL experiences
+    # Use min_df=1 for small datasets to avoid filtering out all terms
+    min_doc_freq = min(2, len(experience_texts))
     vectorizer = TfidfVectorizer(
         max_features=1000,
         stop_words='english',
         ngram_range=(1, 2),
-        min_df=2
+        min_df=min_doc_freq
     )
     
     if len(experience_texts) > 1:
