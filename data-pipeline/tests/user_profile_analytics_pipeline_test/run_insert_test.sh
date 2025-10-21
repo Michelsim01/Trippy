@@ -16,14 +16,9 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "✅ Test data inserted successfully!"
     echo ""
-    echo "Next steps:"
-    echo "1. Go to Airflow UI: http://localhost:8080"
-    echo "2. Trigger the 'user_profile_analytics' DAG"
-    echo "3. Wait for completion"
-    echo "4. Run: ./run_verify_test.sh"
 else
     echo ""
-    echo "❌ Error inserting test data. Check the output above."
+    echo "❌ Error inserting test data."
     exit 1
 fi
 
