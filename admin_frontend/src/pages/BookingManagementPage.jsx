@@ -33,35 +33,6 @@ const BookingManagementPage = () => {
     }
   };
 
-  const handleSendTripReminders = async () => {
-    setSendingReminders(true);
-    setReminderMessage(null);
-    try {
-      const response = await adminService.triggerDailyReminders();
-      if (response.success) {
-        setReminderMessage({
-          type: 'success',
-          text: 'Trip reminders sent successfully!'
-        });
-      } else {
-        setReminderMessage({
-          type: 'error',
-          text: response.error || 'Failed to send trip reminders'
-        });
-      }
-    } catch (err) {
-      setReminderMessage({
-        type: 'error',
-        text: 'Failed to send trip reminders. Please try again.'
-      });
-      console.error('Error sending trip reminders:', err);
-    } finally {
-      setSendingReminders(false);
-      // Clear message after 5 seconds
-      setTimeout(() => setReminderMessage(null), 5000);
-    }
-  };
-
   useEffect(() => {
     fetchMetrics();
   }, []);
@@ -75,18 +46,6 @@ const BookingManagementPage = () => {
           <p className="text-gray-600">Manage bookings, reservations, and customer interactions</p>
         </div>
         <div className="flex flex-col items-end space-y-2">
-          <button
-            onClick={handleSendTripReminders}
-            disabled={sendingReminders}
-            className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
-              sendingReminders
-                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
-            }`}
-          >
-            <Bell className={`w-4 h-4 mr-2 ${sendingReminders ? 'animate-pulse' : ''}`} />
-            {sendingReminders ? 'Sending...' : 'Send Trip Reminders'}
-          </button>
           
           {/* Reminder message */}
           {reminderMessage && (

@@ -828,7 +828,7 @@ public class BookingController {
             event.put("endDateTime", schedule.getEndDateTime());
 
             // For guide events from schedules, we don't have booking-specific info
-            if (Boolean.FALSE.equals(schedule.getIsAvailable()) && schedule.getStartDateTime().isAfter(LocalDateTime.now())) {
+            if (Boolean.TRUE.equals(schedule.getCancelled())) {
                 event.put("status", "CANCELLED_BY_GUIDE");
             } else {
                 event.put("status", "SCHEDULED");
