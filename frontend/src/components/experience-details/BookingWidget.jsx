@@ -132,6 +132,11 @@ const BookingWidget = ({
     return userId === guideId;
   };
 
+  // Check if experience is suspended
+  const isExperienceSuspended = () => {
+    return displayData?.status === 'SUSPENDED';
+  };
+
   // Helper function to get maximum allowed guests based on selected schedule
   const getMaxAllowedGuests = () => {
     if (selectedSchedule !== null && schedulesData && schedulesData[selectedSchedule]) {
@@ -148,6 +153,12 @@ const BookingWidget = ({
     // Prevent guides from booking their own experiences
     if (isUserTheGuide()) {
       alert('You cannot book your own experience.');
+      return;
+    }
+
+    // Prevent booking suspended experiences
+    if (isExperienceSuspended()) {
+      alert('This experience is currently suspended and unavailable for booking.');
       return;
     }
 
@@ -381,23 +392,25 @@ const BookingWidget = ({
       <button
         onClick={handleBookNow}
         className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
-          isUserTheGuide() || selectedSchedule === null
+          isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null
             ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
             : 'bg-primary-1 text-white hover:bg-opacity-90'
           } ${isMobile ? 'mb-0' : 'mb-4'}`}
-        disabled={isUserTheGuide() || selectedSchedule === null}
+        disabled={isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null}
         style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
       >
         {isUserTheGuide()
           ? 'You cannot book your own experience'
-          : selectedSchedule === null
-            ? 'Select a date to book'
-            : 'Book Now'
+          : isExperienceSuspended()
+            ? 'Experience suspended'
+            : selectedSchedule === null
+              ? 'Select a date to book'
+              : 'Book Now'
         }
       </button>
 
-      {/* Chat with Guide Button - Only show if user is not the guide */}
-      {!isUserTheGuide() && (
+      {/* Chat with Guide Button - Only show if user is not the guide and experience is not suspended */}
+      {!isUserTheGuide() && !isExperienceSuspended() && (
         <button
           onClick={onChatWithGuide}
           className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} border-2 border-primary-1 text-primary-1 hover:bg-primary-1 hover:text-white ${isMobile ? 'mb-0' : 'mb-4'}`}

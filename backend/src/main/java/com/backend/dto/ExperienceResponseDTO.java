@@ -1,6 +1,7 @@
 package com.backend.dto;
 
 import com.backend.entity.Experience;
+import com.backend.entity.ExperienceStatus;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,7 @@ public class ExperienceResponseDTO {
     private String coverPhotoUrl;
     private LocalDateTime createdAt;
     private String guideName; // Instead of full User object
+    private ExperienceStatus status;
     
     public ExperienceResponseDTO() {}
     
@@ -33,9 +35,10 @@ public class ExperienceResponseDTO {
         this.duration = experience.getDuration();
         this.coverPhotoUrl = experience.getCoverPhotoUrl();
         this.createdAt = experience.getCreatedAt();
+        this.status = experience.getStatus();
         // Safely get guide name without triggering lazy loading issues
-        this.guideName = experience.getGuide() != null ? 
-            experience.getGuide().getFirstName() + " " + experience.getGuide().getLastName() : 
+        this.guideName = experience.getGuide() != null ?
+            experience.getGuide().getFirstName() + " " + experience.getGuide().getLastName() :
             "Unknown Guide";
     }
     
@@ -75,4 +78,7 @@ public class ExperienceResponseDTO {
     
     public String getGuideName() { return guideName; }
     public void setGuideName(String guideName) { this.guideName = guideName; }
+
+    public ExperienceStatus getStatus() { return status; }
+    public void setStatus(ExperienceStatus status) { this.status = status; }
 }
