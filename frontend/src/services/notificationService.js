@@ -114,15 +114,25 @@ export const notificationService = {
   // Create notification (for testing purposes)
   async createNotification(notificationData) {
     try {
+      const token = localStorage.getItem('token');
+      console.log('NotificationService: Auth token available:', !!token);
+      console.log('NotificationService: Token length:', token?.length || 0);
+      console.log('NotificationService: Sending POST request to /api/notifications with data:', notificationData);
+      
       const response = await api.post('/api/notifications', notificationData)
+      console.log('NotificationService: Received response:', response.status, response.data);
       return {
         success: true,
         data: response.data,
       }
     } catch (error) {
+      console.error('NotificationService: Error occurred:', error);
+      console.error('NotificationService: Error response:', error.response?.data);
+      console.error('NotificationService: Error status:', error.response?.status);
+      console.error('NotificationService: Request config:', error.config);
       return {
         success: false,
-        error: error.response?.data?.message || error.message || 'Failed to create notification',
+        error: error.response?.data?.message || error.response?.data || error.message || 'Failed to create notification',
       }
     }
   }

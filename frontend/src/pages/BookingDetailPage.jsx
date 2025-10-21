@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import FormattedImportantInfo from '../components/FormattedImportantInfo';
+import { notificationService } from '../services/notificationService';
 
 const BookingDetailPage = () => {
     const { bookingId } = useParams();
@@ -58,6 +59,7 @@ const BookingDetailPage = () => {
                     bookingDate: data.bookingDate,
                     cancellationReason: data.cancellationReason,
                     cancelledAt: data.cancelledAt,
+                    scheduleId: data.scheduleId, // Add this for notifications
                     experience: {
                         experienceId: data.experienceId,
                         title: data.experienceTitle,
@@ -301,6 +303,97 @@ const BookingDetailPage = () => {
 
             const updatedBooking = await response.json();
 
+            // Create notifications for tourist booking cancellation
+            try {
+                console.log('=== Starting tourist cancellation notification process ===');
+                console.log('Booking data:', updatedBooking);
+                console.log('Current user (tourist):', user);
+
+                // Get the guide ID from the experience
+                const experienceId = updatedBooking.experienceId || booking?.experience?.experienceId;
+                console.log('Using experience ID:', experienceId);
+
+                if (experienceId) {
+                    const experienceResponse = await fetch(`http://localhost:8080/api/experiences/${experienceId}`, {
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (experienceResponse.ok) {
+                        const experienceData = await experienceResponse.json();
+                        console.log('Experience data:', experienceData);
+
+                        // 1. Notification for the tourist (themselves) confirming cancellation
+                        const touristNotificationData = {
+                            title: 'Booking Cancelled Successfully',
+                            message: `Your booking for "${updatedBooking.experienceTitle}". Refund of $${Math.round(updatedBooking.refundAmount || 0)} will be processed within 5 working days.`,
+                            userId: user.id,
+                            type: 'BOOKING_CANCELLED',
+                        };
+
+                        console.log('Creating tourist notification with data:', touristNotificationData);
+                        const touristNotificationResult = await notificationService.createNotification(touristNotificationData);
+                        
+                        console.log('Tourist notification result:', touristNotificationResult);
+                        if (touristNotificationResult.success) {
+                            console.log('✅ Tourist notification sent successfully:', touristNotificationResult.data);
+                        } else {
+                            console.error('❌ Error sending tourist notification:', touristNotificationResult.error);
+                        }
+
+                        // 2. Notification for the tour guide about guest cancellation
+                        // Try different possible paths for guide ID
+                        let guideId = null;
+                        if (experienceData.guide?.id) {
+                            guideId = experienceData.guide.id;
+                        } else if (experienceData.guide?.userId) {
+                            guideId = experienceData.guide.userId;
+                        } else if (experienceData.guideId) {
+                            guideId = experienceData.guideId;
+                        }
+
+                        console.log('Found guide ID:', guideId);
+
+                        if (guideId) {
+                            const guideNotificationData = {
+                                title: 'Guest Cancelled Booking',
+                                message: `A guest has cancelled their booking for your tour "${updatedBooking.experienceTitle}" scheduled for ${new Date(updatedBooking.startDateTime).toLocaleDateString()}. ${updatedBooking.numberOfParticipants} ${updatedBooking.numberOfParticipants === 1 ? 'spot is' : 'spots are'} now available again.`,
+                                userId: guideId,
+                                type: 'BOOKING_CANCELLED',
+                            };
+
+                            console.log('Creating guide notification with data:', guideNotificationData);
+                            const guideNotificationResult = await notificationService.createNotification(guideNotificationData);
+                            
+                            console.log('Guide notification result:', guideNotificationResult);
+                            if (guideNotificationResult.success) {
+                                console.log('✅ Guide notification sent successfully:', guideNotificationResult.data);
+                            } else {
+                                console.error('❌ Error sending guide notification:', guideNotificationResult.error);
+                            }
+                        } else {
+                            console.log('❌ No guide ID found for this experience');
+                            console.log('Experience data structure:', experienceData);
+                        }
+                    } else {
+                        console.error('❌ Failed to fetch experience data:', experienceResponse.status);
+                    }
+                } else {
+                    console.error('❌ No experience ID available for notification creation');
+                    console.log('Updated booking data:', updatedBooking);
+                    console.log('Original booking data:', booking);
+                }
+            } catch (notificationError) {
+                console.error('❌ Error sending cancellation notifications:', notificationError);
+                console.error('❌ Notification error details:', {
+                    message: notificationError.message,
+                    stack: notificationError.stack
+                });
+                // Don't fail the entire cancellation process if notifications fail
+            }
+
             // Transform to match expected structure (same as initial fetch)
             const transformedBooking = {
                 bookingId: updatedBooking.bookingId,
@@ -313,6 +406,7 @@ const BookingDetailPage = () => {
                 bookingDate: updatedBooking.bookingDate,
                 cancellationReason: updatedBooking.cancellationReason,
                 cancelledAt: updatedBooking.cancelledAt,
+                scheduleId: updatedBooking.scheduleId, // Add this for notifications
                 experience: {
                     experienceId: updatedBooking.experienceId,
                     title: updatedBooking.experienceTitle,

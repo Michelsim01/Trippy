@@ -52,7 +52,8 @@ const NotificationsPage = () => {
             'DISCOUNT': 'Discount',
             'REVIEW_REQUEST': 'Review Request',
             'PASSWORD_RESET': 'Password Reset',
-            'UPDATE_INFO': 'Update Info'
+            'UPDATE_INFO': 'Update Info',
+            'BOOKING_CANCELLED': 'Booking Cancelled',
         };
         return typeLabels[type] || type;
     };

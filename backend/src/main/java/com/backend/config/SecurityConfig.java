@@ -170,6 +170,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/bookings/**").hasRole("TRAVELER")
                 
                 // General authenticated endpoints
+                .requestMatchers("/api/notifications/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN") // Allow all authenticated users to access notifications
                 .requestMatchers("/api/user/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 .requestMatchers("/api/users/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")
                 .requestMatchers("/api/experiences/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")

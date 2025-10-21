@@ -32,13 +32,11 @@ jobs:
         key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
         restore-keys: ${{ runner.os }}-m2
         
-    - name: Run Maven tests (excluding email tests)
+    - name: Run Maven tests
       working-directory: ./backend
       run: |
         # Run tests with CI profile and exclude email-related tests and known failing tests
-        ./mvnw test -Dspring.profiles.active=ci \
-          -Dtest='!**/*EmailServiceTest,!**/*EmailControllerTest,!**/*MailTest,!**/*EmailTest' \
-          -Dmaven.test.failure.ignore=false || echo "⚠️ Some tests failed but continuing build..."
+        ./mvnw test -Dspring.profiles.active=ci -Dmaven.test.failure.ignore=false || echo "⚠️ Some tests failed but continuing build..."
         
     - name: Build with Maven
       working-directory: ./backend

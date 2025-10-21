@@ -13,7 +13,7 @@ Triggered on:
 **Components tested:**
 1. **Backend (Java Spring Boot)**
    - Java 17 with Maven
-   - Unit tests (excluding email-related tests)
+   - Unit tests
    - Build and package JAR
    
 2. **Frontend (React + Vite)**
@@ -38,19 +38,8 @@ Triggered on:
    - Dependency security validation
    - SARIF integration with GitHub Security
 
-## 🚫 Email Test Exclusion
-
-The CI pipeline excludes email-related tests to avoid external dependencies:
-
-**Excluded test patterns:**
-- `**/*EmailServiceTest.java`
-- `**/*EmailControllerTest.java`
-- `**/*MailTest.java`
-- `**/*EmailTest.java`
-
 **Configuration:**
 - Uses `application-ci.properties` profile
-- Disables email services in test environment
 - Tests run with in-memory H2 database
 
 ## 🏃‍♂️ Running CI Tests Locally
@@ -64,7 +53,7 @@ Use the provided script to run the same tests that will execute in CI:
 
 This script will:
 1. Install all dependencies
-2. Run backend tests (excluding email tests)
+2. Run backend tests
 3. Run frontend and admin frontend linting
 4. Build all components
 5. Verify all artifacts are created
@@ -311,7 +300,7 @@ Vulnerabilities by Severity:
 ```bash
 # Backend only
 cd backend
-./mvnw test -Dspring.profiles.active=ci -Dtest='!**/*EmailServiceTest,!**/*EmailControllerTest,!**/*MailTest,!**/*EmailTest'
+./mvnw test -Dspring.profiles.active=ci
 
 # Frontend only
 cd frontend

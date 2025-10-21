@@ -828,7 +828,11 @@ public class BookingController {
             event.put("endDateTime", schedule.getEndDateTime());
 
             // For guide events from schedules, we don't have booking-specific info
-            event.put("status", "SCHEDULED"); // Default status for scheduled events
+            if (Boolean.FALSE.equals(schedule.getIsAvailable()) && schedule.getStartDateTime().isAfter(LocalDateTime.now())) {
+                event.put("status", "CANCELLED_BY_GUIDE");
+            } else {
+                event.put("status", "SCHEDULED");
+            }
             event.put("paymentStatus", "N/A"); // Not applicable for guide view
             event.put("totalAmount", 0); // Not applicable for guide view
             event.put("numberOfParticipants", schedule.getBookings() != null ? schedule.getBookings().size() : 0);

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Button from './Button';
 import swal from 'sweetalert2';
+import { notificationService } from '../services/notificationService';
+import { bookingService } from '../services/bookingService';
 
 const ExperienceEarningsModal = ({
     isOpen,
@@ -199,6 +201,10 @@ const ExperienceEarningsModal = ({
             setCancellingSchedule(selectedCancellationSchedule.scheduleId);
             setShowCancellationDialog(false);
 
+            // First get the participants for this schedule to send notifications
+            const participantsResponse = await bookingService.getScheduleParticipants(selectedCancellationSchedule.scheduleId);
+
+            // Cancel the schedule
             const response = await fetch(`http://localhost:8080/api/bookings/experiences/schedules/${selectedCancellationSchedule.scheduleId}/cancel?reason=${encodeURIComponent(cancellationReason)}`, {
                 method: 'POST',
                 headers: {
@@ -212,6 +218,64 @@ const ExperienceEarningsModal = ({
             }
 
             const result = await response.json();
+
+            // Create notifications for tour cancellation
+            try {
+                // 1. Notification for the tour guide (themselves)
+                const guideNotificationData = {
+                    title: 'Tour Schedule Cancelled',
+                    message: `You have successfully cancelled your tour schedule for "${experienceTitle}". Customers will receive full refunds.`,
+                    userId: userId,
+                    type: 'BOOKING_CANCELLED',
+                };
+                const guideNotificationResult = await notificationService.createNotification(guideNotificationData);
+                if (guideNotificationResult.success) {
+                    console.log('✅ Guide notification sent successfully:', guideNotificationResult.data);
+                } else {
+                    console.error('❌ Error sending guide notification:', guideNotificationResult.error);
+                }
+
+                // 2. Notifications for all users who booked this tour schedule
+                if (participantsResponse.success && participantsResponse.data.participantIds?.length > 0) {
+                    const participantIds = participantsResponse.data.participantIds;
+                    
+                    // Create notifications for each participant
+                    const customerNotificationPromises = participantIds.map(async (participantId) => {
+                        const customerNotificationData = {
+                            title: 'Tour Cancelled by Guide',
+                            message: `Unfortunately, your tour "${experienceTitle}" has been cancelled by the guide. You will receive a full refund within 3-5 business days.`,
+                            userId: participantId,
+                            type: 'BOOKING_CANCELLED',
+                        };
+
+                        console.log(`Creating customer notification for user ${participantId}:`, customerNotificationData);
+                        const customerNotificationResult = await notificationService.createNotification(customerNotificationData);
+                        
+                        console.log(`Customer notification result for user ${participantId}:`, customerNotificationResult);
+                        if (customerNotificationResult.success) {
+                            console.log(`✅ Customer notification sent successfully to user ${participantId}:`, customerNotificationResult.data);
+                        } else {
+                            console.error(`❌ Error sending customer notification to user ${participantId}:`, customerNotificationResult.error);
+                        }
+
+                        return customerNotificationResult;
+                    });
+
+                    // Wait for all customer notifications to be sent
+                    await Promise.all(customerNotificationPromises);
+                    console.log(`✅ All customer notifications processed for ${participantIds.length} participants`);
+                } else {
+                    console.log('❌ No participants found for this schedule or error fetching participants');
+                    console.log('Participants response details:', participantsResponse);
+                }
+            } catch (notificationError) {
+                console.error('❌ Error sending notifications:', notificationError);
+                console.error('❌ Notification error details:', {
+                    message: notificationError.message,
+                    stack: notificationError.stack
+                });
+                // Don't fail the entire cancellation process if notifications fail
+            }
 
             // Refresh earnings data
             if (isOpen && experienceId && userId) {
