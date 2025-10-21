@@ -3,6 +3,9 @@ package com.backend.controller;
 import com.backend.entity.TravelArticle;
 import com.backend.entity.User;
 import com.backend.repository.TravelArticleRepository;
+import com.backend.repository.UserRepository;
+import com.backend.repository.ArticleLikeRepository;
+import com.backend.service.ArticleCommentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +33,15 @@ class TravelArticleControllerTest {
 
     @Mock
     private TravelArticleRepository travelArticleRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private ArticleLikeRepository articleLikeRepository;
+
+    @Mock
+    private ArticleCommentService articleCommentService;
 
     @InjectMocks
     private TravelArticleController travelArticleController;
@@ -131,17 +143,20 @@ class TravelArticleControllerTest {
         // Arrange
         TravelArticle article = createTestTravelArticle(null);
         TravelArticle savedArticle = createTestTravelArticle(1L);
+        User testUser = createTestUser();
 
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(travelArticleRepository.save(any(TravelArticle.class))).thenReturn(savedArticle);
 
         // Act & Assert
         mockMvc.perform(post("/api/travel-articles")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(article)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.articleId").value(1L))
                 .andExpect(jsonPath("$.title").value("Test Article"));
 
+        verify(userRepository).findById(1L);
         verify(travelArticleRepository).save(any(TravelArticle.class));
     }
 
@@ -160,6 +175,9 @@ class TravelArticleControllerTest {
     void createTravelArticle_Exception() throws Exception {
         // Arrange
         TravelArticle article = createTestTravelArticle(null);
+        User testUser = createTestUser();
+        
+        when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
         when(travelArticleRepository.save(any(TravelArticle.class))).thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
@@ -168,6 +186,7 @@ class TravelArticleControllerTest {
                 .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isInternalServerError());
 
+        verify(userRepository).findById(1L);
         verify(travelArticleRepository).save(any(TravelArticle.class));
     }
 
@@ -177,17 +196,18 @@ class TravelArticleControllerTest {
         Long articleId = 1L;
         TravelArticle article = createTestTravelArticle(articleId);
 
-        when(travelArticleRepository.existsById(articleId)).thenReturn(true);
+        when(travelArticleRepository.findById(articleId)).thenReturn(Optional.of(article));
         when(travelArticleRepository.save(any(TravelArticle.class))).thenReturn(article);
 
         // Act & Assert
         mockMvc.perform(put("/api/travel-articles/{id}", articleId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(article)))
+                .content(objectMapper.writeValueAsString(article))
+                .param("userId", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.articleId").value(articleId));
 
-        verify(travelArticleRepository).existsById(articleId);
+        verify(travelArticleRepository).findById(articleId);
         verify(travelArticleRepository).save(any(TravelArticle.class));
     }
 
@@ -197,7 +217,7 @@ class TravelArticleControllerTest {
         Long articleId = 999L;
         TravelArticle article = createTestTravelArticle(articleId);
 
-        when(travelArticleRepository.existsById(articleId)).thenReturn(false);
+        when(travelArticleRepository.findById(articleId)).thenReturn(Optional.empty());
 
         // Act & Assert
         mockMvc.perform(put("/api/travel-articles/{id}", articleId)
@@ -205,7 +225,7 @@ class TravelArticleControllerTest {
                 .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isNotFound());
 
-        verify(travelArticleRepository).existsById(articleId);
+        verify(travelArticleRepository).findById(articleId);
         verify(travelArticleRepository, never()).save(any());
     }
 
@@ -240,13 +260,15 @@ class TravelArticleControllerTest {
     void deleteTravelArticle_Success() throws Exception {
         // Arrange
         Long articleId = 1L;
-        when(travelArticleRepository.existsById(articleId)).thenReturn(true);
+        TravelArticle article = createTestTravelArticle(articleId);
+        when(travelArticleRepository.findById(articleId)).thenReturn(Optional.of(article));
 
         // Act & Assert
-        mockMvc.perform(delete("/api/travel-articles/{id}", articleId))
+        mockMvc.perform(delete("/api/travel-articles/{id}", articleId)
+                .param("userId", "1"))
                 .andExpect(status().isNoContent());
 
-        verify(travelArticleRepository).existsById(articleId);
+        verify(travelArticleRepository).findById(articleId);
         verify(travelArticleRepository).deleteById(articleId);
     }
 
@@ -254,13 +276,13 @@ class TravelArticleControllerTest {
     void deleteTravelArticle_NotFound() throws Exception {
         // Arrange
         Long articleId = 999L;
-        when(travelArticleRepository.existsById(articleId)).thenReturn(false);
+        when(travelArticleRepository.findById(articleId)).thenReturn(Optional.empty());
 
         // Act & Assert
         mockMvc.perform(delete("/api/travel-articles/{id}", articleId))
                 .andExpect(status().isNotFound());
 
-        verify(travelArticleRepository).existsById(articleId);
+        verify(travelArticleRepository).findById(articleId);
         verify(travelArticleRepository, never()).deleteById(any());
     }
 
@@ -278,14 +300,16 @@ class TravelArticleControllerTest {
     void deleteTravelArticle_Exception() throws Exception {
         // Arrange
         Long articleId = 1L;
-        when(travelArticleRepository.existsById(articleId)).thenReturn(true);
+        TravelArticle article = createTestTravelArticle(articleId);
+        when(travelArticleRepository.findById(articleId)).thenReturn(Optional.of(article));
         doThrow(new RuntimeException("Database error")).when(travelArticleRepository).deleteById(articleId);
 
         // Act & Assert
-        mockMvc.perform(delete("/api/travel-articles/{id}", articleId))
+        mockMvc.perform(delete("/api/travel-articles/{id}", articleId)
+                .param("userId", "1"))
                 .andExpect(status().isInternalServerError());
 
-        verify(travelArticleRepository).existsById(articleId);
+        verify(travelArticleRepository).findById(articleId);
         verify(travelArticleRepository).deleteById(articleId);
     }
 

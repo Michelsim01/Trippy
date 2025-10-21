@@ -15,7 +15,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -155,18 +154,19 @@ class AuthControllerTest {
         loginRequest.setEmail("nonexistent@example.com");
         loginRequest.setPassword("wrongpassword");
 
-        when(authService.login(any(LoginRequest.class)))
-            .thenThrow(new AuthenticationException("Invalid credentials") {});
+        // Mock userRepository to return empty Optional (user not found)
+        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(content().string("Invalid email or password"));
+                .andExpect(content().string("No account found with this email address. Please check your email or create a new account."));
 
-        // Verify service was called
-        verify(authService).login(any(LoginRequest.class));
+        // Verify userRepository was called but authService was not
+        verify(userRepository).findByEmail("nonexistent@example.com");
+        verify(authService, never()).login(any(LoginRequest.class));
     }
 
             @Test

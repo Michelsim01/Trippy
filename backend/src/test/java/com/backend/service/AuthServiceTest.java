@@ -99,7 +99,7 @@ class AuthServiceTest {
 
         // Act & Assert
         Exception exception = assertThrows(Exception.class, () -> authService.register(request));
-        assertEquals("User with email test@example.com already exists", exception.getMessage());
+        assertEquals("An account with this email address already exists. Please use a different email or try signing in instead.", exception.getMessage());
 
         verify(userRepository).existsByEmail("test@example.com");
         verify(pendingUserRepository, never()).save(any(PendingUser.class));

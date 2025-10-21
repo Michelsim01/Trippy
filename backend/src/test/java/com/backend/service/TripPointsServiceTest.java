@@ -46,28 +46,30 @@ class TripPointsServiceTest {
         // Arrange
         Long userId = 1L;
         Integer expectedBalance = 150;
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(expectedBalance);
+        testUser.setTripPoints(expectedBalance);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
         // Act
         Integer result = tripPointsService.getPointsBalance(userId);
 
         // Assert
         assertEquals(expectedBalance, result);
-        verify(tripPointsRepository).getCurrentBalanceByUserId(userId);
+        verify(userRepository).findById(userId);
     }
 
     @Test
     void testGetPointsBalance_NoBalance_ReturnsZero() {
         // Arrange
         Long userId = 1L;
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(null);
+        testUser.setTripPoints(null);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
         // Act
         Integer result = tripPointsService.getPointsBalance(userId);
 
         // Assert
         assertEquals(0, result);
-        verify(tripPointsRepository).getCurrentBalanceByUserId(userId);
+        verify(userRepository).findById(userId);
     }
 
     @Test
@@ -93,8 +95,8 @@ class TripPointsServiceTest {
         Integer pointsToAward = 50;
         Integer currentBalance = 100;
         
+        testUser.setTripPoints(currentBalance);
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(currentBalance);
         when(tripPointsRepository.save(any(TripPoints.class))).thenReturn(testTripPoints);
 
         // Act
@@ -103,7 +105,6 @@ class TripPointsServiceTest {
         // Assert
         assertNotNull(result);
         verify(userRepository).findById(userId);
-        verify(tripPointsRepository).getCurrentBalanceByUserId(userId);
         verify(tripPointsRepository).save(any(TripPoints.class));
     }
 
@@ -114,6 +115,7 @@ class TripPointsServiceTest {
         Integer pointsToRedeem = 50;
         Integer currentBalance = 100;
         
+        testUser.setTripPoints(currentBalance);
         when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
         when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(currentBalance);
         when(tripPointsRepository.save(any(TripPoints.class))).thenReturn(testTripPoints);
@@ -123,8 +125,7 @@ class TripPointsServiceTest {
 
         // Assert
         assertNotNull(result);
-        verify(userRepository).findById(userId);
-        verify(tripPointsRepository, atLeastOnce()).getCurrentBalanceByUserId(userId);
+        verify(userRepository, times(2)).findById(userId); // Called in redeemPoints and createTransaction
         verify(tripPointsRepository).save(any(TripPoints.class));
     }
 
@@ -135,14 +136,15 @@ class TripPointsServiceTest {
         Integer pointsToRedeem = 150;
         Integer currentBalance = 100; // Less than points to redeem
         
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(currentBalance);
+        testUser.setTripPoints(currentBalance);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
         // Act & Assert
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
             () -> tripPointsService.redeemPoints(userId, pointsToRedeem));
         assertEquals("Insufficient points balance", exception.getMessage());
+        verify(userRepository).findById(userId);
         verify(tripPointsRepository, never()).save(any());
-        verify(userRepository, never()).findById(any());
     }
 
     @Test
@@ -181,14 +183,15 @@ class TripPointsServiceTest {
         Integer pointsRequired = 50;
         Integer currentBalance = 100;
         
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(currentBalance);
+        testUser.setTripPoints(currentBalance);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
         // Act
         boolean result = tripPointsService.hasEnoughPoints(userId, pointsRequired);
 
         // Assert
         assertTrue(result);
-        verify(tripPointsRepository).getCurrentBalanceByUserId(userId);
+        verify(userRepository).findById(userId);
     }
 
     @Test
@@ -198,14 +201,15 @@ class TripPointsServiceTest {
         Integer pointsRequired = 150;
         Integer currentBalance = 100;
         
-        when(tripPointsRepository.getCurrentBalanceByUserId(userId)).thenReturn(currentBalance);
+        testUser.setTripPoints(currentBalance);
+        when(userRepository.findById(userId)).thenReturn(Optional.of(testUser));
 
         // Act
         boolean result = tripPointsService.hasEnoughPoints(userId, pointsRequired);
 
         // Assert
         assertFalse(result);
-        verify(tripPointsRepository).getCurrentBalanceByUserId(userId);
+        verify(userRepository).findById(userId);
     }
 
     // Helper methods
