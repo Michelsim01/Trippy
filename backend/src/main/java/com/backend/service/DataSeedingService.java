@@ -47,6 +47,9 @@ public class DataSeedingService {
     @Autowired
     private UserSurveyRepository userSurveyRepository;
 
+    @Autowired
+    private TravelArticleRepository travelArticleRepository;
+
     private final Random random = new Random();
 
     /**
@@ -105,6 +108,9 @@ public class DataSeedingService {
         // Create wishlist items
         createWishlistItems(users, experiences);
 
+        // Create travel blog articles
+        List<TravelArticle> articles = createTravelArticles(users);
+
         System.out.println("Database seeding completed successfully!");
         System.out.println("Created " + users.size() + " users");
         System.out.println("Created " + experiences.size() + " experiences");
@@ -112,6 +118,7 @@ public class DataSeedingService {
         System.out.println("Created " + bookings.size() + " bookings");
         System.out.println("Created " + reviews.size() + " reviews");
         System.out.println("Created " + surveys.size() + " user surveys");
+        System.out.println("Created " + (articles != null ? articles.size() : 0) + " travel articles");
         System.out.println("Updated ratings for experiences and guides based on reviews");
 
         // Print booking status distribution for testing reference
@@ -1394,7 +1401,137 @@ public class DataSeedingService {
             
             surveys.add(userSurveyRepository.save(survey));
         }
-        
+
         return surveys;
+    }
+
+    /**
+     * Create travel blog articles with content provided by user
+     */
+    private List<TravelArticle> createTravelArticles(List<User> users) {
+        List<TravelArticle> articles = new ArrayList<>();
+
+        // Check if blogs already exist to avoid duplicates
+        if (travelArticleRepository.count() > 0) {
+            System.out.println("Travel articles already exist, skipping blog creation...");
+            return articles;
+        }
+
+        // Get specific users by email for blog authoring - use database lookup instead of assuming they're in the passed list
+        User rachelGreen = userRepository.findByEmail("rachel.green@trippy.traveler").orElse(null);
+        User johnSmith = userRepository.findByEmail("john.smith@trippy.guide").orElse(null);
+        User alexanderMartin = userRepository.findByEmail("alexander.martin@trippy.traveler").orElse(null);
+        User lucasWhite = userRepository.findByEmail("lucas.white@trippy.traveler").orElse(null);
+        User marcoRossi = userRepository.findByEmail("marco.rossi@trippy.guide").orElse(null);
+        User fatimaAlMansoori = userRepository.findByEmail("fatima.al-mansoori@trippy.guide").orElse(null);
+
+        // Travel blog articles data: title, content, author, category, tags, thumbnail
+        Object[][] blogData = {
+            {
+                "Hidden Gems in Singapore You Probably Haven't Discovered Yet",
+                "<p>Singapore may be famous for its skyline and hawker culture, but beyond the obvious lies a softer, slower side worth exploring. From tucked-away cafés to secret nature trails, here are a few local treasures.</p>\n<blockquote>\"Sometimes the best adventures happen when you wander off the main road.\"</blockquote>\n<h2>☕ The Secret Garden Café at Floral Fantasy</h2>\n<p>Hidden within Gardens by the Bay, this fairytale café is covered in hanging blooms and offers a calm escape from the crowds.</p>\n<figure><img src=\"https://images.unsplash.com/photo-1730130857408-67d0bd27dd1d?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"flower cafe\" style=\"width:100%;border-radius:8px;\"><figcaption>Inside Floral Fantasy's Secret Garden Café</figcaption></figure>\n<h2>🌊 Yishun Dam for Sunset Chasers</h2>\n<p>Golden light, quiet waves, and the occasional cyclist — it's a peaceful place to watch the day fade away.</p>\n<h2>🏚 Kampong Lorong Buangkok</h2>\n<p>Singapore's last kampong, frozen in time, surrounded by modern flats. It's a nostalgic glimpse of simpler days.</p>\n<blockquote>\"In a city of progress, some corners still whisper stories of the past.\"</blockquote>",
+                rachelGreen, ArticleCategoryEnum.EXPLORING, Arrays.asList("singapore", "hidden-gems", "local", "cafe", "sunset"),
+                "https://plus.unsplash.com/premium_photo-1697730373939-3ebcaa9d295e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Top 7 Underrated Islands in Southeast Asia",
+                "<p>Forget Phuket and Bali. Southeast Asia hides dozens of quiet islands where turquoise waters and local smiles greet you without the crowds.</p>\n<blockquote>\"Paradise doesn't always need to be popular.\"</blockquote>\n<h2>🇹🇭 Koh Yao Noi, Thailand</h2>\n<p>Just 30 min from Phuket, this small island offers local homestays, empty beaches, and mangrove kayaking.</p>\n<h2>🇮🇩 Belitung, Indonesia</h2>\n<p>Granite boulders and crystal lagoons rival the Seychelles — at a fraction of the price.</p>\n<h2>🇵🇭 Siquijor, Philippines</h2>\n<p>Known as the \"Island of Fire,\" Siquijor blends waterfalls, caves, and quiet coastal roads perfect for scooters.</p>\n<figure><img src=\"https://images.unsplash.com/photo-1650621886779-19747038a1f7?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"islands\" style=\"width:100%;border-radius:8px;\"><figcaption>Hidden coves across Southeast Asia</figcaption></figure>",
+                johnSmith, ArticleCategoryEnum.TRAVEL, Arrays.asList("islands", "southeast-asia", "hidden", "beaches", "paradise"),
+                "https://plus.unsplash.com/premium_photo-1693149386423-2e4e264712e5?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=3132"
+            },
+            {
+                "How to Travel Solo Without Feeling Lonely",
+                "<p>Traveling alone isn't about isolation — it's about connection. The world opens up when you let curiosity lead.</p>\n<blockquote>\"You're never really alone when you travel with an open heart.\"</blockquote>\n<h2>🎒 1. Join Local Experiences</h2>\n<p>Cooking classes, walking tours, and volunteer programs help you meet people naturally while exploring culture.</p>\n<h2>📱 2. Use Apps for Safe Socializing</h2>\n<p>Platforms like Meetup and Backpackr let you find fellow travelers in seconds.</p>\n<h2>💭 3. Embrace Solitude</h2>\n<p>Some of the best travel memories are made during quiet breakfasts or long train rides where thoughts wander freely.</p>\n<figure><img src=\"https://images.unsplash.com/photo-1534777367038-9404f45b869a?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"solo travel\" style=\"width:100%;border-radius:8px;\"><figcaption>Peace in motion — solo journeys that heal</figcaption></figure>",
+                alexanderMartin, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("solo-travel", "tips", "connection", "apps", "solitude"),
+                "https://images.unsplash.com/photo-1605274280779-a4732e176f4b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Backpacking Japan on a Budget",
+                "<p>Japan doesn't have to be expensive. With a little planning and curiosity, you can explore temples, neon cities, and ramen alleys for under $50 a day.</p>\n<h2>🚆 JR Pass Hacks</h2>\n<p>Buy regional passes instead of nationwide ones. The Kansai Hiroshima Pass, for instance, saves more if you stay in western Japan.</p>\n<h2>🏨 Sleep Smart</h2>\n<p>Capsule hostels and business hotels often include free breakfast — and spotless showers.</p>\n<h2>🍱 Eat Like a Local</h2>\n<p>Family marts and conveyor-belt sushi offer quality meals under ¥600.</p>\n<blockquote>\"Budget travel isn't about cutting corners — it's about unlocking creativity.\"</blockquote>\n<figure><img src=\"https://images.unsplash.com/photo-1499419819507-77191b8ec46e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"tokyo night\" style=\"width:100%;border-radius:8px;\"><figcaption>Tokyo lights on a shoestring</figcaption></figure>",
+                lucasWhite, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("japan", "budget", "backpacking", "jr-pass", "hostels"),
+                "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Digital Nomad Life: Working Remotely in Bali",
+                "<p>For many, Bali isn't just a vacation — it's an office with palm trees. Between surf breaks and coworking cafés, it's the world's unofficial remote-work capital.</p>\n<h2>🌴 Where to Work</h2>\n<p>Canggu's Dojo Coworking and Ubud's Outpost offer fast Wi-Fi, coffee refills, and community events.</p>\n<h2>☕ Daily Routine</h2>\n<p>Mornings start with yoga, afternoons with code, and sunsets with coconut water. Productivity meets peace.</p>\n<h2>💰 Cost Snapshot</h2>\n<p>About US$900–1200 a month covers rent, food, and a scooter — cheaper than most cities.</p>\n<blockquote>\"Bali turns work-life balance into an art form.\"</blockquote>",
+                marcoRossi, ArticleCategoryEnum.TRAVEL, Arrays.asList("digital-nomad", "bali", "remote-work", "coworking", "lifestyle"),
+                "https://images.unsplash.com/photo-1585060085275-6035d9d50f96?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2132"
+            },
+            {
+                "The Art of Slow Travel",
+                "<p>In an age of checklists and selfies, slow travel invites you to pause — to see, taste, and feel more deeply.</p>\n<blockquote>\"Don't collect places. Collect moments.\"</blockquote>\n<h2>🌿 What It Means</h2>\n<p>Spend weeks in one region instead of hopping cities. Learn a few local phrases. Befriend café owners.</p>\n<h2>🍷 Why It Matters</h2>\n<p>Slow travelers spend less time commuting and more time connecting — with people, culture, and themselves.</p>\n<figure><img src=\"https://images.unsplash.com/photo-1603270504031-4344a08b28b6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"train window\" style=\"width:100%;border-radius:8px;\"><figcaption>Watching the world drift by — slowly</figcaption></figure>",
+                fatimaAlMansoori, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("slow-travel", "mindfulness", "culture", "connection", "philosophy"),
+                "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Europe's Hidden Food Markets",
+                "<p>Skip the tourist restaurants and head straight to where locals eat — the buzzing food markets tucked into Europe's streets.</p>\n<h2>🇭🇺 Budapest: Karaván Street Food</h2>\n<p>Goulash in bread bowls and craft beer in a ruin bar courtyard.</p>\n<h2>🇪🇸 Madrid: Mercado de San Fernando</h2>\n<p>Cheaper than San Miguel but twice as authentic — tapas, vermouth, and flamenco energy.</p>\n<h2>🇵🇹 Lisbon: Time Out Market</h2>\n<p>Michelin chefs meet mom-and-pop dishes — one giant hall of flavor.</p>\n<blockquote>\"Every market is a window into a city's soul.\"</blockquote>",
+                johnSmith, ArticleCategoryEnum.EXPLORING, Arrays.asList("europe", "food-markets", "local-food", "budapest", "madrid", "lisbon"),
+                "https://images.unsplash.com/photo-1696536465926-e6eb4a2737bb?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1980"
+            },
+            {
+                "A Photographer's Guide to Sunrise Spots in Singapore",
+                "<p>For photographers, sunrise is magic hour. These spots capture Singapore bathed in gold before the city wakes.</p>\n<h2>📸 Marina Barrage</h2>\n<p>Watch the sun rise behind the skyline — wide angles shine here.</p>\n<h2>🌉 Henderson Waves</h2>\n<p>The highest pedestrian bridge in Singapore glows orange at dawn.</p>\n<h2>🌿 Labrador Nature Reserve</h2>\n<p>Overlooking the southern sea, it's calm and cinematic.</p>\n<figure><img src=\"https://images.unsplash.com/photo-1496543622559-12e927bdd81b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"sunrise\" style=\"width:100%;border-radius:8px;\"><figcaption>First light over the Lion City</figcaption></figure>",
+                rachelGreen, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("photography", "singapore", "sunrise", "marina-barrage", "henderson-waves"),
+                "https://images.unsplash.com/photo-1686577064246-967d76d53f09?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Eco-Friendly Travel: Small Changes, Big Impact",
+                "<p>Travel sustainably isn't a trend — it's a necessity. With small mindful shifts, you can explore responsibly without sacrificing comfort.</p>\n<h2>🧳 Pack Light, Travel Right</h2>\n<p>Every extra kilo burns more fuel. Bring only what you need — and reusable bottles and cutlery.</p>\n<h2>🚴 Choose Greener Transport</h2>\n<p>Walk, bike, or use public transport whenever possible. It's healthier for both you and the planet.</p>\n<h2>🏨 Support Eco-Certified Stays</h2>\n<p>Look for hotels with solar energy, recycling systems, or local sourcing policies.</p>\n<blockquote>\"Leave nothing but footprints — take nothing but memories.\"</blockquote>\n<figure><img src=\"https://plus.unsplash.com/premium_photo-1663047725430-f855f465b6a4?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070\" alt=\"green travel\" style=\"width:100%;border-radius:8px;\"><figcaption>Eco-travel done right</figcaption></figure>",
+                fatimaAlMansoori, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("eco-travel", "sustainability", "green-travel", "responsible-travel", "environment"),
+                "https://plus.unsplash.com/premium_photo-1661808783954-8079b10583fd?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Score Cheap Flights Without Losing Sleep",
+                "<p>Flight hunting doesn't have to be a full-time job. With the right tools and timing, you can find great deals without endless browsing.</p>\n<h2>✈️ Use Flight Comparison Tools</h2>\n<p>Google Flights, Kayak, and Skyscanner show price trends and cheaper alternatives. Set up alerts for your routes.</p>\n<h2>📅 Be Flexible with Dates</h2>\n<p>Tuesday and Wednesday departures are often cheaper. Use calendar view to spot the best deals.</p>\n<h2>🎯 Book at the Right Time</h2>\n<p>Domestic flights: 1-3 months ahead. International: 2-8 months ahead. Last-minute deals exist but are risky.</p>\n<blockquote>\"The best time to book is when you find a good deal at the right price for you.\"</blockquote>\n<figure><img src=\"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2074\" alt=\"airplane wing\" style=\"width:100%;border-radius:8px;\"><figcaption>Smart booking leads to more adventures</figcaption></figure>",
+                alexanderMartin, ArticleCategoryEnum.HOWTO, Arrays.asList("flights", "cheap-travel", "booking", "travel-tips", "budget"),
+                "https://images.unsplash.com/photo-1529074963764-98f45c47344b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2086"
+            }
+        };
+
+        for (Object[] data : blogData) {
+            if (data[2] != null) { // Only create if author exists
+                TravelArticle article = new TravelArticle();
+                article.setTitle((String) data[0]);
+                article.setContent((String) data[1]);
+                article.setAuthor((User) data[2]);
+                article.setCategory((ArticleCategoryEnum) data[3]);
+                article.setTags((List<String>) data[4]);
+
+                // Generate slug from title
+                article.setSlug(generateSlugFromTitle((String) data[0]));
+
+                // Set article details
+                article.setStatus(ArticleStatusEnum.PUBLISHED);
+                article.setViewsCount(0); // Start with 0 views
+                article.setLikesCount(0); // Start with 0 likes
+                article.setCommentsCount(0); // Start with 0 comments
+
+                // Set timestamps (articles created 1-30 days ago)
+                LocalDateTime createdDate = LocalDateTime.now().minusDays(random.nextInt(30) + 1);
+                article.setCreatedAt(createdDate);
+                article.setUpdatedAt(createdDate.plusHours(random.nextInt(24)));
+
+                // Set thumbnail URL from provided Unsplash links
+                article.setThumbnailUrl((String) data[5]);
+
+                articles.add(travelArticleRepository.save(article));
+            } else {
+                System.out.println("Skipping article creation - author not found: " + data[0]);
+            }
+        }
+
+        return articles;
+    }
+
+    /**
+     * Generate URL-friendly slug from article title
+     */
+    private String generateSlugFromTitle(String title) {
+        return title.toLowerCase()
+                   .replaceAll("[^a-z0-9\\s-]", "") // Remove special characters
+                   .replaceAll("\\s+", "-") // Replace spaces with hyphens
+                   .replaceAll("-+", "-") // Replace multiple hyphens with single
+                   .replaceAll("^-|-$", ""); // Remove leading/trailing hyphens
     }
 }

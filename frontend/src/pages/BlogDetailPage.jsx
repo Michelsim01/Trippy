@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Eye, User, Edit, Trash2, Heart, MessageCircle, Send } from 'lucide-react';
 import Navbar from '../components/Navbar';
@@ -22,6 +22,9 @@ const BlogDetailPage = () => {
     const [newComment, setNewComment] = useState('');
     const [loadingLike, setLoadingLike] = useState(false);
     const [loadingComment, setLoadingComment] = useState(false);
+
+    // Ref to track if view count has been incremented to prevent React StrictMode double-execution
+    const viewIncrementedRef = useRef(false);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -116,8 +119,9 @@ const BlogDetailPage = () => {
                 const blogData = await blogService.getBlogById(id, userId);
                 setBlog(blogData);
 
-                // Increment view count only for published blogs
-                if (blogData.status === 'PUBLISHED') {
+                // Increment view count only for published blogs and only once
+                if (blogData.status === 'PUBLISHED' && !viewIncrementedRef.current) {
+                    viewIncrementedRef.current = true;
                     blogService.incrementViews(id);
                 }
 
@@ -162,6 +166,26 @@ const BlogDetailPage = () => {
         } catch (err) {
             console.error('Error deleting blog:', err);
             alert('Failed to delete blog post: ' + err.message);
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!window.confirm('Are you sure you want to publish this draft?')) {
+            return;
+        }
+
+        try {
+            const updatedBlog = {
+                ...blog,
+                status: 'PUBLISHED'
+            };
+            await blogService.updateBlog(id, updatedBlog, user?.id);
+            // Refresh the blog data to show updated status
+            setBlog({ ...blog, status: 'PUBLISHED' });
+            alert('Draft published successfully!');
+        } catch (err) {
+            console.error('Error publishing draft:', err);
+            alert('Failed to publish draft: ' + err.message);
         }
     };
 
@@ -344,6 +368,15 @@ const BlogDetailPage = () => {
                                                         <Edit size={16} />
                                                         Edit
                                                     </Link>
+                                                    {blog.status === 'DRAFT' && (
+                                                        <button
+                                                            onClick={handlePublish}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors text-sm font-medium"
+                                                        >
+                                                            <Send size={16} />
+                                                            Publish
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={handleDelete}
                                                         className="flex items-center gap-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors text-sm font-medium"
