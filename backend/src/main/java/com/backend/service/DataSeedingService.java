@@ -55,18 +55,18 @@ public class DataSeedingService {
     /**
      * Determine which cluster a user belongs to based on their user ID
      * User IDs 1-15 are guides (not clustered)
-     * User IDs 16-80 are travelers (65 travelers split into 4 clusters)
+     * User IDs 16-95 are travelers (80 travelers split into 4 clusters)
      * Cluster 0: User ID 16-32 (17 travelers - Luxury Cultural Explorers)
      * Cluster 1: User ID 33-48 (16 travelers - Budget Social Travelers)
      * Cluster 2: User ID 49-64 (16 travelers - Adventure Enthusiasts)
-     * Cluster 3: User ID 65-80 (16 travelers - Light Casual Travelers)
+     * Cluster 3: User ID 65-95 (31 travelers - Light Casual Travelers)
      */
     private int getUserCluster(Long userId) {
         int id = userId.intValue();
         if (id >= 16 && id <= 32) return 0;      // Luxury Cultural Explorers (17 travelers)
         else if (id >= 33 && id <= 48) return 1; // Budget Social Travelers (16 travelers)
         else if (id >= 49 && id <= 64) return 2; // Adventure Enthusiasts (16 travelers)
-        else return 3;                            // Light Casual Travelers (16 travelers: 65-80)
+        else return 3;                            // Light Casual Travelers (31 travelers: 65-95)
     }
 
     @Transactional
@@ -144,7 +144,7 @@ public class DataSeedingService {
         System.out.println("  - Cluster 0 (Luxury Cultural Explorers): " + cluster0Count + " travelers (IDs 16-32)");
         System.out.println("  - Cluster 1 (Budget Social Travelers): " + cluster1Count + " travelers (IDs 33-48)");
         System.out.println("  - Cluster 2 (Adventure Enthusiasts): " + cluster2Count + " travelers (IDs 49-64)");
-        System.out.println("  - Cluster 3 (Light Casual Travelers): " + cluster3Count + " travelers (IDs 65-80)");
+        System.out.println("  - Cluster 3 (Light Casual Travelers): " + cluster3Count + " travelers (IDs 65-95)");
     }
 
     private List<User> createUsers() {
@@ -185,14 +185,14 @@ public class DataSeedingService {
         }
 
         // Create regular traveler users
-        // Total: 65 travelers (all will have bookings for active user analytics)
+        // Total: 80 travelers (all will have bookings for active user analytics)
         String[] travelerNames = {
                 // Original 15 travelers
                 "Alice Cooper", "Bob Wilson", "Catherine Lee", "Daniel Park", "Elena Volkov",
                 "Frank Miller", "Grace Kim", "Henry Davis", "Isabella Cruz", "Jack Taylor",
                 "Kate Anderson", "Liam O'Brien", "Mia Zhang", "Noah Williams", "Olivia Martinez",
                 
-                // 50 new travelers for expanded analytics testing
+                // 65 new travelers for expanded analytics testing
                 // North American travelers
                 "Rachel Green", "Michael Scott", "Emily Davis", "James Brown", "Sophia Taylor",
                 "William Anderson", "Charlotte Thomas", "Benjamin Moore", "Amelia Jackson", "Lucas White",
