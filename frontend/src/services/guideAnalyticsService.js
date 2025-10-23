@@ -1,5 +1,46 @@
-// Guide Analytics Service with Mock Data
-// This service returns hardcoded mock data for Phase 1 frontend development
+import axios from 'axios';
+
+// Base URL for your backend API
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+
+// Create axios instance with default configuration
+const api = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
+        'Content-Type': 'application/json',
+    },
+    timeout: 10000, // 10 seconds timeout
+});
+
+// Request interceptor to add auth token to requests
+api.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Response interceptor to handle token expiration
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        if (error.response?.status === 401) {
+            // Token expired or invalid for protected routes
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            // Don't redirect automatically, let the component handle it
+        }
+        return Promise.reject(error);
+    }
+);
 
 /**
  * Get dashboard metrics for a guide
@@ -7,26 +48,13 @@
  * @returns {Promise<Object>} Dashboard metrics including monthly bookings, cancellation rate, and total experiences
  */
 export const getDashboardMetrics = async (guideId) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return {
-        monthlyBookings: {
-            current: 45,
-            previous: 38,
-            changePercent: 18.4
-        },
-        cancellationRate: {
-            current: 8.2,
-            previous: 12.1,
-            changePercent: -32.2 // Negative means improvement
-        },
-        totalExperiences: {
-            current: 8,
-            previous: 6,
-            changePercent: 33.3
-        }
-    };
+    try {
+        const response = await api.get(`/api/guide-analytics/${guideId}/dashboard-metrics`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching dashboard metrics:', error);
+        throw error;
+    }
 };
 
 /**
@@ -35,17 +63,13 @@ export const getDashboardMetrics = async (guideId) => {
  * @returns {Promise<Array>} Array of monthly profit data
  */
 export const getProfitChartData = async (guideId) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return [
-        { month: 'May', profit: 1200 },
-        { month: 'Jun', profit: 1450 },
-        { month: 'Jul', profit: 1680 },
-        { month: 'Aug', profit: 1520 },
-        { month: 'Sep', profit: 1890 },
-        { month: 'Oct', profit: 2100 }
-    ];
+    try {
+        const response = await api.get(`/api/guide-analytics/${guideId}/profit-chart`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching profit chart data:', error);
+        throw error;
+    }
 };
 
 /**
@@ -54,46 +78,13 @@ export const getProfitChartData = async (guideId) => {
  * @returns {Promise<Array>} Array of top experiences with booking counts
  */
 export const getTopExperiences = async (guideId) => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    return [
-        {
-            name: 'Sunrise Mountain Hike',
-            bookings: 28,
-            rating: 4.8,
-            category: 'Adventure',
-            conversionRate: 12.5 // bookings / views percentage
-        },
-        {
-            name: 'Local Food Walking Tour',
-            bookings: 22,
-            rating: 4.6,
-            category: 'Culinary',
-            conversionRate: 10.2
-        },
-        {
-            name: 'Historic City Walk',
-            bookings: 18,
-            rating: 4.7,
-            category: 'Cultural',
-            conversionRate: 9.8
-        },
-        {
-            name: 'Beach Sunset Experience',
-            bookings: 15,
-            rating: 4.9,
-            category: 'Nature',
-            conversionRate: 11.3
-        },
-        {
-            name: 'Art Gallery Tour',
-            bookings: 12,
-            rating: 4.5,
-            category: 'Cultural',
-            conversionRate: 8.5
-        }
-    ];
+    try {
+        const response = await api.get(`/api/guide-analytics/${guideId}/top-experiences`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching top experiences:', error);
+        throw error;
+    }
 };
 
 /**
@@ -102,18 +93,23 @@ export const getTopExperiences = async (guideId) => {
  * @returns {Promise<Object>} Complete analytics data
  */
 export const getAllAnalytics = async (guideId) => {
-    // Fetch all data in parallel
-    const [metrics, profitData, topExperiences] = await Promise.all([
-        getDashboardMetrics(guideId),
-        getProfitChartData(guideId),
-        getTopExperiences(guideId)
-    ]);
+    try {
+        // Fetch all data in parallel
+        const [metrics, profitData, topExperiences] = await Promise.all([
+            getDashboardMetrics(guideId),
+            getProfitChartData(guideId),
+            getTopExperiences(guideId)
+        ]);
 
-    return {
-        metrics,
-        profitData,
-        topExperiences
-    };
+        return {
+            metrics,
+            profitData,
+            topExperiences
+        };
+    } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        throw error;
+    }
 };
 
 export default {

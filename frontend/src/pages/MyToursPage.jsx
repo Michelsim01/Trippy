@@ -307,7 +307,7 @@ const MyToursPage = () => {
                                                 ${earnings.paidOutEarnings.toFixed(2)}
                                             </div>
                                             <div className="text-sm text-neutrals-4">
-                                                {earnings.completedBookings} completed tours
+                                                {earnings.completedBookings} completed bookings
                                             </div>
                                         </div>
 

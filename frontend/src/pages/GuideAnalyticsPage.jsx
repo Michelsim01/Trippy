@@ -52,7 +52,7 @@ const GuideAnalyticsPage = () => {
         };
     };
 
-    // Render metric card component
+    // Render metric card component with change percentage
     const MetricCard = ({ title, subtitle, currentValue, changePercent, icon, iconBg, valueColor }) => {
         const change = formatChange(changePercent);
 
@@ -76,6 +76,31 @@ const GuideAnalyticsPage = () => {
                     <span>{change.icon}</span>
                     <span>{change.value}%</span>
                     <span className="text-neutrals-4">vs last month</span>
+                </div>
+            </div>
+        );
+    };
+
+    // Render simple metric card without change percentage
+    const SimpleMetricCard = ({ title, subtitle, value, icon, iconBg, valueColor }) => {
+        return (
+            <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center mr-3`}>
+                            {icon}
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold text-neutrals-1">{title}</h3>
+                            <p className="text-sm text-neutrals-4">{subtitle}</p>
+                        </div>
+                    </div>
+                </div>
+                <div className={`text-3xl font-bold ${valueColor} mb-2`}>
+                    {value}
+                </div>
+                <div className="text-sm text-neutrals-4">
+                    Total published experiences
                 </div>
             </div>
         );
@@ -150,11 +175,10 @@ const GuideAnalyticsPage = () => {
                                             valueColor="text-orange-600"
                                         />
 
-                                        <MetricCard
+                                        <SimpleMetricCard
                                             title="Total Experiences"
                                             subtitle="Published tours"
-                                            currentValue={analyticsData.metrics.totalExperiences.current}
-                                            changePercent={analyticsData.metrics.totalExperiences.changePercent}
+                                            value={analyticsData.metrics.totalExperiences}
                                             icon={
                                                 <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -285,11 +309,10 @@ const GuideAnalyticsPage = () => {
                                     valueColor="text-orange-600"
                                 />
 
-                                <MetricCard
+                                <SimpleMetricCard
                                     title="Total Experiences"
                                     subtitle="Published tours"
-                                    currentValue={analyticsData.metrics.totalExperiences.current}
-                                    changePercent={analyticsData.metrics.totalExperiences.changePercent}
+                                    value={analyticsData.metrics.totalExperiences}
                                     icon={
                                         <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
