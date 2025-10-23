@@ -24,6 +24,7 @@ import MessagesPage from './pages/MessagesPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import BookingDetailPage from './pages/BookingDetailPage'
 import MyToursPage from './pages/MyToursPage'
+import GuideAnalyticsPage from './pages/GuideAnalyticsPage'
 import ProfilePage from './pages/ProfilePage'
 import BlogPage from './pages/BlogPage'
 import BlogDetailPage from './pages/BlogDetailPage'
@@ -176,6 +177,10 @@ function AppRoutes() {
       <Route
         path="/my-tours"
         element={requiresSurveyCompletion(<MyToursPage />)}
+      />
+      <Route
+        path="/tour-analytics"
+        element={requiresSurveyCompletion(<GuideAnalyticsPage />)}
       />
       <Route
         path="/profile/:id"

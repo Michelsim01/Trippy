@@ -14,12 +14,17 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const navItems = [
         { id: 'blog', label: 'Blog' },
         { id: 'my-bookings', label: 'My Bookings' },
-        ...(user?.canCreateExperiences && isKycApproved 
+        ...(user?.canCreateExperiences && isKycApproved
             ? [{ id: 'my-tours', label: 'My Tours' }]
             : []
         ),
+        // Tour Analytics - only show for KYC-approved guides
+        ...(user?.canCreateExperiences && isKycApproved
+            ? [{ id: 'tour-analytics', label: 'Tour Analytics' }]
+            : []
+        ),
         // Conditionally include create-experience or kyc based on KYC status
-        ...(isKycApproved 
+        ...(isKycApproved
             ? [{ id: 'create-experience', label: 'Create an Experience' }]
             : [{ id: 'kyc-onboarding', label: 'Complete KYC to Create' }]
         ),
