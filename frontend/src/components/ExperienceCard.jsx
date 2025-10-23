@@ -14,6 +14,8 @@ const ExperienceCard = ({
     showDeleteButton = false, // New prop to show delete button
     showEarningsButton = false, // New prop to show earnings button
     onEarningsClick = null, // Callback when earnings button is clicked
+    showViewCountButton = false, // New prop to show view count button
+    onViewsClick = null, // Callback when views button is clicked
     onExperienceDeleted = null, // Callback when experience is deleted
     isInWishlist = false, // New prop to indicate if this item is in the user's wishlist
     schedules = [] // New prop for schedule data
@@ -136,6 +138,14 @@ const ExperienceCard = ({
         }
     };
 
+    const handleViewsClick = (e) => {
+        e.stopPropagation();
+        const experienceId = experience?.experienceId || experience?.id;
+        if (onViewsClick) {
+            onViewsClick(experienceId);
+        }
+    };
+
 
     // Use experience data directly
     const cardData = experience;
@@ -223,6 +233,25 @@ const ExperienceCard = ({
                     </div>
                 )}
                 
+                {/* View Count Button */}
+                {showViewCountButton && (
+                    <button
+                        className="absolute top-4 right-14 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group"
+                        onClick={handleViewsClick}
+                        title="View Analytics"
+                        style={{ position: 'absolute' }}
+                    >
+                        <svg className="w-5 h-5 text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {/* Tooltip on hover */}
+                        <span className="absolute left-1/2 top-full -translate-x-1/2 mt-2 px-2 py-1 bg-primary-4 text-white text-xs rounded shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-30">
+                            Views
+                        </span>
+                    </button>
+                )}
+
                 {/* Earnings Button */}
                 {showEarningsButton && (
                     <button

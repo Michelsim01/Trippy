@@ -6,6 +6,7 @@ import Sidebar from '../components/Sidebar'
 import Footer from '../components/Footer'
 import ExperienceCard from '../components/ExperienceCard'
 import ExperienceEarningsModal from '../components/ExperienceEarningsModal'
+import ExperienceViewsModal from '../components/ExperienceViewsModal'
 
 const MyToursPage = () => {
     const { user } = useAuth()
@@ -20,6 +21,9 @@ const MyToursPage = () => {
     const [selectedExperienceTitle, setSelectedExperienceTitle] = useState('')
     const [earnings, setEarnings] = useState(null)
     const [earningsLoading, setEarningsLoading] = useState(true)
+    const [isViewsModalOpen, setIsViewsModalOpen] = useState(false)
+    const [selectedViewsExperienceId, setSelectedViewsExperienceId] = useState(null)
+    const [selectedViewsExperienceTitle, setSelectedViewsExperienceTitle] = useState('')
 
     useEffect(() => {
         const fetchTours = async () => {
@@ -171,6 +175,19 @@ const MyToursPage = () => {
         setIsEarningsModalOpen(false)
         setSelectedExperienceId(null)
         setSelectedExperienceTitle('')
+    }
+
+    const handleViewsClick = (experienceId) => {
+        const experience = tours.find(tour => tour.experienceId === experienceId)
+        setSelectedViewsExperienceId(experienceId)
+        setSelectedViewsExperienceTitle(experience?.title || 'Unknown Experience')
+        setIsViewsModalOpen(true)
+    }
+
+    const handleCloseViewsModal = () => {
+        setIsViewsModalOpen(false)
+        setSelectedViewsExperienceId(null)
+        setSelectedViewsExperienceTitle('')
     }
 
     // Calculate stats for the quick stats section
@@ -391,7 +408,9 @@ const MyToursPage = () => {
                                                 showEditButton={true}
                                                 showDeleteButton={true}
                                                 showEarningsButton={true}
+                                                showViewCountButton={true}
                                                 onEarningsClick={handleEarningsClick}
+                                                onViewsClick={handleViewsClick}
                                                 onExperienceDeleted={handleTourDeleted}
                                                 schedules={schedules[tour.experienceId] || []}
                                                 showExplore={false}
@@ -601,7 +620,9 @@ const MyToursPage = () => {
                                         showEditButton={true}
                                         showDeleteButton={true}
                                         showEarningsButton={true}
+                                        showViewCountButton={true}
                                         onEarningsClick={handleEarningsClick}
+                                        onViewsClick={handleViewsClick}
                                         onExperienceDeleted={handleTourDeleted}
                                         schedules={schedules[tour.experienceId] || []}
                                         showExplore={false}
@@ -622,6 +643,14 @@ const MyToursPage = () => {
                 experienceTitle={selectedExperienceTitle}
                 experienceId={selectedExperienceId}
                 userId={user?.id || user?.userId}
+            />
+
+            {/* Views Modal */}
+            <ExperienceViewsModal
+                isOpen={isViewsModalOpen}
+                onClose={handleCloseViewsModal}
+                experienceTitle={selectedViewsExperienceTitle}
+                experienceId={selectedViewsExperienceId}
             />
         </div>
     )
