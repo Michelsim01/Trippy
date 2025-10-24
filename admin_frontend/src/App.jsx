@@ -13,6 +13,7 @@ import BookingManagementPage from './pages/BookingManagementPage';
 import TransactionManagementPage from './pages/TransactionManagementPage';
 import KYCManagementPage from './pages/KYCManagementPage';
 import TicketResolutionPage from './pages/TicketResolutionPage';
+import AdminReferralPage from './pages/AdminReferralPage';
 
 // Placeholder components for other pages
 
@@ -136,6 +137,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <TicketResolutionPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/referrals" 
+        element={
+          <ProtectedRoute>
+            <AdminReferralPage />
           </ProtectedRoute>
         } 
       />

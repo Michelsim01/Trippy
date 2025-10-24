@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, UserPlus, Info } from 'lucide-react';
 
 const AdminLoginPage = () => {
   const [email, setEmail] = useState('');
@@ -71,7 +71,7 @@ const AdminLoginPage = () => {
                   <p className="text-red-600 text-sm">{error}</p>
                   {error.includes('No account found') && (
                     <p className="text-red-500 text-xs mt-1">
-                      Don't have an admin account? <Link to="/admin/signup" className="underline hover:text-red-700">Create one here</Link>
+                      Don't have an admin account? You need to be invited by an existing admin.
                     </p>
                   )}
                   {error.includes('Incorrect password') && (
@@ -144,14 +144,17 @@ const AdminLoginPage = () => {
               </button>
             </form>
 
-            {/* Signup Link */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an admin account?{' '}
-                <Link to="/admin/signup" className="text-blue-600 hover:text-blue-500 font-medium">
-                  Create one
-                </Link>
-              </p>
+            {/* Referral Information */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex">
+                <Info className="w-5 h-5 text-blue-400 mt-0.5 mr-3" />
+                <div>
+                  <h3 className="text-sm font-medium text-blue-800">Need Admin Access?</h3>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Admin accounts are invitation-only. Contact an existing administrator to request access to the Trippy Admin Portal.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 

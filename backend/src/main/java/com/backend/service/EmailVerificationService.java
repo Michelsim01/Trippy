@@ -5,6 +5,8 @@ import com.backend.entity.User;
 import com.backend.entity.PendingUser;
 import com.backend.repository.UserRepository;
 import com.backend.repository.PendingUserRepository;
+import com.backend.service.AdminReferralService;
+import com.backend.service.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,9 @@ public class EmailVerificationService {
     
     @Autowired
     private EmailService emailService;
+    
+    @Autowired
+    private AdminReferralService adminReferralService;
     
     // Token expiration time: 24 hours
     private static final int TOKEN_EXPIRATION_HOURS = 24;
@@ -264,8 +269,9 @@ public class EmailVerificationService {
             user.setIsActive(true);
             user.setIsEmailVerified(true); // Mark as verified
             
-            // Set admin status based on admin code
-            boolean isAdmin = pendingUser.getAdminCode() != null && !pendingUser.getAdminCode().trim().isEmpty();
+            // Set admin status based on admin code or referral token
+            boolean isAdmin = (pendingUser.getAdminCode() != null && !pendingUser.getAdminCode().trim().isEmpty()) ||
+                             (pendingUser.getReferralToken() != null && !pendingUser.getReferralToken().trim().isEmpty());
             user.setIsAdmin(isAdmin);
             user.setCanCreateExperiences(false);
             user.setCreatedAt(LocalDateTime.now());
@@ -274,6 +280,16 @@ public class EmailVerificationService {
             
             // Save the actual user
             userRepository.save(user);
+            
+            // Mark referral as used if this was a referral registration
+            if (pendingUser.getReferralToken() != null && !pendingUser.getReferralToken().trim().isEmpty()) {
+                try {
+                    adminReferralService.markReferralAsUsed(pendingUser.getReferralToken());
+                } catch (Exception e) {
+                    System.err.println("Failed to mark referral as used: " + e.getMessage());
+                    // Don't fail the registration if referral marking fails
+                }
+            }
             
             // Remove pending user from temporary storage using async cleanup to avoid transaction conflicts
             cleanupPendingUserAsync(pendingUser);

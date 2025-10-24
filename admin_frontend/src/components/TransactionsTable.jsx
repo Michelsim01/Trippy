@@ -417,7 +417,7 @@ const TransactionsTable = ({ onTransactionAction }) => {
               <th className="w-64 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Experience</th>
               <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
               <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Service Fee</th>
-              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+              <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
               <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
               <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -448,7 +448,9 @@ const TransactionsTable = ({ onTransactionAction }) => {
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-900 text-center">${t.platformFee}</td>
+                <td className="px-4 py-4 text-sm text-gray-900 text-center">
+                  {t.type === 'PAYOUT' || t.type === 'REFUND' ? '-' : `$${t.platformFee}`}
+                </td>
                 <td className="px-4 py-4 text-sm text-gray-900 text-center">${t.amount}</td>
                 <td className="px-4 py-4">
                   <div className="text-xs text-gray-900">

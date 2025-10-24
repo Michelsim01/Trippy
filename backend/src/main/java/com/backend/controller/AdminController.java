@@ -7,6 +7,8 @@ import com.backend.repository.ReviewRepository;
 import com.backend.repository.ExperienceScheduleRepository;
 import com.backend.repository.TransactionRepository;
 import com.backend.repository.KycDocumentRepository;
+import com.backend.service.AdminReferralService;
+import com.backend.entity.AdminReferral;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -61,6 +63,9 @@ public class AdminController {
 
     @Autowired
     private KycDocumentRepository kycDocumentRepository;
+
+    @Autowired
+    private AdminReferralService adminReferralService;
 
     /**
      * Helper method to get the currently authenticated admin user ID
@@ -1577,6 +1582,97 @@ public class AdminController {
             System.err.println("Error rejecting KYC: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of("error", "Failed to reject KYC: " + e.getMessage()));
+        }
+    }
+
+    // ==================== ADMIN REFERRAL MANAGEMENT ====================
+
+    /**
+     * Create a new admin referral invitation
+     */
+    @PostMapping("/referrals")
+    public ResponseEntity<Map<String, Object>> createReferral(@RequestBody Map<String, String> request) {
+        try {
+            Long adminUserId = getCurrentAdminUserId();
+            if (adminUserId == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Admin authentication required"));
+            }
+
+            String referredEmail = request.get("email");
+            if (referredEmail == null || referredEmail.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Email address is required"));
+            }
+
+            AdminReferral referral = adminReferralService.createReferral(referredEmail, adminUserId);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Referral invitation sent successfully");
+            response.put("referralId", referral.getId());
+            response.put("referredEmail", referral.getReferredEmail());
+            response.put("expiresAt", referral.getExpiresAt());
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error creating referral: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Get referrals made by the current admin
+     */
+    @GetMapping("/referrals")
+    public ResponseEntity<List<Map<String, Object>>> getReferrals() {
+        try {
+            Long adminUserId = getCurrentAdminUserId();
+            if (adminUserId == null) {
+                return ResponseEntity.status(401).body(List.of(Map.of("error", "Admin authentication required")));
+            }
+
+            List<AdminReferral> referrals = adminReferralService.getReferralsByReferrer(adminUserId);
+            List<Map<String, Object>> response = new ArrayList<>();
+
+            for (AdminReferral referral : referrals) {
+                Map<String, Object> referralData = new HashMap<>();
+                referralData.put("id", referral.getId());
+                referralData.put("referredEmail", referral.getReferredEmail());
+                referralData.put("createdAt", referral.getCreatedAt());
+                referralData.put("expiresAt", referral.getExpiresAt());
+                referralData.put("isUsed", referral.getIsUsed());
+                referralData.put("usedAt", referral.getUsedAt());
+                referralData.put("isExpired", referral.isExpired());
+                response.add(referralData);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.err.println("Error fetching referrals: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(List.of(Map.of("error", "Failed to fetch referrals: " + e.getMessage())));
+        }
+    }
+
+    /**
+     * Get referral statistics for the current admin
+     */
+    @GetMapping("/referrals/stats")
+    public ResponseEntity<Map<String, Object>> getReferralStats() {
+        try {
+            Long adminUserId = getCurrentAdminUserId();
+            if (adminUserId == null) {
+                return ResponseEntity.status(401).body(Map.of("error", "Admin authentication required"));
+            }
+
+            Map<String, Object> stats = adminReferralService.getReferralStats(adminUserId);
+            return ResponseEntity.ok(stats);
+
+        } catch (Exception e) {
+            System.err.println("Error fetching referral stats: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("error", "Failed to fetch referral stats: " + e.getMessage()));
         }
     }
 }

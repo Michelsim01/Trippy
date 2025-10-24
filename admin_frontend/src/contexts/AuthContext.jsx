@@ -127,7 +127,8 @@ export const AuthProvider = ({ children }) => {
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
-        adminCode: formData.adminCode
+        adminCode: formData.adminCode,
+        referralToken: formData.referralToken
       });
 
       // Registration creates a pending user, not an immediate login

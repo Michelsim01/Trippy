@@ -1,17 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, User, AlertCircle, CheckCircle } from 'lucide-react';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 const AdminSignupPage = () => {
+  const [searchParams] = useSearchParams();
+  const referralToken = searchParams.get('referral');
+  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
-    adminCode: ''
+    referralToken: referralToken || ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -19,9 +22,40 @@ const AdminSignupPage = () => {
   const [error, setError] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [referralInfo, setReferralInfo] = useState(null);
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
   
   const { signup } = useAuth();
   const navigate = useNavigate();
+
+  // Validate referral token on component mount
+  useEffect(() => {
+    if (referralToken) {
+      validateReferralToken();
+    } else {
+      setError('Invalid admin invitation link. Please contact an existing admin for an invitation.');
+    }
+  }, [referralToken]);
+
+  const validateReferralToken = async () => {
+    setIsValidatingReferral(true);
+    try {
+      const response = await fetch(`http://localhost:8080/api/public/referrals/validate/${referralToken}`);
+      const data = await response.json();
+      
+      if (data.valid) {
+        setReferralInfo(data);
+        setFormData(prev => ({ ...prev, email: data.referredEmail }));
+      } else {
+        setError(data.error || 'Invalid or expired referral token');
+      }
+    } catch (error) {
+      console.error('Error validating referral token:', error);
+      setError('Failed to validate referral token. Please try again.');
+    } finally {
+      setIsValidatingReferral(false);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -51,12 +85,8 @@ const AdminSignupPage = () => {
       setError('Passwords do not match');
       return false;
     }
-    if (!formData.adminCode.trim()) {
-      setError('Admin code is required');
-      return false;
-    }
-    if (formData.adminCode !== '99999') {
-      setError('Invalid admin code');
+    if (!formData.referralToken.trim()) {
+      setError('Invalid referral token');
       return false;
     }
     return true;
@@ -122,8 +152,8 @@ const AdminSignupPage = () => {
           {/* Signup Form */}
           <div className="space-y-6">
             <div className="text-center mb-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h3>
-              <p className="text-gray-600">Sign up for your admin account</p>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Accept Admin Invitation</h3>
+              <p className="text-gray-600">Complete your admin account setup</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -248,31 +278,40 @@ const AdminSignupPage = () => {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="adminCode" className="block text-sm font-medium text-gray-700 mb-2">
-                  Admin Code
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="text"
-                    id="adminCode"
-                    name="adminCode"
-                    value={formData.adminCode}
-                    onChange={handleChange}
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                    placeholder="Enter admin code"
-                    required
-                  />
+              {/* Referral Information */}
+              {referralInfo && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex">
+                    <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 mr-3" />
+                    <div>
+                      <h3 className="text-sm font-medium text-green-800">Valid Admin Invitation</h3>
+                      <p className="text-sm text-green-700 mt-1">
+                        You've been invited by <strong>{referralInfo.referrerName}</strong> to join as an administrator.
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        This invitation expires on {new Date(referralInfo.expiresAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Contact your system administrator for the admin code
-                </p>
-              </div>
+              )}
+
+              {/* Loading state for referral validation */}
+              {isValidatingReferral && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mt-0.5 mr-3"></div>
+                    <div>
+                      <h3 className="text-sm font-medium text-blue-800">Validating Invitation</h3>
+                      <p className="text-sm text-blue-700 mt-1">Please wait while we verify your admin invitation...</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isValidatingReferral || !referralInfo}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? 'Creating Account...' : 'Create Admin Account'}
