@@ -651,6 +651,7 @@ const MyToursPage = () => {
                 onClose={handleCloseViewsModal}
                 experienceTitle={selectedViewsExperienceTitle}
                 experienceId={selectedViewsExperienceId}
+                guideId={user?.id || user?.userId}
             />
         </div>
     )

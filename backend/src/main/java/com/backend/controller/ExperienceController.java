@@ -13,6 +13,7 @@ import com.backend.repository.BookingRepository;
 import com.backend.repository.PersonalChatRepository;
 import com.backend.dto.SearchSuggestionDTO;
 import com.backend.service.ExperienceService;
+import com.backend.service.ExperienceAnalyticsService;
 import com.backend.entity.BookingStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -49,6 +50,9 @@ public class ExperienceController {
 
     @Autowired
     private PersonalChatRepository personalChatRepository;
+
+    @Autowired
+    private ExperienceAnalyticsService experienceAnalyticsService;
 
     @GetMapping
     public List<Map<String, Object>> getAllExperiences() {
@@ -483,6 +487,21 @@ public class ExperienceController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "error", "Failed to check schedule booking statuses: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Increment view count for an experience
+     * Public endpoint - no authentication required
+     */
+    @PostMapping("/{id}/increment-view")
+    public ResponseEntity<Void> incrementViewCount(@PathVariable Long id) {
+        try {
+            experienceAnalyticsService.incrementViewCount(id);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            System.err.println("ERROR in ExperienceController.incrementViewCount: " + e.getMessage());
+            return ResponseEntity.status(500).build();
         }
     }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useFormData } from '../contexts/FormDataContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -78,12 +78,42 @@ const ExperienceDetailsPage = () => {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showAllSchedules, setShowAllSchedules] = useState(false);
 
+  // View tracking ref (prevents double-counting in StrictMode)
+  const hasTrackedView = useRef(false);
+
   // Fetch experience data
   useEffect(() => {
     if (id) {
       fetchAllExperienceData();
     }
   }, [id]);
+
+  // Track page view 
+  useEffect(() => {
+    const incrementViewCount = async () => {
+      // Only track if we have an id and haven't tracked this view yet
+      if (!id || hasTrackedView.current) return;
+
+      // Mark as tracked immediately to prevent double-counting
+      hasTrackedView.current = true;
+
+      try {
+        // Call the increment-view endpoint
+        await fetch(`http://localhost:8080/api/experiences/${id}/increment-view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        // No need to handle response - fire and forget
+      } catch (error) {
+        console.error('Failed to track view:', error);
+        // Silently fail - don't disrupt user experience
+      }
+    };
+
+    incrementViewCount();
+  }, [id]); // Only run when id changes (once per visit)
 
   // Check wishlist status
   useEffect(() => {

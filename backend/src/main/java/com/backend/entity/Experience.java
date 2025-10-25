@@ -76,6 +76,9 @@ public class Experience {
     @Column(name = "average_rating", columnDefinition = "NUMERIC DEFAULT 0")
     private BigDecimal averageRating = BigDecimal.ZERO;
 
+    @Column(name = "view_count", columnDefinition = "INTEGER DEFAULT 0")
+    private Integer viewCount = 0;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -287,6 +290,14 @@ public class Experience {
 
     public void setAverageRating(BigDecimal averageRating) {
         this.averageRating = averageRating;
+    }
+
+    public Integer getViewCount() {
+        return viewCount;
+    }
+
+    public void setViewCount(Integer viewCount) {
+        this.viewCount = viewCount;
     }
 
     public LocalDateTime getCreatedAt() {

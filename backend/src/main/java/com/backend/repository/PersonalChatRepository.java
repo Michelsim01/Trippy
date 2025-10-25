@@ -60,4 +60,9 @@ public interface PersonalChatRepository extends JpaRepository<PersonalChat, Long
            "LEFT JOIN FETCH members.user " +
            "WHERE pc.personalChatId IN :chatIds")
     List<PersonalChat> findByIdsWithMembers(@Param("chatIds") List<Long> chatIds);
+
+    @Query("SELECT COUNT(pc) FROM PersonalChat pc " +
+           "WHERE pc.experience.experienceId = :experienceId " +
+           "AND (pc.isTripChat = false OR pc.isTripChat IS NULL)")
+    long countByExperienceId(@Param("experienceId") Long experienceId);
 }

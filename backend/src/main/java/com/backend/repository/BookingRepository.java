@@ -112,4 +112,14 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     // Find bookings by traveler ID and status (for recommendation system)
     List<Booking> findByTraveler_IdAndStatus(Long travelerId, BookingStatus status);
+
+    // Calculate average party size for an experience
+    @Query("SELECT AVG(b.numberOfParticipants) FROM Booking b " +
+           "WHERE b.experienceSchedule.experience.experienceId = :experienceId " +
+           "AND b.status IN ('CONFIRMED', 'COMPLETED')")
+    Double calculateAveragePartySizeByExperienceId(@Param("experienceId") Long experienceId);
+
+    // Find all bookings for an experience
+    @Query("SELECT b FROM Booking b WHERE b.experienceSchedule.experience.experienceId = :experienceId")
+    List<Booking> findByExperienceId(@Param("experienceId") Long experienceId);
 }

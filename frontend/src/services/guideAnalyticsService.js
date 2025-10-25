@@ -88,6 +88,24 @@ export const getTopExperiences = async (guideId) => {
 };
 
 /**
+ * Get view analytics for a specific experience
+ * @param {number} experienceId - The experience ID
+ * @param {number} guideId - The guide's user ID
+ * @returns {Promise<Object>} Experience view analytics including total views, bookings, conversion rate, etc.
+ */
+export const getExperienceViews = async (experienceId, guideId) => {
+    try {
+        const response = await api.get(`/api/guide-analytics/experience/${experienceId}/views`, {
+            params: { guideId }
+        });
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching experience views:', error);
+        throw error;
+    }
+};
+
+/**
  * Get all analytics data for a guide in one call
  * @param {number} guideId - The guide's user ID
  * @returns {Promise<Object>} Complete analytics data
@@ -116,5 +134,6 @@ export default {
     getDashboardMetrics,
     getProfitChartData,
     getTopExperiences,
+    getExperienceViews,
     getAllAnalytics
 };

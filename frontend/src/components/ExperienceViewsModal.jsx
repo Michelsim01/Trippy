@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { getExperienceViews } from '../services/guideAnalyticsService';
 
 /**
  * ExperienceViewsModal Component
  * Displays view metrics for a specific experience
- *
- * Phase 2: Using mock data
- * Phase 4: Will connect to real backend API
+ 
  */
 const ExperienceViewsModal = ({
     isOpen,
     onClose,
     experienceTitle,
-    experienceId
+    experienceId,
+    guideId
 }) => {
     const [viewData, setViewData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -20,39 +20,40 @@ const ExperienceViewsModal = ({
     // Fetch view data when modal opens
     useEffect(() => {
         const fetchViewData = async () => {
-            if (!isOpen || !experienceId) return;
+            if (!isOpen || !experienceId || !guideId) return;
 
             try {
                 setLoading(true);
                 setError(null);
 
-                // Simulate API call delay
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Call real backend API
+                const data = await getExperienceViews(experienceId, guideId);
 
-                // MOCK DATA - Phase 2
-                // In Phase 4, replace with actual API call:
-                // const response = await fetch(`http://localhost:8080/api/guide-analytics/experience/${experienceId}/views`, ...)
-
-                const mockData = {
-                    totalViews: 245,
-                    totalBookings: 12,
-                    chatInquiries: 8,
-                    wishlistAdds: 34,
-                    averagePartySize: 2.5,
-                    conversionRate: ((12 / 245) * 100).toFixed(1) // bookings/views percentage
+                // Format the data for display
+                const formattedData = {
+                    totalViews: data.totalViews || 0,
+                    totalBookings: data.totalBookings || 0,
+                    chatInquiries: data.chatInquiries || 0,
+                    wishlistAdds: data.wishlistAdds || 0,
+                    averagePartySize: typeof data.averagePartySize === 'number'
+                        ? data.averagePartySize.toFixed(1)
+                        : data.averagePartySize || '0.0',
+                    conversionRate: typeof data.conversionRate === 'number'
+                        ? data.conversionRate.toFixed(1)
+                        : data.conversionRate || '0.0'
                 };
 
-                setViewData(mockData);
+                setViewData(formattedData);
             } catch (error) {
                 console.error('Error fetching view data:', error);
-                setError(error.message);
+                setError(error.message || 'Failed to load analytics data');
             } finally {
                 setLoading(false);
             }
         };
 
         fetchViewData();
-    }, [isOpen, experienceId]);
+    }, [isOpen, experienceId, guideId]);
 
     if (!isOpen) return null;
 

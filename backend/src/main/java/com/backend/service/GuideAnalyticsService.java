@@ -190,11 +190,21 @@ public class GuideAnalyticsService {
                 .map(exp -> {
                     Long bookingCount = bookingCountByExperience.getOrDefault(exp.getExperienceId(), 0L);
                     Double rating = exp.getAverageRating() != null ? exp.getAverageRating().doubleValue() : 0.0;
+
+                    // Calculate conversion rate (bookings / views * 100)
+                    Double conversionRate = 0.0;
+                    Integer viewCount = exp.getViewCount() != null ? exp.getViewCount() : 0;
+                    if (viewCount > 0) {
+                        conversionRate = (bookingCount.doubleValue() / viewCount) * 100.0;
+                        conversionRate = Math.round(conversionRate * 10.0) / 10.0; // Round to 1 decimal
+                    }
+
                     return new TopExperienceDTO(
                             exp.getTitle(),
                             Integer.valueOf(bookingCount.intValue()),
                             rating,
-                            exp.getCategory() != null ? exp.getCategory().name() : "OTHER");
+                            exp.getCategory() != null ? exp.getCategory().name() : "OTHER",
+                            conversionRate);
                 })
                 .sorted(Comparator.comparingInt(TopExperienceDTO::getBookings).reversed())
                 .limit(5)

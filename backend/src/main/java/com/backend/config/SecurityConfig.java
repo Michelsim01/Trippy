@@ -152,13 +152,14 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/travel-articles/upload-image").permitAll() // Allow blog image uploads
                 .requestMatchers("/api/travel-articles/images/**").permitAll() // Allow blog image access
-                
+                .requestMatchers("/api/experiences/*/increment-view").permitAll() // Allow public view tracking
+
                 // WebSocket endpoints (no authentication required for connection)
                 .requestMatchers("/ws/**").permitAll()
-                
+
                 // Admin-only endpoints
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                
+
                 // Guide endpoints (requires GUIDE role)
                 .requestMatchers("/api/experiences/create").hasRole("GUIDE")
                 .requestMatchers("/api/experiences/*/manage").hasRole("GUIDE")

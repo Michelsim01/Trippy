@@ -5,14 +5,16 @@ public class TopExperienceDTO {
     private Integer bookings;
     private Double rating;
     private String category;
+    private Double conversionRate;
 
     public TopExperienceDTO() {}
 
-    public TopExperienceDTO(String name, Integer bookings, Double rating, String category) {
+    public TopExperienceDTO(String name, Integer bookings, Double rating, String category, Double conversionRate) {
         this.name = name;
         this.bookings = bookings;
         this.rating = rating;
         this.category = category;
+        this.conversionRate = conversionRate;
     }
 
     public String getName() {
@@ -45,5 +47,13 @@ public class TopExperienceDTO {
 
     public void setCategory(String category) {
         this.category = category;
+    }
+
+    public Double getConversionRate() {
+        return conversionRate;
+    }
+
+    public void setConversionRate(Double conversionRate) {
+        this.conversionRate = conversionRate;
     }
 }
