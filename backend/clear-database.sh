@@ -56,6 +56,7 @@ TRUNCATE TABLE experience_itinerary CASCADE;
 TRUNCATE TABLE experience_tags CASCADE;
 TRUNCATE TABLE experiences CASCADE;
 TRUNCATE TABLE kyc_document CASCADE;
+TRUNCATE TABLE admin_referrals CASCADE;
 TRUNCATE TABLE notification CASCADE;
 TRUNCATE TABLE trip_points CASCADE;
 TRUNCATE TABLE pending_users CASCADE;
@@ -76,6 +77,7 @@ SELECT setval(pg_get_serial_sequence('wishlist_item', 'wishlist_item_id'), 1, fa
 SELECT setval(pg_get_serial_sequence('trip_cohort', 'cohort_id'), 1, false);
 SELECT setval(pg_get_serial_sequence('notification', 'notification_id'), 1, false);
 SELECT setval(pg_get_serial_sequence('trip_points', 'points_id'), 1, false);
+SELECT setval(pg_get_serial_sequence('admin_referrals', 'id'), 1, false);
 "
 
 # Execute SQL commands

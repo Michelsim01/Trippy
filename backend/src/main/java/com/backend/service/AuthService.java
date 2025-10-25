@@ -8,6 +8,7 @@ import com.backend.entity.User;
 import com.backend.entity.PendingUser;
 import com.backend.repository.UserRepository;
 import com.backend.repository.PendingUserRepository;
+import com.backend.service.AdminReferralService;
 import com.backend.util.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,6 +45,9 @@ public class AuthService {
     
     @Autowired
     private EmailVerificationService emailVerificationService;
+    
+    @Autowired
+    private AdminReferralService adminReferralService;
     
     @Autowired
     private AuthenticationManager authenticationManager;
@@ -126,6 +130,24 @@ public class AuthService {
                 }
             }
             
+            // Validate referral token if provided (new admin referral system)
+            boolean isReferralRegistration = registerRequest.getReferralToken() != null && !registerRequest.getReferralToken().trim().isEmpty();
+            if (isReferralRegistration) {
+                try {
+                    adminReferralService.validateReferralToken(registerRequest.getReferralToken());
+                } catch (Exception e) {
+                    throw new Exception("Invalid or expired referral token. Please contact the admin who invited you.");
+                }
+            }
+            
+            // Ensure only one admin registration method is used
+            if (isAdminRegistration && isReferralRegistration) {
+                throw new Exception("Please use either admin code or referral link, not both.");
+            }
+            
+            // Determine if this is an admin registration
+            boolean isAdmin = isAdminRegistration || isReferralRegistration;
+            
             // Generate verification token
             String verificationToken = emailVerificationService.generateVerificationToken();
             
@@ -136,7 +158,8 @@ public class AuthService {
                 registerRequest.getFirstName(),
                 registerRequest.getLastName(),
                 verificationToken,
-                registerRequest.getAdminCode()
+                registerRequest.getAdminCode(),
+                registerRequest.getReferralToken()
             );
             
             // Save pending user to temporary storage

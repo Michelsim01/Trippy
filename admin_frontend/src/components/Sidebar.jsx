@@ -9,7 +9,8 @@ import {
   ShieldCheck,
   AlertTriangle, 
   Settings,
-  LogOut
+  LogOut,
+  UserPlus
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,6 +27,7 @@ const Sidebar = () => {
     { name: 'Transaction Management', href: '/admin/transactions', icon: FileText },
     { name: 'KYC Management', href: '/admin/kyc', icon: ShieldCheck },
     { name: 'Ticket Resolution', href: '/admin/tickets', icon: AlertTriangle },
+    { name: 'Admin Referrals', href: '/admin/referrals', icon: UserPlus },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];
 

@@ -112,7 +112,16 @@ public class DataSeedingService {
         List<TravelArticle> articles = createTravelArticles(users);
 
         System.out.println("Database seeding completed successfully!");
-        System.out.println("Created " + users.size() + " users");
+        
+        // Count different types of users
+        long adminCount = users.stream().filter(User::getIsAdmin).count();
+        long guideCount = users.stream().filter(user -> user.getCanCreateExperiences() && !user.getIsAdmin()).count();
+        long travelerCount = users.stream().filter(user -> !user.getCanCreateExperiences() && !user.getIsAdmin()).count();
+        
+        System.out.println("Created " + users.size() + " users:");
+        System.out.println("  - " + adminCount + " admin user(s)");
+        System.out.println("  - " + guideCount + " guides (can create experiences)");
+        System.out.println("  - " + travelerCount + " travelers");
         System.out.println("Created " + experiences.size() + " experiences");
         System.out.println("Created " + schedules.size() + " schedules");
         System.out.println("Created " + bookings.size() + " bookings");
@@ -145,6 +154,14 @@ public class DataSeedingService {
         System.out.println("  - Cluster 1 (Budget Social Travelers): " + cluster1Count + " travelers (IDs 33-48)");
         System.out.println("  - Cluster 2 (Adventure Enthusiasts): " + cluster2Count + " travelers (IDs 49-64)");
         System.out.println("  - Cluster 3 (Light Casual Travelers): " + cluster3Count + " travelers (IDs 65-95)");
+        
+        // Print admin credentials for easy access
+        if (adminCount > 0) {
+            System.out.println("\n🔑 Admin Access:");
+            System.out.println("  - Email: admin@trippy.com");
+            System.out.println("  - Password: Password123");
+            System.out.println("  - Portal: http://localhost:5174/admin/login");
+        }
     }
 
     private List<User> createUsers() {
@@ -239,6 +256,25 @@ public class DataSeedingService {
 
             users.add(userRepository.save(traveler));
         }
+
+        // Create one admin user for referral system
+        User admin = new User();
+        admin.setFirstName("Admin");
+        admin.setLastName("User");
+        admin.setEmail("admin@trippy.com");
+        admin.setPassword(new BCryptPasswordEncoder().encode("Password123"));
+        admin.setPhoneNumber("+1234567890");
+        admin.setIsEmailVerified(true);
+        admin.setIsActive(true);
+        admin.setCanCreateExperiences(false);
+        admin.setIsAdmin(true); // This is the key line - making this user an admin
+        admin.setKycStatus(KycStatus.NOT_STARTED); // Admins don't need KYC
+        admin.setAverageRating(BigDecimal.ZERO);
+        admin.setTripPoints(0);
+        admin.setCreatedAt(LocalDateTime.now().minusDays(30)); // Created 30 days ago
+        admin.setUpdatedAt(LocalDateTime.now());
+
+        users.add(userRepository.save(admin));
 
         return users;
     }

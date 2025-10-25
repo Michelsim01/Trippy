@@ -40,6 +40,10 @@ public class PendingUser {
     @Column(name = "admin_code")
     private String adminCode;
     
+    // Referral token for admin registration via referral
+    @Column(name = "referral_token")
+    private String referralToken;
+    
     // Constructors
     public PendingUser() {
     }
@@ -61,6 +65,18 @@ public class PendingUser {
         this.lastName = lastName;
         this.verificationToken = verificationToken;
         this.adminCode = adminCode;
+        this.createdAt = LocalDateTime.now();
+        this.expiresAt = LocalDateTime.now().plusHours(24); // Expire after 24 hours
+    }
+    
+    public PendingUser(String email, String password, String firstName, String lastName, String verificationToken, String adminCode, String referralToken) {
+        this.email = email;
+        this.password = password;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.verificationToken = verificationToken;
+        this.adminCode = adminCode;
+        this.referralToken = referralToken;
         this.createdAt = LocalDateTime.now();
         this.expiresAt = LocalDateTime.now().plusHours(24); // Expire after 24 hours
     }
@@ -136,6 +152,14 @@ public class PendingUser {
     
     public void setAdminCode(String adminCode) {
         this.adminCode = adminCode;
+    }
+    
+    public String getReferralToken() {
+        return referralToken;
+    }
+    
+    public void setReferralToken(String referralToken) {
+        this.referralToken = referralToken;
     }
     
     /**

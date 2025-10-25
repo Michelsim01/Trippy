@@ -291,6 +291,109 @@ public class EmailService {
     }
 
     /**
+     * Send admin referral email with HTML template
+     * @param toEmail - recipient email address
+     * @param referralToken - admin referral token
+     * @param referrerName - name of the admin who made the referral
+     */
+    public void sendAdminReferralEmail(String toEmail, String referralToken, String referrerName) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            // Set email details
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Admin Invitation - Trippy");
+
+            // Create HTML content
+            String htmlContent = createAdminReferralHtmlContent(referrerName, referralToken);
+            helper.setText(htmlContent, true);
+
+            // Send email
+            mailSender.send(message);
+            System.out.println("Admin referral email sent successfully to: " + toEmail);
+
+        } catch (MessagingException e) {
+            System.err.println("Failed to send admin referral email: " + e.getMessage());
+            throw new RuntimeException("Failed to send admin referral email", e);
+        }
+    }
+
+    /**
+     * Create HTML content for admin referral email
+     */
+    private String createAdminReferralHtmlContent(String referrerName, String referralToken) {
+        String signupLink = adminFrontendUrl + "/admin/signup?referral=" + referralToken;
+        
+        return String.format("""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Admin Invitation</title>
+                <style>
+                    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+                    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                    .header { background: linear-gradient(135deg, #4AC63F 0%%, #3ea832 100%%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+                    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+                    .button { display: inline-block; background: #4AC63F; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+                    .button:hover { background: #3ea832; }
+                    .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+                    .info { background: #e8f5e8; border: 1px solid #4AC63F; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                    .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="header">
+                        <h1>👑 Admin Invitation</h1>
+                        <p>Trippy - Local Experience Marketplace</p>
+                    </div>
+                    <div class="content">
+                        <h2>You've been invited to join as an Admin!</h2>
+                        <p><strong>%s</strong> has invited you to become an administrator for Trippy.</p>
+                        <p>As an admin, you'll have access to:</p>
+                        <ul>
+                            <li>User management and moderation</li>
+                            <li>Experience approval and oversight</li>
+                            <li>Booking and transaction monitoring</li>
+                            <li>KYC verification and dispute resolution</li>
+                            <li>Platform analytics and insights</li>
+                        </ul>
+                        <div class="info">
+                            <strong>🎯 Next Steps:</strong>
+                            <ol>
+                                <li>Click the button below to accept your invitation</li>
+                                <li>Complete the admin registration form</li>
+                                <li>Verify your email address</li>
+                                <li>Start managing the platform!</li>
+                            </ol>
+                        </div>
+                        <a href="%s" class="button">Accept Admin Invitation</a>
+                        <div class="warning">
+                            <strong>⚠️ Important:</strong>
+                            <ul>
+                                <li>This invitation will expire in 7 days</li>
+                                <li>This link is unique to you - don't share it</li>
+                                <li>If you didn't expect this invitation, please ignore this email</li>
+                            </ul>
+                        </div>
+                        <p>If the button doesn't work, copy and paste this link into your browser:</p>
+                        <p style="word-break: break-all; background: #eee; padding: 10px; border-radius: 5px;">%s</p>
+                    </div>
+                    <div class="footer">
+                        <p>This invitation was sent by %s. If you have any questions, please contact our support team.</p>
+                        <p>© 2024 Trippy. All rights reserved.</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            """, referrerName, signupLink, signupLink, referrerName);
+    }
+
+    /**
      * Send simple text email (fallback method)
      */
     public void sendSimpleEmail(String toEmail, String subject, String text) {

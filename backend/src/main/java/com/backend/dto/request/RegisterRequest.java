@@ -33,6 +33,9 @@ public class RegisterRequest {
     // Admin code for admin registration
     private String adminCode;
     
+    // Referral token for admin registration via referral
+    private String referralToken;
+    
     
     // Default constructor
     public RegisterRequest() {}
@@ -94,6 +97,14 @@ public class RegisterRequest {
     
     public void setAdminCode(String adminCode) {
         this.adminCode = adminCode;
+    }
+    
+    public String getReferralToken() {
+        return referralToken;
+    }
+    
+    public void setReferralToken(String referralToken) {
+        this.referralToken = referralToken;
     }
     
     
