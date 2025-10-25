@@ -698,6 +698,7 @@ public class DataSeedingService {
             experience.setTotalStars(BigDecimal.ZERO); // Will be updated when reviews are created
             experience.setTotalReviews(0); // Will be updated when reviews are created
             experience.setAverageRating(BigDecimal.ZERO); // Will be calculated from totalStars/totalReviews
+            experience.setViewCount(20 + random.nextInt(481)); // Random view count between 20-500
             experience.setHighlights(generateHighlights((String) data[0]));
             experience.setWhatIncluded(generateWhatIncluded());
             experience.setImportantInfo(generateImportantInfo());
