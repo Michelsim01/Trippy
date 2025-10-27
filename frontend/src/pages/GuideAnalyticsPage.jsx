@@ -52,6 +52,16 @@ const GuideAnalyticsPage = () => {
         };
     };
 
+    // Helper function to format category names
+    const formatCategory = (category) => {
+        if (!category) return '';
+        // Convert GUIDED_TOUR -> Guided Tour
+        return category
+            .split('_')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+            .join(' ');
+    };
+
     // Render metric card component with change percentage
     const MetricCard = ({ title, subtitle, currentValue, changePercent, icon, iconBg, valueColor }) => {
         const change = formatChange(changePercent);
@@ -217,8 +227,8 @@ const GuideAnalyticsPage = () => {
                                                         <tr key={index} className="border-b border-neutrals-6 hover:bg-neutrals-8 transition-colors">
                                                             <td className="py-3 px-4 text-sm text-neutrals-1 font-medium">{experience.name}</td>
                                                             <td className="py-3 px-4">
-                                                                <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-primary-1 bg-opacity-10 text-primary-1">
-                                                                    {experience.category}
+                                                                <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
+                                                                    {formatCategory(experience.category)}
                                                                 </span>
                                                             </td>
                                                             <td className="py-3 px-4 text-center text-sm font-semibold text-neutrals-1">{experience.bookings}</td>
@@ -343,8 +353,8 @@ const GuideAnalyticsPage = () => {
                                                 <span className="text-sm font-bold text-primary-1 ml-2">{experience.bookings} bookings</span>
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-neutrals-4">
-                                                <span className="inline-block px-2 py-1 rounded-full bg-primary-1 bg-opacity-10 text-primary-1 font-medium">
-                                                    {experience.category}
+                                                <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
+                                                    {formatCategory(experience.category)}
                                                 </span>
                                                 <div className="flex items-center gap-1">
                                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
