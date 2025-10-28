@@ -21,6 +21,22 @@ Then login with:
 - **Username**: `admin`
 - **Password**: `admin`
 
+## Prerequisites
+
+### PostgreSQL with pgvector Extension
+
+The database uses the `pgvector/pgvector:pg16` Docker image (already configured in `docker-compose.yml`). This enables vector similarity search capabilities.
+
+### Python Dependencies
+
+The following packages are pre-installed in the Docker image:
+- `apache-airflow` - Workflow orchestration
+- `pandas`, `numpy` - Data processing
+- `scikit-learn`, `textblob` - ML and NLP
+- `openai>=1.0.0` - OpenAI API client
+- `pgvector>=0.2.0` - Vector database support
+- `psycopg2-binary` - PostgreSQL adapter
+
 ## Configuration
 
 ### Set Up Database Connection
@@ -77,7 +93,22 @@ docker-compose down -v
 
 ## Troubleshooting
 
+### Common Issues
+
 - **DAGs not appearing?** Check scheduler logs: `docker-compose logs -f airflow-scheduler`
 - **Services unhealthy?** Check status: `docker-compose ps`
 - **Need to rebuild?** Run: `docker-compose up -d --build`
 - **Connection issues?** Use Docker service names (`db`, not `localhost`) for connections between containers
+- **Airflow not starting?** Wait 1-2 minutes after `docker-compose up` for initialization to complete
+
+### Verify Your Setup
+
+**Check pgvector extension:**
+```bash
+docker exec postgres-spring psql -U app -d appdb -c "SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';"
+```
+
+**Check installed packages:**
+```bash
+docker exec airflow-scheduler python -m pip list | grep -E "openai|pgvector"
+```

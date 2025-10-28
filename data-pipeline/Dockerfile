@@ -7,4 +7,6 @@ RUN pip install --no-cache-dir \
     numpy \
     scikit-learn \
     textblob \
-    psycopg2-binary
+    psycopg2-binary \
+    openai>=1.0.0 \
+    pgvector>=0.2.0
