@@ -16,6 +16,7 @@ x-airflow-common:
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
     AIRFLOW__WEBSERVER__SECRET_KEY: 'airflow-secret-key-change-in-production'
     AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8081
+    OPENAI_API_KEY: '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'
   volumes:
     - ./data-pipeline/airflow/dags:/opt/airflow/dags
     - ./data-pipeline/airflow/logs:/opt/airflow/logs
@@ -29,7 +30,7 @@ x-airflow-common:
 services:
   # ========= Application Database (PostgreSQL) =========
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: postgres-spring
     environment:
       POSTGRES_USER: app
