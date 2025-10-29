@@ -16,7 +16,9 @@ x-airflow-common:
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
     AIRFLOW__WEBSERVER__SECRET_KEY: 'airflow-secret-key-change-in-production'
     AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8081
-    OPENAI_API_KEY: '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'
+    AIRFLOW__WEBSERVER__WORKER_REFRESH_INTERVAL: 0
+    AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: 300
+    OPENAI_API_KEY: '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'
   volumes:
     - ./data-pipeline/airflow/dags:/opt/airflow/dags
     - ./data-pipeline/airflow/logs:/opt/airflow/logs
