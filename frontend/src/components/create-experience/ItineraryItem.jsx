@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MapPin, Clock, X, Flag, Navigation } from 'lucide-react';
 
 export default function ItineraryItem({
@@ -34,6 +34,8 @@ export default function ItineraryItem({
   const marginLeft = isMobile ? "ml-6" : "ml-8";
   const paddingTop = isMobile ? "pt-1" : "pt-2";
 
+  const isStartPoint = item.type === 'start';
+
   return (
     <div className="relative">
       <div className={`flex items-start ${gapSize}`}>
@@ -47,19 +49,29 @@ export default function ItineraryItem({
         </div>
 
         <div className={`flex-1 ${paddingTop}`}>
-          <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'} mb-2`}>
-            <MapPin className={`${iconSize} text-neutrals-4`} />
-            <input
-              type="text"
-              value={item.location}
-              onChange={(e) => onUpdate('location', e.target.value)}
-              className={`flex-1 ${inputTextSize} font-semibold text-neutrals-1 bg-transparent focus:outline-none border-b-2 border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all py-1`}
-              placeholder="Enter location name"
-            />
+          <div className={`flex items-start ${isMobile ? 'gap-2' : 'gap-3'} mb-2`}>
+            <MapPin className={`${iconSize} text-neutrals-4 ${isMobile ? 'mt-3' : 'mt-4'}`} />
+            <div className="flex-1">
+              {/* All stops: read-only display (must delete to change) */}
+              <input
+                type="text"
+                value={item.location}
+                readOnly
+                className={`w-full ${inputTextSize} font-semibold text-neutrals-1 bg-neutrals-7 cursor-not-allowed border-2 border-neutrals-5 rounded-lg px-3 py-2`}
+                placeholder={isStartPoint ? "Meeting Point" : "Location"}
+                title="To change location, delete this stop and add a new one"
+              />
+            </div>
             <button
               onClick={onRemove}
-              className="text-red-500 hover:text-red-700 transition-colors p-1"
+              disabled={isStartPoint}
+              className={`transition-colors p-1 ${isMobile ? 'mt-2' : 'mt-3'} ${
+                isStartPoint 
+                  ? 'text-neutrals-5 cursor-not-allowed' 
+                  : 'text-red-500 hover:text-red-700'
+              }`}
               style={isMobile ? {marginRight: '8px'} : {}}
+              title={isStartPoint ? 'Start point cannot be removed' : 'Remove item'}
             >
               <X className={removeIconSize} />
             </button>
@@ -70,9 +82,9 @@ export default function ItineraryItem({
               <input
                 type="text"
                 value={item.time}
-                onChange={(e) => onUpdate('time', e.target.value)}
-                className="text-sm text-neutrals-3 bg-transparent focus:outline-none border-b border-transparent hover:border-neutrals-5 focus:border-primary-1 transition-all py-1"
-                placeholder="Duration (e.g., 1 hour)"
+                readOnly
+                className="text-sm text-neutrals-3 bg-transparent cursor-not-allowed py-1"
+                title="To change duration, delete this stop and add a new one"
               />
             </div>
           )}

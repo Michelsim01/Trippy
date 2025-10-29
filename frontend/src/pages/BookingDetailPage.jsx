@@ -8,6 +8,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import Button from '../components/Button';
 import FormattedImportantInfo from '../components/FormattedImportantInfo';
+import MapboxMap from '../components/MapboxMap';
 import { notificationService } from '../services/notificationService';
 
 const BookingDetailPage = () => {
@@ -67,7 +68,9 @@ const BookingDetailPage = () => {
                         coverPhotoUrl: data.experienceCoverPhotoUrl,
                         shortDescription: data.experienceDescription,
                         importantInfo: data.experienceImportantInfo,
-                        location: data.experienceLocation
+                        location: data.experienceLocation,
+                        latitude: data.experienceLatitude,
+                        longitude: data.experienceLongitude
                     },
                     experienceSchedule: {
                         startDateTime: data.startDateTime,
@@ -414,7 +417,9 @@ const BookingDetailPage = () => {
                     coverPhotoUrl: updatedBooking.experienceCoverPhotoUrl,
                     shortDescription: updatedBooking.experienceDescription,
                     importantInfo: updatedBooking.experienceImportantInfo,
-                    location: updatedBooking.experienceLocation
+                    location: updatedBooking.experienceLocation,
+                    latitude: updatedBooking.experienceLatitude,
+                    longitude: updatedBooking.experienceLongitude
                 },
                 experienceSchedule: {
                     startDateTime: updatedBooking.startDateTime,
@@ -558,6 +563,19 @@ const BookingDetailPage = () => {
                             {/* Meeting Point */}
                             <div className="bg-white rounded-2xl border border-neutrals-6 p-6">
                                 <h3 className="text-xl font-semibold text-neutrals-1 mb-4">Meeting Point</h3>
+                                
+                                {/* Map View */}
+                                <div className="mb-4">
+                                    <MapboxMap
+                                        latitude={booking.experience.latitude}
+                                        longitude={booking.experience.longitude}
+                                        locationName={booking.experience.location || 'Meeting Point'}
+                                        zoom={14}
+                                        height="350px"
+                                        className="shadow-md"
+                                    />
+                                </div>
+
                                 <div className="flex items-start gap-3">
                                     <MapPin className="w-5 h-5 text-neutrals-4 mt-0.5 flex-shrink-0" />
                                     <p className="text-neutrals-3 leading-relaxed">

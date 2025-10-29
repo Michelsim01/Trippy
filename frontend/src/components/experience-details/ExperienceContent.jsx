@@ -1,5 +1,6 @@
 import { MapPin, Clock } from 'lucide-react';
 import FormattedImportantInfo from '../FormattedImportantInfo';
+import MapboxMap from '../MapboxMap';
 
 const ExperienceContent = ({
   displayData,
@@ -98,6 +99,19 @@ const ExperienceContent = ({
           <h2 className="text-lg font-semibold text-neutrals-2 mb-3" style={{ fontFamily: 'Poppins' }}>
             Meeting Point
           </h2>
+          
+          {/* Map View */}
+          <div className="mb-4">
+            <MapboxMap
+              latitude={displayData.latitude}
+              longitude={displayData.longitude}
+              locationName={displayData.location || 'Meeting Point'}
+              zoom={14}
+              height="250px"
+              className="shadow-sm"
+            />
+          </div>
+
           <div className="flex items-start gap-3">
             <svg className="w-4 h-4 text-primary-1 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -105,7 +119,6 @@ const ExperienceContent = ({
             </svg>
             <div>
               <p className="text-neutrals-2 font-medium mb-1 text-sm">{displayData.location || 'Meeting location will be provided after booking'}</p>
-              <p className="text-neutrals-4 text-xs">Exact meeting instructions will be sent via email after booking confirmation.</p>
             </div>
           </div>
         </div>
@@ -244,6 +257,19 @@ const ExperienceContent = ({
         <h2 className="text-2xl font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
           Meeting Point
         </h2>
+        
+        {/* Map View */}
+        <div className="mb-4">
+          <MapboxMap
+            latitude={displayData.latitude}
+            longitude={displayData.longitude}
+            locationName={displayData.location || 'Meeting Point'}
+            zoom={14}
+            height="400px"
+            className="shadow-md"
+          />
+        </div>
+
         <div className="flex items-start gap-3">
           <svg className="w-5 h-5 text-primary-1 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -251,7 +277,6 @@ const ExperienceContent = ({
           </svg>
           <div>
             <p className="text-neutrals-2 font-medium mb-1">{displayData.location || 'Meeting location will be provided after booking'}</p>
-            <p className="text-neutrals-4 text-sm">Exact meeting instructions will be sent via email after booking confirmation.</p>
           </div>
         </div>
       </div>

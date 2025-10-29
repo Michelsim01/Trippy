@@ -11,6 +11,7 @@ import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import PhotoUpload from '../components/create-experience/PhotoUpload';
 import LocationSearchInput from '../components/create-experience/LocationSearchInput';
+import Swal from 'sweetalert2';
 
 export default function EditExperienceBasicInfoPage() {
   const navigate = useNavigate();
@@ -112,64 +113,81 @@ export default function EditExperienceBasicInfoPage() {
     );
   }
 
-  const handleSave = async () => {
-    try {
-      setIsSaving(true);
+  const handleCancel = async () => {
+    const result = await Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost. Are you sure you want to cancel?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF385C',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Cancel',
+      cancelButtonText: 'Continue Editing'
+    });
 
-      // Prepare current form data
-      const currentData = {
-        title: formData.title.trim(),
-        shortDescription: formData.shortDescription.trim(),
-        highlights: formData.highlights,
-        category: formData.category,
-        location: formData.location,
-        country: formData.location?.country || formData.country.trim(),
-        tags: formData.tags,
-        languages: formData.languages,
-        participantsAllowed: formData.participantsAllowed,
-        coverPhotoUrl: formData.coverPhotoUrl,
-        additionalPhotos: formData.additionalPhotos
-      };
-
-      // Save only Basic Info data with partial save (preserves other page data)
-      await savePartialChanges(currentData);
-
-      alert('Basic info saved successfully!');
-    } catch (error) {
-      console.error('Error saving changes:', error);
-      alert('Failed to save changes. Please try again.');
-    } finally {
-      setIsSaving(false);
+    if (result.isConfirmed) {
+      navigate('/my-tours');
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!formData.title.trim()) {
-      alert('Please enter a title for your experience');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Title Required',
+        text: 'Please enter a title for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.shortDescription.trim()) {
-      alert('Please enter a short description for your experience');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Description Required',
+        text: 'Please enter a short description for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.highlights || formData.highlights.length === 0) {
-      alert('Please add at least one highlight for your experience');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Highlights Required',
+        text: 'Please add at least one highlight for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.category) {
-      alert('Please select a category');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Category Required',
+        text: 'Please select a category',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.location || !formData.location.name) {
-      alert('Please select a location');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Location Required',
+        text: 'Please select a location',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.participantsAllowed || parseInt(formData.participantsAllowed) <= 0) {
-      alert('Please enter maximum number of participants');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Participants Required',
+        text: 'Please enter maximum number of participants',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
-    updateFormData({
+    // Prepare current page data
+    const currentData = {
       title: formData.title.trim(),
       shortDescription: formData.shortDescription.trim(),
       highlights: formData.highlights,
@@ -181,9 +199,28 @@ export default function EditExperienceBasicInfoPage() {
       participantsAllowed: formData.participantsAllowed,
       coverPhotoUrl: formData.coverPhotoUrl,
       additionalPhotos: formData.additionalPhotos
-    });
+    };
 
-    navigate(`/edit-experience/${id}/details`);
+    // Update context first
+    updateFormData(currentData);
+
+    // Auto-save changes before navigating
+    try {
+      setIsSaving(true);
+      await savePartialChanges(currentData);
+      // Navigate to next page after successful save
+      navigate(`/edit-experience/${id}/details`);
+    } catch (error) {
+      console.error('Error auto-saving changes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const addHighlightItem = () => {
@@ -468,17 +505,17 @@ export default function EditExperienceBasicInfoPage() {
                   {/* Action Buttons */}
                   <div className="pt-8 flex gap-4">
                     <button
-                      onClick={handleSave}
-                      disabled={isSaving}
-                      className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-6 rounded-full hover:bg-primary-1 hover:text-white transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleCancel}
+                      className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-6 rounded-full hover:bg-red-600 transition-colors text-xl"
                     >
-                      {isSaving ? 'Saving...' : 'Save Changes'}
+                      Cancel
                     </button>
                     <button
                       onClick={handleNext}
-                      className="flex-1 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
+                      disabled={isSaving}
+                      className="flex-1 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next
+                      {isSaving ? 'Saving...' : 'Next'}
                     </button>
                   </div>
 
@@ -689,17 +726,17 @@ export default function EditExperienceBasicInfoPage() {
               <div style={{marginBottom: '20px'}}>
                 <div className="flex gap-3 mb-4">
                   <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-4 rounded-full hover:bg-primary-1 hover:text-white transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleCancel}
+                    className="flex-1 bg-red-500 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    Cancel
                   </button>
                   <button
                     onClick={handleNext}
-                    className="flex-1 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors shadow-lg hover:shadow-xl"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {isSaving ? 'Saving...' : 'Next'}
                   </button>
                 </div>
               </div>

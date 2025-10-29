@@ -9,6 +9,8 @@ import ProgressSteps from '../components/create-experience/ProgressSteps';
 import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import ItineraryBuilder from '../components/create-experience/ItineraryBuilder';
+import Swal from 'sweetalert2';
+import { validateItineraryDuration, checkAdjacentStopsDistance } from '../utils/itineraryValidation';
 
 export default function CreateExperienceDetailsPage() {
   const navigate = useNavigate();
@@ -34,14 +36,98 @@ export default function CreateExperienceDetailsPage() {
     return 'stop';
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!formData.fullDescription.trim()) {
-      alert('Please enter a full description');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Full Description Required',
+        text: 'Please provide a full description of your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (formData.whatIsIncluded.length === 0) {
-      alert('Please add at least one item to what is included');
+      Swal.fire({
+        icon: 'warning',
+        title: 'What Is Included Required',
+        text: 'Please add at least one item to what is included',
+        confirmButtonColor: '#FF385C'
+      });
       return;
+    }
+    
+    // Check if itinerary has items (multi-location) and validate end point
+    if (formData.itinerary.length > 0) {
+      const hasEndPoint = formData.itinerary.some(item => item.type === 'end');
+      if (!hasEndPoint) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Missing End Point',
+          text: 'Please add an end point to complete your itinerary',
+          confirmButtonColor: '#FF385C'
+        });
+        return;
+      }
+      
+      // Validation 1: Check that total stop durations don't exceed experience duration
+      const durationValidation = validateItineraryDuration(
+        formData.itinerary,
+        contextData?.startDateTime,
+        contextData?.endDateTime
+      );
+      
+      if (!durationValidation.valid) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Duration Mismatch',
+          html: durationValidation.message,
+          confirmButtonColor: '#FF385C',
+          confirmButtonText: 'OK'
+        });
+        return;
+      }
+      
+      // Validation 2: Check for unrealistic distances between adjacent stops
+      const distanceWarnings = checkAdjacentStopsDistance(formData.itinerary);
+      
+      if (distanceWarnings.length > 0) {
+        // Build warning message
+        let warningHtml = '<div style="text-align: left;">';
+        warningHtml += '<p style="margin-bottom: 10px;">The following stops are very far apart:</p>';
+        warningHtml += '<ul style="margin-left: 20px; margin-bottom: 10px;">';
+        
+        distanceWarnings.forEach(warning => {
+          const fromLabel = warning.fromType === 'start' ? 'Start' : 
+                           warning.fromType === 'end' ? 'End' : 'Stop';
+          const toLabel = warning.toType === 'start' ? 'Start' : 
+                         warning.toType === 'end' ? 'End' : 'Stop';
+          
+          warningHtml += `<li style="margin-bottom: 8px;">
+            <strong>${fromLabel}:</strong> ${warning.fromLocation}<br/>
+            <strong>${toLabel}:</strong> ${warning.toLocation}<br/>
+            <span style="color: #FF385C; font-weight: bold;">Distance: ${warning.distance} km</span>
+          </li>`;
+        });
+        
+        warningHtml += '</ul>';
+        warningHtml += '<p>Please verify that the locations are correct. This might make the itinerary unrealistic.</p>';
+        warningHtml += '</div>';
+        
+        const result = await Swal.fire({
+          icon: 'warning',
+          title: 'Large Distance Between Stops',
+          html: warningHtml,
+          showCancelButton: true,
+          confirmButtonColor: '#FF385C',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Continue Anyway',
+          cancelButtonText: 'Go Back and Fix'
+        });
+        
+        if (!result.isConfirmed) {
+          return;
+        }
+      }
     }
     
     updateFormData({
@@ -195,6 +281,7 @@ Know before you go
                   <ItineraryBuilder
                     items={formData.itinerary}
                     onItemsChange={(newItems) => handleInputChange('itinerary', newItems)}
+                    meetingPoint={contextData?.location}
                     isMobile={false}
                   />
                 </div>
@@ -274,6 +361,7 @@ Know before you go
                 <ItineraryBuilder
                   items={formData.itinerary}
                   onItemsChange={(newItems) => handleInputChange('itinerary', newItems)}
+                  meetingPoint={contextData?.location}
                   isMobile={true}
                 />
               </div>  
