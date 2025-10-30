@@ -6,6 +6,7 @@ import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ProgressSteps from '../components/create-experience/ProgressSteps';
+import Swal from 'sweetalert2';
 
 export default function EditExperiencePricingPage() {
   const navigate = useNavigate();
@@ -72,44 +73,89 @@ export default function EditExperiencePricingPage() {
     setFormData(prev => ({ ...prev, pricePerPerson: formatted }));
   };
 
-  const handleSave = async () => {
+  const handleCancel = async () => {
+    const result = await Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost. Are you sure you want to cancel?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF385C',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Cancel',
+      cancelButtonText: 'Continue Editing'
+    });
+
+    if (result.isConfirmed) {
+      navigate('/my-tours');
+    }
+  };
+
+  const handleNext = async () => {
+    if (!formData.pricePerPerson || parseFloat(formData.pricePerPerson) <= 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Price Required',
+        text: 'Please enter a valid price per person',
+        confirmButtonColor: '#FF385C'
+      });
+      return;
+    }
+
+    // Prepare current page data
+    const pricingData = {
+      price: formData.pricePerPerson,
+      currency: formData.currency
+    };
+
+    // Update context first
+    updateFormData(pricingData);
+
+    // Auto-save changes before navigating
     try {
       setIsSaving(true);
-
-      // Prepare only the Pricing page data for partial save
-      const pricingData = {
-        price: formData.pricePerPerson,
-        currency: formData.currency
-      };
-
-      // Save only Pricing data with partial save (preserves other page data)
       await savePartialChanges(pricingData);
-
-      alert('Pricing saved successfully!');
+      // Navigate to next page after successful save
+      navigate(`/edit-experience/${id}/availability`);
     } catch (error) {
-      console.error('Error saving changes:', error);
-      alert('Failed to save changes. Please try again.');
+      console.error('Error auto-saving changes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleNext = () => {
-    if (!formData.pricePerPerson || parseFloat(formData.pricePerPerson) <= 0) {
-      alert('Please enter a valid price per person');
-      return;
-    }
-
-    updateFormData({
+  const handleBack = async () => {
+    // Prepare current page data
+    const pricingData = {
       price: formData.pricePerPerson,
       currency: formData.currency
-    });
+    };
 
-    navigate(`/edit-experience/${id}/availability`);
-  };
+    // Update context first
+    updateFormData(pricingData);
 
-  const handleBack = () => {
-    navigate(`/edit-experience/${id}/details`);
+    // Auto-save changes before navigating
+    try {
+      setIsSaving(true);
+      await savePartialChanges(pricingData);
+      // Navigate back after successful save
+      navigate(`/edit-experience/${id}/details`);
+    } catch (error) {
+      console.error('Error auto-saving changes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const toggleSidebar = () => {
@@ -208,23 +254,24 @@ export default function EditExperiencePricingPage() {
 
                 <div className="pt-8 flex gap-4" style={{marginBottom: '50px'}}>
                   <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-6 rounded-full hover:bg-primary-1 hover:text-white transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleCancel}
+                    className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-6 rounded-full hover:bg-red-600 transition-colors text-xl"
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    Cancel
                   </button>
                   <button
                     onClick={handleBack}
-                    className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl"
+                    disabled={isSaving}
+                    className="flex-1 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Back
+                    {isSaving ? 'Saving...' : 'Back'}
                   </button>
                   <button
                     onClick={handleNext}
-                    className="w-1/4 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {isSaving ? 'Saving...' : 'Next'}
                   </button>
                 </div>
               </div>
@@ -306,23 +353,24 @@ export default function EditExperiencePricingPage() {
 
               <div className="flex gap-3" style={{marginBottom: '15px'}}>
                 <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-4 rounded-full hover:bg-primary-1 hover:text-white transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-4 rounded-full hover:bg-red-600 transition-colors"
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  Cancel
                 </button>
                 <button
                   onClick={handleBack}
-                  className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Back
+                  {isSaving ? 'Saving...' : 'Back'}
                 </button>
                 <button
                   onClick={handleNext}
-                  className="w-1/4 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next
+                  {isSaving ? 'Saving...' : 'Next'}
                 </button>
               </div>
             </div>

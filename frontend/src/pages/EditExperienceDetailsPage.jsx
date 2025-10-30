@@ -9,6 +9,8 @@ import ProgressSteps from '../components/create-experience/ProgressSteps';
 import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import ItineraryBuilder from '../components/create-experience/ItineraryBuilder';
+import Swal from 'sweetalert2';
+import { validateItineraryDuration, checkAdjacentStopsDistance } from '../utils/itineraryValidation';
 
 export default function EditExperienceDetailsPage() {
   const navigate = useNavigate();
@@ -61,52 +63,176 @@ export default function EditExperienceDetailsPage() {
   }, [contextData, isEditMode]);
 
 
-  const handleSave = async () => {
+  const handleCancel = async () => {
+    const result = await Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost. Are you sure you want to cancel?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF385C',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Cancel',
+      cancelButtonText: 'Continue Editing'
+    });
+
+    if (result.isConfirmed) {
+      navigate('/my-tours');
+    }
+  };
+
+  const handleNext = async () => {
+    if (!formData.fullDescription.trim()) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Description Required',
+        text: 'Please enter a full description',
+        confirmButtonColor: '#FF385C'
+      });
+      return;
+    }
+    if (formData.whatIsIncluded.length === 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'What\'s Included Required',
+        text: 'Please add at least one item to what is included',
+        confirmButtonColor: '#FF385C'
+      });
+      return;
+    }
+
+    // Check if itinerary has items (multi-location) and validate end point
+    if (formData.itinerary.length > 0) {
+      const hasEndPoint = formData.itinerary.some(item => item.type === 'end');
+      if (!hasEndPoint) {
+        await Swal.fire({
+          icon: 'warning',
+          title: 'End Point Required',
+          text: 'Please add an end point to complete your itinerary',
+          confirmButtonColor: '#FF385C'
+        });
+        return;
+      }
+
+      // Validation 1: Check that total stop durations don't exceed experience duration
+      const durationValidation = validateItineraryDuration(
+        formData.itinerary,
+        contextData?.startDateTime,
+        contextData?.endDateTime
+      );
+
+      if (!durationValidation.valid) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Duration Mismatch',
+          html: durationValidation.message,
+          confirmButtonColor: '#FF385C',
+          confirmButtonText: 'OK'
+        });
+        return;
+      }
+
+      // Validation 2: Check for unrealistic distances between adjacent stops
+      const distanceWarnings = checkAdjacentStopsDistance(formData.itinerary);
+
+      if (distanceWarnings.length > 0) {
+        // Build warning message
+        let warningHtml = '<div style="text-align: left;">';
+        warningHtml += '<p style="margin-bottom: 10px;">The following stops are very far apart:</p>';
+        warningHtml += '<ul style="margin-left: 20px; margin-bottom: 10px;">';
+
+        distanceWarnings.forEach(warning => {
+          const fromLabel = warning.fromType === 'start' ? 'Start' :
+            warning.fromType === 'end' ? 'End' : 'Stop';
+          const toLabel = warning.toType === 'start' ? 'Start' :
+            warning.toType === 'end' ? 'End' : 'Stop';
+
+          warningHtml += `<li style="margin-bottom: 8px;">
+            <strong>${fromLabel}:</strong> ${warning.fromLocation}<br/>
+            <strong>${toLabel}:</strong> ${warning.toLocation}<br/>
+            <span style="color: #FF385C; font-weight: bold;">Distance: ${warning.distance} km</span>
+          </li>`;
+        });
+
+        warningHtml += '</ul>';
+        warningHtml += '<p>Please verify that the locations are correct. This might make the itinerary unrealistic.</p>';
+        warningHtml += '</div>';
+
+        const result = await Swal.fire({
+          icon: 'warning',
+          title: 'Large Distance Between Stops',
+          html: warningHtml,
+          showCancelButton: true,
+          confirmButtonColor: '#FF385C',
+          cancelButtonColor: '#6c757d',
+          confirmButtonText: 'Continue Anyway',
+          cancelButtonText: 'Go Back and Fix'
+        });
+
+        if (!result.isConfirmed) {
+          return;
+        }
+      }
+    }
+
+    // Prepare current page data
+    const detailsData = {
+      fullDescription: formData.fullDescription.trim(),
+      whatIncluded: formData.whatIsIncluded.join(', '),
+      importantInfo: formData.importantInfo.trim(),
+      itinerary: formData.itinerary
+    };
+
+    // Update context first
+    updateFormData(detailsData);
+
+    // Auto-save changes before navigating
     try {
       setIsSaving(true);
-
-      // Prepare only the Details page data for partial save
-      const detailsData = {
-        fullDescription: formData.fullDescription.trim(),
-        whatIncluded: formData.whatIsIncluded.join(', '),
-        importantInfo: formData.importantInfo.trim(),
-        itinerary: formData.itinerary
-      };
-
-      // Save only Details data with partial save (preserves other page data)
       await savePartialChanges(detailsData);
-
-      alert('Details saved successfully!');
+      // Navigate to next page after successful save
+      navigate(`/edit-experience/${id}/pricing`);
     } catch (error) {
-      console.error('Error saving changes:', error);
-      alert('Failed to save changes. Please try again.');
+      console.error('Error auto-saving changes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleNext = () => {
-    if (!formData.fullDescription.trim()) {
-      alert('Please enter a full description');
-      return;
-    }
-    if (formData.whatIsIncluded.length === 0) {
-      alert('Please add at least one item to what is included');
-      return;
-    }
-
-    updateFormData({
+  const handleBack = async () => {
+    // Prepare current page data
+    const detailsData = {
       fullDescription: formData.fullDescription.trim(),
       whatIncluded: formData.whatIsIncluded.join(', '),
       importantInfo: formData.importantInfo.trim(),
       itinerary: formData.itinerary
-    });
+    };
 
-    navigate(`/edit-experience/${id}/pricing`);
-  };
+    // Update context first
+    updateFormData(detailsData);
 
-  const handleBack = () => {
-    navigate(`/edit-experience/${id}/basic-info`);
+    // Auto-save changes before navigating
+    try {
+      setIsSaving(true);
+      await savePartialChanges(detailsData);
+      // Navigate back after successful save
+      navigate(`/edit-experience/${id}/basic-info`);
+    } catch (error) {
+      console.error('Error auto-saving changes:', error);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleInputChange = (field, value) => {
@@ -147,11 +273,11 @@ export default function EditExperienceDetailsPage() {
             isSidebarOpen={isSidebarOpen}
             onToggleSidebar={toggleSidebar}
           />
-          <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
+          <div className="max-w-7xl mx-auto py-16" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
 
 
             <div className="mb-16">
-              <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{marginBottom: '30px'}}>Edit Experience - Details</h1>
+              <h1 className="text-4xl font-bold text-neutrals-1 mb-12" style={{ marginBottom: '30px' }}>Edit Experience - Details</h1>
               <ProgressSteps currentStep={2} />
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 lg:gap-20">
@@ -163,7 +289,7 @@ export default function EditExperienceDetailsPage() {
                     value={formData.fullDescription}
                     onChange={(value) => handleInputChange('fullDescription', value)}
                     placeholder="Provide a detailed description of your experience, including what guests will do, see, and learn"
-                    style={{height: '192px'}}
+                    style={{ height: '192px' }}
                     isMobile={false}
                   />
 
@@ -191,30 +317,31 @@ Not Allowed
 Know before you go
 1. Wear comfortable shoes
 2. Bring water bottle"
-                    style={{height: '192px'}}
+                    style={{ height: '192px' }}
                     isMobile={false}
                   />
                 </div>
 
-                <div className="pt-8 flex gap-4" style={{marginBottom: '50px'}}>
+                <div className="pt-8 flex gap-4" style={{ marginBottom: '50px' }}>
                   <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-6 rounded-full hover:bg-primary-1 hover:text-white transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleCancel}
+                    className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-6 rounded-full hover:bg-red-600 transition-colors text-xl"
                   >
-                    {isSaving ? 'Saving...' : 'Save Changes'}
+                    Cancel
                   </button>
                   <button
                     onClick={handleBack}
-                    className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl"
+                    disabled={isSaving}
+                    className="flex-1 border-2 border-neutrals-5 text-neutrals-2 font-bold py-6 rounded-full hover:bg-neutrals-7 transition-colors text-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Back
+                    {isSaving ? 'Saving...' : 'Back'}
                   </button>
                   <button
                     onClick={handleNext}
-                    className="w-1/4 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl"
+                    disabled={isSaving}
+                    className="flex-1 bg-primary-1 text-white font-bold py-6 rounded-full hover:opacity-90 transition-colors text-xl shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
+                    {isSaving ? 'Saving...' : 'Next'}
                   </button>
                 </div>
               </div>
@@ -223,6 +350,7 @@ Know before you go
                   <ItineraryBuilder
                     items={formData.itinerary}
                     onItemsChange={(newItems) => handleInputChange('itinerary', newItems)}
+                    meetingPoint={contextData?.location}
                     isMobile={false}
                   />
                 </div>
@@ -244,7 +372,7 @@ Know before you go
         <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} variant="mobile" />
 
         <main className="w-full">
-          <div className="py-10" style={{paddingLeft: '20px', paddingRight: '20px'}}>
+          <div className="py-10" style={{ paddingLeft: '20px', paddingRight: '20px' }}>
 
             <div className="mb-10">
               <h1 className="text-2xl font-bold text-neutrals-1 mb-8">Edit Experience - Details</h1>
@@ -258,7 +386,7 @@ Know before you go
                 value={formData.fullDescription}
                 onChange={(value) => handleInputChange('fullDescription', value)}
                 placeholder="Provide a detailed description of your experience, including what guests will do, see, and learn"
-                style={{height: '160px'}}
+                style={{ height: '160px' }}
                 isMobile={true}
               />
 
@@ -286,37 +414,39 @@ Not Allowed
 Know before you go
 1. Wear comfortable shoes
 2. Bring water bottle"
-                style={{height: '192px'}}
+                style={{ height: '192px' }}
                 isMobile={true}
               />
 
-              <div style={{marginBottom: '50px'}}>
+              <div style={{ marginBottom: '50px' }}>
                 <ItineraryBuilder
                   items={formData.itinerary}
                   onItemsChange={(newItems) => handleInputChange('itinerary', newItems)}
+                  meetingPoint={contextData?.location}
                   isMobile={true}
                 />
               </div>
 
-              <div className="flex gap-3" style={{marginBottom: '15px'}}>
+              <div className="flex gap-3" style={{ marginBottom: '15px' }}>
                 <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="flex-1 bg-white border-2 border-primary-1 text-primary-1 font-bold py-4 rounded-full hover:bg-primary-1 hover:text-white transition-colors shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-4 rounded-full hover:bg-red-600 transition-colors"
                 >
-                  {isSaving ? 'Saving...' : 'Save Changes'}
+                  Cancel
                 </button>
                 <button
                   onClick={handleBack}
-                  className="w-1/4 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Back
+                  {isSaving ? 'Saving...' : 'Back'}
                 </button>
                 <button
                   onClick={handleNext}
-                  className="w-1/4 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors"
+                  disabled={isSaving}
+                  className="flex-1 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Next
+                  {isSaving ? 'Saving...' : 'Next'}
                 </button>
               </div>
             </div>

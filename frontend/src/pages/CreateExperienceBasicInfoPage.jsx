@@ -12,6 +12,7 @@ import FormField from '../components/create-experience/FormField';
 import ListManager from '../components/create-experience/ListManager';
 import PhotoUpload from '../components/create-experience/PhotoUpload';
 import LocationSearchInput from '../components/create-experience/LocationSearchInput';
+import Swal from 'sweetalert2';
 
 export default function CreateExperienceBasicInfoPage() {
   const navigate = useNavigate();
@@ -72,40 +73,85 @@ export default function CreateExperienceBasicInfoPage() {
 
   const handleNext = () => {
     if (!formData.title.trim()) {
-      alert('Please enter a title for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Title',
+        text: 'Please enter a title for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.shortDescription.trim()) {
-      alert('Please enter a short description for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Description',
+        text: 'Please enter a short description for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!Array.isArray(formData.highlights) || formData.highlights.length === 0) {
-      alert('Please add at least one highlight for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Highlights',
+        text: 'Please add at least one highlight for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.category) {
-      alert('Please select a category');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Category',
+        text: 'Please select a category for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.startDateTime) {
-      alert('Please select a start date and time for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Start Date/Time',
+        text: 'Please select a start date and time for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.endDateTime) {
-      alert('Please select an end date and time for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing End Date/Time',
+        text: 'Please select an end date and time for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.location || !formData.location.name) {
-      alert('Please select a location');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Location',
+        text: 'Please select a location for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
     if (!formData.participantsAllowed || formData.participantsAllowed <= 0) {
-      alert('Please enter the maximum number of participants');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Participants',
+        text: 'Please enter the maximum number of participants',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
     if (!formData.coverPhotoUrl) {
-      alert('Please upload a cover photo for your experience');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Missing Cover Photo',
+        text: 'Please upload a cover photo for your experience',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 

@@ -9,7 +9,8 @@ export default function LocationSearchInput({
   isMobile = false,
   error = null,
   disabled = false,
-  required = false
+  required = false,
+  showClearButton = true
 }) {
   const [query, setQuery] = useState((value && value.name) ? value.name : "");
   const [suggestions, setSuggestions] = useState([]);
@@ -192,7 +193,6 @@ export default function LocationSearchInput({
     <div style={{ marginBottom }} ref={dropdownRef}>
       <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
       </label>
 
       <div className="relative">
@@ -215,7 +215,7 @@ export default function LocationSearchInput({
           <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center space-x-2">
             {isLoading ? (
               <Loader2 className={`${isMobile ? 'w-4 h-4' : 'w-5 h-5'} text-neutrals-4 animate-spin`} />
-            ) : query ? (
+            ) : (query && showClearButton) ? (
               <button
                 onClick={handleClear}
                 className="hover:text-neutrals-3 text-neutrals-4 transition-colors"

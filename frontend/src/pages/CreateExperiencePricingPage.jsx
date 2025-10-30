@@ -7,6 +7,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ProgressSteps from '../components/create-experience/ProgressSteps';
 import FormField from '../components/create-experience/FormField';
+import Swal from 'sweetalert2';
 
 export default function CreateExperiencePricingPage() {
   const navigate = useNavigate();
@@ -27,7 +28,12 @@ export default function CreateExperiencePricingPage() {
 
   const handleNext = () => {
     if (!formData.pricePerPerson || parseFloat(formData.pricePerPerson) <= 0) {
-      alert('Please enter a valid price per person');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Price',
+        text: 'Please enter a valid price per person',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 

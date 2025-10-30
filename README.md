@@ -115,6 +115,9 @@ VITE_API_BASE_URL=http://localhost:8080
 
 # Stripe Configuration (Test Mode)
 VITE_STRIPE_PUBLIC_KEY=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
+
+# Mapbox Configuration
+VITE_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoibWljaGVsc2ltMDEiLCJhIjoiY21najUwZWM4MGd2MzJqb2t0cXgwMmNmZyJ9.U_2z19hTOSuTlD1-gpRrMg
 ```
 
 ### 2. Start Services with Docker Compose

@@ -7,6 +7,7 @@ import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
 import ProgressSteps from '../components/create-experience/ProgressSteps';
 import Button from '../components/Button';
+import Swal from 'sweetalert2';
 
 export default function EditExperienceAvailabilityPage() {
   const navigate = useNavigate();
@@ -185,21 +186,36 @@ export default function EditExperienceAvailabilityPage() {
   };
 
   // Handle schedule form submission
-  const handleScheduleSubmit = () => {
+  const handleScheduleSubmit = async () => {
     if (!scheduleForm.startDateTime || !scheduleForm.endDateTime) {
-      alert('Please fill in both start and end date/time');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Missing Information',
+        text: 'Please fill in both start and end date/time',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
     if (new Date(scheduleForm.startDateTime) >= new Date(scheduleForm.endDateTime)) {
-      alert('End date/time must be after start date/time');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Invalid Time Range',
+        text: 'End date/time must be after start date/time',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
     // Validate duration consistency if master duration is set
     if (masterSchedule.duration && !validateDurationConsistency(scheduleForm.startDateTime, scheduleForm.endDateTime)) {
       const actualDuration = calculateDurationHours(scheduleForm.startDateTime, scheduleForm.endDateTime);
-      alert(`Duration mismatch! This schedule is ${actualDuration.toFixed(1)} hours, but master duration is ${masterSchedule.duration} hours. Please adjust the times or master duration.`);
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Duration Mismatch',
+        html: `This schedule is <strong>${actualDuration.toFixed(1)} hours</strong>, but master duration is <strong>${masterSchedule.duration} hours</strong>.<br><br>Please adjust the times or master duration.`,
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
@@ -218,7 +234,12 @@ export default function EditExperienceAvailabilityPage() {
     });
 
     if (hasConflict) {
-      alert('This schedule conflicts with an existing schedule. Please choose different times.');
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Schedule Conflict',
+        text: 'This schedule conflicts with an existing schedule. Please choose different times.',
+        confirmButtonColor: '#FF385C'
+      });
       return;
     }
 
@@ -248,29 +269,78 @@ export default function EditExperienceAvailabilityPage() {
     setScheduleForm({ startDateTime: '', endDateTime: '' });
   };
 
-  // Handle save
-  const handleSave = async () => {
+  const handleCancel = async () => {
+    const result = await Swal.fire({
+      title: 'Cancel Editing?',
+      text: 'Any unsaved changes will be lost. Are you sure you want to cancel?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#FF385C',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'Yes, Cancel',
+      cancelButtonText: 'Continue Editing'
+    });
+
+    if (result.isConfirmed) {
+      navigate('/my-tours');
+    }
+  };
+
+  // Handle navigation
+  const handleBack = async () => {
+    // Auto-save before going back
     try {
       setIsSaving(true);
       setSaveError(null);
       await saveCurrentChanges();
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      navigate(`/edit-experience/${id}/pricing`);
     } catch (error) {
       console.error('Save failed:', error);
       setSaveError(error.message);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Handle navigation
-  const handleBack = () => {
-    navigate(`/edit-experience/${id}/pricing`);
-  };
+  const handleNext = async () => {
+    // Validate before finishing
+    if (!contextData?.schedules || contextData.schedules.length === 0) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'No Schedules',
+        text: 'Please add at least one schedule before finishing.',
+        confirmButtonColor: '#FF385C'
+      });
+      return;
+    }
 
-  const handleNext = () => {
-    navigate(`/my-tours`);
+    // Auto-save before finishing
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      await saveCurrentChanges();
+      setSaveSuccess(true);
+      // Give user feedback before navigating
+      setTimeout(() => {
+        navigate(`/my-tours`);
+      }, 500);
+    } catch (error) {
+      console.error('Save failed:', error);
+      setSaveError(error.message);
+      await Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: 'Failed to save changes. Please try again.',
+        confirmButtonColor: '#FF385C'
+      });
+      setIsSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -286,15 +356,20 @@ export default function EditExperienceAvailabilityPage() {
 
   return (
     <div className="min-h-screen bg-neutrals-8">
-      <Navbar
-        isAuthenticated={true}
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-      />
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} variant="desktop" />
+      <div className="hidden lg:flex">
+        <div className={`transition-all duration-300 ${isSidebarOpen ? 'w-[275px]' : 'w-0'} overflow-hidden`}>
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} variant="desktop" />
+        </div>
 
-      <div className={`transition-all duration-300 ${isSidebarOpen ? 'lg:ml-64' : ''}`}>
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex-1 w-full transition-all duration-300">
+          <Navbar
+            isAuthenticated={true}
+            isSidebarOpen={isSidebarOpen}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+
+          {/* Main Content - Centered with max width */}
+          <div className="max-w-7xl mx-auto py-16" style={{paddingLeft: '20px', paddingRight: '20px'}}>
           {/* Progress Steps */}
           <ProgressSteps currentStep={4} isEditMode={isEditMode} />
 
@@ -585,41 +660,31 @@ export default function EditExperienceAvailabilityPage() {
             </div>
           )}
 
-          {/* Navigation Buttons */}
-          <div className="flex justify-between">
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={handleBack}
-              className="px-8"
-            >
-              Back
-            </Button>
-
-            <div className="flex gap-4">
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleSave}
-                disabled={isSaving}
-                className="px-8 border-green-200 text-green-700 hover:bg-green-50"
-              >
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-
-              <Button
-                variant="primary"
-                size="lg"
-                onClick={handleNext}
-                className="px-8"
-              >
-                Finish
-              </Button>
-            </div>
-          </div>
+          <div className="flex gap-3" style={{marginBottom: '15px'}}>
+                <button
+                  onClick={handleCancel}
+                  className="flex-1 bg-red-500 border-2 border-neutrals-5 text-white font-bold py-4 rounded-full hover:bg-red-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBack}
+                  disabled={isSaving}
+                  className="flex-1 border-2 border-neutrals-5 text-neutrals-2 font-bold py-4 rounded-full hover:bg-neutrals-7 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Back'}
+                </button>
+                <button
+                  onClick={handleNext}
+                  disabled={isSaving}
+                  className="flex-1 bg-primary-1 text-white font-bold py-4 rounded-full hover:opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Finish'}
+                </button>
+              </div>
         </div>
       </div>
-
+    </div>
       <Footer />
     </div>
   );

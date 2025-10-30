@@ -702,6 +702,8 @@ public class BookingService {
         response.setExperienceCountry(experience.getCountry());
         response.setExperienceImportantInfo(experience.getImportantInfo());
         response.setExperiencePrice(experience.getPrice());
+        response.setExperienceLatitude(experience.getLatitude());
+        response.setExperienceLongitude(experience.getLongitude());
         response.setGuideRating(experience.getAverageRating());
     }
 

@@ -28,6 +28,8 @@ public class BookingResponseDTO {
     private String experienceCountry;
     private String experienceImportantInfo;
     private BigDecimal experiencePrice;
+    private BigDecimal experienceLatitude;
+    private BigDecimal experienceLongitude;
 
     // Schedule Details
     private Long scheduleId;
@@ -202,6 +204,22 @@ public class BookingResponseDTO {
 
     public void setExperiencePrice(BigDecimal experiencePrice) {
         this.experiencePrice = experiencePrice;
+    }
+
+    public BigDecimal getExperienceLatitude() {
+        return experienceLatitude;
+    }
+
+    public void setExperienceLatitude(BigDecimal experienceLatitude) {
+        this.experienceLatitude = experienceLatitude;
+    }
+
+    public BigDecimal getExperienceLongitude() {
+        return experienceLongitude;
+    }
+
+    public void setExperienceLongitude(BigDecimal experienceLongitude) {
+        this.experienceLongitude = experienceLongitude;
     }
 
     public Long getScheduleId() {
