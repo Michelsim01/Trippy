@@ -9,6 +9,14 @@ from sklearn.metrics.pairwise import cosine_similarity
 import json
 import re
 from collections import Counter
+import os
+
+try:
+    # Optional dependency: if not installed or API key missing, we skip embeddings
+    from openai import OpenAI  # type: ignore
+    _OPENAI_AVAILABLE = True
+except Exception:
+    _OPENAI_AVAILABLE = False
 
 default_args = {
     'owner': 'trippy',
@@ -406,7 +414,7 @@ def build_search_embeddings(**context):
     
     tfidf_matrix = vectorizer.fit_transform(content_list)
     
-    # Convert to JSON-serializable format
+    # Convert to JSON-serializable format (lightweight term weights)
     for i, entry in enumerate(knowledge_entries):
         # Get the TF-IDF vector as a sparse matrix row
         vector = tfidf_matrix[i].toarray()[0]
@@ -415,6 +423,27 @@ def build_search_embeddings(**context):
         top_indices = vector.nonzero()[0]
         top_terms = {vector_dict[idx]: float(vector[idx]) for idx in top_indices if vector[idx] > 0.1}
         entry['vectorized_content'] = json.dumps(top_terms)
+
+    # Optionally build OpenAI embeddings (for RAG)
+    api_key = os.environ.get('OPENAI_API_KEY')
+    if not _OPENAI_AVAILABLE or not api_key:
+        print("OpenAI embeddings skipped: package or API key not available")
+        # Still return entries with TF-IDF
+        return json.dumps(knowledge_entries)
+
+    try:
+        client = OpenAI(api_key=api_key)
+        # Batch up to a safe size per request
+        batch_size = 100
+        texts = [entry['content'] for entry in knowledge_entries]
+        for start in range(0, len(texts), batch_size):
+            batch = texts[start:start + batch_size]
+            response = client.embeddings.create(model="text-embedding-3-small", input=batch)
+            for idx, emb in enumerate(response.data):
+                knowledge_entries[start + idx]['embedding'] = json.dumps(emb.embedding)
+        print(f"Built OpenAI embeddings for {len(knowledge_entries)} entries")
+    except Exception as e:
+        print(f"OpenAI embeddings generation failed, continuing without: {e}")
     
     print(f"Built TF-IDF embeddings for {len(knowledge_entries)} knowledge entries")
     
@@ -441,6 +470,7 @@ def save_knowledge_base(**context):
         source_id BIGINT,
         content TEXT NOT NULL,
         vectorized_content TEXT,
+        embedding JSONB,
         category VARCHAR(50),
         keywords VARCHAR(255),
         metadata JSONB,
@@ -455,6 +485,9 @@ def save_knowledge_base(**context):
     -- Ensure unique index exists even if table was created previously without the constraint
     CREATE UNIQUE INDEX IF NOT EXISTS uq_kb_source_content_idx 
       ON faq_knowledge_base(source_type, source_id, content);
+    -- Ensure embedding column exists even if table predates this change
+    ALTER TABLE faq_knowledge_base
+      ADD COLUMN IF NOT EXISTS embedding JSONB;
     """
     
     pg_hook.run(create_table_sql)
@@ -474,14 +507,15 @@ def save_knowledge_base(**context):
         
         for entry in batch:
             upsert_sql = """
-            INSERT INTO faq_knowledge_base (
-                source_type, source_id, content, vectorized_content, 
-                category, keywords, metadata, created_at, last_updated
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO faq_knowledge_base (
+            source_type, source_id, content, vectorized_content, embedding,
+            category, keywords, metadata, created_at, last_updated
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (source_type, source_id, content)
             DO UPDATE SET 
                 vectorized_content = EXCLUDED.vectorized_content,
+            embedding = EXCLUDED.embedding,
                 category = EXCLUDED.category,
                 keywords = EXCLUDED.keywords,
                 metadata = EXCLUDED.metadata,
@@ -497,6 +531,7 @@ def save_knowledge_base(**context):
                     source_id,
                     entry['content'],
                     entry.get('vectorized_content', ''),
+                    entry.get('embedding', None),
                     entry.get('category', 'GENERAL'),
                     entry['keywords_str'],
                     entry.get('metadata', '{}')
