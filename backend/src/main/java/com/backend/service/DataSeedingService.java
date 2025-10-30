@@ -50,6 +50,12 @@ public class DataSeedingService {
     @Autowired
     private TravelArticleRepository travelArticleRepository;
 
+    @Autowired
+    private FAQRepository faqRepository;
+
+    @Autowired
+    private FAQKnowledgeBaseRepository faqKnowledgeBaseRepository;
+
     private final Random random = new Random();
 
     /**
@@ -111,6 +117,9 @@ public class DataSeedingService {
         // Create travel blog articles
         List<TravelArticle> articles = createTravelArticles(users);
 
+        // Create FAQs
+        List<FAQ> faqs = createFAQs();
+
         System.out.println("Database seeding completed successfully!");
         
         // Count different types of users
@@ -128,6 +137,7 @@ public class DataSeedingService {
         System.out.println("Created " + reviews.size() + " reviews");
         System.out.println("Created " + surveys.size() + " user surveys");
         System.out.println("Created " + (articles != null ? articles.size() : 0) + " travel articles");
+        System.out.println("Created " + faqs.size() + " FAQs");
         System.out.println("Updated ratings for experiences and guides based on reviews");
 
         // Print booking status distribution for testing reference
@@ -1570,5 +1580,663 @@ public class DataSeedingService {
                    .replaceAll("\\s+", "-") // Replace spaces with hyphens
                    .replaceAll("-+", "-") // Replace multiple hyphens with single
                    .replaceAll("^-|-$", ""); // Remove leading/trailing hyphens
+    }
+
+    /**
+     * Create sample FAQs for the chatbot
+     */
+    private List<FAQ> createFAQs() {
+        List<FAQ> faqs = new ArrayList<>();
+        
+        Object[][] faqData = {
+            // ==================== BOOKING FAQs ====================
+            {
+                "How do I make a booking?",
+                "Booking is easy! Browse our experiences, select your preferred date and time, fill in your details, and proceed to payment. You'll receive a confirmation email with your booking details.",
+                FAQCategory.BOOKING,
+                10
+            },
+            {
+                "Can I book for multiple people?",
+                "Yes! When making a booking, you can select the number of participants. Each experience has a maximum participants limit, so make sure to check availability.",
+                FAQCategory.BOOKING,
+                9
+            },
+            {
+                "What information do I need to make a booking?",
+                "You'll need to provide your full name, email address, phone number, and payment details. For some experiences, additional information like dietary restrictions or medical conditions may be required.",
+                FAQCategory.BOOKING,
+                8
+            },
+            {
+                "Can I book an experience on the same day?",
+                "Most experiences can be booked up to 2 hours before the start time, depending on availability. We recommend booking in advance to secure your spot!",
+                FAQCategory.BOOKING,
+                7
+            },
+            {
+                "How far in advance can I book?",
+                "You can book experiences up to 6 months in advance. This gives you the best selection of dates and times, especially for popular experiences.",
+                FAQCategory.BOOKING,
+                8
+            },
+            {
+                "Can I book multiple experiences at once?",
+                "Yes! You can add multiple experiences to your cart and complete them in a single transaction. You'll receive separate confirmation emails for each experience.",
+                FAQCategory.BOOKING,
+                7
+            },
+            {
+                "What if an experience is fully booked?",
+                "You can join the waitlist for fully booked experiences. You'll be notified if a spot becomes available due to cancellations.",
+                FAQCategory.BOOKING,
+                7
+            },
+            {
+                "Do I need to provide my ID when booking?",
+                "For most experiences, you don't need to provide ID at booking. However, some experiences (especially those with age restrictions or safety requirements) may require ID verification upon arrival.",
+                FAQCategory.BOOKING,
+                6
+            },
+            {
+                "Can I book as a gift for someone else?",
+                "Yes! During booking, you can specify the participant's details (name and contact info). The gift recipient will receive the booking confirmation. You can also include a gift message.",
+                FAQCategory.BOOKING,
+                8
+            },
+            {
+                "What if I have special requirements or accessibility needs?",
+                "We accommodate special needs whenever possible! Contact the guide directly through messaging after booking, or reach out to support@trippy.com for assistance. It's best to inform us at least 48 hours before the experience.",
+                FAQCategory.BOOKING,
+                9
+            },
+            
+            // ==================== PAYMENT FAQs ====================
+            {
+                "What payment methods do you accept?",
+                "We accept all major credit cards (Visa, Mastercard, American Express) and debit cards. All payments are processed securely through our payment gateway.",
+                FAQCategory.PAYMENT,
+                10
+            },
+            {
+                "Can I use TripPoints for payment?",
+                "Absolutely! TripPoints can be used as a discount on bookings. Earn TripPoints by completing bookings, leaving reviews, and referring friends. Check your TripPoints balance in your profile.",
+                FAQCategory.PAYMENT,
+                9
+            },
+            {
+                "When is my payment processed?",
+                "Payment is processed immediately when you confirm your booking. You'll receive a receipt via email upon successful payment.",
+                FAQCategory.PAYMENT,
+                8
+            },
+            {
+                "Are there any hidden fees?",
+                "No hidden fees! The price you see includes the experience cost and any applicable service fees. All pricing is transparent, and you'll see the complete breakdown before payment.",
+                FAQCategory.PAYMENT,
+                8
+            },
+            {
+                "What is a service fee?",
+                "The service fee is a small charge that covers platform operations, customer support, and booking management. This fee is non-refundable in the event of cancellation.",
+                FAQCategory.PAYMENT,
+                9
+            },
+            {
+                "Can I pay in installments?",
+                "Currently, we require full payment upfront. However, you can save up TripPoints to reduce your total payment amount over time.",
+                FAQCategory.PAYMENT,
+                7
+            },
+            {
+                "Is my payment information secure?",
+                "Absolutely! All payments are processed through industry-standard encryption and secure payment gateways. We never store your full card details on our servers.",
+                FAQCategory.PAYMENT,
+                10
+            },
+            {
+                "Can I use multiple TripPoints with a credit card?",
+                "Yes! You can use TripPoints to reduce your payment amount, and pay the remaining balance with your credit card. Use as many or as few TripPoints as you'd like.",
+                FAQCategory.PAYMENT,
+                8
+            },
+            {
+                "What currency are prices displayed in?",
+                "Prices are displayed in the local currency of the experience location. Your card will be charged with automatic currency conversion if your card uses a different currency.",
+                FAQCategory.PAYMENT,
+                7
+            },
+            {
+                "Do you store my payment information?",
+                "We don't store your payment information. Each booking requires you to enter your card details through our secure payment processor, ensuring maximum security.",
+                FAQCategory.PAYMENT,
+                8
+            },
+            {
+                "Can I use a different payment method for my next booking?",
+                "Yes, you can use any accepted payment method for each new booking. We don't save payment methods for your security.",
+                FAQCategory.PAYMENT,
+                6
+            },
+            {
+                "Will I receive a receipt?",
+                "Yes! You'll receive a detailed receipt via email immediately after completing your booking. It includes the booking details, payment breakdown, and confirmation code.",
+                FAQCategory.PAYMENT,
+                9
+            },
+            
+            // ==================== CANCELLATION FAQs (Updated with Actual Policy) ====================
+            {
+                "Can I cancel my booking?",
+                "Yes, you can cancel your booking! Our cancellation policy depends on how far in advance you cancel. Here's our policy: Free full refund within 24 hours of purchase, Full base amount refund (7+ days before), 50% refund (3-6 days before), Non-refundable (<3 days before).",
+                FAQCategory.CANCELLATION,
+                10
+            },
+            {
+                "What is your cancellation policy?",
+                "Tourist cancellation policy: Free full refund within 24 hours of purchase. 7+ days before: Full base amount refund (service fee not refunded). 3-6 days before: 50% base amount refund (service fee not refunded). Less than 3 days: Non-refundable. Note: TripPoints used are not refunded.",
+                FAQCategory.CANCELLATION,
+                10
+            },
+            {
+                "How do I cancel a booking?",
+                "You can cancel your booking from the 'My Bookings' section in your account. Select the booking you want to cancel and follow the prompts. Your refund will be calculated and processed according to our cancellation policy.",
+                FAQCategory.CANCELLATION,
+                9
+            },
+            {
+                "Can I get a full refund?",
+                "Yes, you get a full refund if you cancel within 24 hours of purchase OR if you cancel 7 or more days before the experience. The service fee is non-refundable in all cases.",
+                FAQCategory.CANCELLATION,
+                9
+            },
+            {
+                "What if I cancel between 3-6 days before?",
+                "If you cancel 3-6 days before the experience, you'll receive a 50% refund of the base amount only. The service fee and any TripPoints used are not refunded.",
+                FAQCategory.CANCELLATION,
+                8
+            },
+            {
+                "Can I cancel less than 3 days before?",
+                "Cancellations made less than 3 days before the experience are non-refundable. No refund will be provided. We recommend canceling as early as possible.",
+                FAQCategory.CANCELLATION,
+                9
+            },
+            {
+                "Will I get my TripPoints back after cancellation?",
+                "No. TripPoints used in a booking are not refunded after cancellation, regardless of when you cancel. TripPoints are treated as applied discounts and cannot be reversed.",
+                FAQCategory.CANCELLATION,
+                10
+            },
+            {
+                "Is the service fee refundable?",
+                "No, the service fee is non-refundable in all cancellation scenarios. Only the base experience amount is subject to the refund policy.",
+                FAQCategory.CANCELLATION,
+                9
+            },
+            {
+                "What if the guide cancels?",
+                "If the guide cancels, you'll receive a full refund including the service fee and any TripPoints you used will be restored to your account. We'll also help you find an alternative experience if you'd like.",
+                FAQCategory.CANCELLATION,
+                8
+            },
+            {
+                "Can I reschedule instead of canceling?",
+                "Contact your guide directly through the platform to discuss rescheduling. Rescheduling is at the guide's discretion and subject to availability. If rescheduling isn't possible, the standard cancellation policy applies.",
+                FAQCategory.CANCELLATION,
+                8
+            },
+            {
+                "How long does it take to receive a refund?",
+                "Refunds are processed within 5-10 business days to your original payment method. The exact timing depends on your bank or credit card company. You'll receive an email confirmation when the refund is processed.",
+                FAQCategory.CANCELLATION,
+                8
+            },
+            {
+                "What if the experience is cancelled due to weather?",
+                "If the experience is cancelled by the guide due to weather or safety reasons, you'll receive a full refund including the service fee, and TripPoints will be restored to your account.",
+                FAQCategory.CANCELLATION,
+                8
+            },
+            {
+                "Can I cancel part of a group booking?",
+                "Yes, you can reduce the number of participants in a booking, but the refund amount will depend on the cancellation timing and the group size. Contact support for assistance with group booking modifications.",
+                FAQCategory.CANCELLATION,
+                7
+            },
+            
+            // ==================== ACCOUNT FAQs ====================
+            {
+                "How do I create an account?",
+                "Creating an account is free and easy! Click the 'Sign Up' button, enter your email and password, and verify your email address. You can also sign up with your Google account for faster registration.",
+                FAQCategory.ACCOUNT,
+                10
+            },
+            {
+                "How do I reset my password?",
+                "On the login page, click 'Forgot Password' and enter your email address. You'll receive a password reset link via email. Follow the link to create a new password. The link expires after 24 hours.",
+                FAQCategory.ACCOUNT,
+                9
+            },
+            {
+                "Can I edit my profile information?",
+                "Yes! You can edit your profile information anytime from the 'My Profile' section. Update your name, email, phone number, profile picture, and more. Changes are saved immediately.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            {
+                "How do I become a guide?",
+                "To become a guide, you need to complete KYC (Know Your Customer) verification. This includes submitting valid identification documents. Once approved, you can create and manage your own experiences. Visit the 'Become a Guide' section to get started.",
+                FAQCategory.ACCOUNT,
+                9
+            },
+            {
+                "What is KYC verification?",
+                "KYC (Know Your Customer) is a verification process required to become a guide. You'll need to submit valid government-issued ID (passport, driver's license, or national ID). The verification process typically takes 2-5 business days.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            {
+                "How long does KYC approval take?",
+                "KYC verification usually takes 2-5 business days. Our team manually reviews each submission to ensure authenticity. You'll receive an email notification once your verification is approved or if additional information is needed.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            {
+                "Can I have multiple accounts?",
+                "No, you should only have one account per person. Multiple accounts may lead to suspension. If you're having trouble accessing your account, contact support instead of creating a new one.",
+                FAQCategory.ACCOUNT,
+                7
+            },
+            {
+                "How do I delete my account?",
+                "To delete your account, go to Settings > Account Settings > Delete Account. This action is permanent and cannot be undone. You'll need to cancel any active bookings before deletion.",
+                FAQCategory.ACCOUNT,
+                7
+            },
+            {
+                "What information is stored in my account?",
+                "Your account stores your profile information, booking history, trip points, preferences, and travel survey data. All information is kept confidential and used only for platform functionality and personalization.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            {
+                "Can I change my email address?",
+                "Yes! Go to your profile settings and click 'Edit Profile'. Enter your new email address and verify it by clicking the confirmation link sent to the new address. Your old email will be unlinked.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            {
+                "How do I update my phone number?",
+                "Update your phone number in the 'My Profile' section. This is important for booking confirmations and guide communications. Some experiences may require a working phone number.",
+                FAQCategory.ACCOUNT,
+                7
+            },
+            {
+                "Why do I need to verify my email?",
+                "Email verification ensures account security and allows you to receive booking confirmations, updates, and important notifications. You must verify your email before making your first booking.",
+                FAQCategory.ACCOUNT,
+                8
+            },
+            
+            // ==================== TRIPPOINTS FAQs ====================
+            {
+                "What are TripPoints?",
+                "TripPoints are our loyalty program points that you earn for various activities on our platform. Use TripPoints to get discounts on bookings and save money on your adventures!",
+                FAQCategory.TRIPPOINTS,
+                10
+            },
+            {
+                "How do I earn TripPoints?",
+                "You can earn TripPoints by: • Completing bookings • Leaving reviews after your experience • Referring friends to the platform • Participating in special promotions. Check your activity section for a complete list of ways to earn.",
+                FAQCategory.TRIPPOINTS,
+                9
+            },
+            {
+                "How do I use TripPoints?",
+                "When making a booking, you'll see an option to apply TripPoints as a discount. You can use any amount of your available TripPoints. They're applied instantly to reduce your total payment.",
+                FAQCategory.TRIPPOINTS,
+                9
+            },
+            {
+                "Do TripPoints expire?",
+                "TripPoints don't expire as long as your account remains active. However, if your account is inactive for more than 24 months, your TripPoints may be forfeited.",
+                FAQCategory.TRIPPOINTS,
+                8
+            },
+            {
+                "How many TripPoints do I earn per booking?",
+                "You typically earn 100 TripPoints per completed booking, which equals approximately 1-5% of the booking value depending on the experience price. Special experiences may offer bonus points!",
+                FAQCategory.TRIPPOINTS,
+                8
+            },
+            {
+                "Are TripPoints refunded when I cancel?",
+                "No. If you cancel a booking where you used TripPoints, those TripPoints are NOT refunded to your account. TripPoints act as applied discounts and cannot be recovered after cancellation.",
+                FAQCategory.TRIPPOINTS,
+                9
+            },
+            {
+                "Can I transfer TripPoints to another account?",
+                "No, TripPoints are non-transferable and can only be used in the account where they were earned. This prevents fraud and maintains system integrity.",
+                FAQCategory.TRIPPOINTS,
+                7
+            },
+            {
+                "Can I use TripPoints to pay the full amount?",
+                "Yes, if you have enough TripPoints to cover the entire booking amount (excluding service fee), you can use them. The service fee must still be paid with a credit card.",
+                FAQCategory.TRIPPOINTS,
+                8
+            },
+            {
+                "What is the TripPoints to dollar conversion?",
+                "100 TripPoints equals approximately $1 USD worth of discount. The actual value may vary slightly based on experience pricing, but this is the standard conversion rate.",
+                FAQCategory.TRIPPOINTS,
+                8
+            },
+            {
+                "How do I check my TripPoints balance?",
+                "Your TripPoints balance is visible in your profile and on every booking page. You can also view your TripPoints transaction history in the 'My TripPoints' section of your account.",
+                FAQCategory.TRIPPOINTS,
+                7
+            },
+            {
+                "Can I buy TripPoints?",
+                "No, TripPoints cannot be purchased. They can only be earned through platform activities like bookings, reviews, and referrals. This keeps the loyalty program fair and authentic.",
+                FAQCategory.TRIPPOINTS,
+                7
+            },
+            {
+                "How long does it take for TripPoints to appear in my account?",
+                "TripPoints are credited immediately after the qualifying action. For bookings, points appear after completion. For reviews, they appear after the review is published. No waiting period!",
+                FAQCategory.TRIPPOINTS,
+                8
+            },
+            
+            // ==================== EXPERIENCE FAQs ====================
+            {
+                "What is included in an experience?",
+                "The 'What's Included' section on each experience page lists everything covered in the price. This typically includes the activity, guide, necessary equipment, and sometimes food or transportation. Details vary by experience.",
+                FAQCategory.EXPERIENCES,
+                10
+            },
+            {
+                "What should I bring to an experience?",
+                "Each experience page includes an 'Important Info' section listing what to bring, recommended clothing, and any special requirements. Check this section before attending to ensure you're fully prepared!",
+                FAQCategory.EXPERIENCES,
+                9
+            },
+            {
+                "What if it rains or bad weather?",
+                "Most experiences operate rain or shine. If weather conditions make an experience unsafe or significantly impact the quality, either you or the guide may cancel with a full refund. Check the experience details for weather policies.",
+                FAQCategory.EXPERIENCES,
+                9
+            },
+            {
+                "Are the experiences safe?",
+                "Safety is our top priority! All experiences must meet safety standards, and guides are vetted. Each experience has specific safety requirements, which are clearly outlined in the 'Important Info' section.",
+                FAQCategory.EXPERIENCES,
+                10
+            },
+            {
+                "Can I contact the guide before the experience?",
+                "Yes! Once you've made a booking, you can message your guide directly through the platform. This is great for asking questions, discussing special requirements, or coordinating logistics.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "How do I find the meeting point?",
+                "Meeting point information is provided in your booking confirmation email. You'll receive detailed location, time, and contact information. Most experiences include a Google Maps link for easy navigation.",
+                FAQCategory.EXPERIENCES,
+                9
+            },
+            {
+                "Can I arrive late to an experience?",
+                "Arriving late may result in missing part or all of the experience without a refund. Guides wait for a reasonable time (usually 15 minutes), but cannot delay for other participants. Please arrive on time!",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "What if the guide doesn't show up?",
+                "If your guide doesn't show up, you'll receive a full refund and any TripPoints used will be restored. Contact us immediately and we'll help you find an alternative experience or reschedule.",
+                FAQCategory.EXPERIENCES,
+                9
+            },
+            {
+                "Are experiences suitable for children?",
+                "Each experience listing includes age restrictions. Some are family-friendly for all ages, while others have minimum age requirements. Check the 'Important Info' section for child policies.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "Can I book the same experience multiple times?",
+                "Yes! There's no limit on how many times you can book the same experience. Many travelers enjoy revisiting favorite experiences or trying them in different seasons.",
+                FAQCategory.EXPERIENCES,
+                7
+            },
+            {
+                "How long are typical experiences?",
+                "Experience duration ranges from 2 hours to full-day (12+ hours). Each experience clearly lists its duration on the booking page. You can filter experiences by duration when searching.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "Do experiences require physical fitness?",
+                "Difficulty levels are indicated in each experience description. Some are leisurely walks, others require moderate hiking or activities. Check the 'Important Info' section for fitness requirements.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "Are food and drinks included?",
+                "Food and drinks are listed in the 'What's Included' section. Some experiences include meals or snacks, others don't. Always check the listing details before booking.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "Can I get a private experience?",
+                "Some guides offer private experiences or you can book the entire experience for your group. Check booking options or contact the guide through messaging to arrange private experiences.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "How many people are typically in a group?",
+                "Group sizes vary by experience. Most have a minimum of 2 and maximum of 6-12 participants. Check the 'Participants Allowed' section on each experience page for exact numbers.",
+                FAQCategory.EXPERIENCES,
+                7
+            },
+            {
+                "Can I take photos during experiences?",
+                "Yes! Taking photos is encouraged at most experiences. Some may have restrictions for cultural or safety reasons, which will be mentioned in the 'Important Info' section.",
+                FAQCategory.EXPERIENCES,
+                8
+            },
+            {
+                "What language are experiences conducted in?",
+                "Most experiences are conducted in the local language and English. The experience listing will indicate available languages. Some guides offer multi-language support.",
+                FAQCategory.EXPERIENCES,
+                7
+            },
+            {
+                "Are discounts available for groups?",
+                "Some experiences offer group discounts. Check the pricing section or contact the guide through messaging. Group rates are typically shown when you select 4+ participants.",
+                FAQCategory.EXPERIENCES,
+                7
+            },
+            
+            // ==================== GENERAL FAQs ====================
+            {
+                "How do I leave a review?",
+                "After completing an experience, you'll receive an email with a link to leave a review. Alternatively, go to 'My Bookings' and click 'Leave Review' on your completed booking. Your feedback helps other travelers and improves our platform!",
+                FAQCategory.GENERAL,
+                9
+            },
+            {
+                "What is your refund policy?",
+                "Our refund policy depends on the experience and cancellation timing. Generally: Full refund for cancellations 48+ hours before. 50% refund for cancellations 24-48 hours before. No refund for cancellations within 24 hours. Check individual experience pages for specific policies.",
+                FAQCategory.GENERAL,
+                8
+            },
+            {
+                "How do I contact customer support?",
+                "You can reach our support team via: • In-app messaging from the 'Support' section • Email at support@trippy.com • Support tickets for more complex issues We aim to respond within 24 hours.",
+                FAQCategory.GENERAL,
+                9
+            },
+            
+            // ==================== TECHNICAL FAQs ====================
+            {
+                "The website is not loading properly. What should I do?",
+                "Try these troubleshooting steps: • Clear your browser cache and cookies • Try a different browser • Check your internet connection • Disable browser extensions • If the problem persists, contact our support team.",
+                FAQCategory.TECHNICAL,
+                9
+            },
+            {
+                "I didn't receive my confirmation email. What should I do?",
+                "Check your spam/junk folder first. If not there, verify you used the correct email address. You can also check 'My Bookings' in your account to view your booking status. If still not found, contact support.",
+                FAQCategory.TECHNICAL,
+                8
+            },
+            {
+                "How do I update my email address?",
+                "Go to your profile settings and click 'Edit Profile'. Enter your new email address and verify it by clicking the confirmation link sent to the new address.",
+                FAQCategory.TECHNICAL,
+                8
+            },
+            {
+                "The booking page is showing an error. What should I do?",
+                "Try refreshing the page, clearing your browser cache, or using a different browser. If the error persists, take a screenshot and contact support with the booking ID or experience name.",
+                FAQCategory.TECHNICAL,
+                7
+            },
+            {
+                "My payment was processed but the booking didn't confirm. What now?",
+                "Contact support immediately with your payment confirmation/receipt. Our team can verify the payment and manually confirm your booking. This is rare but fully solvable.",
+                FAQCategory.TECHNICAL,
+                8
+            },
+            {
+                "Can I use the app on mobile?",
+                "Yes! Our website is mobile-responsive and works on all smartphones and tablets. We also offer a progressive web app experience for easier mobile access.",
+                FAQCategory.TECHNICAL,
+                8
+            },
+            {
+                "Why is my session timing out?",
+                "For security, sessions time out after 30 minutes of inactivity. This protects your account. Simply log in again to continue where you left off.",
+                FAQCategory.TECHNICAL,
+                7
+            },
+            {
+                "How do I enable JavaScript if disabled?",
+                "Our platform requires JavaScript to function properly. Go to your browser settings to enable JavaScript. We recommend modern browsers like Chrome, Firefox, Safari, or Edge.",
+                FAQCategory.TECHNICAL,
+                7
+            },
+            
+            // ==================== SAFETY FAQs ====================
+            {
+                "What safety measures are in place?",
+                "All experiences must pass safety reviews. Guides are verified through KYC processes. We provide emergency contact information for each experience. Participants are required to provide accurate health information when necessary.",
+                FAQCategory.SAFETY,
+                9
+            },
+            {
+                "Are there age restrictions?",
+                "Age restrictions vary by experience. Some activities are family-friendly, while others may have minimum age requirements. Check the 'Important Info' section on each experience page for specific age policies.",
+                FAQCategory.SAFETY,
+                9
+            },
+            {
+                "What if I have health conditions?",
+                "If you have medical conditions or mobility restrictions, please inform the guide when booking or message them before the experience. Guides can advise if the experience is suitable for you.",
+                FAQCategory.SAFETY,
+                9
+            },
+            {
+                "Are guides insured and licensed?",
+                "All guides on our platform must pass KYC verification. While individual insurance varies, the platform ensures all guides meet local regulatory requirements for their activities.",
+                FAQCategory.SAFETY,
+                8
+            },
+            {
+                "What emergency procedures are in place?",
+                "Every experience includes emergency contact information. Guides are trained to handle common situations. The platform also has emergency contact procedures in place for serious incidents.",
+                FAQCategory.SAFETY,
+                8
+            },
+            {
+                "Are experiences safe for solo travelers?",
+                "Yes! Many experiences welcome solo travelers. Group sizes are intentionally small for safety and quality. You'll join other travelers in a safe, guided environment.",
+                FAQCategory.SAFETY,
+                9
+            },
+            {
+                "What happens if someone gets injured during an experience?",
+                "Guides are equipped with first aid knowledge and emergency contacts. In serious situations, guides will call emergency services and contact the platform support team immediately.",
+                FAQCategory.SAFETY,
+                8
+            },
+            
+            // ==================== LOGISTICS FAQs ====================
+            {
+                "How do I know where to meet?",
+                "Meeting point details are provided in your booking confirmation email. You'll receive an exact location, Google Maps link, guide contact information, and meeting time.",
+                FAQCategory.LOGISTICS,
+                9
+            },
+            {
+                "Is transportation to the meeting point included?",
+                "Transportation to the meeting point is typically not included unless specifically stated in the 'What's Included' section. Some experiences may include pickup services - check the listing.",
+                FAQCategory.LOGISTICS,
+                8
+            },
+            {
+                "What if I need to leave early from an experience?",
+                "If you need to leave early, inform your guide at the start. While you won't receive a refund for the missed portion, most guides can accommodate early departures when possible.",
+                FAQCategory.LOGISTICS,
+                7
+            },
+            {
+                "Can I store luggage during the experience?",
+                "Storage options vary by experience. Some guides can accommodate small bags, others cannot. Check the 'Important Info' section or message your guide before the experience.",
+                FAQCategory.LOGISTICS,
+                7
+            },
+            {
+                "Are experiences accessible for people with disabilities?",
+                "Many experiences are accessible, but it depends on the activity type. Each listing mentions accessibility information in the 'Important Info' section. Contact guides directly for specific needs.",
+                FAQCategory.LOGISTICS,
+                8
+            },
+            {
+                "Can I change the number of participants after booking?",
+                "You can modify participant count before the experience if there's availability. Contact support or your guide to make changes. Additional participants require payment of the difference.",
+                FAQCategory.LOGISTICS,
+                8
+            },
+            {
+                "What if my flight is delayed?",
+                "If you're running late due to transportation delays, contact your guide immediately. They may be able to accommodate a late arrival, but there's no guarantee of refund or full experience.",
+                FAQCategory.LOGISTICS,
+                8
+            }
+        };
+        
+        for (Object[] data : faqData) {
+            FAQ faq = new FAQ();
+            faq.setQuestion((String) data[0]);
+            faq.setAnswer((String) data[1]);
+            faq.setCategory((FAQCategory) data[2]);
+            faq.setPriority((Integer) data[3]);
+            faq.setViewCount(0);
+            faq.setHelpfulCount(0);
+            faq.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(180)));
+            faq.setUpdatedAt(LocalDateTime.now());
+            
+            faqs.add(faqRepository.save(faq));
+        }
+        
+        System.out.println("Created " + faqs.size() + " FAQs across multiple categories");
+        return faqs;
     }
 }
