@@ -1,8 +1,8 @@
 package com.backend.controller;
 
-import com.backend.dto.request.ChatMessageRequest;
-import com.backend.dto.response.ChatMessageResponse;
-import com.backend.dto.response.ChatSessionResponse;
+import com.backend.dto.request.ChatbotMessageRequest;
+import com.backend.dto.response.ChatbotMessageResponse;
+import com.backend.dto.response.ChatbotSessionResponse;
 import com.backend.entity.ChatbotSession;
 import com.backend.service.ExperienceChatbotService;
 import jakarta.validation.Valid;
@@ -27,21 +27,21 @@ public class ExperienceChatbotController {
     private ExperienceChatbotService experienceChatbotService;
 
     @PostMapping("/message")
-    public ResponseEntity<ChatMessageResponse> sendMessage(
-            @Valid @RequestBody ChatMessageRequest request,
+    public ResponseEntity<ChatbotMessageResponse> sendMessage(
+            @Valid @RequestBody ChatbotMessageRequest request,
             @RequestHeader(value = "User-ID") Long userId) {
         
         try {
             logger.info("Processing chat message for user: {}, session: {}", userId, request.getSessionId());
             
-            ChatMessageResponse response = experienceChatbotService.processMessage(request, userId);
+            ChatbotMessageResponse response = experienceChatbotService.processMessage(request, userId);
             
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
             logger.error("Error processing chat message: {}", e.getMessage(), e);
             
-            ChatMessageResponse errorResponse = new ChatMessageResponse(
+            ChatbotMessageResponse errorResponse = new ChatbotMessageResponse(
                 "I'm sorry, I encountered an error processing your request. Please try again.",
                 request.getSessionId()
             );
@@ -51,11 +51,11 @@ public class ExperienceChatbotController {
     }
 
     @GetMapping("/sessions/{sessionId}")
-    public ResponseEntity<ChatSessionResponse> getSessionHistory(@PathVariable String sessionId) {
+    public ResponseEntity<ChatbotSessionResponse> getSessionHistory(@PathVariable String sessionId) {
         try {
             logger.info("Retrieving session history for: {}", sessionId);
             
-            ChatSessionResponse sessionResponse = experienceChatbotService.getSessionHistory(sessionId);
+            ChatbotSessionResponse sessionResponse = experienceChatbotService.getSessionHistory(sessionId);
             
             if (sessionResponse == null) {
                 return ResponseEntity.notFound().build();
