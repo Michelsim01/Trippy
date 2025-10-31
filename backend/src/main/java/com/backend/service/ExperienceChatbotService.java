@@ -1,8 +1,8 @@
 package com.backend.service;
 
-import com.backend.dto.request.ChatMessageRequest;
-import com.backend.dto.response.ChatMessageResponse;
-import com.backend.dto.response.ChatSessionResponse;
+import com.backend.dto.request.ChatbotMessageRequest;
+import com.backend.dto.response.ChatbotMessageResponse;
+import com.backend.dto.response.ChatbotSessionResponse;
 import com.backend.entity.ChatbotMessage;
 import com.backend.entity.ChatbotSession;
 import com.backend.entity.ExperienceKnowledgeBaseDocument;
@@ -46,7 +46,7 @@ public class ExperienceChatbotService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public ChatMessageResponse processMessage(ChatMessageRequest request, Long userId) {
+    public ChatbotMessageResponse processMessage(ChatbotMessageRequest request, Long userId) {
         try {
             // Get or create chat session
             ChatbotSession session = getOrCreateSession(request.getSessionId(), userId);
@@ -64,7 +64,7 @@ public class ExperienceChatbotService {
             ChatbotMessage chatbotMessage = saveChatMessage(session, request.getMessage(), botResponse, relevantDocs);
 
             // Build response with sources
-            ChatMessageResponse response = new ChatMessageResponse(botResponse, session.getSessionId());
+            ChatbotMessageResponse response = new ChatbotMessageResponse(botResponse, session.getSessionId());
             response.setSources(buildSourceList(relevantDocs));
             response.setTimestamp(chatbotMessage.getCreatedAt());
 
@@ -73,14 +73,14 @@ public class ExperienceChatbotService {
 
         } catch (Exception e) {
             logger.error("Error processing chat message: {}", e.getMessage(), e);
-            return new ChatMessageResponse(
+            return new ChatbotMessageResponse(
                 "I'm sorry, I encountered an error processing your request. Please try again.",
                 request.getSessionId() != null ? request.getSessionId() : generateSessionId()
             );
         }
     }
 
-    public ChatSessionResponse getSessionHistory(String sessionId) {
+    public ChatbotSessionResponse getSessionHistory(String sessionId) {
         try {
             Optional<ChatbotSession> sessionOpt = chatbotSessionRepository.findBySessionId(sessionId);
             
@@ -92,15 +92,15 @@ public class ExperienceChatbotService {
             ChatbotSession session = sessionOpt.get();
             List<ChatbotMessage> messages = chatbotMessageRepository.findByChatbotSessionOrderByCreatedAtAsc(session);
 
-            List<ChatSessionResponse.MessageHistory> messageHistory = messages.stream()
-                .map(msg -> new ChatSessionResponse.MessageHistory(
+            List<ChatbotSessionResponse.MessageHistory> messageHistory = messages.stream()
+                .map(msg -> new ChatbotSessionResponse.MessageHistory(
                     msg.getUserMessage(),
                     msg.getBotResponse(),
                     msg.getCreatedAt()
                 ))
                 .collect(Collectors.toList());
 
-            return new ChatSessionResponse(sessionId, messageHistory, session.getCreatedAt());
+            return new ChatbotSessionResponse(sessionId, messageHistory, session.getCreatedAt());
 
         } catch (Exception e) {
             logger.error("Error retrieving session history: {}", e.getMessage(), e);
@@ -159,7 +159,7 @@ public class ExperienceChatbotService {
 
         // Save sources as JSON
         try {
-            List<ChatMessageResponse.SourceDocument> sourceDocs = buildSourceList(sources);
+            List<ChatbotMessageResponse.SourceDocument> sourceDocs = buildSourceList(sources);
             String sourcesJson = objectMapper.writeValueAsString(sourceDocs);
             chatbotMessage.setSources(sourcesJson);
         } catch (JsonProcessingException e) {
@@ -170,9 +170,9 @@ public class ExperienceChatbotService {
         return chatbotMessageRepository.save(chatbotMessage);
     }
 
-    private List<ChatMessageResponse.SourceDocument> buildSourceList(List<ExperienceKnowledgeBaseDocument> documents) {
+    private List<ChatbotMessageResponse.SourceDocument> buildSourceList(List<ExperienceKnowledgeBaseDocument> documents) {
         return documents.stream()
-            .map(doc -> new ChatMessageResponse.SourceDocument(
+            .map(doc -> new ChatbotMessageResponse.SourceDocument(
                 doc.getDocumentId(),
                 doc.getTitle(),
                 doc.getDocumentType(),

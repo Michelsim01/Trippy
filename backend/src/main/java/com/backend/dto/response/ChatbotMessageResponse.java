@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class ChatMessageResponse {
+public class ChatbotMessageResponse {
     
     private String response;
     
@@ -16,9 +16,9 @@ public class ChatMessageResponse {
     private LocalDateTime timestamp;
     
     // Constructors
-    public ChatMessageResponse() {}
+    public ChatbotMessageResponse() {}
     
-    public ChatMessageResponse(String response, String sessionId) {
+    public ChatbotMessageResponse(String response, String sessionId) {
         this.response = response;
         this.sessionId = sessionId;
         this.timestamp = LocalDateTime.now();

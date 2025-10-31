@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public class ChatSessionResponse {
+public class ChatbotSessionResponse {
     
     @JsonProperty("sessionId")
     private String sessionId;
@@ -14,9 +14,9 @@ public class ChatSessionResponse {
     private LocalDateTime createdAt;
     
     // Constructors
-    public ChatSessionResponse() {}
+    public ChatbotSessionResponse() {}
     
-    public ChatSessionResponse(String sessionId, List<MessageHistory> messages, LocalDateTime createdAt) {
+    public ChatbotSessionResponse(String sessionId, List<MessageHistory> messages, LocalDateTime createdAt) {
         this.sessionId = sessionId;
         this.messages = messages;
         this.createdAt = createdAt;

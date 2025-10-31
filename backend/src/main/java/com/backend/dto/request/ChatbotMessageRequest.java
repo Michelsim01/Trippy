@@ -3,7 +3,7 @@ package com.backend.dto.request;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-public class ChatMessageRequest {
+public class ChatbotMessageRequest {
     
     @NotBlank(message = "Message cannot be empty")
     @Size(max = 5000, message = "Message cannot exceed 5000 characters")
@@ -16,9 +16,9 @@ public class ChatMessageRequest {
     private String chatbotType = "experienceRecommendation"; // Default to travel chatbot
     
     // Constructors
-    public ChatMessageRequest() {}
+    public ChatbotMessageRequest() {}
     
-    public ChatMessageRequest(String message, String sessionId) {
+    public ChatbotMessageRequest(String message, String sessionId) {
         this.message = message;
         this.sessionId = sessionId;
     }
