@@ -77,9 +77,9 @@ spring.datasource.password=secret
 spring.datasource.driver-class-name=org.postgresql.Driver
 
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
+spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=false
+spring.jpa.properties.hibernate.format_sql=true
 
 # JWT Configuration
 jwt.secret=trippy-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
@@ -105,6 +105,16 @@ stripe.api.publishable-key=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRP
 
 # MapBox Configuration
 mapbox.api.access-token=pk.eyJ1IjoibWljaGVsc2ltMDEiLCJhIjoiY21najUwZWM4MGd2MzJqb2t0cXgwMmNmZyJ9.U_2z19hTOSuTlD1-gpRrMg
+
+# OpenAI Configuration
+openai.api.key=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
+openai.model.embedding=text-embedding-3-small
+openai.model.chat=gpt-3.5-turbo
+
+# Chatbot Configuration
+chatbot.max.context.length=10
+chatbot.similarity.threshold=0.7
+chatbot.max.results=5
 ```
 
 4. Create a `.env` file in the frontend directory (`frontend/.env`):
