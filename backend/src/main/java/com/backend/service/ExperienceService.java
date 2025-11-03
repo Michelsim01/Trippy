@@ -156,8 +156,12 @@ public class ExperienceService {
 
             // Create and save itinerary items
             List<Map<String, Object>> itineraries = (List<Map<String, Object>>) payload.get("itineraries");
+            System.out.println("🔍 Received itineraries from frontend: " + itineraries);
+            
             if (itineraries != null) {
                 for (Map<String, Object> itineraryData : itineraries) {
+                    System.out.println("📍 Processing itinerary item: " + itineraryData);
+                    
                     ExperienceItinerary itinerary = new ExperienceItinerary();
                     itinerary.setExperience(savedExperience);
                     itinerary.setStopOrder((Integer) itineraryData.get("stopOrder"));
@@ -175,7 +179,38 @@ public class ExperienceService {
                         itinerary.setDuration(duration);
                     }
 
-                    experienceItineraryRepository.save(itinerary);
+                    // Set latitude if provided
+                    if (itineraryData.get("latitude") != null) {
+                        Object latObj = itineraryData.get("latitude");
+                        System.out.println("📍 Latitude value: " + latObj + " (type: " + latObj.getClass().getName() + ")");
+                        if (latObj instanceof Number) {
+                            itinerary.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+                        } else if (latObj instanceof String) {
+                            itinerary.setLatitude(new java.math.BigDecimal((String) latObj));
+                        }
+                        System.out.println("✅ Latitude set to: " + itinerary.getLatitude());
+                    } else {
+                        System.out.println("⚠️ No latitude provided for: " + itineraryData.get("locationName"));
+                    }
+
+                    // Set longitude if provided
+                    if (itineraryData.get("longitude") != null) {
+                        Object lngObj = itineraryData.get("longitude");
+                        System.out.println("📍 Longitude value: " + lngObj + " (type: " + lngObj.getClass().getName() + ")");
+                        if (lngObj instanceof Number) {
+                            itinerary.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+                        } else if (lngObj instanceof String) {
+                            itinerary.setLongitude(new java.math.BigDecimal((String) lngObj));
+                        }
+                        System.out.println("✅ Longitude set to: " + itinerary.getLongitude());
+                    } else {
+                        System.out.println("⚠️ No longitude provided for: " + itineraryData.get("locationName"));
+                    }
+
+                    ExperienceItinerary savedItinerary = experienceItineraryRepository.save(itinerary);
+                    System.out.println("💾 Saved itinerary with ID: " + savedItinerary.getItineraryId() + 
+                                     ", lat: " + savedItinerary.getLatitude() + 
+                                     ", lng: " + savedItinerary.getLongitude());
                 }
             }
 
@@ -368,8 +403,11 @@ public class ExperienceService {
 
         // Create and save new itinerary items
         List<Map<String, Object>> itineraries = (List<Map<String, Object>>) payload.get("itineraries");
+        System.out.println("🔍 UPDATE WORKFLOW - Received itineraries from frontend: " + itineraries);
         if (itineraries != null) {
             for (Map<String, Object> itineraryData : itineraries) {
+                System.out.println("🔍 UPDATE - Processing itinerary item: " + itineraryData);
+                
                 ExperienceItinerary itinerary = new ExperienceItinerary();
                 itinerary.setExperience(updatedExperience);
                 itinerary.setStopOrder((Integer) itineraryData.get("stopOrder"));
@@ -386,7 +424,37 @@ public class ExperienceService {
                     itinerary.setDuration(duration);
                 }
 
-                experienceItineraryRepository.save(itinerary);
+                // Set latitude if provided
+                if (itineraryData.get("latitude") != null) {
+                    Object latObj = itineraryData.get("latitude");
+                    System.out.println("📍 UPDATE - Latitude value: " + latObj + " (type: " + latObj.getClass().getName() + ")");
+                    if (latObj instanceof Number) {
+                        itinerary.setLatitude(java.math.BigDecimal.valueOf(((Number) latObj).doubleValue()));
+                    } else if (latObj instanceof String) {
+                        itinerary.setLatitude(new java.math.BigDecimal((String) latObj));
+                    }
+                    System.out.println("✅ UPDATE - Latitude set to: " + itinerary.getLatitude());
+                } else {
+                    System.out.println("⚠️ UPDATE - No latitude provided for: " + itineraryData.get("locationName"));
+                }
+
+                // Set longitude if provided
+                if (itineraryData.get("longitude") != null) {
+                    Object lngObj = itineraryData.get("longitude");
+                    System.out.println("📍 UPDATE - Longitude value: " + lngObj + " (type: " + lngObj.getClass().getName() + ")");
+                    if (lngObj instanceof Number) {
+                        itinerary.setLongitude(java.math.BigDecimal.valueOf(((Number) lngObj).doubleValue()));
+                    } else if (lngObj instanceof String) {
+                        itinerary.setLongitude(new java.math.BigDecimal((String) lngObj));
+                    }
+                    System.out.println("✅ UPDATE - Longitude set to: " + itinerary.getLongitude());
+                } else {
+                    System.out.println("⚠️ UPDATE - No longitude provided for: " + itineraryData.get("locationName"));
+                }
+
+                ExperienceItinerary savedItinerary = experienceItineraryRepository.save(itinerary);
+                System.out.println("💾 UPDATE - Saved itinerary with ID: " + savedItinerary.getItineraryId() + 
+                                   ", lat: " + savedItinerary.getLatitude() + ", lng: " + savedItinerary.getLongitude());
             }
         }
 

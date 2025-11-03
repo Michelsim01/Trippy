@@ -349,6 +349,8 @@ public class ExperienceController {
                 itineraryMap.put("stopType", itinerary.getStopType());
                 itineraryMap.put("locationName", itinerary.getLocationName());
                 itineraryMap.put("duration", itinerary.getDuration());
+                itineraryMap.put("latitude", itinerary.getLatitude());
+                itineraryMap.put("longitude", itinerary.getLongitude());
                 return itineraryMap;
             }).collect(Collectors.toList());
 
