@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useCart } from '../contexts/CartContext'
 import { userService } from '../services/userService'
 import LogoutModal from './LogoutModal'
 import SearchSuggestions from './SearchSuggestions'
@@ -19,6 +20,7 @@ const Navbar = ({
 }) => {
     const navigate = useNavigate()
     const { isAuthenticated, user, logout } = useAuth()
+    const { cartCount } = useCart()
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
     const [userProfile, setUserProfile] = useState(null)
@@ -268,6 +270,20 @@ const Navbar = ({
                                             </svg>
                                         </Link>
 
+                                        {/* Shopping Cart */}
+                                        <Link to="/cart" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors relative">
+                                            <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            {cartCount > 0 && (
+                                                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-1)' }}>
+                                                    <span className="text-white text-xs font-medium">
+                                                        {cartCount > 99 ? '99+' : cartCount}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </Link>
+
                                         {/* Messages */}
                                         <Link to="/messages" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors relative">
                                             <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -418,6 +434,20 @@ const Navbar = ({
                                         <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                         </svg>
+                                    </Link>
+
+                                    {/* Shopping Cart */}
+                                    <Link to="/cart" className="p-2 hover:bg-neutrals-7 rounded-lg transition-colors relative">
+                                        <svg className="w-6 h-6 text-neutrals-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        {cartCount > 0 && (
+                                            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-primary-1)' }}>
+                                                <span className="text-white text-xs font-medium">
+                                                    {cartCount > 99 ? '99+' : cartCount}
+                                                </span>
+                                            </div>
+                                        )}
                                     </Link>
 
                                     {/* Messages */}
