@@ -56,6 +56,9 @@ public class DataSeedingService {
     @Autowired
     private FAQKnowledgeBaseRepository faqKnowledgeBaseRepository;
 
+    @Autowired
+    private ExperienceItineraryRepository experienceItineraryRepository;
+
     private final Random random = new Random();
 
     /**
@@ -92,6 +95,9 @@ public class DataSeedingService {
 
         // Create experiences with guides
         List<Experience> experiences = createExperiences(users);
+
+        // Create itineraries for 50 experiences (multi-location routes)
+        List<ExperienceItinerary> itineraries = createExperienceItineraries(experiences);
 
         // Create schedules for experiences
         List<ExperienceSchedule> schedules = createExperienceSchedules(experiences);
@@ -132,6 +138,8 @@ public class DataSeedingService {
         System.out.println("  - " + guideCount + " guides (can create experiences)");
         System.out.println("  - " + travelerCount + " travelers");
         System.out.println("Created " + experiences.size() + " experiences");
+        System.out.println("Created " + itineraries.size() + " itineraries for " + 
+            itineraries.stream().map(i -> i.getExperience().getExperienceId()).distinct().count() + " experiences");
         System.out.println("Created " + schedules.size() + " schedules");
         System.out.println("Created " + bookings.size() + " bookings");
         System.out.println("Created " + reviews.size() + " reviews");
@@ -715,7 +723,77 @@ public class DataSeedingService {
                 { "Sound Bath Meditation", "Sedona", "United States",
                         "Therapeutic sound healing session with crystal bowls in red rock setting",
                         ExperienceCategory.OTHERS, 1.5, 55.00, 15,
-                        "https://images.unsplash.com/photo-1545389336-cf090694435e" }
+                        "https://images.unsplash.com/photo-1545389336-cf090694435e" },
+
+                // === DEMO EXPERIENCES FOR AI CHATBOT (15 experiences: 5 India, 5 China, 5 USA) ===
+                // These experiences are specifically designed for January 2026 trip planning demo
+                // Locations are within 300km radius, schedules are non-overlapping with travel buffers
+                
+                // INDIA - Delhi NCR Region (5 experiences within 250km)
+                { "Old Delhi Heritage Walk", "New Delhi", "India",
+                        "Explore narrow lanes of Old Delhi visiting Jama Masjid, spice market and historic havelis with local historian",
+                        ExperienceCategory.GUIDED_TOUR, 4.0, 45.00, 15,
+                        "https://images.unsplash.com/photo-1587474260584-136574528ed5" },
+                { "Taj Mahal Sunrise Tour", "Agra", "India",
+                        "Early morning visit to iconic Taj Mahal followed by Agra Fort with expert guide and breakfast",
+                        ExperienceCategory.DAYTRIP, 12.0, 85.00, 20,
+                        "https://images.unsplash.com/photo-1564507592333-c60657eea523" },
+                { "Jaipur Pink City Explorer", "Jaipur", "India",
+                        "Full-day tour of Amber Fort, City Palace, Hawa Mahal and local bazaars with traditional Rajasthani lunch",
+                        ExperienceCategory.DAYTRIP, 10.0, 95.00, 12,
+                        "https://images.unsplash.com/photo-1599661046289-e31897846e41" },
+                { "Cooking Class Mughlai Cuisine", "New Delhi", "India",
+                        "Learn authentic Mughlai dishes including biryani and kebabs in home kitchen with family meal",
+                        ExperienceCategory.WORKSHOP, 5.0, 65.00, 8,
+                        "https://images.unsplash.com/photo-1585937421612-70a008356fbe" },
+                { "Ranthambore Tiger Safari", "Sawai Madhopur", "India",
+                        "Morning wildlife safari in Ranthambore National Park with expert naturalist tracking Bengal tigers",
+                        ExperienceCategory.ADVENTURE, 6.0, 120.00, 6,
+                        "https://images.unsplash.com/photo-1612817288484-6f916006741a" },
+
+                // CHINA - Beijing Area (5 experiences within 200km)
+                { "Forbidden City Imperial Tour", "Beijing", "China",
+                        "Skip-the-line guided tour of vast Forbidden City palace complex with imperial history expert",
+                        ExperienceCategory.GUIDED_TOUR, 4.5, 75.00, 15,
+                        "https://images.unsplash.com/photo-1508804185872-d7badad00f7d" },
+                { "Great Wall Hiking Adventure", "Mutianyu", "China",
+                        "Hike restored sections of Great Wall with cable car access and authentic Chinese lunch",
+                        ExperienceCategory.ADVENTURE, 8.0, 110.00, 12,
+                        "https://images.unsplash.com/photo-1508804185872-d7badad00f7d" },
+                { "Beijing Hutong Bike Tour", "Beijing", "China",
+                        "Cycle through traditional alleyways visiting local homes, courtyard gardens and hidden temples",
+                        ExperienceCategory.GUIDED_TOUR, 3.5, 50.00, 10,
+                        "https://images.unsplash.com/photo-1537895058180-0c91e59d2361" },
+                { "Chinese Calligraphy Workshop", "Beijing", "China",
+                        "Learn ancient art of brush calligraphy with master artist and create your own artwork",
+                        ExperienceCategory.WORKSHOP, 3.0, 60.00, 8,
+                        "https://images.unsplash.com/photo-1616400619175-5beda3a17896" },
+                { "Temple of Heaven Morning Ritual", "Beijing", "China",
+                        "Early morning visit to see locals practicing tai chi, traditional music and morning exercises",
+                        ExperienceCategory.OTHERS, 2.5, 35.00, 20,
+                        "https://images.unsplash.com/photo-1508804185872-d7badad00f7d" },
+
+                // USA - New York Area (5 experiences within 150km)
+                { "Statue of Liberty & Ellis Island", "New York City", "United States",
+                        "Ferry tour to Liberty Island and Ellis Island Immigration Museum with skip-the-line access",
+                        ExperienceCategory.GUIDED_TOUR, 5.0, 85.00, 25,
+                        "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee" },
+                { "Central Park Guided Walk", "New York City", "United States",
+                        "Explore iconic Central Park landmarks, Bethesda Fountain, Bow Bridge and Strawberry Fields",
+                        ExperienceCategory.GUIDED_TOUR, 3.0, 45.00, 15,
+                        "https://images.unsplash.com/photo-1551632811-561732d1e306" },
+                { "Broadway Theater Experience", "New York City", "United States",
+                        "Premium orchestra seats to top Broadway show with pre-theater dinner at Times Square restaurant",
+                        ExperienceCategory.OTHERS, 5.0, 280.00, 10,
+                        "https://images.unsplash.com/photo-1503095396549-807759245b35" },
+                { "Brooklyn Food Tour", "Brooklyn", "United States",
+                        "Taste artisanal foods in Williamsburg and DUMBO neighborhoods with local foodie guide",
+                        ExperienceCategory.GUIDED_TOUR, 4.0, 95.00, 12,
+                        "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8" },
+                { "Niagara Falls Day Trip", "Niagara Falls", "United States",
+                        "Full-day excursion to Niagara Falls with Maid of the Mist boat ride and Cave of the Winds",
+                        ExperienceCategory.DAYTRIP, 14.0, 180.00, 20,
+                        "https://images.unsplash.com/photo-1489447068241-b3490214e879" }
         };
 
         for (int i = 0; i < experienceData.length; i++) {
@@ -759,38 +837,347 @@ public class DataSeedingService {
         return experiences;
     }
 
+    /**
+     * Create itineraries for 50 multi-location experiences
+     * - 30 experiences with START → END only (simple point-to-point)
+     * - 20 experiences with START → STOP(s) → END (1-4 intermediate stops)
+     * Focus on GUIDED_TOUR, DAYTRIP, ADVENTURE categories
+     */
+    private List<ExperienceItinerary> createExperienceItineraries(List<Experience> experiences) {
+        List<ExperienceItinerary> allItineraries = new ArrayList<>();
+        
+        int totalExperiences = experiences.size();
+        int demoStartIndex = totalExperiences - 15;
+        
+        // Select 50 specific experiences by index for itineraries from original 100 experiences
+        // Distribution: First 30 = START→END, Next 20 = START→STOP(S)→END
+        int[] experienceIndices = {
+            // GUIDED_TOUR experiences (indices 0, 5, 10, 16-31 = 18 experiences)
+            0, 5, 10, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+            // DAYTRIP experiences (indices 1, 6, 77-89 = 15 experiences)
+            1, 6, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88,
+            // ADVENTURE experiences (indices 2, 7, 11, 32-44 = 15 experiences)
+            2, 7, 11, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
+            // Mix of other categories (2 experiences)
+            14, 90
+        };
+        
+        // Add 8 demo experiences with itineraries (last 15 experiences)
+        // Simple itineraries (START→END): India #0,2,4, China #5,7, USA #10,12
+        // Complex itineraries (START→STOP→END): India #1, China #6
+        int[] demoWithItineraries = {
+            demoStartIndex + 0,  // India: Old Delhi Heritage Walk (simple)
+            demoStartIndex + 1,  // India: Taj Mahal Sunrise Tour (complex - Agra)
+            demoStartIndex + 2,  // India: Jaipur Pink City Explorer (simple)
+            demoStartIndex + 4,  // India: Ranthambore Tiger Safari (simple)
+            demoStartIndex + 5,  // China: Forbidden City Imperial Tour (simple)
+            demoStartIndex + 6,  // China: Great Wall Hiking Adventure (complex)
+            demoStartIndex + 7,  // China: Beijing Hutong Bike Tour (simple)
+            demoStartIndex + 10  // USA: Statue of Liberty & Ellis Island (simple)
+        };
+        
+        System.out.println("Creating itineraries for 50 original + 8 demo experiences...");
+        
+        // Create itineraries for original 50 experiences
+        for (int i = 0; i < experienceIndices.length && i < 50; i++) {
+            int expIndex = experienceIndices[i];
+            if (expIndex >= experiences.size()) continue;
+            
+            Experience experience = experiences.get(expIndex);
+            List<ExperienceItinerary> expItineraries = new ArrayList<>();
+            
+            // First 30 experiences: START → END only
+            if (i < 30) {
+                expItineraries = createSimpleItinerary(experience, i + 1);
+            } 
+            // Next 20 experiences: START → STOP(S) → END
+            else {
+                expItineraries = createComplexItinerary(experience, i + 1);
+            }
+            
+            // Save all itineraries for this experience
+            for (ExperienceItinerary itinerary : expItineraries) {
+                allItineraries.add(experienceItineraryRepository.save(itinerary));
+            }
+        }
+        
+        // Create itineraries for 8 demo experiences
+        for (int i = 0; i < demoWithItineraries.length; i++) {
+            int expIndex = demoWithItineraries[i];
+            if (expIndex >= experiences.size()) continue;
+            
+            Experience experience = experiences.get(expIndex);
+            List<ExperienceItinerary> expItineraries = new ArrayList<>();
+            
+            // Demo experiences: 2 complex (indices 1, 6), rest simple
+            if (i == 1 || i == 5) {
+                // Complex itinerary for Taj Mahal (India) and Great Wall (China)
+                expItineraries = createComplexItinerary(experience, 100 + i);
+            } else {
+                // Simple itinerary for the rest
+                expItineraries = createSimpleItinerary(experience, 100 + i);
+            }
+            
+            // Save all itineraries for this experience
+            for (ExperienceItinerary itinerary : expItineraries) {
+                allItineraries.add(experienceItineraryRepository.save(itinerary));
+            }
+        }
+        
+        System.out.println("Created " + allItineraries.size() + " itinerary items for " + 
+            allItineraries.stream().map(i -> i.getExperience().getExperienceId()).distinct().count() + " experiences");
+        
+        return allItineraries;
+    }
+    
+    /**
+     * Create simple START → END itinerary (no intermediate stops)
+     */
+    private List<ExperienceItinerary> createSimpleItinerary(Experience experience, int seed) {
+        List<ExperienceItinerary> itineraries = new ArrayList<>();
+        
+        // START point (using experience's location)
+        ExperienceItinerary start = new ExperienceItinerary();
+        start.setExperience(experience);
+        start.setStopOrder(1);
+        start.setStopType("start");
+        start.setLocationName(experience.getLocation() + " Meeting Point");
+        start.setDuration(""); // No duration for start point
+        start.setLatitude(experience.getLatitude());
+        start.setLongitude(experience.getLongitude());
+        start.setCreatedAt(LocalDateTime.now());
+        itineraries.add(start);
+        
+        // END point (slightly offset from start for variety)
+        ExperienceItinerary end = new ExperienceItinerary();
+        end.setExperience(experience);
+        end.setStopOrder(2);
+        end.setStopType("end");
+        end.setLocationName(getEndLocationName(experience, seed));
+        end.setDuration(""); // No duration for end point
+        // Offset end coordinates slightly (0.01-0.05 degrees, roughly 1-5km)
+        BigDecimal latOffset = BigDecimal.valueOf((seed % 5 + 1) * 0.01);
+        BigDecimal lonOffset = BigDecimal.valueOf((seed % 3 + 1) * 0.01);
+        end.setLatitude(experience.getLatitude().add(latOffset));
+        end.setLongitude(experience.getLongitude().add(lonOffset));
+        end.setCreatedAt(LocalDateTime.now());
+        itineraries.add(end);
+        
+        return itineraries;
+    }
+    
+    /**
+     * Create complex START → STOP(S) → END itinerary (1-4 intermediate stops)
+     */
+    private List<ExperienceItinerary> createComplexItinerary(Experience experience, int seed) {
+        List<ExperienceItinerary> itineraries = new ArrayList<>();
+        
+        // Determine number of stops (1-4) based on experience duration
+        double durationHours = experience.getDuration().doubleValue();
+        int numStops;
+        if (durationHours >= 8) {
+            numStops = 3 + (seed % 2); // 3-4 stops for long experiences
+        } else if (durationHours >= 5) {
+            numStops = 2 + (seed % 2); // 2-3 stops for medium experiences
+        } else {
+            numStops = 1 + (seed % 2); // 1-2 stops for shorter experiences
+        }
+        
+        // START point
+        ExperienceItinerary start = new ExperienceItinerary();
+        start.setExperience(experience);
+        start.setStopOrder(1);
+        start.setStopType("start");
+        start.setLocationName(experience.getLocation() + " Meeting Point");
+        start.setDuration("");
+        start.setLatitude(experience.getLatitude());
+        start.setLongitude(experience.getLongitude());
+        start.setCreatedAt(LocalDateTime.now());
+        itineraries.add(start);
+        
+        // Calculate time allocation for stops
+        double availableHours = durationHours * 0.8; // 80% of total time for stops
+        double timePerStop = availableHours / numStops;
+        
+        // Create intermediate STOP(S)
+        for (int i = 0; i < numStops; i++) {
+            ExperienceItinerary stop = new ExperienceItinerary();
+            stop.setExperience(experience);
+            stop.setStopOrder(i + 2); // Order: START(1), STOP(2), STOP(3), ..., END(last)
+            stop.setStopType("stop");
+            stop.setLocationName(getStopLocationName(experience, i + 1, seed));
+            
+            // Format duration (in hours or minutes)
+            stop.setDuration(formatDuration(timePerStop));
+            
+            // Calculate intermediate coordinates (spread stops between start and end)
+            double progress = (double)(i + 1) / (numStops + 1);
+            BigDecimal latOffset = BigDecimal.valueOf(progress * 0.05 * (1 + seed % 3));
+            BigDecimal lonOffset = BigDecimal.valueOf(progress * 0.05 * (1 + seed % 2));
+            stop.setLatitude(experience.getLatitude().add(latOffset));
+            stop.setLongitude(experience.getLongitude().add(lonOffset));
+            stop.setCreatedAt(LocalDateTime.now());
+            itineraries.add(stop);
+        }
+        
+        // END point
+        ExperienceItinerary end = new ExperienceItinerary();
+        end.setExperience(experience);
+        end.setStopOrder(numStops + 2); // After all stops
+        end.setStopType("end");
+        end.setLocationName(getEndLocationName(experience, seed));
+        end.setDuration("");
+        // End point furthest from start
+        BigDecimal latOffset = BigDecimal.valueOf(0.06 * (1 + seed % 3));
+        BigDecimal lonOffset = BigDecimal.valueOf(0.06 * (1 + seed % 2));
+        end.setLatitude(experience.getLatitude().add(latOffset));
+        end.setLongitude(experience.getLongitude().add(lonOffset));
+        end.setCreatedAt(LocalDateTime.now());
+        itineraries.add(end);
+        
+        return itineraries;
+    }
+    
+    /**
+     * Helper: Get appropriate end location name based on experience
+     */
+    private String getEndLocationName(Experience experience, int seed) {
+        String[] endings = {
+            experience.getLocation() + " City Center",
+            experience.getLocation() + " Viewpoint",
+            experience.getLocation() + " Main Square",
+            experience.getLocation() + " Harbor",
+            experience.getLocation() + " Station"
+        };
+        return endings[seed % endings.length];
+    }
+    
+    /**
+     * Helper: Get stop location name based on experience and stop number
+     */
+    private String getStopLocationName(Experience experience, int stopNum, int seed) {
+        String[] stopTypes = {
+            "Historic Site", "Scenic Overlook", "Local Market", "Cultural Monument",
+            "Popular Landmark", "Hidden Gem", "Artisan Quarter", "Viewpoint",
+            "Traditional District", "Waterfront Area", "Temple", "Museum"
+        };
+        return experience.getLocation() + " " + stopTypes[(seed + stopNum) % stopTypes.length];
+    }
+    
+    /**
+     * Helper: Format duration in hours/minutes
+     */
+    private String formatDuration(double hours) {
+        if (hours >= 1) {
+            int wholeHours = (int) hours;
+            int minutes = (int) ((hours - wholeHours) * 60);
+            if (minutes > 0) {
+                return wholeHours + " hour" + (wholeHours > 1 ? "s" : "") + " " + minutes + " min";
+            }
+            return wholeHours + " hour" + (wholeHours > 1 ? "s" : "");
+        } else {
+            int minutes = (int) (hours * 60);
+            return minutes + " minutes";
+        }
+    }
+
     private List<ExperienceSchedule> createExperienceSchedules(List<Experience> experiences) {
         List<ExperienceSchedule> allSchedules = new ArrayList<>();
+        
+        // Determine if this is a demo experience (last 15 experiences)
+        int totalExperiences = experiences.size();
+        int demoStartIndex = totalExperiences - 15;
 
-        for (Experience experience : experiences) {
-            // Create 3-5 schedules per experience starting from November 2025
-            int scheduleCount = 3 + random.nextInt(3);
+        for (int expIndex = 0; expIndex < experiences.size(); expIndex++) {
+            Experience experience = experiences.get(expIndex);
+            boolean isDemoExperience = expIndex >= demoStartIndex;
+            
+            if (isDemoExperience) {
+                // Special handling for demo experiences - create specific January 2026 schedules
+                allSchedules.addAll(createDemoSchedules(experience, expIndex - demoStartIndex));
+            } else {
+                // Regular experiences - create 3-5 schedules from November 2025 onwards
+                int scheduleCount = 3 + random.nextInt(3);
 
-            for (int i = 0; i < scheduleCount; i++) {
-                ExperienceSchedule schedule = new ExperienceSchedule();
-                schedule.setExperience(experience);
+                for (int i = 0; i < scheduleCount; i++) {
+                    ExperienceSchedule schedule = new ExperienceSchedule();
+                    schedule.setExperience(experience);
 
-                // All schedules start from November 2025 onwards
-                LocalDateTime startTime = LocalDateTime.of(2025, 11, 1, 0, 0)
-                        .plusDays(random.nextInt(120)) // spread across November 2025 to February 2026
-                        .withHour(8 + random.nextInt(12)) // 8 AM to 8 PM
-                        .withMinute(random.nextInt(4) * 15) // 0, 15, 30, 45 minutes
-                        .withSecond(0)
-                        .withNano(0);
+                    // All schedules start from November 2025 onwards
+                    LocalDateTime startTime = LocalDateTime.of(2025, 11, 1, 0, 0)
+                            .plusDays(random.nextInt(120)) // spread across November 2025 to February 2026
+                            .withHour(8 + random.nextInt(12)) // 8 AM to 8 PM
+                            .withMinute(random.nextInt(4) * 15) // 0, 15, 30, 45 minutes
+                            .withSecond(0)
+                            .withNano(0);
 
-                // End time based on experience duration
-                LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
+                    // End time based on experience duration
+                    LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
 
-                schedule.setStartDateTime(startTime);
-                schedule.setEndDateTime(endTime);
-                schedule.setAvailableSpots(experience.getParticipantsAllowed()); // Start with full capacity
-                schedule.setIsAvailable(true);
-                schedule.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
+                    schedule.setStartDateTime(startTime);
+                    schedule.setEndDateTime(endTime);
+                    schedule.setAvailableSpots(experience.getParticipantsAllowed());
+                    schedule.setIsAvailable(true);
+                    schedule.setCreatedAt(LocalDateTime.now().minusDays(random.nextInt(30)));
 
-                allSchedules.add(experienceScheduleRepository.save(schedule));
+                    allSchedules.add(experienceScheduleRepository.save(schedule));
+                }
             }
         }
         return allSchedules;
+    }
+    
+    /**
+     * Create specific January 2026 schedules for demo experiences with smart timing
+     * Ensures non-overlapping schedules with proper travel buffers between cities
+     */
+    private List<ExperienceSchedule> createDemoSchedules(Experience experience, int demoIndex) {
+        List<ExperienceSchedule> schedules = new ArrayList<>();
+        
+        // Define schedule patterns for each demo experience (0-14)
+        // India experiences (0-4): Jan 10-18, 2026
+        // China experiences (5-9): Jan 19-27, 2026  
+        // USA experiences (10-14): Jan 28 - Feb 5, 2026
+        
+        LocalDateTime baseDate;
+        int scheduleCount = 2; // Create 2 schedules per demo experience
+        
+        if (demoIndex < 5) {
+            // INDIA experiences - January 10-18, 2026
+            baseDate = LocalDateTime.of(2026, 1, 10, 9, 0);
+            baseDate = baseDate.plusDays(demoIndex * 2); // Space out by 2 days for travel between cities
+            
+        } else if (demoIndex < 10) {
+            // CHINA experiences - January 19-27, 2026
+            baseDate = LocalDateTime.of(2026, 1, 19, 9, 0);
+            baseDate = baseDate.plusDays((demoIndex - 5) * 2); // Space out by 2 days
+            
+        } else {
+            // USA experiences - January 28 - February 5, 2026
+            baseDate = LocalDateTime.of(2026, 1, 28, 9, 0);
+            baseDate = baseDate.plusDays((demoIndex - 10) * 2); // Space out by 2 days
+        }
+        
+        // Create morning and afternoon/evening schedules
+        int[] hourOffsets = {0, 6}; // Morning (9 AM) and Afternoon (3 PM)
+        
+        for (int i = 0; i < scheduleCount; i++) {
+            ExperienceSchedule schedule = new ExperienceSchedule();
+            schedule.setExperience(experience);
+            
+            LocalDateTime startTime = baseDate.plusDays(i).withHour(9 + hourOffsets[i]).withMinute(0).withSecond(0).withNano(0);
+            LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
+            
+            schedule.setStartDateTime(startTime);
+            schedule.setEndDateTime(endTime);
+            schedule.setAvailableSpots(experience.getParticipantsAllowed());
+            schedule.setIsAvailable(true);
+            schedule.setCreatedAt(LocalDateTime.now().minusDays(5));
+            
+            schedules.add(experienceScheduleRepository.save(schedule));
+        }
+        
+        return schedules;
     }
 
     /**
@@ -1453,7 +1840,11 @@ public class DataSeedingService {
     }
 
     /**
-     * Create travel blog articles with content provided by user
+     * Create 50 travel blog articles with diverse content
+     * - 40 PUBLISHED (80%), 10 DRAFT (20%)
+     * - All 6 categories represented
+     * - View counts: 0-2000
+     * - 15+ different authors (mix of guides and travelers)
      */
     private List<TravelArticle> createTravelArticles(List<User> users) {
         List<TravelArticle> articles = new ArrayList<>();
@@ -1464,13 +1855,22 @@ public class DataSeedingService {
             return articles;
         }
 
-        // Get specific users by email for blog authoring - use database lookup instead of assuming they're in the passed list
+        // Get diverse users for blog authoring - mix of guides and travelers
         User rachelGreen = userRepository.findByEmail("rachel.green@trippy.traveler").orElse(null);
         User johnSmith = userRepository.findByEmail("john.smith@trippy.guide").orElse(null);
         User alexanderMartin = userRepository.findByEmail("alexander.martin@trippy.traveler").orElse(null);
         User lucasWhite = userRepository.findByEmail("lucas.white@trippy.traveler").orElse(null);
         User marcoRossi = userRepository.findByEmail("marco.rossi@trippy.guide").orElse(null);
         User fatimaAlMansoori = userRepository.findByEmail("fatima.al-mansoori@trippy.guide").orElse(null);
+        User mariaGarcia = userRepository.findByEmail("maria.garcia@trippy.guide").orElse(null);
+        User davidChen = userRepository.findByEmail("david.chen@trippy.guide").orElse(null);
+        User emilyDavis = userRepository.findByEmail("emily.davis@trippy.traveler").orElse(null);
+        User sophiaTaylor = userRepository.findByEmail("sophia.taylor@trippy.traveler").orElse(null);
+        User oliverMueller = userRepository.findByEmail("oliver.mueller@trippy.traveler").orElse(null);
+        User yukiYamamoto = userRepository.findByEmail("yuki.yamamoto@trippy.traveler").orElse(null);
+        User sofiaRodriguez = userRepository.findByEmail("sofia.rodriguez@trippy.traveler").orElse(null);
+        User omarHassan = userRepository.findByEmail("omar.hassan@trippy.traveler").orElse(null);
+        User sarahJohnson = userRepository.findByEmail("sarah.johnson@trippy.guide").orElse(null);
 
         // Travel blog articles data: title, content, author, category, tags, thumbnail
         Object[][] blogData = {
@@ -1533,6 +1933,230 @@ public class DataSeedingService {
                 "<p>Flight hunting doesn't have to be a full-time job. With the right tools and timing, you can find great deals without endless browsing.</p>\n<h2>✈️ Use Flight Comparison Tools</h2>\n<p>Google Flights, Kayak, and Skyscanner show price trends and cheaper alternatives. Set up alerts for your routes.</p>\n<h2>📅 Be Flexible with Dates</h2>\n<p>Tuesday and Wednesday departures are often cheaper. Use calendar view to spot the best deals.</p>\n<h2>🎯 Book at the Right Time</h2>\n<p>Domestic flights: 1-3 months ahead. International: 2-8 months ahead. Last-minute deals exist but are risky.</p>\n<blockquote>\"The best time to book is when you find a good deal at the right price for you.\"</blockquote>\n<figure><img src=\"https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2074\" alt=\"airplane wing\" style=\"width:100%;border-radius:8px;\"><figcaption>Smart booking leads to more adventures</figcaption></figure>",
                 alexanderMartin, ArticleCategoryEnum.HOWTO, Arrays.asList("flights", "cheap-travel", "booking", "travel-tips", "budget"),
                 "https://images.unsplash.com/photo-1529074963764-98f45c47344b?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=2086"
+            },
+            
+            // === NEW 40 ARTICLES (articles 11-50) ===
+            
+            // TIPSANDTRICKS Category (2 more - total 7)
+            {
+                "Packing Hacks for Long-Term Travel",
+                "<p>Living out of a backpack for months? These packing strategies will save space, weight, and sanity.</p>\n<h2>🎒 The Capsule Wardrobe</h2>\n<p>7 tops, 3 bottoms, 2 pairs of shoes. Mix and match for weeks of outfits in one bag.</p>\n<h2>🧳 Compression Is Key</h2>\n<p>Packing cubes and compression bags reduce volume by 30%. Game changer for winter gear.</p>\n<blockquote>\"Travel light, travel far — your back will thank you.\"</blockquote>",
+                emilyDavis, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("packing", "backpacking", "minimalism", "travel-gear", "tips"),
+                "https://images.unsplash.com/photo-1553531087-88e781a318c4?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Travel Insurance 101: What You Actually Need",
+                "<p>Don't get ripped off. Here's what travel insurance should cover — and what's just marketing fluff.</p>\n<h2>✅ Must-Haves</h2>\n<p>Medical emergencies, trip cancellations, and lost luggage. These three are non-negotiable.</p>\n<h2>❌ Skip These</h2>\n<p>Rental car coverage and cancel-for-any-reason policies often overlap with credit card benefits.</p>",
+                davidChen, ArticleCategoryEnum.TIPSANDTRICKS, Arrays.asList("insurance", "travel-planning", "safety", "health", "tips"),
+                "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            
+            // EXPLORING Category (8 more - total 10)
+            {
+                "Tokyo's Best Coffee Shops Off the Tourist Map",
+                "<p>Forget Starbucks. Tokyo's specialty coffee scene rivals any city on Earth — if you know where to look.</p>\n<h2>☕ Omotesando Koffee</h2>\n<p>Tiny espresso bar serving single-origin beans in a minimalist wooden box.</p>\n<h2>☕ Blue Bottle Shinjuku</h2>\n<p>California cool meets Japanese precision. Their pour-over is art.</p>",
+                yukiYamamoto, ArticleCategoryEnum.EXPLORING, Arrays.asList("tokyo", "coffee", "cafes", "japan", "specialty-coffee"),
+                "https://images.unsplash.com/photo-1554118811-1e0d58224f24?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Lisbon's Secret Viewpoints (Miradouros)",
+                "<p>Skip the crowded São Jorge Castle. These hidden miradouros offer stunning views without the selfie sticks.</p>\n<h2>🌇 Miradouro da Graça</h2>\n<p>Sunset over red rooftops with a beer in hand. Locals love it for good reason.</p>\n<h2>🌆 Miradouro de Santa Luzia</h2>\n<p>Tiled terrace overlooking Alfama's maze of alleys and the river beyond.</p>",
+                sofiaRodriguez, ArticleCategoryEnum.EXPLORING, Arrays.asList("lisbon", "portugal", "viewpoints", "hidden-gems", "sunset"),
+                "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Brooklyn's Underground Art Scene",
+                "<p>Manhattan gets the tourists. Brooklyn gets the artists. Explore galleries, studios, and street art in Bushwick and Williamsburg.</p>\n<h2>🎨 Bushwick Collective</h2>\n<p>Entire blocks transformed into open-air galleries by world-class muralists.</p>\n<h2>🖼️ Secret Warehouse Galleries</h2>\n<p>Industrial spaces hosting experimental exhibits. Check Instagram for pop-up alerts.</p>",
+                alexanderMartin, ArticleCategoryEnum.EXPLORING, Arrays.asList("brooklyn", "street-art", "galleries", "new-york", "underground"),
+                "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Melbourne's Laneway Culture Explained",
+                "<p>Melbourne's magic isn't on the main streets — it's in the narrow laneways hiding cafés, bars, and boutiques.</p>\n<h2>🏙️ Hosier Lane</h2>\n<p>Ever-changing street art gallery. Come back weekly for new murals.</p>\n<h2>☕ Degraves Street</h2>\n<p>European café vibes in the heart of the CBD. Breakfast capital of Australia.</p>",
+                mariaGarcia, ArticleCategoryEnum.EXPLORING, Arrays.asList("melbourne", "laneways", "australia", "coffee", "street-art"),
+                "https://images.unsplash.com/photo-1514395462725-fb4566210144?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Berlin's Alternative Neighborhoods",
+                "<p>Forget Mitte. Kreuzberg and Neukölln are where Berlin's counterculture thrives.</p>\n<h2>🌈 Kreuzberg 36</h2>\n<p>Turkish markets, punk bars, and the best döner kebab outside Istanbul.</p>\n<h2>🎵 Neukölln Nightlife</h2>\n<p>Underground clubs in former factories. Techno until sunrise.</p>",
+                oliverMueller, ArticleCategoryEnum.EXPLORING, Arrays.asList("berlin", "kreuzberg", "neukölln", "germany", "nightlife"),
+                "https://images.unsplash.com/photo-1560969184-10fe8719e047?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Marrakech Beyond the Medina",
+                "<p>The old city is beautiful but packed. Venture into Gueliz and Hivernage for modern Marrakech.</p>\n<h2>🌆 Gueliz District</h2>\n<p>French colonial architecture, rooftop bars, and contemporary Moroccan restaurants.</p>\n<h2>🏊 Hivernage Hotels</h2>\n<p>Luxury pools and gardens. A cool oasis after the medina's intensity.</p>",
+                omarHassan, ArticleCategoryEnum.EXPLORING, Arrays.asList("marrakech", "morocco", "modern", "gueliz", "nightlife"),
+                "https://images.unsplash.com/photo-1597212618440-806262de4f6b?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Seoul's Temple Stay Experience",
+                "<p>Want to understand Korean Buddhism? Sleep in a temple, wake at 3 AM for chanting, and find unexpected peace.</p>\n<h2>🛐 Jogyesa Temple</h2>\n<p>Right in downtown Seoul. Short programs perfect for first-timers.</p>\n<h2>🧘 What to Expect</h2>\n<p>Meditation, tea ceremonies, and vegetarian temple food. No Wi-Fi. Just presence.</p>",
+                yukiYamamoto, ArticleCategoryEnum.EXPLORING, Arrays.asList("seoul", "korea", "temple-stay", "buddhism", "meditation"),
+                "https://images.unsplash.com/photo-1528360983277-13d401cdc186?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Amsterdam's Museum Quarter After Dark",
+                "<p>Museums close at 6 PM, but the neighborhood comes alive. Canals, concerts, and cozy brown cafés.</p>\n<h2>🎶 Concertgebouw</h2>\n<p>World-class acoustics for classical music. Free lunchtime concerts on Wednesdays.</p>\n<h2>🍻 Brown Cafés</h2>\n<p>Dark wood, low lights, and local beer. Amsterdam's living rooms.</p>",
+                oliverMueller, ArticleCategoryEnum.EXPLORING, Arrays.asList("amsterdam", "netherlands", "museums", "nightlife", "culture"),
+                "https://images.unsplash.com/photo-1534351590666-13e3e96b5017?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            
+            // TRAVEL Category (8 more - total 10)
+            {
+                "Working Remotely From Latin America",
+                "<p>Fast internet, low cost of living, and incredible food. Latin America is the new digital nomad frontier.</p>\n<h2>🇲🇽 Mexico City</h2>\n<p>World-class museums, tacos for $1, and a thriving expat community. Visa-free for 180 days.</p>\n<h2>🇨🇴 Medellín</h2>\n<p>Eternal spring weather, affordable apartments, and coworking spaces everywhere.</p>",
+                marcoRossi, ArticleCategoryEnum.TRAVEL, Arrays.asList("digital-nomad", "latin-america", "remote-work", "mexico", "colombia"),
+                "https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Train Travel Through Eastern Europe",
+                "<p>Slow travel at its finest. Prague to Budapest to Krakow — medieval cities connected by scenic railways.</p>\n<h2>🚂 The Route</h2>\n<p>Prague → Vienna → Budapest → Krakow. 5 days, 4 countries, endless castles.</p>\n<h2>💺 First vs Second Class</h2>\n<p>Second class is comfortable and half the price. Save your euros for goulash and beer.</p>",
+                sophiaTaylor, ArticleCategoryEnum.TRAVEL, Arrays.asList("train-travel", "eastern-europe", "prague", "budapest", "slow-travel"),
+                "https://images.unsplash.com/photo-1474487548417-781cb71495f3?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Sabbatical Year: How I Quit My Job to Travel",
+                "<p>It's scary, but doable. Here's how I saved $15K, negotiated a leave, and spent a year exploring 30 countries.</p>\n<h2>💰 The Money Part</h2>\n<p>Automate savings, cut subscriptions, and embrace side hustles. It adds up faster than you think.</p>\n<h2>🗣️ Talking to Your Boss</h2>\n<p>Frame it as professional development. Some companies offer unpaid leave. Others let you go. Both are okay.</p>",
+                emilyDavis, ArticleCategoryEnum.TRAVEL, Arrays.asList("sabbatical", "career-break", "long-term-travel", "quit-job", "motivation"),
+                "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Vanlife Across New Zealand",
+                "<p>Rent a campervan and chase waterfalls, glaciers, and Lord of the Rings filming locations across both islands.</p>\n<h2>🚐 Best Campervan Companies</h2>\n<p>Jucy, Spaceships, and Escape are budget-friendly. Book early for summer (Dec-Feb).</p>\n<h2>🏕️ Freedom Camping Rules</h2>\n<p>You need a self-contained vehicle for free camping. Otherwise, use DOC campsites for $6-15/night.</p>",
+                alexanderMartin, ArticleCategoryEnum.TRAVEL, Arrays.asList("vanlife", "new-zealand", "road-trip", "camping", "adventure"),
+                "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Overland from Istanbul to Iran",
+                "<p>Ancient Silk Road cities, Persian hospitality, and landscapes that feel like Mars. This route is unforgettable.</p>\n<h2>🗺️ The Journey</h2>\n<p>Istanbul → Ankara → Cappadocia → Eastern Turkey → Tabriz → Tehran. Buses and shared taxis connect it all.</p>\n<h2>🛂 Visa Tips</h2>\n<p>Get your Iran visa online (e-visa). Women must wear a headscarf, but locals are incredibly welcoming.</p>",
+                omarHassan, ArticleCategoryEnum.TRAVEL, Arrays.asList("overland", "iran", "turkey", "silk-road", "adventure"),
+                "https://images.unsplash.com/photo-1564760055775-d63b17a55c44?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Island Hopping in Greece on a Budget",
+                "<p>Santorini is stunning but expensive. Here's how to explore Greek islands without draining your savings.</p>\n<h2>🏝️ Skip Santorini, Try Naxos</h2>\n<p>Same white villages, better beaches, half the tourists, quarter of the price.</p>\n<h2>⛴️ Ferry Strategy</h2>\n<p>Book slow ferries (not catamarans) and travel overnight to save on accommodation.</p>",
+                sophiaTaylor, ArticleCategoryEnum.TRAVEL, Arrays.asList("greece", "islands", "budget-travel", "ferry", "naxos"),
+                "https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Traveling with Kids: Southeast Asia Edition",
+                "<p>Yes, you can backpack Asia with children. Here's how to make it safe, fun, and educational for everyone.</p>\n<h2>👶 Best Countries for Families</h2>\n<p>Thailand, Malaysia, and Vietnam are safe, affordable, and kid-friendly. Playgrounds and street food everywhere.</p>\n<h2>🏥 Health Precautions</h2>\n<p>Vaccines, travel insurance, and a well-stocked first aid kit are non-negotiable. Pack familiar snacks for picky eaters.</p>",
+                sarahJohnson, ArticleCategoryEnum.TRAVEL, Arrays.asList("family-travel", "kids", "southeast-asia", "parenting", "safety"),
+                "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Cycling the Danube: Vienna to Budapest",
+                "<p>One of Europe's most scenic bike routes. Flat, safe, and filled with castles, vineyards, and riverside towns.</p>\n<h2>🚴 The Route</h2>\n<p>300km over 5-7 days. Bike paths the whole way. Even beginners can handle it.</p>\n<h2>🍷 Wine Stops</h2>\n<p>Austria's Wachau Valley is wine country. Stop at heurigers (wine taverns) for local whites and cold cuts.</p>",
+                davidChen, ArticleCategoryEnum.TRAVEL, Arrays.asList("cycling", "danube", "vienna", "budapest", "bike-tour"),
+                "https://images.unsplash.com/photo-1541625602330-2277a4c46182?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            
+            // HOWTO Category (7 more - total 8)
+            {
+                "How to Learn Basic Phrases in Any Language Fast",
+                "<p>You don't need fluency to travel. Learn these 20 phrases and locals will love you.</p>\n<h2>📝 The Essential 20</h2>\n<p>Hello, thank you, please, excuse me, how much, where is, I don't understand, delicious, bathroom, help.</p>\n<h2>🎧 Use Spaced Repetition</h2>\n<p>Apps like Anki drill phrases into long-term memory. 10 minutes a day for a week = survival conversation.</p>",
+                lucasWhite, ArticleCategoryEnum.HOWTO, Arrays.asList("language-learning", "phrases", "communication", "tips", "apps"),
+                "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Find Free Walking Tours Anywhere",
+                "<p>Free (tip-based) walking tours exist in almost every city. Here's how to find the best ones.</p>\n<h2>🔍 Where to Look</h2>\n<p>Google \"free walking tour [city name]\" or check GetYourGuide and Airbnb Experiences. Read reviews carefully.</p>\n<h2>💵 How Much to Tip</h2>\n<p>€5-10 for a 2-hour tour is standard. More if the guide was exceptional.</p>",
+                rachelGreen, ArticleCategoryEnum.HOWTO, Arrays.asList("walking-tours", "free-activities", "budget", "sightseeing", "guides"),
+                "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Use Google Maps Offline",
+                "<p>No data? No problem. Download offline maps before you travel and navigate without internet.</p>\n<h2>📱 Step-by-Step</h2>\n<p>Search the area → Tap your profile → Offline maps → Select area → Download. Maps last 30 days.</p>\n<h2>🗺️ Pro Tips</h2>\n<p>Download on Wi-Fi to save mobile data. Offline maps still show your location via GPS — no internet needed.</p>",
+                davidChen, ArticleCategoryEnum.HOWTO, Arrays.asList("google-maps", "offline", "navigation", "travel-tech", "gps"),
+                "https://images.unsplash.com/photo-1524661135-423995f22d0b?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Negotiate Prices in Markets",
+                "<p>Haggling isn't rude — it's expected in many cultures. Here's how to do it respectfully and get fair prices.</p>\n<h2>🤝 The Process</h2>\n<p>Start at 50% of the asking price. Meet somewhere in the middle. Smile. Walk away if needed — they often call you back.</p>\n<h2>❌ When NOT to Haggle</h2>\n<p>Restaurants, supermarkets, and transportation with fixed prices. Know the difference.</p>",
+                mariaGarcia, ArticleCategoryEnum.HOWTO, Arrays.asList("negotiation", "markets", "shopping", "culture", "bargaining"),
+                "https://images.unsplash.com/photo-1472851294608-062f824d29cc?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Stay Connected: SIM Cards vs eSIM",
+                "<p>International roaming is expensive. Here's the smarter way to get data abroad.</p>\n<h2>📱 Physical SIM Cards</h2>\n<p>Buy at airports or convenience stores. Cheap and reliable. Downside: swapping SIMs is annoying.</p>\n<h2>🌐 eSIM Revolution</h2>\n<p>Apps like Airalo let you download data plans instantly. No physical card. Perfect for hopping countries.</p>",
+                alexanderMartin, ArticleCategoryEnum.HOWTO, Arrays.asList("esim", "sim-cards", "mobile-data", "connectivity", "tech"),
+                "https://images.unsplash.com/photo-1556656793-08538906a9f8?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Find Cheap Accommodation",
+                "<p>Hotels are overrated. Hostels, guesthouses, and home stays offer better value and more local connections.</p>\n<h2>🏨 Hostelworld Strategy</h2>\n<p>Book highly-rated hostels in advance. Private rooms exist if dorms aren't your thing.</p>\n<h2>🏠 Airbnb Alternatives</h2>\n<p>Try Booking.com's apartments section or local sites like Vrbo. Often cheaper than Airbnb now.</p>",
+                lucasWhite, ArticleCategoryEnum.HOWTO, Arrays.asList("accommodation", "hostels", "budget", "lodging", "booking"),
+                "https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "How to Handle Jet Lag Like a Pro",
+                "<p>Crossing time zones doesn't have to wreck your trip. Science-backed strategies to adjust fast.</p>\n<h2>☀️ Light Exposure</h2>\n<p>Get sunlight in the morning at your destination. It resets your circadian rhythm faster than anything.</p>\n<h2>💊 Melatonin Timing</h2>\n<p>Take 0.5-3mg of melatonin 30 minutes before your new bedtime. Skip it during the day.</p>",
+                sarahJohnson, ArticleCategoryEnum.HOWTO, Arrays.asList("jet-lag", "health", "sleep", "circadian", "science"),
+                "https://images.unsplash.com/photo-1517976487492-5750f3195933?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            
+            // OFFTOPIC Category (5 articles)
+            {
+                "Why I'm Quitting Social Media While Traveling",
+                "<p>Instagram made me miss sunsets because I was too busy photographing them. Here's what happened when I logged off.</p>\n<h2>📵 The Experiment</h2>\n<p>30 days offline. No posts, no stories, no scrolling. Just presence.</p>\n<h2>🧠 What Changed</h2>\n<p>I noticed details. Talked to strangers. Felt less rushed. Travel became meditation again.</p>",
+                emilyDavis, ArticleCategoryEnum.OFFTOPIC, Arrays.asList("social-media", "mindfulness", "digital-detox", "presence", "travel-philosophy"),
+                "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "The Ethics of Voluntourism: Am I Actually Helping?",
+                "<p>Volunteering abroad feels good, but is it actually beneficial? Let's have an honest conversation.</p>\n<h2>⚠️ Red Flags</h2>\n<p>Orphanage tourism, unskilled labor replacing locals, paying thousands to \"help.\" These often do more harm than good.</p>\n<h2>✅ Better Alternatives</h2>\n<p>Donate directly to vetted NGOs. Volunteer with organizations that prioritize local employment. Or just be a respectful tourist.</p>",
+                sofiaRodriguez, ArticleCategoryEnum.OFFTOPIC, Arrays.asList("voluntourism", "ethics", "responsible-travel", "volunteering", "critical-thinking"),
+                "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Travel Burnout Is Real: When to Take a Break",
+                "<p>Moving every few days sounds romantic until you're exhausted, lonely, and craving routine. It's okay to slow down.</p>\n<h2>🚨 Warning Signs</h2>\n<p>Dreading the next hostel, skipping famous sites, feeling homesick constantly. Your body is asking for rest.</p>\n<h2>🛑 What Helped Me</h2>\n<p>Renting an apartment for a month. Cooking meals. Making a temporary home. Travel doesn't have to be constant motion.</p>",
+                lucasWhite, ArticleCategoryEnum.OFFTOPIC, Arrays.asList("burnout", "mental-health", "self-care", "slow-travel", "honesty"),
+                "https://images.unsplash.com/photo-1506126613408-eca07ce68773?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Why Travel Doesn't Fix Everything (But It Helps)",
+                "<p>Travel won't cure depression, solve your career crisis, or magically make you a new person. But it does offer perspective.</p>\n<h2>💭 The Myth</h2>\n<p>\"Find yourself by traveling the world.\" It's not that simple. You take your problems with you.</p>\n<h2>🌍 The Truth</h2>\n<p>Travel gives you space to think. New inputs. Different ways of living. That's valuable — just not magic.</p>",
+                marcoRossi, ArticleCategoryEnum.OFFTOPIC, Arrays.asList("self-discovery", "mental-health", "expectations", "reality", "philosophy"),
+                "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "The Loneliness of Long-Term Solo Travel",
+                "<p>Solo travel Instagram looks magical. Reality includes lonely dinners, language barriers, and missing home. Let's talk about it.</p>\n<h2>😔 The Hard Parts</h2>\n<p>Eating alone in restaurants feels awkward. Hostels get loud and draining. Making real friends is hard when everyone's transient.</p>\n<h2>💪 Coping Strategies</h2>\n<p>Video calls with family, journaling, and giving yourself permission to have bad days. Loneliness is part of the journey.</p>",
+                alexanderMartin, ArticleCategoryEnum.OFFTOPIC, Arrays.asList("loneliness", "solo-travel", "mental-health", "reality", "honesty"),
+                "https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            
+            // OTHERS Category (5 articles)
+            {
+                "My Favorite Travel Gear After 5 Years on the Road",
+                "<p>Tested, broken, replaced, and re-bought. Here's what survived years of abuse and what I'd never travel without.</p>\n<h2>🎒 The Backpack</h2>\n<p>Osprey Farpoint 40. Fits carry-on requirements, has lifetime warranty, still looks new after 50+ flights.</p>\n<h2>👟 The Shoes</h2>\n<p>Allbirds Wool Runners. Comfy, packable, machine-washable. I own 3 pairs.</p>",
+                marcoRossi, ArticleCategoryEnum.OTHERS, Arrays.asList("gear", "equipment", "backpack", "recommendations", "review"),
+                "https://images.unsplash.com/photo-1622260614927-9aa24c0bc9b2?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Best Travel Credit Cards for 2025",
+                "<p>The right credit card pays for flights and hotels through points. Here are the best cards for travelers.</p>\n<h2>💳 Chase Sapphire Preferred</h2>\n<p>2x points on travel and dining. Transfer to airlines for huge value. $95 annual fee pays for itself fast.</p>\n<h2>💳 Capital One Venture X</h2>\n<p>Unlimited 2x miles, $300 annual travel credit, and airport lounge access. Premium but worth it.</p>",
+                davidChen, ArticleCategoryEnum.OTHERS, Arrays.asList("credit-cards", "points", "rewards", "finance", "travel-hacking"),
+                "https://images.unsplash.com/photo-1556742111-a301076d9d18?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Apps Every Traveler Should Have in 2025",
+                "<p>Beyond Google Maps and WhatsApp, these apps solve real problems on the road.</p>\n<h2>📱 Rome2Rio</h2>\n<p>Shows ALL transport options between two places — flights, trains, buses, ferries. Saves hours of research.</p>\n<h2>📱 XE Currency</h2>\n<p>Offline currency converter. Essential for markets and quick mental math.</p>",
+                sarahJohnson, ArticleCategoryEnum.OTHERS, Arrays.asList("apps", "technology", "travel-tech", "tools", "mobile"),
+                "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Podcasts for Long Flights and Bus Rides",
+                "<p>Audiobooks are great, but podcasts keep you entertained without commitment. Here are my go-to travel podcasts.</p>\n<h2>🎧 Zero To Travel</h2>\n<p>Interviews with long-term travelers sharing actionable advice and inspiring stories.</p>\n<h2>🎧 The Trip</h2>\n<p>NPR's travel storytelling at its best. Episodes are like mini documentaries.</p>",
+                yukiYamamoto, ArticleCategoryEnum.OTHERS, Arrays.asList("podcasts", "entertainment", "audio", "recommendations", "long-haul"),
+                "https://images.unsplash.com/photo-1478737270239-2f02b77fc618?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
+            },
+            {
+                "Travel Books That Changed How I See the World",
+                "<p>Not guidebooks — these are stories, philosophies, and essays that rewired my brain about travel and life.</p>\n<h2>📚 Vagabonding by Rolf Potts</h2>\n<p>The bible of long-term travel. It's about lifestyle design, not just tourism.</p>\n<h2>📚 The Art of Travel by Alain de Botton</h2>\n<p>Philosophical essays on why we travel and what we're really searching for.</p>",
+                fatimaAlMansoori, ArticleCategoryEnum.OTHERS, Arrays.asList("books", "reading", "literature", "philosophy", "recommendations"),
+                "https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.1.0&auto=format&fit=crop&q=80&w=2070"
             }
         };
 
@@ -1548,9 +2172,12 @@ public class DataSeedingService {
                 // Generate slug from title
                 article.setSlug(generateSlugFromTitle((String) data[0]));
 
-                // Set article details
-                article.setStatus(ArticleStatusEnum.PUBLISHED);
-                article.setViewsCount(0); // Start with 0 views
+                // Set article status: 80% PUBLISHED, 20% DRAFT
+                article.setStatus(random.nextDouble() < 0.8 ? 
+                    ArticleStatusEnum.PUBLISHED : ArticleStatusEnum.DRAFT);
+                
+                // Set varied view counts (0-2000 range)
+                article.setViewsCount(random.nextInt(2001)); 
                 article.setLikesCount(0); // Start with 0 likes
                 article.setCommentsCount(0); // Start with 0 comments
 
