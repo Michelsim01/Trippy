@@ -13,6 +13,7 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const isKycApproved = user?.kycStatus === 'APPROVED';
     const navItems = [
         { id: 'blog', label: 'Blog' },
+        { id: 'faq', label: 'FAQ' },
         { id: 'my-bookings', label: 'My Bookings' },
         ...(user?.canCreateExperiences && isKycApproved
             ? [{ id: 'my-tours', label: 'My Tours' }]
