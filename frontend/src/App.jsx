@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { CartProvider } from './contexts/CartContext'
 import { FormDataProvider } from './contexts/FormDataContext'
 import useChatNotifications from './hooks/useChatNotifications'
 import { unreadCountManager } from './utils/unreadCountManager'
@@ -20,6 +21,7 @@ import VerifyEmailPage from './pages/VerifyEmailPage'
 import HomePage from './pages/HomePage'
 import NotificationsPage from './pages/NotificationsPage'
 import WishlistPage from './pages/WishlistPage'
+import CartPage from './pages/CartPage'
 import MessagesPage from './pages/MessagesPage'
 import MyBookingsPage from './pages/MyBookingsPage'
 import BookingDetailPage from './pages/BookingDetailPage'
@@ -161,6 +163,10 @@ function AppRoutes() {
       <Route
         path="/wishlist"
         element={requiresSurveyCompletion(<WishlistPage />)}
+      />
+      <Route
+        path="/cart"
+        element={requiresSurveyCompletion(<CartPage />)}
       />
       <Route
         path="/messages"
@@ -335,19 +341,21 @@ export default function App() {
     <Router>
       <ErrorBoundary>
         <AuthProvider>
-          <UserProvider>
-            <FormDataProvider>
-              <TripPointsProvider>
-                <ReviewProvider>
-                  <Elements stripe={stripePromise}>
-                    <div className="App">
-                      <AppRoutes />
-                    </div>
-                  </Elements>
-                </ReviewProvider>
-              </TripPointsProvider>
-            </FormDataProvider>
-          </UserProvider>
+          <CartProvider>
+            <UserProvider>
+              <FormDataProvider>
+                <TripPointsProvider>
+                  <ReviewProvider>
+                    <Elements stripe={stripePromise}>
+                      <div className="App">
+                        <AppRoutes />
+                      </div>
+                    </Elements>
+                  </ReviewProvider>
+                </TripPointsProvider>
+              </FormDataProvider>
+            </UserProvider>
+          </CartProvider>
         </AuthProvider>
       </ErrorBoundary>
     </Router>

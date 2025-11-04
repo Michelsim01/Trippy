@@ -34,7 +34,7 @@ export default function LocationSearchInput({
     ? `w-full px-4 py-4 border-2 ${borderColor} rounded-xl focus:outline-none ${focusBorderColor} text-sm font-medium text-neutrals-2 transition-colors ${disabled ? 'bg-neutrals-7 text-neutrals-4 cursor-not-allowed' : ''}`
     : `w-full px-6 py-5 border-2 ${borderColor} rounded-xl focus:outline-none ${focusBorderColor} text-lg font-medium text-neutrals-2 transition-colors ${disabled ? 'bg-neutrals-7 text-neutrals-4 cursor-not-allowed' : ''}`;
 
-  // Debounced search function
+  // Debounced search function using Mapbox Geocoding API
   const searchLocations = async (searchQuery) => {
     if (!searchQuery || searchQuery.length < 2) {
       setSuggestions([]);
@@ -46,18 +46,43 @@ export default function LocationSearchInput({
     setApiError(null);
 
     try {
-      const response = await fetch(`/api/locations/search?query=${encodeURIComponent(searchQuery)}`);
+      // Use Mapbox Geocoding API directly
+      const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
+      const response = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(searchQuery)}.json?access_token=${mapboxToken}&limit=5&types=place,locality,neighborhood,address,poi`
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error:', response.status, errorText);
-        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        console.error('Mapbox API Error:', response.status, errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Location search response:', data);
-      setSuggestions(Array.isArray(data) ? data : []);
-      setIsOpen(Array.isArray(data) && data.length > 0);
+      console.log('Mapbox geocoding response:', data);
+      
+      // Transform Mapbox response to our format
+      const transformedSuggestions = data.features?.map(feature => {
+        // Extract coordinates [lng, lat] from Mapbox
+        const [longitude, latitude] = feature.center;
+        
+        // Extract country from context
+        const countryContext = feature.context?.find(ctx => ctx.id.startsWith('country'));
+        const country = countryContext?.text || '';
+        
+        // Use place_name as the display name
+        const placeName = feature.place_name;
+        
+        return {
+          placeName,
+          latitude,
+          longitude,
+          country
+        };
+      }) || [];
+      
+      setSuggestions(transformedSuggestions);
+      setIsOpen(transformedSuggestions.length > 0);
       setSelectedIndex(-1);
     } catch (error) {
       console.error('Error fetching location suggestions:', error);

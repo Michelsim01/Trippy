@@ -367,12 +367,18 @@ export const FormDataProvider = ({ children }) => {
         },
 
         // ExperienceItinerary entities
-        itineraries: dataToSave.itinerary?.map((item, index) => ({
-          stopOrder: index,
-          stopType: item.type || 'stop',
-          locationName: item.location || item.locationName,
-          duration: item.time || item.duration
-        })) || [],
+        itineraries: dataToSave.itinerary?.map((item, index) => {
+          const itineraryItem = {
+            stopOrder: index,
+            stopType: item.type || 'stop',
+            locationName: item.location || item.locationName,
+            duration: item.time || item.duration,
+            latitude: item.latitude || null,
+            longitude: item.longitude || null
+          };
+          console.log('🎒 EDIT WORKFLOW - Mapping itinerary item:', itineraryItem);
+          return itineraryItem;
+        }) || [],
 
         // ExperienceMedia entities
         media: [
@@ -407,6 +413,20 @@ export const FormDataProvider = ({ children }) => {
 
   // Helper function to convert frontend data to backend format
   const getBackendPayload = () => {
+    // Debug logging for itinerary data
+    console.log('🎒 FormData.itinerary:', formData.itinerary);
+    
+    const itineraries = formData.itinerary.map((item, index) => ({
+      stopOrder: index,
+      stopType: item.type || 'stop',
+      locationName: item.location || item.locationName,
+      duration: item.time || item.duration,
+      latitude: item.latitude || null,
+      longitude: item.longitude || null
+    }));
+    
+    console.log('🎒 Mapped itineraries for backend:', itineraries);
+    
     return {
       // Main Experience entity
       experience: {
@@ -431,12 +451,7 @@ export const FormDataProvider = ({ children }) => {
       },
 
       // ExperienceItinerary entities (separate records)
-      itineraries: formData.itinerary.map((item, index) => ({
-        stopOrder: index,
-        stopType: item.type || 'stop',
-        locationName: item.location || item.locationName,
-        duration: item.time || item.duration
-      })),
+      itineraries: itineraries,
 
       // ExperienceMedia entities (separate records)
       media: [

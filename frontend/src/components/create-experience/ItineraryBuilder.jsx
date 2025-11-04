@@ -25,12 +25,40 @@ export default function ItineraryBuilder({
         time: "",
         type: "start"
       };
+      console.log('🏁 Auto-adding START point from meeting point:', startPoint);
       onItemsChange([startPoint]);
     } else if (!isMultiLocation && items.length > 0) {
       // Clear itinerary when switched to single location
       onItemsChange([]);
     }
   }, [isMultiLocation]);
+
+  // Update the starting point when meeting point changes
+  useEffect(() => {
+    if (isMultiLocation && items.length > 0 && meetingPoint) {
+      // Check if the first item is a start point
+      if (items[0].type === 'start') {
+        // Check if the meeting point has actually changed
+        const currentStart = items[0];
+        const hasChanged = 
+          currentStart.location !== meetingPoint.name ||
+          currentStart.latitude !== meetingPoint.latitude ||
+          currentStart.longitude !== meetingPoint.longitude;
+
+        if (hasChanged) {
+          // Update the start point to match the new meeting point
+          const updatedItems = [...items];
+          updatedItems[0] = {
+            ...updatedItems[0],
+            location: meetingPoint.name,
+            latitude: meetingPoint.latitude,
+            longitude: meetingPoint.longitude
+          };
+          onItemsChange(updatedItems);
+        }
+      }
+    }
+  }, [meetingPoint, isMultiLocation]);
 
   // Helper function to suggest the next appropriate type
   const getDefaultItemType = () => {
@@ -66,8 +94,13 @@ export default function ItineraryBuilder({
     if (canAddItem()) {
       const itemToAdd = {
         ...newItem,
-        location: newItem.location.trim()
+        location: newItem.location.trim(),
+        // Explicitly preserve coordinates
+        latitude: newItem.latitude,
+        longitude: newItem.longitude
       };
+
+      console.log('📝 Adding itinerary item:', itemToAdd);
 
       const updatedItems = [...items, itemToAdd];
       onItemsChange(updatedItems);
@@ -90,7 +123,6 @@ export default function ItineraryBuilder({
   };
 
   const typeOptions = [
-    { value: 'start', label: 'Start Point', icon: Flag, color: 'text-green-600' },
     { value: 'stop', label: 'Stop', icon: MapPinIcon, color: 'text-blue-600' },
     { value: 'end', label: 'End Point', icon: Navigation, color: 'text-red-600' }
   ];

@@ -1,6 +1,7 @@
-import { Clock } from 'lucide-react';
+import { Clock, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { convertTo12Hr } from '../../utils/scheduleGenerator';
+import { useCart } from '../../contexts/CartContext';
 
 // Helper function to format schedule display
 const formatScheduleDisplay = (schedule) => {
@@ -121,6 +122,7 @@ const BookingWidget = ({
   onChatWithGuide
 }) => {
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   // Check if current user is the guide of this experience
   const isUserTheGuide = () => {
@@ -200,6 +202,60 @@ const BookingWidget = ({
 
     navigate(`/checkout/contact?${searchParams.toString()}`);
   };
+
+  // Handle Add to Cart
+  const handleAddToCart = async () => {
+    // Prevent guides from adding their own experiences to cart
+    if (isUserTheGuide()) {
+      alert('You cannot add your own experience to cart.');
+      return;
+    }
+
+    // Prevent adding suspended experiences
+    if (isExperienceSuspended()) {
+      alert('This experience is currently suspended and unavailable.');
+      return;
+    }
+
+    // Ensure a schedule is selected
+    if (selectedSchedule === null) {
+      alert('Please select a date and time to add to cart.');
+      return;
+    }
+
+    // Get the selected schedule data
+    let selectedScheduleData;
+    if (schedulesData && schedulesData.length > 0) {
+      selectedScheduleData = schedulesData[selectedSchedule];
+
+      // Additional validation: Check if the selected schedule is still available
+      if (!selectedScheduleData || selectedScheduleData.availableSpots <= 0 || selectedScheduleData.isAvailable === false) {
+        alert('The selected schedule is no longer available. Please choose another date.');
+        setSelectedSchedule(null);
+        return;
+      }
+
+      // Check if there are enough spots for the requested number of guests
+      if (guests > selectedScheduleData.availableSpots) {
+        alert(`Only ${selectedScheduleData.availableSpots} spot${selectedScheduleData.availableSpots !== 1 ? 's' : ''} available for this schedule. Please reduce the number of guests or choose another date.`);
+        return;
+      }
+    } else {
+      console.warn('No real schedule data available');
+      return;
+    }
+
+    // Add to cart
+    const scheduleId = selectedScheduleData.scheduleId || selectedScheduleData.id;
+    const success = await addToCart(scheduleId, guests);
+
+    if (success) {
+      alert('Experience added to cart successfully!');
+    } else {
+      alert('Failed to add to cart. Please try again.');
+    }
+  };
+
   return (
     <div className={`bg-white border border-neutrals-6 rounded-2xl shadow-lg ${isMobile ? 'p-4' : 'p-6'}`}>
       {/* Price Section */}
@@ -388,26 +444,37 @@ const BookingWidget = ({
         </div>
       )}
 
-      {/* Book Now Button */}
-      <button
-        onClick={handleBookNow}
-        className={`w-full py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
-          isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null
-            ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
-            : 'bg-primary-1 text-white hover:bg-opacity-90'
-          } ${isMobile ? 'mb-0' : 'mb-4'}`}
-        disabled={isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null}
-        style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
-      >
-        {isUserTheGuide()
-          ? 'You cannot book your own experience'
-          : isExperienceSuspended()
-            ? 'Experience suspended'
-            : selectedSchedule === null
-              ? 'Select a date to book'
-              : 'Book Now'
-        }
-      </button>
+      {/* Add to Cart and Book Now Buttons */}
+      <div className={`flex gap-2 ${isMobile ? 'mb-0' : 'mb-4'}`}>
+        {/* Add to Cart Button */}
+        <button
+          onClick={handleAddToCart}
+          className={`flex-1 py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} border-2 ${
+            isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null
+              ? 'border-neutrals-5 text-neutrals-4 cursor-not-allowed'
+              : 'border-primary-1 text-primary-1 hover:bg-primary-1 hover:text-white'
+            }`}
+          disabled={isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null}
+          style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
+        >
+          <ShoppingCart className="w-4 h-4 inline mr-2" />
+          Add to Cart
+        </button>
+
+        {/* Book Now Button */}
+        <button
+          onClick={handleBookNow}
+          className={`flex-1 py-3 rounded-${isMobile ? 'lg' : 'full'} font-bold transition-colors ${isMobile ? 'text-sm' : ''} ${
+            isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null
+              ? 'bg-neutrals-5 text-neutrals-4 cursor-not-allowed'
+              : 'bg-primary-1 text-white hover:bg-opacity-90'
+            }`}
+          disabled={isUserTheGuide() || isExperienceSuspended() || selectedSchedule === null}
+          style={!isMobile ? { fontFamily: 'DM Sans' } : {}}
+        >
+          Book Now
+        </button>
+      </div>
 
       {/* Chat with Guide Button - Only show if user is not the guide and experience is not suspended */}
       {!isUserTheGuide() && !isExperienceSuspended() && (

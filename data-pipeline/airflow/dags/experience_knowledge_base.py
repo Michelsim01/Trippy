@@ -23,13 +23,13 @@ default_args = {
 
 # Creates an Airflow workflow that runs automatically every 24 hours
 dag = DAG(
-    'knowledge_base',
+    'experience_knowledge_base',
     default_args=default_args,
-    description='Transform travel data into AI-ready knowledge base for chatbot',
+    description='Transform travel data into AI-ready experience knowledge base for chatbot',
     schedule=timedelta(hours=24),  # Run every 24 hours
     start_date=datetime(2024, 10, 1),
     catchup=False,
-    tags=['analytics', 'knowledge-base', 'chatbot', 'ai'],
+    tags=['analytics', 'experience-knowledge-base', 'chatbot', 'ai'],
 )
 
 def get_last_run_timestamp(**context):
@@ -51,26 +51,26 @@ def get_last_run_timestamp(**context):
     result = pg_hook.get_first("""
         SELECT last_run_timestamp 
         FROM pipeline_watermarks 
-        WHERE pipeline_name = 'knowledge_base'
+        WHERE pipeline_name = 'experience_knowledge_base'
     """)
     
     # Determine if this is a full refresh day (every Monday) 
     execution_date = context['execution_date']
     is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
     
-    # Check if knowledge_base_documents table exists and has data
+    # Check if experience_knowledge_base table exists and has data
     # If empty, force full refresh (auto-recovery mechanism)
     kb_table_count = pg_hook.get_first("""
         SELECT COUNT(*) 
         FROM information_schema.tables 
-        WHERE table_name = 'knowledge_base_documents'
+        WHERE table_name = 'experience_knowledge_base'
     """)
     
     if kb_table_count and kb_table_count[0] > 0:
         # Table exists, check if it has data
-        kb_count = pg_hook.get_first("SELECT COUNT(*) FROM knowledge_base_documents")
+        kb_count = pg_hook.get_first("SELECT COUNT(*) FROM experience_knowledge_base")
         if kb_count and kb_count[0] == 0:
-            print("WARNING: knowledge_base_documents table is empty. Forcing full refresh for recovery.")
+            print("WARNING: experience_knowledge_base table is empty. Forcing full refresh for recovery.")
             is_full_refresh = True
     
     # If it's Monday or no previous run, do full refresh (return very old date)
@@ -635,13 +635,13 @@ def store_knowledge_base(**context):
     
     pg_hook = PostgresHook(postgres_conn_id='trippy_db')
     
-    # Create knowledge base tables if they don't exist
+    # Create experience knowledge base tables if they don't exist
     create_tables_sql = """
     -- Enable pgvector extension
     CREATE EXTENSION IF NOT EXISTS vector;
     
-    -- Main knowledge base table
-    CREATE TABLE IF NOT EXISTS knowledge_base_documents (
+    -- Main experience knowledge base table
+    CREATE TABLE IF NOT EXISTS experience_knowledge_base (
         document_id VARCHAR(255) PRIMARY KEY,
         document_type VARCHAR(50) NOT NULL,
         title VARCHAR(500),
@@ -656,18 +656,18 @@ def store_knowledge_base(**context):
     );
     
     -- Create indexes for efficient searching
-    CREATE INDEX IF NOT EXISTS idx_knowledge_base_documents_type 
-        ON knowledge_base_documents(document_type);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_base_documents_relevance 
-        ON knowledge_base_documents(relevance_score DESC);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_base_documents_source 
-        ON knowledge_base_documents(source_experience_id);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_base_documents_metadata 
-        ON knowledge_base_documents USING gin(metadata);
+    CREATE INDEX IF NOT EXISTS idx_experience_knowledge_base_type 
+        ON experience_knowledge_base(document_type);
+    CREATE INDEX IF NOT EXISTS idx_experience_knowledge_base_relevance 
+        ON experience_knowledge_base(relevance_score DESC);
+    CREATE INDEX IF NOT EXISTS idx_experience_knowledge_base_source 
+        ON experience_knowledge_base(source_experience_id);
+    CREATE INDEX IF NOT EXISTS idx_experience_knowledge_base_metadata 
+        ON experience_knowledge_base USING gin(metadata);
     
     -- Vector similarity index (using cosine distance)
-    CREATE INDEX IF NOT EXISTS idx_knowledge_base_documents_embedding 
-        ON knowledge_base_documents USING ivfflat (embedding vector_cosine_ops)
+    CREATE INDEX IF NOT EXISTS idx_experience_knowledge_base_embedding 
+        ON experience_knowledge_base USING ivfflat (embedding vector_cosine_ops)
         WITH (lists = 100);
     """
     
@@ -675,8 +675,8 @@ def store_knowledge_base(**context):
     
     # Clear existing data if full refresh
     if is_full_refresh:
-        print("Full refresh mode: Clearing existing knowledge base documents")
-        pg_hook.run("DELETE FROM knowledge_base_documents WHERE document_type IN ('experience', 'article')")
+        print("Full refresh mode: Clearing existing experience knowledge base documents")
+        pg_hook.run("DELETE FROM experience_knowledge_base WHERE document_type IN ('experience', 'article')")
     
     # Insert/update documents
     for doc in documents:
@@ -688,7 +688,7 @@ def store_knowledge_base(**context):
         embedding_vector = doc['embedding']
         
         upsert_sql = """
-        INSERT INTO knowledge_base_documents (
+        INSERT INTO experience_knowledge_base (
             document_id, document_type, title, content_text, embedding, 
             metadata, relevance_score, source_experience_id, source_article_id, updated_at
         )
@@ -718,7 +718,7 @@ def store_knowledge_base(**context):
             doc.get('source_article_id')     # Will be None for experiences
         ])
     
-    print(f"Successfully stored {len(documents)} knowledge base documents")
+    print(f"Successfully stored {len(documents)} experience knowledge base documents")
     
     # Update statistics
     stats_result = pg_hook.get_first("""
@@ -726,17 +726,17 @@ def store_knowledge_base(**context):
             COUNT(*) as total_docs,
             COUNT(*) FILTER (WHERE document_type = 'experience') as experience_docs,
             AVG(relevance_score) as avg_relevance
-        FROM knowledge_base_documents
+        FROM experience_knowledge_base
     """)
     
     if stats_result:
-        print(f"Knowledge base statistics:")
+        print(f"Experience knowledge base statistics:")
         print(f"- Total documents: {stats_result[0]}")
         print(f"- Experience documents: {stats_result[1]}")
         avg_relevance = stats_result[2] if stats_result[2] is not None else 0.0
         print(f"- Average relevance score: {avg_relevance:.2f}")
     
-    return "Knowledge base storage completed successfully"
+    return "Experience knowledge base storage completed successfully"
 
 def update_watermark(**context):
     """Update the pipeline watermark with current timestamp"""
@@ -754,13 +754,13 @@ def update_watermark(**context):
         last_updated = CURRENT_TIMESTAMP
     """
     
-    pg_hook.run(upsert_watermark, parameters=['knowledge_base'])
+    pg_hook.run(upsert_watermark, parameters=['experience_knowledge_base'])
     
     # Get the updated timestamp for logging
     result = pg_hook.get_first("""
         SELECT last_run_timestamp 
         FROM pipeline_watermarks 
-        WHERE pipeline_name = 'knowledge_base'
+        WHERE pipeline_name = 'experience_knowledge_base'
     """)
     
     updated_time = result[0] if result else 'unknown'
