@@ -169,7 +169,8 @@ public class SecurityConfig {
                 // Traveler endpoints (requires TRAVELER role)
                 .requestMatchers("/api/experiences/book").hasRole("TRAVELER")
                 .requestMatchers("/api/bookings/**").hasRole("TRAVELER")
-                
+                .requestMatchers("/api/cart/**").hasAnyRole("TRAVELER", "GUIDE")
+
                 // General authenticated endpoints
                 .requestMatchers("/api/notifications/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN") // Allow all authenticated users to access notifications
                 .requestMatchers("/api/user/**").hasAnyRole("TRAVELER", "GUIDE", "ADMIN")

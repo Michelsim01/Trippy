@@ -8,6 +8,10 @@ const ExperienceContent = ({
   highlightsArray,
   isMobile = false
 }) => {
+  // Debug logging
+  console.log('🎯 ExperienceContent - itinerariesData:', itinerariesData);
+  console.log('🎯 ExperienceContent - displayData:', displayData);
+
   if (isMobile) {
     return (
       <div className="space-y-6">
@@ -97,7 +101,7 @@ const ExperienceContent = ({
         {/* Mobile Meeting Point */}
         <div>
           <h2 className="text-lg font-semibold text-neutrals-2 mb-3" style={{ fontFamily: 'Poppins' }}>
-            Meeting Point
+            {itinerariesData && itinerariesData.length > 0 ? 'Route Map' : 'Meeting Point'}
           </h2>
           
           {/* Map View */}
@@ -106,6 +110,7 @@ const ExperienceContent = ({
               latitude={displayData.latitude}
               longitude={displayData.longitude}
               locationName={displayData.location || 'Meeting Point'}
+              itineraries={itinerariesData}
               zoom={14}
               height="250px"
               className="shadow-sm"
@@ -255,7 +260,7 @@ const ExperienceContent = ({
       {/* Meeting Point */}
       <div>
         <h2 className="text-2xl font-semibold text-neutrals-2 mb-4" style={{ fontFamily: 'Poppins' }}>
-          Meeting Point
+          {itinerariesData && itinerariesData.length > 0 ? 'Route Map' : 'Meeting Point'}
         </h2>
         
         {/* Map View */}
@@ -264,6 +269,7 @@ const ExperienceContent = ({
             latitude={displayData.latitude}
             longitude={displayData.longitude}
             locationName={displayData.location || 'Meeting Point'}
+            itineraries={itinerariesData}
             zoom={14}
             height="400px"
             className="shadow-md"
