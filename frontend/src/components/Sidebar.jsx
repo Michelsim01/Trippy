@@ -13,7 +13,6 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const isKycApproved = user?.kycStatus === 'APPROVED';
     const navItems = [
         { id: 'blog', label: 'Blog' },
-        { id: 'faq', label: 'FAQ' },
         { id: 'my-bookings', label: 'My Bookings' },
         ...(user?.canCreateExperiences && isKycApproved
             ? [{ id: 'my-tours', label: 'My Tours' }]
@@ -31,6 +30,7 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         ),
         { id: 'calendar', label: 'Calendar' },
         { id: 'support', label: 'Support' },
+        { id: 'faq', label: 'FAQ' },
         { id: 'about', label: 'About' },
         { id: 'contact', label: 'Contact' },
     ]

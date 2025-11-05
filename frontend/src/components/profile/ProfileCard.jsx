@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Star, Check, Flag, Edit } from 'lucide-react';
+import ReportUserModal from './ReportUserModal';
 import { useAuth } from '../../contexts/AuthContext';
 import { userService } from '../../services/userService';
 import { useTripPoints } from '../../contexts/TripPointsContext';
@@ -15,6 +16,7 @@ const ProfileCard = ({
     className = "" 
 }) => {
     const { isAuthenticated, token, user: currentUser } = useAuth();
+    const [showReport, setShowReport] = useState(false);
     const { currentBalance } = useTripPoints();
     const [userData, setUserData] = useState(propUserData || null);
     const [userStats, setUserStats] = useState(null);
@@ -262,12 +264,18 @@ const ProfileCard = ({
             <div className="text-center">
                 <p className="text-gray-500 text-sm mb-2">Member since {memberSince}</p>
                 {!isCurrentUserProfile && (
-                <button className="flex items-center justify-center gap-2 text-gray-500 hover:text-red-500 transition-colors mx-auto text-sm">
+                <button onClick={() => setShowReport(true)} className="flex items-center justify-center gap-2 text-gray-500 hover:text-red-500 transition-colors mx-auto text-sm">
                     <Flag className="w-4 h-4" />
                     <span>Report this user</span>
                 </button>
                 )}
             </div>
+            <ReportUserModal
+                isOpen={showReport}
+                onClose={() => setShowReport(false)}
+                reportedUserId={userId}
+                onSubmitted={() => setShowReport(false)}
+            />
         </div>
     );
 };
