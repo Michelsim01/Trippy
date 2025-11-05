@@ -1,0 +1,15 @@
+package com.backend.entity;
+
+public enum UserReportReason {
+    INAPPROPRIATE_NAME,
+    SPAM_OR_SCAM,
+    FRAUDULENT_ACTIVITY,
+    HARASSMENT_OR_ABUSE,
+    HATE_SPEECH,
+    IMPERSONATION,
+    INAPPROPRIATE_CONTENT,
+    UNDERAGE_USER,
+    OTHER
+}
+
+
