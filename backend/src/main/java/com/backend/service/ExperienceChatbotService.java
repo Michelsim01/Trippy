@@ -58,7 +58,7 @@ public class ExperienceChatbotService {
             String context = experienceKnowledgeBaseService.buildContext(relevantDocs);
 
             // Generate AI response
-            String botResponse = openAIService.generateChatResponse(request.getMessage(), context);
+            String botResponse = openAIService.generateExperienceChatResponse(request.getMessage(), context);
 
             // Save the conversation
             ChatbotMessage chatbotMessage = saveChatMessage(session, request.getMessage(), botResponse, relevantDocs);

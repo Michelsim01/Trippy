@@ -50,7 +50,7 @@ public class OpenAIService {
             return null;
         }
     }
-    
+
     public String generateChatResponse(String userMessage, String context) {
         try {
             String systemPrompt = buildSystemPrompt(context);
@@ -80,8 +80,79 @@ public class OpenAIService {
         }
     }
     
+    public String generateExperienceChatResponse(String userMessage, String context) {
+        try {
+            String systemPrompt = buildExperienceSystemPrompt(context);
+            
+            ChatCompletionRequest request = ChatCompletionRequest.builder()
+                    .model(chatModel)
+                    .messages(List.of(
+                            new ChatMessage(ChatMessageRole.SYSTEM.value(), systemPrompt),
+                            new ChatMessage(ChatMessageRole.USER.value(), userMessage)
+                    ))
+                    .maxTokens(500)
+                    .temperature(0.7)
+                    .build();
+            
+            ChatCompletionResult result = openAiService.createChatCompletion(request);
+            
+            if (result.getChoices() != null && !result.getChoices().isEmpty()) {
+                return result.getChoices().get(0).getMessage().getContent();
+            }
+            
+            logger.error("No chat completion choices received for message: {}", userMessage);
+            return "I'm sorry, I couldn't process your request at the moment. Please try again.";
+            
+        } catch (Exception e) {
+            logger.error("Error generating chat response: {}", e.getMessage());
+            return "I'm experiencing technical difficulties. Please try again later.";
+        }
+    }
+
+    private String buildSystemPrompt(String context) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are Trippy's AI Trip Planner. ");
+        prompt.append("Your role is to create personalized itineraries using experiences from Trippy's marketplace. ");
+        prompt.append("When building itineraries, ALWAYS prioritize Trippy experiences first.\\n\\n");
+
+        prompt.append("Key guidelines:\\n");
+        prompt.append("- PRIORITIZE experiences from Trippy (provided in context below)\\n");
+        prompt.append("- Format each activity with detailed timing and routing information\\n");
+        prompt.append("- For Trippy experiences, use this exact format:\\n");
+        prompt.append("  [START TIME] (e.g., 9:00 AM)\\n");
+        prompt.append("  [FROM TRIPPY] Experience Name\\n");
+        prompt.append("  Location: City, Country\\n");
+        prompt.append("  Duration: X hours\\n");
+        prompt.append("  Description: Brief synopsis from context\\n");
+        prompt.append("  Price: $XX (if available in context)\\n");
+        prompt.append("\\n");
+        prompt.append("  [TRAVEL TIME]\\n");
+        prompt.append("  Next Activity: Name\\n");
+        prompt.append("  Route: Driving/Transit/Walking - X km, Y minutes (from routing info in context)\\n");
+        prompt.append("\\n");
+        prompt.append("- Include realistic start times for each activity\\n");
+        prompt.append("- Use the transportation routing data from context for accurate travel times\\n");
+        prompt.append("- Mention availability dates from context when suggesting when to book\\n");
+        prompt.append("- You may add general activities to fill the day, but Trippy experiences are the priority\\n");
+        prompt.append("- Be friendly, enthusiastic, and knowledgeable about travel\\n\\n");
+
+        if (context != null && !context.trim().isEmpty()) {
+            prompt.append("=== TRIPPY EXPERIENCES (PRIORITIZE THESE) ===\\n");
+            prompt.append(context);
+            prompt.append("\\n\\n");
+            prompt.append("Build your itinerary starting with the Trippy experiences above. ");
+            prompt.append("Label each Trippy experience with '[FROM TRIPPY]' so users know they can book it. ");
+            prompt.append("Include specific experience names, prices, availability, and travel times from the context. ");
+            prompt.append("You may add general travel tips or suggestions to fill gaps, but Trippy experiences should be the core of the itinerary.");
+        } else {
+            prompt.append("No specific Trippy experiences available. Provide general travel assistance and ask clarifying questions to better help the user.");
+        }
+
+        return prompt.toString();
+    }
+    
     // Build the system prompt for the chatbot
-    private String buildSystemPrompt(String context) { 
+    private String buildExperienceSystemPrompt(String context) { 
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are a helpful AI assistant for Trippy, a local travel experience marketplace. ");
         prompt.append("Your role is to help users discover amazing local experiences, answer questions about travel, ");
