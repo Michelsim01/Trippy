@@ -139,7 +139,7 @@ public class ExperienceChatbotService {
         }
     }
 
-    private ChatbotSession getOrCreateSession(String sessionId, Long userId) {
+    public ChatbotSession getOrCreateSession(String sessionId, Long userId) {
         if (sessionId != null && !sessionId.trim().isEmpty()) {
             Optional<ChatbotSession> existingSession = chatbotSessionRepository.findBySessionId(sessionId);
             if (existingSession.isPresent()) {

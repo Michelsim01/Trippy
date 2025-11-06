@@ -80,7 +80,8 @@ public class OpenAIService {
         }
     }
     
-    private String buildSystemPrompt(String context) {
+    // Build the system prompt for the chatbot
+    private String buildSystemPrompt(String context) { 
         StringBuilder prompt = new StringBuilder();
         prompt.append("You are a helpful AI assistant for Trippy, a local travel experience marketplace. ");
         prompt.append("Your role is to help users discover amazing local experiences, answer questions about travel, ");
@@ -100,6 +101,17 @@ public class OpenAIService {
             prompt.append("Use this information to provide accurate, specific recommendations. ");
             prompt.append("If the context doesn't contain relevant information for the user's question, ");
             prompt.append("provide general travel advice or ask clarifying questions.");
+            prompt.append("\\n\\n");
+            prompt.append("When mentioning specific experiences in your response, format the experience names as markdown links using this pattern: [Experience Name](/experience/{experience_id}).");
+            prompt.append("Use the actual experience ID from the provided data. For example: [Chinatown Food Walk](/experience/123)");
+            prompt.append("\\n\\n");
+            prompt.append("When mentioning specific articles or blog posts in your response, format the article titles as markdown links using this pattern: [Article Title](/blog/{article_id}).");
+            prompt.append("Use the actual article ID from the provided data. For example: [Top 10 Hidden Gems in Singapore](/blog/15)");
+            prompt.append("\\n\\n");
+            prompt.append("If the user asks for experiences in a specific location but no experiences are available for that exact location in the provided context, ");
+            prompt.append("explicitly mention that you currently don't have experiences available for that specific place. ");
+            prompt.append("Then offer similar experiences from nearby regions or similar destinations as alternatives. ");
+            prompt.append("For example: 'We currently don't have experiences available in Munich, but here are some similar experiences from other European cities that you might enjoy:'");
         } else {
             prompt.append("No specific context available. Provide general travel assistance and ask clarifying questions to better help the user.");
         }
