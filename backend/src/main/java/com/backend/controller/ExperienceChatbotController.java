@@ -69,6 +69,32 @@ public class ExperienceChatbotController {
         }
     }
 
+    @PostMapping("/sessions")
+    public ResponseEntity<Map<String, Object>> createSession(@RequestHeader(value = "User-ID") Long userId) {
+        try {
+            logger.info("Creating new experience chatbot session for user: {}", userId);
+            
+            // Use the service's getOrCreateSession method which handles session ID generation
+            ChatbotSession session = experienceChatbotService.getOrCreateSession(null, userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("sessionId", session.getSessionId());
+            response.put("userId", session.getUserId());
+            response.put("createdAt", session.getCreatedAt());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error creating experience chatbot session: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error creating session");
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
     @DeleteMapping("/sessions/{sessionId}")
     public ResponseEntity<Map<String, Object>> deleteSession(@PathVariable String sessionId) {
         try {

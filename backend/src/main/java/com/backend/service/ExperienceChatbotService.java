@@ -58,7 +58,7 @@ public class ExperienceChatbotService {
             String context = experienceKnowledgeBaseService.buildContext(relevantDocs);
 
             // Generate AI response
-            String botResponse = openAIService.generateChatResponse(request.getMessage(), context);
+            String botResponse = openAIService.generateExperienceChatResponse(request.getMessage(), context);
 
             // Save the conversation
             ChatbotMessage chatbotMessage = saveChatMessage(session, request.getMessage(), botResponse, relevantDocs);
@@ -139,7 +139,7 @@ public class ExperienceChatbotService {
         }
     }
 
-    private ChatbotSession getOrCreateSession(String sessionId, Long userId) {
+    public ChatbotSession getOrCreateSession(String sessionId, Long userId) {
         if (sessionId != null && !sessionId.trim().isEmpty()) {
             Optional<ChatbotSession> existingSession = chatbotSessionRepository.findBySessionId(sessionId);
             if (existingSession.isPresent()) {

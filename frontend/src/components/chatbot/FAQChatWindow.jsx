@@ -230,7 +230,7 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-[10001] border border-neutrals-6">
+    <div className="fixed bottom-24 right-6 w-[500px] h-[800px] bg-white rounded-lg shadow-2xl flex flex-col z-[10001] border border-neutrals-6">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-neutrals-6 bg-primary-1 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">
