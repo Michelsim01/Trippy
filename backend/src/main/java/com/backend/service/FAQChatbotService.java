@@ -150,6 +150,21 @@ public class FAQChatbotService {
         }
     }
 
+    public FAQChatbotSession getOrCreateLatestSession(Long userId) {
+        // Try to get the most recent session for this user
+        List<FAQChatbotSession> userSessions = faqChatbotSessionRepository.findByUserIdOrderByUpdatedAtDesc(userId);
+        
+        if (!userSessions.isEmpty()) {
+            // Return the most recent session
+            return userSessions.get(0);
+        }
+        
+        // No existing session, create a new one
+        String newSessionId = generateSessionId();
+        FAQChatbotSession newSession = new FAQChatbotSession(newSessionId, userId);
+        return faqChatbotSessionRepository.save(newSession);
+    }
+
     public FAQChatbotSession getOrCreateSession(String sessionId, Long userId) {
         if (sessionId != null && !sessionId.trim().isEmpty()) {
             Optional<FAQChatbotSession> existingSession = faqChatbotSessionRepository.findBySessionId(sessionId);

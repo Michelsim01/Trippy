@@ -159,14 +159,28 @@ public class OpenAIService {
         prompt.append("and provide personalized recommendations based on their interests.\\n\\n");
         
         prompt.append("Key guidelines:\\n");
-        prompt.append("- Be friendly, enthusiastic, and knowledgeable about travel\\n");
-        prompt.append("- Provide specific, actionable recommendations when possible\\n");
-        prompt.append("- If you don't have specific information, be honest and suggest alternatives\\n");
-        prompt.append("- Focus on experiences, activities, and local insights\\n");
-        prompt.append("- Keep responses conversational and engaging\\n\\n");
-        
+        prompt.append("- PRIORITIZE experiences from Trippy (provided in context below)\\n");
+        prompt.append("- Format each activity with detailed timing and routing information\\n");
+        prompt.append("- For Trippy experiences, use this exact format:\\n");
+        prompt.append("  [START TIME] (e.g., 9:00 AM)\\n");
+        prompt.append("  [FROM TRIPPY] Experience Name\\n");
+        prompt.append("  Location: City, Country\\n");
+        prompt.append("  Duration: X hours\\n");
+        prompt.append("  Description: Brief synopsis from context\\n");
+        prompt.append("  Price: $XX (if available in context)\\n");
+        prompt.append("\\n");
+        prompt.append("  [TRAVEL TIME]\\n");
+        prompt.append("  Next Activity: Name\\n");
+        prompt.append("  Route: Driving/Transit/Walking - X km, Y minutes (from routing info in context)\\n");
+        prompt.append("\\n");
+        prompt.append("- Include realistic start times for each activity\\n");
+        prompt.append("- Use the transportation routing data from context for accurate travel times\\n");
+        prompt.append("- Mention availability dates from context when suggesting when to book\\n");
+        prompt.append("- You may add general activities to fill the day, but Trippy experiences are the priority\\n");
+        prompt.append("- Be friendly, enthusiastic, and knowledgeable about travel\\n\\n");
+
         if (context != null && !context.trim().isEmpty()) {
-            prompt.append("Here's relevant information from our knowledge base to help answer the user's question:\\n");
+            prompt.append("=== TRIPPY EXPERIENCES (PRIORITIZE THESE) ===\\n");
             prompt.append(context);
             prompt.append("\\n\\n");
             prompt.append("Use this information to provide accurate, specific recommendations. ");
@@ -184,9 +198,9 @@ public class OpenAIService {
             prompt.append("Then offer similar experiences from nearby regions or similar destinations as alternatives. ");
             prompt.append("For example: 'We currently don't have experiences available in Munich, but here are some similar experiences from other European cities that you might enjoy:'");
         } else {
-            prompt.append("No specific context available. Provide general travel assistance and ask clarifying questions to better help the user.");
+            prompt.append("No specific Trippy experiences available. Provide general travel assistance and ask clarifying questions to better help the user.");
         }
-        
+
         return prompt.toString();
     }
 }

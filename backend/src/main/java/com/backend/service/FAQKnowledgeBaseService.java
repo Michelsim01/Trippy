@@ -22,11 +22,17 @@ public class FAQKnowledgeBaseService {
     @Autowired
     private FAQKnowledgeBaseRepository faqKnowledgeBaseRepository;
     
+    @Autowired(required = false)
+    private OpenAIService openAIService;
+    
     @Value("${chatbot.similarity.threshold:0.2}")
     private Double similarityThreshold;
     
     @Value("${chatbot.max.results}")
     private Integer maxResults;
+    
+    @Value("${chatbot.use.openai.embeddings:true}")
+    private Boolean useOpenAIEmbeddings;
     
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final Pattern WORD_PATTERN = Pattern.compile("\\b\\w+\\b");
@@ -59,27 +65,56 @@ public class FAQKnowledgeBaseService {
             // Calculate similarity scores for each FAQ
             List<FAQWithSimilarity> faqsWithSimilarity = new ArrayList<>();
             
+            // Try OpenAI embeddings first if enabled and available
+            List<Double> queryEmbedding = null;
+            if (useOpenAIEmbeddings && openAIService != null) {
+                try {
+                    queryEmbedding = openAIService.generateEmbedding(query);
+                    if (queryEmbedding == null || queryEmbedding.isEmpty()) {
+                        logger.warn("OpenAI embedding generation failed, falling back to TF-IDF");
+                        queryEmbedding = null;
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error generating OpenAI embedding: {}. Falling back to TF-IDF", e.getMessage());
+                    queryEmbedding = null;
+                }
+            }
+            
             for (FAQKnowledgeBase faq : allFAQs) {
                 // Calculate multiple similarity scores
                 double exactPhraseSimilarity = calculateExactPhraseSimilarity(query.toLowerCase(), faq);
-                double tfidfSimilarity = calculateCosineSimilarity(queryVector, faq);
+                double embeddingSimilarity = 0.0;
+                
+                // Use OpenAI embeddings if available
+                if (queryEmbedding != null) {
+                    embeddingSimilarity = calculateEmbeddingSimilarity(queryEmbedding, faq);
+                }
+                
+                // Fallback to TF-IDF if embeddings not available
+                double tfidfSimilarity = (embeddingSimilarity == 0.0) 
+                    ? calculateCosineSimilarity(queryVector, faq) 
+                    : 0.0;
+                
                 double keywordSimilarity = calculateKeywordSimilarity(queryTerms, faq);
                 double contentSimilarity = calculateContentSimilarity(query.toLowerCase(), faq.getContent().toLowerCase());
                 
                 // Weighted combination: exact phrase matches get highest priority
+                // OpenAI embeddings get higher weight than TF-IDF
+                double semanticSimilarity = Math.max(embeddingSimilarity, tfidfSimilarity);
+                
                 double similarity = Math.max(
                     exactPhraseSimilarity * 1.5,  // Boost exact phrase matches
                     Math.max(
                         contentSimilarity * 1.2,   // Boost content similarity
-                        Math.max(tfidfSimilarity, keywordSimilarity)
+                        Math.max(semanticSimilarity * 1.3, keywordSimilarity)  // Boost semantic similarity
                     )
                 );
                 
                 // Cap at 1.0
                 similarity = Math.min(similarity, 1.0);
                 
-                logger.debug("FAQ {} - Exact: {}, Content: {}, TF-IDF: {}, Keyword: {}, Final: {}", 
-                    faq.getKnowledgeId(), exactPhraseSimilarity, contentSimilarity, tfidfSimilarity, keywordSimilarity, similarity);
+                logger.debug("FAQ {} - Exact: {}, Content: {}, Embedding: {}, TF-IDF: {}, Keyword: {}, Final: {}", 
+                    faq.getKnowledgeId(), exactPhraseSimilarity, contentSimilarity, embeddingSimilarity, tfidfSimilarity, keywordSimilarity, similarity);
                 
                 if (similarity >= similarityThreshold) {
                     faqsWithSimilarity.add(new FAQWithSimilarity(faq, similarity));
@@ -408,6 +443,119 @@ public class FAQKnowledgeBaseService {
         }
         
         return Math.min(jaccard, 1.0);
+    }
+    
+    /**
+     * Calculate cosine similarity using OpenAI embeddings
+     * Checks if FAQ has embedding stored in metadata or vectorized_content
+     */
+    private double calculateEmbeddingSimilarity(List<Double> queryEmbedding, FAQKnowledgeBase faq) {
+        try {
+            // Try to get embedding from metadata first
+            List<Double> faqEmbedding = extractEmbeddingFromMetadata(faq);
+            
+            if (faqEmbedding == null || faqEmbedding.isEmpty()) {
+                logger.debug("No embedding found for FAQ {}, skipping embedding similarity", faq.getKnowledgeId());
+                return 0.0;
+            }
+            
+            if (faqEmbedding.size() != queryEmbedding.size()) {
+                logger.warn("Embedding size mismatch: query={}, FAQ={}", queryEmbedding.size(), faqEmbedding.size());
+                return 0.0;
+            }
+            
+            // Calculate cosine similarity
+            double dotProduct = 0.0;
+            double queryNorm = 0.0;
+            double faqNorm = 0.0;
+            
+            for (int i = 0; i < queryEmbedding.size(); i++) {
+                double q = queryEmbedding.get(i);
+                double f = faqEmbedding.get(i);
+                dotProduct += q * f;
+                queryNorm += q * q;
+                faqNorm += f * f;
+            }
+            
+            queryNorm = Math.sqrt(queryNorm);
+            faqNorm = Math.sqrt(faqNorm);
+            
+            if (queryNorm == 0.0 || faqNorm == 0.0) {
+                return 0.0;
+            }
+            
+            return dotProduct / (queryNorm * faqNorm);
+            
+        } catch (Exception e) {
+            logger.error("Error calculating embedding similarity for FAQ {}: {}", faq.getKnowledgeId(), e.getMessage());
+            return 0.0;
+        }
+    }
+    
+    /**
+     * Extract embedding from FAQ
+     * Checks embedding column first, then metadata field
+     */
+    private List<Double> extractEmbeddingFromMetadata(FAQKnowledgeBase faq) {
+        try {
+            // First check the dedicated embedding column (JSONB)
+            String embeddingJson = faq.getEmbedding();
+            if (embeddingJson != null && !embeddingJson.trim().isEmpty()) {
+                Object embeddingObj = objectMapper.readValue(embeddingJson, Object.class);
+                List<Double> embedding = parseEmbedding(embeddingObj);
+                if (embedding != null && !embedding.isEmpty()) {
+                    return embedding;
+                }
+            }
+            
+            // Fallback: check metadata field (JSONB)
+            String metadata = faq.getMetadata();
+            if (metadata != null && !metadata.trim().isEmpty()) {
+                Map<String, Object> metadataMap = objectMapper.readValue(metadata, new TypeReference<Map<String, Object>>() {});
+                
+                // Check if embedding is directly in metadata
+                if (metadataMap.containsKey("embedding")) {
+                    Object embeddingObj = metadataMap.get("embedding");
+                    return parseEmbedding(embeddingObj);
+                }
+            }
+            
+            return null;
+            
+        } catch (Exception e) {
+            logger.debug("Could not extract embedding for FAQ {}: {}", faq.getKnowledgeId(), e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Parse embedding from various formats
+     */
+    private List<Double> parseEmbedding(Object embeddingObj) {
+        try {
+            if (embeddingObj instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Object> rawList = (List<Object>) embeddingObj;
+                return rawList.stream()
+                    .map(obj -> {
+                        if (obj instanceof Number) {
+                            return ((Number) obj).doubleValue();
+                        } else if (obj instanceof String) {
+                            return Double.parseDouble((String) obj);
+                        }
+                        return null;
+                    })
+                    .filter(d -> d != null)
+                    .collect(Collectors.toList());
+            } else if (embeddingObj instanceof String) {
+                // Parse JSON string
+                return objectMapper.readValue((String) embeddingObj, new TypeReference<List<Double>>() {});
+            }
+            return null;
+        } catch (Exception e) {
+            logger.debug("Error parsing embedding: {}", e.getMessage());
+            return null;
+        }
     }
     
     /**

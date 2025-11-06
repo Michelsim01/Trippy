@@ -27,9 +27,6 @@ const SettingsPage = () => {
     const sectionTabs = [
         { id: 'profile', label: 'Profile' },
         { id: 'login', label: 'Login' },
-        { id: 'credit-card', label: 'Credit Card' },
-        { id: 'notifications', label: 'Notifications' },
-        { id: 'privacy', label: 'Privacy' },
         { id: 'account', label: 'Account' },
     ];
 
@@ -210,25 +207,6 @@ const SettingsPage = () => {
                                             onUserDataUpdate={handleUserDataUpdate}
                                         />
                                     </div>
-                                    <div id="credit-card">
-                                        <CreditCardSection 
-                                            showAddCard={showAddCard} 
-                                            toggleAddCard={toggleAddCard} 
-                                            userData={userData}
-                                        />
-                                    </div>
-                                    <div id="notifications">
-                                        <NotificationsSection 
-                                            userData={userData} 
-                                            onUserDataUpdate={handleUserDataUpdate}
-                                        />
-                                    </div>
-                                    <div id="privacy">
-                                        <PrivacySection 
-                                            userData={userData} 
-                                            onUserDataUpdate={handleUserDataUpdate}
-                                        />
-                                    </div>
                                     <div id="account">
                                         <AccountSection 
                                             userData={userData} 
@@ -263,25 +241,6 @@ const SettingsPage = () => {
                         </div>
                         <div id="login">
                             <LoginSection 
-                                userData={userData} 
-                                onUserDataUpdate={handleUserDataUpdate}
-                            />
-                        </div>
-                        <div id="credit-card">
-                            <CreditCardSection 
-                                showAddCard={showAddCard} 
-                                toggleAddCard={toggleAddCard} 
-                                userData={userData}
-                            />
-                        </div>
-                        <div id="notifications">
-                            <NotificationsSection 
-                                userData={userData} 
-                                onUserDataUpdate={handleUserDataUpdate}
-                            />
-                        </div>
-                        <div id="privacy">
-                            <PrivacySection 
                                 userData={userData} 
                                 onUserDataUpdate={handleUserDataUpdate}
                             />

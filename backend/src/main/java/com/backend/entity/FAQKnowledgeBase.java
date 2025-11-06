@@ -27,6 +27,9 @@ public class FAQKnowledgeBase {
     @Column(name = "vectorized_content", columnDefinition = "TEXT")
     private String vectorizedContent; // TF-IDF/semantic representation
     
+    @Column(columnDefinition = "JSONB")
+    private String embedding; // OpenAI embeddings stored as JSON array
+    
     @Column(length = 50)
     private String category;
     
@@ -92,6 +95,14 @@ public class FAQKnowledgeBase {
     
     public void setVectorizedContent(String vectorizedContent) {
         this.vectorizedContent = vectorizedContent;
+    }
+    
+    public String getEmbedding() {
+        return embedding;
+    }
+    
+    public void setEmbedding(String embedding) {
+        this.embedding = embedding;
     }
     
     public String getCategory() {

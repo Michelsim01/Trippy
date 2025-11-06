@@ -48,6 +48,58 @@ const ExperienceEditModal = ({ experience, isOpen, onClose, onExperienceUpdated 
     }));
   };
 
+  /**
+   * Send notification to the experience owner (guide) about changes
+   * @param {string} notificationType - Type of notification (UPDATE, SUSPEND, STATUS_CHANGE)
+   * @param {string} actionDescription - Description of the action taken
+   */
+  const sendExperienceUpdateNotification = async (notificationType, actionDescription) => {
+    try {
+      console.log('Sending notification for experience:', experience.id);
+      
+      // Get the guide's user ID from the experience
+      const guideUserId = experience.guide?.id;
+      
+      if (!guideUserId) {
+        console.warn('No guide user ID found for experience:', experience.id);
+        return;
+      }
+
+      const notificationPayload = {
+        title: 'Experience Updated by Admin',
+        message: `Your experience "${experience.title}" has been ${actionDescription}. Please review the changes in your experience listings.`,
+        userId: guideUserId,
+        type: notificationType,
+      };
+      
+      console.log('Notification payload:', notificationPayload);
+      
+      const token = localStorage.getItem('admin_token');
+      const response = await fetch(`http://localhost:8080/api/notifications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(notificationPayload),
+      });
+      
+      console.log('Notification response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Notification error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Notification sent successfully:', data);
+    } catch (error) {
+      console.error('Error sending notification:', error);
+      // Don't throw the error - we don't want notification failures to break the main flow
+    }
+  };
+
   const showConfirmation = (title, message, type, action) => {
     setConfirmationModal({
       isOpen: true,
@@ -86,6 +138,12 @@ const ExperienceEditModal = ({ experience, isOpen, onClose, onExperienceUpdated 
           const response = await adminService.updateExperience(experience.id, updateData);
           
           if (response.success) {
+            // Send notification to the guide about the update
+            await sendExperienceUpdateNotification(
+              'EXPERIENCE_UPDATE',
+              'updated with new information'
+            );
+            
             setSuccess('Experience updated successfully!');
             onExperienceUpdated(response.data);
             setTimeout(() => {
@@ -118,6 +176,12 @@ const ExperienceEditModal = ({ experience, isOpen, onClose, onExperienceUpdated 
           const response = await adminService.suspendExperience(experience.id);
           
           if (response.success) {
+            // Send notification to the guide about the suspension
+            await sendExperienceUpdateNotification(
+              'EXPERIENCE_SUSPENDED',
+              'suspended by an administrator. No new bookings will be accepted until it is reactivated'
+            );
+            
             setSuccess('Experience suspended successfully!');
             onExperienceUpdated(response.data);
             setTimeout(() => {
@@ -153,6 +217,12 @@ const ExperienceEditModal = ({ experience, isOpen, onClose, onExperienceUpdated 
           const response = await adminService.updateExperienceStatus(experience.id, newStatus);
           
           if (response.success) {
+            // Send notification to the guide about the status change
+            await sendExperienceUpdateNotification(
+              'EXPERIENCE_STATUS_CHANGE',
+              `${action}d by an administrator`
+            );
+            
             setSuccess(`Experience ${action}d successfully!`);
             onExperienceUpdated(response.data);
             setTimeout(() => {

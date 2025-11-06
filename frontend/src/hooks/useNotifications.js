@@ -133,10 +133,18 @@ export const useNotifications = (refreshInterval = 30000) => { // Default refres
     return () => clearInterval(interval)
   }, [fetchUnreadCount, refreshInterval, isAuthenticated, user?.id])
 
-  // Categorize notifications (same logic as NotificationsPage)
+    // Categorize notifications (same logic as NotificationsPage)
   const categorizedNotifications = {
-    user: notifications.filter(n => n.type === 'PASSWORD_RESET' || n.type === 'UPDATE_INFO'),
-    tours: notifications.filter(n => n.type === 'BOOKING_CONFIRMATION' || n.type === 'REMINDER' || n.type === 'DISCOUNT' || n.type === 'BOOKING_CANCELLED'),
+    user: notifications.filter(n => n.type === 'PASSWORD_RESET' || n.type === 'UPDATE_INFO' || n.type === 'EMAIL_UPDATE'),
+    experiences: notifications.filter(n => 
+      n.type === 'BOOKING_CONFIRMATION' || 
+      n.type === 'REMINDER' || 
+      n.type === 'DISCOUNT' || 
+      n.type === 'BOOKING_CANCELLED' ||
+      n.type === 'EXPERIENCE_UPDATE' ||
+      n.type === 'EXPERIENCE_SUSPENDED' ||
+      n.type === 'EXPERIENCE_STATUS_CHANGE'
+    ),
     reviews: notifications.filter(n => n.type === 'REVIEW_REQUEST'),
     messages: notifications.filter(n => n.type === 'MESSAGE')
   }

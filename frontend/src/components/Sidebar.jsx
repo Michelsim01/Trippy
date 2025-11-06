@@ -1,19 +1,21 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import LogoutModal from './LogoutModal'
+import ChatbotModal from './itinerary-chatbot/ChatbotModal'
 import { useFormData } from '../contexts/FormDataContext'
 import { useAuth } from '../contexts/AuthContext'
 import { kycService } from '../services/kycService'
 
 const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false)
+    const [isChatbotOpen, setIsChatbotOpen] = useState(false)
     const navigate = useNavigate();
     const { clearFormData } = useFormData();
     const { user } = useAuth();
     const isKycApproved = user?.kycStatus === 'APPROVED';
     const navItems = [
+        { id: 'ai-trip-planner', label: 'AI Trip Planner', isButton: true },
         { id: 'blog', label: 'Blog' },
-        { id: 'faq', label: 'FAQ' },
         { id: 'my-bookings', label: 'My Bookings' },
         ...(user?.canCreateExperiences && isKycApproved
             ? [{ id: 'my-tours', label: 'My Tours' }]
@@ -31,6 +33,7 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         ),
         { id: 'calendar', label: 'Calendar' },
         { id: 'support', label: 'Support' },
+        { id: 'faq', label: 'FAQ' },
         { id: 'about', label: 'About' },
         { id: 'contact', label: 'Contact' },
     ]
@@ -60,6 +63,11 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
         }
         onClose(); // Close the sidebar
     };
+
+    const handleChatbotClick = () => {
+        onClose() // Close sidebar first
+        setIsChatbotOpen(true) // Open chatbot modal
+    }
 
     const handleLogout = () => {
         onClose() // Close sidebar first
@@ -114,7 +122,17 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
                         <ul className="space-y-[22px]">
                             {navItems.map((item) => (
                                 <li key={item.id}>
-                                    {item.id === 'create-experience' ? (
+                                    {item.id === 'ai-trip-planner' ? (
+                                        <button
+                                            onClick={handleChatbotClick}
+                                            className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left flex items-center gap-2"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                            </svg>
+                                            {item.label}
+                                        </button>
+                                    ) : item.id === 'create-experience' ? (
                                         <button
                                             onClick={handleCreateExperienceClick}
                                             className="block font-dm-sans font-bold text-white text-[14px] leading-[16px] hover:text-opacity-80 transition-colors w-full text-left"
@@ -176,9 +194,15 @@ const Sidebar = ({ isOpen, onClose, variant = "mobile" }) => {
             </div>
             
             {/* Logout Modal */}
-            <LogoutModal 
-                isOpen={isLogoutModalOpen} 
-                onClose={() => setIsLogoutModalOpen(false)} 
+            <LogoutModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+            />
+
+            {/* Chatbot Modal */}
+            <ChatbotModal
+                isOpen={isChatbotOpen}
+                onClose={() => setIsChatbotOpen(false)}
             />
         </>
     )
