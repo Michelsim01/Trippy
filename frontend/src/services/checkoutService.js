@@ -374,6 +374,73 @@ export const checkoutService = {
         data: error.response?.data
       }
     }
+  },
+
+  // ================================
+  // BULK CHECKOUT METHODS
+  // ================================
+
+  /**
+   * Validate multiple cart items for bulk booking
+   * POST /api/bookings/bulk/validate
+   */
+  async validateBulkBooking(bulkBookingRequest) {
+    try {
+      const response = await api.post('/api/bookings/bulk/validate', bulkBookingRequest)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to validate bulk booking',
+        data: error.response?.data
+      }
+    }
+  },
+
+  /**
+   * Create multiple PENDING bookings from cart items
+   * POST /api/bookings/bulk/create
+   */
+  async createBulkBookings(bulkBookingRequest) {
+    try {
+      const response = await api.post('/api/bookings/bulk/create', bulkBookingRequest)
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to create bulk bookings',
+        data: error.response?.data
+      }
+    }
+  },
+
+  /**
+   * Process payment for multiple bookings with a single Stripe charge
+   * POST /api/bookings/bulk/process-payment
+   */
+  async processBulkPayment(bookingIds, paymentToken) {
+    try {
+      const response = await api.post('/api/bookings/bulk/process-payment', {
+        bookingIds,
+        paymentToken
+      })
+      return {
+        success: true,
+        data: response.data
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to process bulk payment',
+        data: error.response?.data
+      }
+    }
   }
 }
 
@@ -431,6 +498,25 @@ export const validateContactInfo = (contactInfo) => {
   return {
     isValid: Object.keys(errors).length === 0,
     errors
+  }
+}
+
+// Helper function to create bulk booking request DTO
+export const createBulkBookingRequest = ({
+  cartItemIds,
+  contactFirstName,
+  contactLastName,
+  contactEmail,
+  contactPhone,
+  trippointsDiscount = 0
+}) => {
+  return {
+    cartItemIds,
+    contactFirstName,
+    contactLastName,
+    contactEmail,
+    contactPhone,
+    trippointsDiscount
   }
 }
 

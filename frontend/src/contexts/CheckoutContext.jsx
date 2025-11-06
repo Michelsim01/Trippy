@@ -47,6 +47,23 @@ const initialState = {
     contactValid: false,
     paymentValid: false,
     bookingValidated: false
+  },
+
+  // Bulk checkout state (for cart checkout)
+  bulkCheckout: {
+    cartItemIds: [],
+    cartItems: [],
+    bookings: [],
+    trippoints: {
+      isRedemptionActive: false,
+      discountAmount: 0
+    },
+    pricing: {
+      subtotal: 0,
+      serviceFee: 0,
+      trippointsDiscount: 0,
+      grandTotal: 0
+    }
   }
 }
 
@@ -82,6 +99,14 @@ const CHECKOUT_ACTIONS = {
   // Trippoints
   TOGGLE_TRIPPOINTS_REDEMPTION: 'TOGGLE_TRIPPOINTS_REDEMPTION',
   SET_TRIPPOINTS_DISCOUNT: 'SET_TRIPPOINTS_DISCOUNT',
+
+  // Bulk checkout
+  SET_BULK_CART_ITEM_IDS: 'SET_BULK_CART_ITEM_IDS',
+  SET_BULK_CART_ITEMS: 'SET_BULK_CART_ITEMS',
+  SET_BULK_BOOKINGS: 'SET_BULK_BOOKINGS',
+  SET_BULK_PRICING: 'SET_BULK_PRICING',
+  TOGGLE_BULK_TRIPPOINTS: 'TOGGLE_BULK_TRIPPOINTS',
+  CLEAR_BULK_CHECKOUT: 'CLEAR_BULK_CHECKOUT',
 
   // Reset
   RESET_CHECKOUT: 'RESET_CHECKOUT'
@@ -172,6 +197,72 @@ function checkoutReducer(state, action) {
         }
       }
 
+    // Bulk checkout actions
+    case CHECKOUT_ACTIONS.SET_BULK_CART_ITEM_IDS:
+      return {
+        ...state,
+        bulkCheckout: { ...state.bulkCheckout, cartItemIds: action.payload }
+      }
+
+    case CHECKOUT_ACTIONS.SET_BULK_CART_ITEMS:
+      return {
+        ...state,
+        bulkCheckout: { ...state.bulkCheckout, cartItems: action.payload }
+      }
+
+    case CHECKOUT_ACTIONS.SET_BULK_BOOKINGS:
+      return {
+        ...state,
+        bulkCheckout: { ...state.bulkCheckout, bookings: action.payload }
+      }
+
+    case CHECKOUT_ACTIONS.SET_BULK_PRICING:
+      return {
+        ...state,
+        bulkCheckout: { ...state.bulkCheckout, pricing: action.payload }
+      }
+
+    case CHECKOUT_ACTIONS.TOGGLE_BULK_TRIPPOINTS:
+      const bulkIsActive = !state.bulkCheckout.trippoints.isRedemptionActive
+      const bulkDiscountAmount = bulkIsActive ? action.payload.discountAmount : 0
+      const newGrandTotal = state.bulkCheckout.pricing.subtotal + state.bulkCheckout.pricing.serviceFee - bulkDiscountAmount
+
+      return {
+        ...state,
+        bulkCheckout: {
+          ...state.bulkCheckout,
+          trippoints: {
+            isRedemptionActive: bulkIsActive,
+            discountAmount: bulkDiscountAmount
+          },
+          pricing: {
+            ...state.bulkCheckout.pricing,
+            trippointsDiscount: bulkDiscountAmount,
+            grandTotal: parseFloat(newGrandTotal.toFixed(2))
+          }
+        }
+      }
+
+    case CHECKOUT_ACTIONS.CLEAR_BULK_CHECKOUT:
+      return {
+        ...state,
+        bulkCheckout: {
+          cartItemIds: [],
+          cartItems: [],
+          bookings: [],
+          trippoints: {
+            isRedemptionActive: false,
+            discountAmount: 0
+          },
+          pricing: {
+            subtotal: 0,
+            serviceFee: 0,
+            trippointsDiscount: 0,
+            grandTotal: 0
+          }
+        }
+      }
+
     case CHECKOUT_ACTIONS.RESET_CHECKOUT:
       return { ...initialState, experienceData: state.experienceData, scheduleData: state.scheduleData }
 
@@ -230,6 +321,17 @@ export function CheckoutProvider({ children }) {
       type: CHECKOUT_ACTIONS.SET_TRIPPOINTS_DISCOUNT,
       payload: discountAmount
     }),
+
+    // Bulk checkout
+    setBulkCartItemIds: (ids) => dispatch({ type: CHECKOUT_ACTIONS.SET_BULK_CART_ITEM_IDS, payload: ids }),
+    setBulkCartItems: (items) => dispatch({ type: CHECKOUT_ACTIONS.SET_BULK_CART_ITEMS, payload: items }),
+    setBulkBookings: (bookings) => dispatch({ type: CHECKOUT_ACTIONS.SET_BULK_BOOKINGS, payload: bookings }),
+    setBulkPricing: (pricing) => dispatch({ type: CHECKOUT_ACTIONS.SET_BULK_PRICING, payload: pricing }),
+    toggleBulkTrippoints: (discountAmount) => dispatch({
+      type: CHECKOUT_ACTIONS.TOGGLE_BULK_TRIPPOINTS,
+      payload: { discountAmount }
+    }),
+    clearBulkCheckout: () => dispatch({ type: CHECKOUT_ACTIONS.CLEAR_BULK_CHECKOUT }),
 
     // Reset
     resetCheckout: () => dispatch({ type: CHECKOUT_ACTIONS.RESET_CHECKOUT })
