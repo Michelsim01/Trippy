@@ -88,7 +88,10 @@ public class OpenAIService {
 
         prompt.append("Key guidelines:\\n");
         prompt.append("- PRIORITIZE experiences from Trippy (provided in context below)\\n");
-        prompt.append("- Format each activity with detailed timing and routing information\\n");
+        prompt.append("- Create a day-by-day itinerary with SPECIFIC DATES assigned to each day\\n");
+        prompt.append("- Use the availability section to choose dates when Trippy experiences are bookable\\n");
+        prompt.append("- Format each day with a clear date header (e.g., 'Day 1: January 15, 2025')\\n");
+        prompt.append("\\n");
         prompt.append("- For Trippy experiences, use this exact format:\\n");
         prompt.append("  [START TIME] (e.g., 9:00 AM)\\n");
         prompt.append("  [FROM TRIPPY] Experience Name\\n");
@@ -101,9 +104,8 @@ public class OpenAIService {
         prompt.append("  Next Activity: Name\\n");
         prompt.append("  Route: Driving/Transit/Walking - X km, Y minutes (from routing info in context)\\n");
         prompt.append("\\n");
-        prompt.append("- Include realistic start times for each activity\\n");
+        prompt.append("- IMPORTANT: Check the availability section and only suggest dates when experiences are bookable\\n");
         prompt.append("- Use the transportation routing data from context for accurate travel times\\n");
-        prompt.append("- Mention availability dates from context when suggesting when to book\\n");
         prompt.append("- You may add general activities to fill the day, but Trippy experiences are the priority\\n");
         prompt.append("- Be friendly, enthusiastic, and knowledgeable about travel\\n\\n");
 

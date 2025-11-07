@@ -5,7 +5,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "itinerary_distance_matrix")
+@Table(name = "itinerary_distance_matrix",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"origin_experience_id", "destination_experience_id"})
+    }
+)
 public class ItineraryDistanceMatrix {
 
     @Id
