@@ -97,7 +97,7 @@ docker-compose down -v
 
 - **DAGs not appearing?** Check scheduler logs: `docker-compose logs -f airflow-scheduler`
 - **Services unhealthy?** Check status: `docker-compose ps`
-- **Need to rebuild?** Run: `docker-compose up -d --build`
+- **Need to rebuild?** Run:   
 - **Connection issues?** Use Docker service names (`db`, not `localhost`) for connections between containers
 - **Airflow not starting?** Wait 1-2 minutes after `docker-compose up` for initialization to complete
 

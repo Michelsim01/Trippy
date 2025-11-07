@@ -96,6 +96,14 @@ public class ExperienceKnowledgeBaseService {
             context.append("Source ").append(i + 1).append(" (").append(doc.getDocumentType()).append("):\\n");
             context.append("Title: ").append(doc.getTitle()).append("\\n");
             
+            // Add IDs for link generation
+            if (doc.getSourceExperienceId() != null) {
+                context.append("Experience ID: ").append(doc.getSourceExperienceId()).append("\\n");
+            }
+            if (doc.getSourceArticleId() != null) {
+                context.append("Article ID: ").append(doc.getSourceArticleId()).append("\\n");
+            }
+            
             // Truncate content if too long
             String content = doc.getContentText();
             if (content.length() > 1000) {

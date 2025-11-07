@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { loadStripe } from '@stripe/stripe-js'
 import { Elements } from '@stripe/react-stripe-js'
@@ -51,6 +51,7 @@ import KycOnboardingPage from './pages/KycOnboardingPage'
 import KycVerificationPage from './pages/KycVerificationPage'
 import KycSubmittedPage from './pages/KycSubmittedPage'
 import SupportPage from './pages/SupportPage'
+import FAQPage from './pages/FAQPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
@@ -62,6 +63,10 @@ import SurveyPage from './pages/SurveyPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ServerErrorPage from './pages/ServerErrorPage'
 import ErrorBoundary from './components/ErrorBoundary'
+import FloatingChatButton from './components/chatbot/FloatingChatButton'
+import ChatbotSelectionModal from './components/chatbot/ChatbotSelectionModal'
+import FAQChatWindow from './components/chatbot/FAQChatWindow'
+import ExperienceChatWindow from './components/chatbot/ExperienceChatWindow'
 import './App.css'
 
 // Initialize Stripe with publishable key
@@ -70,6 +75,9 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY)
 // AppRoutes component that uses authentication context
 function AppRoutes() {
   const { isAuthenticated, isLoading, user, hasSurveyCompleted, isSurveyLoading } = useAuth()
+  const [showChatbotModal, setShowChatbotModal] = useState(false)
+  const [showFAQChat, setShowFAQChat] = useState(false)
+  const [showExperienceChat, setShowExperienceChat] = useState(false)
   
   // Global chat notifications for navbar badge updates on all pages
   const { chatNotifications, clearChatNotifications } = useChatNotifications(user?.id || user?.userId)
@@ -113,7 +121,8 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
+    <>
+      <Routes>
       {/* Public routes */}
       <Route
         path="/"
@@ -150,6 +159,10 @@ function AppRoutes() {
       <Route
         path="/support"
         element={<SupportPage />}
+      />
+      <Route
+        path="/faq"
+        element={requiresSurveyCompletion(<FAQPage />)}
       />
       <Route
         path="/home"
@@ -339,6 +352,28 @@ function AppRoutes() {
       {/* Catch all route - redirect to 404 */}
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
+    
+    {/* Floating Chat Button - only show when authenticated */}
+    {isAuthenticated && hasSurveyCompleted && (
+      <>
+        <FloatingChatButton onClick={() => setShowChatbotModal(true)} />
+        <ChatbotSelectionModal
+          isOpen={showChatbotModal}
+          onClose={() => setShowChatbotModal(false)}
+          onSelectFAQ={() => setShowFAQChat(true)}
+          onSelectExperience={() => setShowExperienceChat(true)}
+        />
+        <FAQChatWindow
+          isOpen={showFAQChat}
+          onClose={() => setShowFAQChat(false)}
+        />
+        <ExperienceChatWindow
+          isOpen={showExperienceChat}
+          onClose={() => setShowExperienceChat(false)}
+        />
+      </>
+    )}
+    </>
   )
 }
 
