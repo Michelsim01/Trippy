@@ -16,7 +16,7 @@ export default function CheckoutBulkContactPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { user, isAuthenticated } = useAuth()
-  const { cartItems } = useCart()
+  const { cartItems, refreshCart } = useCart()
   const { currentBalance } = useTripPoints()
   const {
     contactInfo,
@@ -39,6 +39,13 @@ export default function CheckoutBulkContactPage() {
   const [validationErrors, setValidationErrors] = useState({})
   const [isCreatingBookings, setIsCreatingBookings] = useState(false)
   const [selectedCartItems, setSelectedCartItems] = useState([])
+
+  // Refresh cart when component mounts to ensure we have latest cart data
+  useEffect(() => {
+    if (isAuthenticated) {
+      refreshCart()
+    }
+  }, [isAuthenticated, refreshCart])
 
   const countries = [
     'Singapore (+65)',
@@ -83,17 +90,21 @@ export default function CheckoutBulkContactPage() {
   // Parse cart item IDs from URL
   useEffect(() => {
     const cartItemIdsParam = searchParams.get('cartItemIds')
-    if (cartItemIdsParam) {
+
+    // Wait for cart items to load before filtering
+    if (cartItemIdsParam && cartItems.length > 0) {
       const ids = cartItemIdsParam.split(',').map(id => parseInt(id))
       setBulkCartItemIds(ids)
 
       // Filter cart items by IDs
       const items = cartItems.filter(item => ids.includes(item.cartItemId))
-      setSelectedCartItems(items)
-      setBulkCartItems(items)
 
-      // Calculate pricing
-      calculatePricing(items)
+      // Only update if we found all the items we're looking for
+      if (items.length === ids.length) {
+        setSelectedCartItems(items)
+        setBulkCartItems(items)
+        calculatePricing(items)
+      }
     }
   }, [searchParams, cartItems])
 
