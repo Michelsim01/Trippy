@@ -63,6 +63,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import FloatingChatButton from './components/chatbot/FloatingChatButton'
 import ChatbotSelectionModal from './components/chatbot/ChatbotSelectionModal'
 import FAQChatWindow from './components/chatbot/FAQChatWindow'
+import ExperienceChatWindow from './components/chatbot/ExperienceChatWindow'
 import './App.css'
 
 // Initialize Stripe with publishable key
@@ -73,6 +74,7 @@ function AppRoutes() {
   const { isAuthenticated, isLoading, user, hasSurveyCompleted, isSurveyLoading } = useAuth()
   const [showChatbotModal, setShowChatbotModal] = useState(false)
   const [showFAQChat, setShowFAQChat] = useState(false)
+  const [showExperienceChat, setShowExperienceChat] = useState(false)
   
   // Global chat notifications for navbar badge updates on all pages
   const { chatNotifications, clearChatNotifications } = useChatNotifications(user?.id || user?.userId)
@@ -353,14 +355,15 @@ function AppRoutes() {
           isOpen={showChatbotModal}
           onClose={() => setShowChatbotModal(false)}
           onSelectFAQ={() => setShowFAQChat(true)}
-          onSelectExperience={() => {
-            // Placeholder for experience recommender
-            console.log('Experience recommender coming soon');
-          }}
+          onSelectExperience={() => setShowExperienceChat(true)}
         />
         <FAQChatWindow
           isOpen={showFAQChat}
           onClose={() => setShowFAQChat(false)}
+        />
+        <ExperienceChatWindow
+          isOpen={showExperienceChat}
+          onClose={() => setShowExperienceChat(false)}
         />
       </>
     )}

@@ -72,11 +72,10 @@ public class FAQChatbotController {
     @PostMapping("/sessions")
     public ResponseEntity<Map<String, Object>> createSession(@RequestHeader(value = "User-ID") Long userId) {
         try {
-            logger.info("Creating new FAQ session for user: {}", userId);
+            logger.info("Getting or creating FAQ session for user: {}", userId);
             
-            // Create a new session by processing a dummy message or directly
-            String sessionId = "faq_chat_" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-            FAQChatbotSession session = faqChatbotService.getOrCreateSession(sessionId, userId);
+            // Get or create the most recent session for this user
+            FAQChatbotSession session = faqChatbotService.getOrCreateLatestSession(userId);
             
             Map<String, Object> response = new HashMap<>();
             response.put("sessionId", session.getSessionId());
@@ -86,11 +85,36 @@ public class FAQChatbotController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Error creating FAQ session: {}", e.getMessage(), e);
+            logger.error("Error getting/creating FAQ session: {}", e.getMessage(), e);
             
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("success", false);
-            errorResponse.put("message", "Error creating session");
+            errorResponse.put("message", "Error getting/creating session");
+            
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/users/{userId}/latest-session")
+    public ResponseEntity<Map<String, Object>> getLatestSession(@PathVariable Long userId) {
+        try {
+            logger.info("Getting latest FAQ session for user: {}", userId);
+            
+            FAQChatbotSession session = faqChatbotService.getOrCreateLatestSession(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("sessionId", session.getSessionId());
+            response.put("userId", session.getUserId());
+            response.put("createdAt", session.getCreatedAt());
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            logger.error("Error getting latest FAQ session: {}", e.getMessage(), e);
+            
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("success", false);
+            errorResponse.put("message", "Error getting latest session");
             
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }

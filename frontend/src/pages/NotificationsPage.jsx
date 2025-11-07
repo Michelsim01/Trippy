@@ -40,7 +40,7 @@ const NotificationsPage = () => {
 
     const tabs = [
         { id: 'user', label: 'User' },
-        { id: 'tours', label: 'Tours' },
+        { id: 'experiences', label: 'Experiences' },
         { id: 'reviews', label: 'Reviews' }
     ];
 
@@ -54,6 +54,9 @@ const NotificationsPage = () => {
             'PASSWORD_RESET': 'Password Reset',
             'UPDATE_INFO': 'Update Info',
             'BOOKING_CANCELLED': 'Booking Cancelled',
+            'EXPERIENCE_UPDATE': 'Experience Update',
+            'EXPERIENCE_SUSPENDED': 'Experience Suspended',
+            'EXPERIENCE_STATUS_CHANGE': 'Experience Status Change'
         };
         return typeLabels[type] || type;
     };

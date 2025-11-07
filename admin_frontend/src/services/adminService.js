@@ -858,6 +858,91 @@ export const adminService = {
     }
   },
 
+  // ==================== REPORT MANAGEMENT ====================
+
+  /**
+   * Get report management metrics
+   * @returns {Promise<Object>} Report metrics data
+   */
+  getReportMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/reports/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching report metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch report metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all user reports
+   * @returns {Promise<Object>} All user reports
+   */
+  getAllReports: async () => {
+    try {
+      const response = await api.get('/api/admin/reports');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all reports:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch reports'
+      };
+    }
+  },
+
+  /**
+   * Update report status
+   * @param {number} reportId - The report ID
+   * @param {string} status - New status (OPEN, IN_PROGRESS, RESOLVED, DISMISSED)
+   * @returns {Promise<Object>} Update result
+   */
+  updateReportStatus: async (reportId, status) => {
+    try {
+      const response = await api.put(`/api/admin/reports/${reportId}/status`, { status });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating report status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update report status'
+      };
+    }
+  },
+
+  /**
+   * Delete report
+   * @param {number} reportId - The report ID
+   * @returns {Promise<Object>} Delete result
+   */
+  deleteReport: async (reportId) => {
+    try {
+      const response = await api.delete(`/api/admin/reports/${reportId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting report:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete report'
+      };
+    }
+  },
+
   // Create notification
   async createNotification(notificationData) {
     try {

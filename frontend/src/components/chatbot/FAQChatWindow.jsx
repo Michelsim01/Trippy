@@ -22,10 +22,15 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
     }
   }, [isOpen, user]);
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when new messages are added (not when loading history)
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (!loading && messages.length > 0) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
+  }, [messages.length, loading]);
 
   // Focus input when window opens
   useEffect(() => {
@@ -44,29 +49,40 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Try to get existing session or create new one
+      // Get or create the most recent session for this user
       const sessionData = await faqChatService.createSession(userId);
       setSessionId(sessionData.sessionId);
 
       // Load existing messages if any
       const sessionHistory = await faqChatService.getSession(sessionData.sessionId);
-      if (sessionHistory && sessionHistory.messages) {
-        const formattedMessages = sessionHistory.messages.map(msg => ({
-          id: `msg-${msg.timestamp}`,
-          text: msg.userMessage,
-          isUser: true,
-          timestamp: formatTimestamp(msg.timestamp),
-        })).concat(
-          sessionHistory.messages.map(msg => ({
-            id: `bot-${msg.timestamp}`,
-            text: msg.botResponse,
-            isUser: false,
-            timestamp: formatTimestamp(msg.timestamp),
-          }))
-        );
-        setMessages(formattedMessages.sort((a, b) => 
-          new Date(a.timestamp) - new Date(b.timestamp)
-        ));
+      if (sessionHistory && sessionHistory.messages && sessionHistory.messages.length > 0) {
+        // Messages are already in chronological order from backend
+        // Interleave user and bot messages
+        const formattedMessages = [];
+        
+        sessionHistory.messages.forEach((msg, index) => {
+          // Add user message
+          if (msg.userMessage) {
+            formattedMessages.push({
+              id: `user-${msg.timestamp}-${index}`,
+              text: msg.userMessage,
+              isUser: true,
+              timestamp: formatTimestamp(msg.timestamp),
+            });
+          }
+          
+          // Add bot response immediately after user message
+          if (msg.botResponse) {
+            formattedMessages.push({
+              id: `bot-${msg.timestamp}-${index}`,
+              text: msg.botResponse,
+              isUser: false,
+              timestamp: formatTimestamp(msg.timestamp),
+            });
+          }
+        });
+        
+        setMessages(formattedMessages);
       }
     } catch (error) {
       console.error('Error initializing session:', error);
@@ -214,7 +230,7 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-24 right-6 w-96 h-[600px] bg-white rounded-lg shadow-2xl flex flex-col z-[10001] border border-neutrals-6">
+    <div className="fixed bottom-24 right-6 w-[500px] h-[800px] bg-white rounded-lg shadow-2xl flex flex-col z-[10001] border border-neutrals-6">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-neutrals-6 bg-primary-1 text-white rounded-t-lg">
         <div className="flex items-center space-x-2">
