@@ -1,13 +1,16 @@
 package com.backend.service;
 
+import com.backend.dto.QueryParams;
 import com.backend.dto.request.ChatbotMessageRequest;
 import com.backend.dto.response.ChatbotMessageResponse;
 import com.backend.dto.response.ChatbotSessionResponse;
 import com.backend.entity.*;
 import com.backend.repository.*;
+import com.backend.util.QueryParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,9 +43,14 @@ public class ItineraryChatbotService {
     @Autowired
     private OpenAIService openAIService;
 
-    private static final int MAX_EXPERIENCES = 10;
-    private static final int MAX_CONTEXT_LENGTH = 8000;
-    private static final double SIMILARITY_THRESHOLD = 1.5;
+    @Value("${chatbot.max.results}")
+    private Integer maxExperiences;
+
+    @Value("${chatbot.max.context.length}")
+    private Integer maxContextLength;
+
+    @Value("${chatbot.similarity.threshold}")
+    private Double similarityThreshold;
 
     public ChatbotMessageResponse processMessage(ChatbotMessageRequest request, Long userId) {
         try {
@@ -56,14 +64,28 @@ public class ItineraryChatbotService {
             logger.debug("Context content: {}", context);
 
             // Generate AI response with itinerary planning context
+            logger.info("Calling OpenAI with message length: {}, context length: {}",
+                request.getMessage().length(), context.length());
             String botResponse = openAIService.generateChatResponse(request.getMessage(), context);
+
+            logger.info("Received OpenAI response - length: {} characters", botResponse.length());
+            logger.info("Response ends with: '{}'",
+                botResponse.length() > 200 ? botResponse.substring(botResponse.length() - 200) : botResponse);
+
+            // Check if response appears truncated
+            if (botResponse.contains("Stay tuned") || botResponse.contains("Coming up next") ||
+                botResponse.contains("Day 2 and Day 3")) {
+                logger.warn("⚠️ RESPONSE APPEARS INTENTIONALLY SPLIT - AI is teasing future content!");
+            }
 
             // Save the conversation
             ChatbotMessage chatbotMessage = saveChatMessage(session, request.getMessage(), botResponse, "[]");
+            logger.info("Saved message to database - bot_response length: {}", botResponse.length());
 
             // Build response
             ChatbotMessageResponse response = new ChatbotMessageResponse(botResponse, session.getSessionId());
             response.setTimestamp(chatbotMessage.getCreatedAt());
+            logger.info("Returning response to frontend - length: {}", response.getResponse().length());
 
             logger.info("Processed itinerary chat message for session: {}", session.getSessionId());
             return response;
@@ -81,6 +103,10 @@ public class ItineraryChatbotService {
         StringBuilder context = new StringBuilder();
 
         try {
+            // 0. Parse query parameters
+            QueryParams params = QueryParser.parse(userMessage);
+            logger.info("Parsed query params: {}", params);
+
             // 1. Generate embedding for user query
             List<Double> embedding = openAIService.generateEmbedding(userMessage);
 
@@ -89,28 +115,54 @@ public class ItineraryChatbotService {
                 return "I'm having trouble understanding your request. Please try rephrasing.";
             }
 
-            // 2. Search for relevant experiences using vector similarity
+            // 2. Search for relevant experiences using vector similarity with optional location filtering
             String embeddingString = convertEmbeddingToString(embedding);
-            List<ExperienceKnowledgeBaseDocument> relevantExperiences =
-                experienceKnowledgeBaseRepository.findSimilarDocuments(
-                    embeddingString,
-                    SIMILARITY_THRESHOLD,
-                    MAX_EXPERIENCES
-                );
+            List<ExperienceKnowledgeBaseDocument> relevantExperiences;
 
-            if (relevantExperiences.isEmpty()) {
-                logger.warn("No relevant experiences found for query: {}", userMessage);
-                return "I don't have enough information about experiences matching your request.";
+            if (params.getDestination() != null && !params.getDestination().isEmpty()) {
+                // Use SQL-based location filtering for better performance
+                relevantExperiences = experienceKnowledgeBaseRepository.findSimilarDocumentsByLocation(
+                    embeddingString,
+                    params.getDestination(),
+                    similarityThreshold,
+                    maxExperiences
+                );
+                logger.info("Found {} relevant experiences for destination '{}' using SQL filtering",
+                    relevantExperiences.size(), params.getDestination());
+            } else {
+                // No destination specified, search globally
+                relevantExperiences = experienceKnowledgeBaseRepository.findSimilarDocuments(
+                    embeddingString,
+                    similarityThreshold,
+                    maxExperiences
+                );
+                logger.info("Found {} relevant experiences (no location filter)", relevantExperiences.size());
             }
 
-            logger.info("Found {} relevant experiences for query: {}", relevantExperiences.size(), userMessage);
+            if (relevantExperiences.isEmpty()) {
+                if (params.getDestination() != null) {
+                    return String.format("I couldn't find any experiences in %s. Could you try a different destination or be more specific?",
+                        params.getDestination());
+                } else {
+                    return "I don't have enough information about experiences matching your request.";
+                }
+            }
 
-            // Extract experience IDs
+            // Extract experience IDs and create ID-to-title mapping
             List<Long> experienceIds = relevantExperiences.stream()
                 .map(ExperienceKnowledgeBaseDocument::getSourceExperienceId)
                 .filter(Objects::nonNull)
                 .distinct()
                 .collect(Collectors.toList());
+
+            // Create mapping from experience ID to experience title
+            Map<Long, String> experienceIdToTitle = relevantExperiences.stream()
+                .filter(exp -> exp.getSourceExperienceId() != null && exp.getTitle() != null)
+                .collect(Collectors.toMap(
+                    ExperienceKnowledgeBaseDocument::getSourceExperienceId,
+                    ExperienceKnowledgeBaseDocument::getTitle,
+                    (existing, replacement) -> existing  // Keep first title if duplicates
+                ));
 
             logger.info("Experience IDs: {}", experienceIds);
 
@@ -130,8 +182,38 @@ public class ItineraryChatbotService {
                     endDate
                 );
 
-            // 5. Build context string
+            // 5. Calculate trip date range from user query
+            LocalDate tripStartDate;
+            if (params.getStartDate() != null) {
+                tripStartDate = params.getStartDate();
+            } else {
+                // Default: start 7 days from now (reasonable booking lead time)
+                tripStartDate = LocalDate.now().plusDays(7);
+            }
+
+            int tripDuration = params.getTripDuration() != null ? params.getTripDuration() : 3;
+            LocalDate tripEndDate = tripStartDate.plusDays(tripDuration);
+
+            // 6. Build context string
             context.append("=== ITINERARY PLANNING CONTEXT ===\n\n");
+
+            // Add trip details
+            context.append("=== USER TRIP DETAILS ===\n");
+            context.append(String.format("Trip Start Date: %s\n",
+                tripStartDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy"))));
+            context.append(String.format("Trip End Date: %s\n",
+                tripEndDate.format(java.time.format.DateTimeFormatter.ofPattern("MMMM d, yyyy"))));
+            context.append(String.format("Duration: %d days\n", tripDuration));
+            if (params.getDestination() != null) {
+                context.append(String.format("Destination: %s\n", params.getDestination()));
+            }
+            if (params.getDepartureCity() != null) {
+                context.append(String.format("Departing From: %s\n", params.getDepartureCity()));
+            }
+            if (params.getMaxBudget() != null) {
+                context.append(String.format("Budget: $%s per person\n", params.getMaxBudget()));
+            }
+            context.append("\n");
 
             // Add system instructions
             context.append("You are Trippy's AI Trip Planner. Your role is to:\n");
@@ -162,14 +244,14 @@ public class ItineraryChatbotService {
                     .collect(Collectors.groupingBy(ItineraryAvailabilityIndex::getExperienceId));
 
                 for (Map.Entry<Long, List<ItineraryAvailabilityIndex>> entry : availByExperience.entrySet()) {
-                    context.append(formatAvailabilityInfo(entry.getKey(), entry.getValue())).append("\n");
+                    context.append(formatAvailabilityInfo(entry.getKey(), entry.getValue(), experienceIdToTitle)).append("\n");
                 }
             }
 
             // Truncate if too long
             String fullContext = context.toString();
-            if (fullContext.length() > MAX_CONTEXT_LENGTH) {
-                fullContext = fullContext.substring(0, MAX_CONTEXT_LENGTH) + "\n... (context truncated)";
+            if (fullContext.length() > maxContextLength) {
+                fullContext = fullContext.substring(0, maxContextLength) + "\n... (context truncated)";
             }
 
             return fullContext;
@@ -224,10 +306,16 @@ public class ItineraryChatbotService {
         return sb.toString();
     }
 
-    private String formatAvailabilityInfo(Long experienceId, List<ItineraryAvailabilityIndex> availabilities) {
+    private String formatAvailabilityInfo(Long experienceId, List<ItineraryAvailabilityIndex> availabilities, Map<Long, String> experienceIdToTitle) {
         StringBuilder sb = new StringBuilder();
 
-        sb.append(String.format("Experience #%d:\n", experienceId));
+        // Include experience title if available
+        String experienceTitle = experienceIdToTitle.get(experienceId);
+        if (experienceTitle != null) {
+            sb.append(String.format("Experience #%d (%s):\n", experienceId, experienceTitle));
+        } else {
+            sb.append(String.format("Experience #%d:\n", experienceId));
+        }
 
         long availableDays = availabilities.stream()
             .filter(a -> a.getAvailableSchedulesCount() > 0)

@@ -44,4 +44,21 @@ public interface ExperienceKnowledgeBaseRepository extends JpaRepository<Experie
     
     @Query("SELECT COUNT(kd) FROM ExperienceKnowledgeBaseDocument kd WHERE kd.documentType = :documentType")
     Long countByDocumentType(@Param("documentType") String documentType);
+
+    @Query(value = """
+        SELECT * FROM experience_knowledge_base
+        WHERE embedding <=> CAST(:queryEmbedding AS vector) < :threshold
+        AND (
+            metadata->>'location' ILIKE CONCAT('%', :location, '%')
+            OR metadata->>'country' ILIKE CONCAT('%', :location, '%')
+        )
+        ORDER BY embedding <=> CAST(:queryEmbedding AS vector)
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<ExperienceKnowledgeBaseDocument> findSimilarDocumentsByLocation(
+        @Param("queryEmbedding") String queryEmbedding,
+        @Param("location") String location,
+        @Param("threshold") Double threshold,
+        @Param("limit") Integer limit
+    );
 }
