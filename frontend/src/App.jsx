@@ -54,6 +54,9 @@ import SupportPage from './pages/SupportPage'
 import CheckoutContactPage from './pages/CheckoutContactPage'
 import CheckoutPaymentPage from './pages/CheckoutPaymentPage'
 import CheckoutCompletePage from './pages/CheckoutCompletePage'
+import CheckoutBulkContactPage from './pages/CheckoutBulkContactPage'
+import CheckoutBulkPaymentPage from './pages/CheckoutBulkPaymentPage'
+import CheckoutBulkCompletePage from './pages/CheckoutBulkCompletePage'
 import WriteReviewPage from './pages/WriteReviewPage'
 import SurveyPage from './pages/SurveyPage'
 import NotFoundPage from './pages/NotFoundPage'
@@ -308,6 +311,9 @@ function AppRoutes() {
               <Route path="contact" element={<CheckoutContactPage />} />
               <Route path="payment" element={<CheckoutPaymentPage />} />
               <Route path="complete" element={<CheckoutCompletePage />} />
+              <Route path="bulk/contact" element={<CheckoutBulkContactPage />} />
+              <Route path="bulk/payment" element={<CheckoutBulkPaymentPage />} />
+              <Route path="bulk/complete" element={<CheckoutBulkCompletePage />} />
             </Routes>
           </CheckoutProvider>
         )}

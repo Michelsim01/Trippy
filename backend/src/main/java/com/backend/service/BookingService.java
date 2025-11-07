@@ -306,13 +306,13 @@ public class BookingService {
 
                     // Add the traveler to the trip chat
                     tripChatService.addUserToTripChat(
-                        schedule.getScheduleId(),
-                        booking.getTraveler().getId(),
-                        booking.getBookingId()
-                    );
+                            schedule.getScheduleId(),
+                            booking.getTraveler().getId(),
+                            booking.getBookingId());
                 } catch (Exception e) {
                     // Log error but don't fail the booking if chat creation fails
-                    System.err.println("Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    System.err.println(
+                            "Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
@@ -476,10 +476,14 @@ public class BookingService {
 
     /**
      * Calculate refund amount for tourist cancellation based on policy:
-     * - Free: 24 hours after purchase (full base amount)
-     * - 7+ days before: Full base amount refund (service fee not refunded)
-     * - 3-6 days before: 50% base amount refund (service fee not refunded)
+     * Refund = (Base Amount - Trippoints Discount) * Policy Percentage
+     *
+     * - Free: 24 hours after purchase (full refund)
+     * - 7+ days before: Full refund
+     * - 3-6 days before: 50% refund
      * - <3 days: Non-refundable
+     *
+     * Note: Service fee and trippoints discount are NEVER refunded
      */
     private BigDecimal calculateTouristRefundAmount(Booking booking) {
         if (booking.getBookingDate() == null || booking.getExperienceSchedule() == null) {
@@ -491,6 +495,13 @@ public class BookingService {
         LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
 
         BigDecimal baseAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
+        BigDecimal trippointsDiscount = booking.getTrippointsDiscount() != null ? booking.getTrippointsDiscount()
+                : BigDecimal.ZERO;
+
+        // Calculate the actual amount paid by customer (excluding service fee)
+        // This is: baseAmount - trippointsDiscount
+        // Equivalent to: totalAmount - serviceFee
+        BigDecimal refundableAmount = baseAmount.subtract(trippointsDiscount);
 
         // Calculate hours since booking was created
         long hoursFromBooking = java.time.Duration.between(bookingCreated, now).toHours();
@@ -501,16 +512,16 @@ public class BookingService {
 
         // Free cancellation: Within 24 hours of booking
         if (hoursFromBooking <= 24) {
-            return baseAmount; // Full base amount refund
+            return refundableAmount; // Full refund of what customer paid (minus service fee)
         }
 
         // Standard cancellation policies based on time until experience
         if (daysToExperience >= 7) {
-            // Full base amount refund (service fee never refunded)
-            return baseAmount;
+            // Full refund (service fee and trippoints never refunded)
+            return refundableAmount;
         } else if (daysToExperience >= 3) {
-            // 50% base amount refund (service fee never refunded)
-            return baseAmount.multiply(new BigDecimal("0.5"));
+            // 50% refund (service fee and trippoints never refunded)
+            return refundableAmount.multiply(new BigDecimal("0.5"));
         } else {
             // Non-refundable
             return BigDecimal.ZERO;
@@ -567,7 +578,8 @@ public class BookingService {
                     paymentService.createRefundTransaction(booking, booking.getRefundAmount());
                 } catch (Exception e) {
                     // Log the error but don't fail the schedule cancellation
-                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId()
+                            + ": " + e.getMessage());
                 }
             }
 
@@ -967,7 +979,7 @@ public class BookingService {
 
                 // Check if user is trying to book their own experience
                 if (experience.getGuide() != null &&
-                    experience.getGuide().getId().equals(currentUser.getId())) {
+                        experience.getGuide().getId().equals(currentUser.getId())) {
                     errors.add(itemPrefix + "Cannot book your own experience");
                     continue;
                 }
@@ -986,7 +998,7 @@ public class BookingService {
                 int availableSpots = schedule.getAvailableSpots();
                 if (availableSpots < cartItem.getNumberOfParticipants()) {
                     errors.add(itemPrefix + "Not enough spots available. Available: " +
-                              availableSpots + ", Requested: " + cartItem.getNumberOfParticipants());
+                            availableSpots + ", Requested: " + cartItem.getNumberOfParticipants());
                 }
             }
 
@@ -998,7 +1010,8 @@ public class BookingService {
     }
 
     /**
-     * Create multiple PENDING bookings from cart items with proportional trippoints discount.
+     * Create multiple PENDING bookings from cart items with proportional trippoints
+     * discount.
      *
      * For each cart item:
      * - Extracts schedule, participants, and pricing information
@@ -1006,12 +1019,14 @@ public class BookingService {
      * - Creates booking in PENDING status with shared contact info
      * - Does NOT decrement available spots (done on payment confirmation)
      *
-     * Uses @Transactional to ensure all bookings are created atomically or none at all.
+     * Uses @Transactional to ensure all bookings are created atomically or none at
+     * all.
      *
-     * @param request BulkBookingRequestDTO containing cart item IDs, contact info, and trippoints discount
+     * @param request BulkBookingRequestDTO containing cart item IDs, contact info,
+     *                and trippoints discount
      * @return List of BookingResponseDTO for created bookings
      * @throws IllegalArgumentException if validation fails
-     * @throws RuntimeException if booking creation fails
+     * @throws RuntimeException         if booking creation fails
      */
     @Transactional
     public List<BookingResponseDTO> createBulkBookings(BulkBookingRequestDTO request) {
@@ -1112,7 +1127,8 @@ public class BookingService {
     /**
      * Process payment for multiple bookings with a single Stripe charge.
      *
-     * Creates individual Transaction records for each booking, all sharing the same stripeChargeId.
+     * Creates individual Transaction records for each booking, all sharing the same
+     * stripeChargeId.
      * On successful payment:
      * - Confirms all bookings atomically
      * - Decrements available spots for each schedule
@@ -1121,12 +1137,12 @@ public class BookingService {
      *
      * Uses @Transactional to ensure all operations succeed or fail together.
      *
-     * @param bookingIds List of booking IDs to process payment for
+     * @param bookingIds   List of booking IDs to process payment for
      * @param paymentToken Stripe payment token from client
      * @return List of BookingResponseDTO for confirmed bookings
      * @throws IllegalArgumentException if bookings not found
-     * @throws IllegalStateException if bookings are not in payable state
-     * @throws RuntimeException if payment processing fails
+     * @throws IllegalStateException    if bookings are not in payable state
+     * @throws RuntimeException         if payment processing fails
      */
     @Transactional
     public List<BookingResponseDTO> processBulkPayment(List<Long> bookingIds, String paymentToken) {
@@ -1156,25 +1172,29 @@ public class BookingService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // Process single Stripe payment for grand total
-            // Using first booking as reference for payment (any booking works, they share same user)
+            // Using first booking as reference for payment (any booking works, they share
+            // same user)
             PaymentTransactionDTO paymentResult = paymentService.processPayment(bookings.get(0), paymentToken);
 
             if (paymentResult.getStatus() != TransactionStatus.COMPLETED) {
                 throw new RuntimeException("Payment failed or pending");
             }
 
-            // Get the transaction that was created by payment service to extract stripeChargeId
+            // Get the transaction that was created by payment service to extract
+            // stripeChargeId
             Transaction firstTransaction = getBookingPaymentTransaction(bookings.get(0));
             String stripeChargeId = firstTransaction.getStripeChargeId();
             String externalTransactionId = firstTransaction.getExternalTransactionId();
 
-            // Process all bookings (first one needs transaction update, rest need transaction creation)
+            // Process all bookings (first one needs transaction update, rest need
+            // transaction creation)
             for (int i = 0; i < bookings.size(); i++) {
                 Booking booking = bookings.get(i);
 
                 if (i == 0) {
                     // First booking already has a transaction from processPayment
-                    // Just need to update the amount to match the booking's totalAmount (not grandTotal)
+                    // Just need to update the amount to match the booking's totalAmount (not
+                    // grandTotal)
                     firstTransaction.setAmount(booking.getTotalAmount());
                     transactionRepository.save(firstTransaction);
                 } else {
@@ -1215,8 +1235,7 @@ public class BookingService {
                     tripChatService.addUserToTripChat(
                             schedule.getScheduleId(),
                             booking.getTraveler().getId(),
-                            booking.getBookingId()
-                    );
+                            booking.getBookingId());
                 } catch (Exception e) {
                     System.err.println("Error creating trip chat for booking " +
                             booking.getBookingId() + ": " + e.getMessage());
