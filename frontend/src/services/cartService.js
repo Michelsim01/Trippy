@@ -136,6 +136,30 @@ export const cartService = {
   },
 
   /**
+   * Remove multiple cart items (bulk deletion for checkout)
+   * @param {number[]} cartItemIds - Array of cart item IDs to remove
+   * @param {number} userId - ID of the user (for authorization)
+   * @returns {Promise} Response
+   */
+  async removeMultipleCartItems(cartItemIds, userId) {
+    try {
+      const response = await api.delete('/api/cart/items/bulk', {
+        params: { userId },
+        data: { cartItemIds }
+      })
+      return {
+        success: true,
+        data: response.data,
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error || error.message || 'Failed to remove cart items',
+      }
+    }
+  },
+
+  /**
    * Clear all items from user's cart
    * @param {number} userId - ID of the user
    * @returns {Promise} Response

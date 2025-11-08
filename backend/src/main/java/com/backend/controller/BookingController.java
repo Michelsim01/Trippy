@@ -854,4 +854,126 @@ public class BookingController {
 
         return events;
     }
+
+    // ================================
+    // BULK CHECKOUT ENDPOINTS
+    // ================================
+
+    /**
+     * Validate multiple cart items for bulk booking
+     *
+     * @param request BulkBookingRequestDTO containing cart item IDs to validate
+     * @return List of validation errors (empty if all valid)
+     */
+    @PostMapping("/bulk/validate")
+    public ResponseEntity<?> validateBulkBooking(@Valid @RequestBody BulkBookingRequestDTO request) {
+        try {
+            if (request == null || request.getCartItemIds() == null || request.getCartItemIds().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Cart item IDs are required"));
+            }
+
+            List<String> errors = bookingService.validateBulkBooking(request.getCartItemIds());
+
+            if (errors.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                    "valid", true,
+                    "message", "All cart items validated successfully"
+                ));
+            } else {
+                return ResponseEntity.ok(Map.of(
+                    "valid", false,
+                    "errors", errors
+                ));
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error validating bulk booking: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Validation error: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Create multiple PENDING bookings from cart items
+     *
+     * @param request BulkBookingRequestDTO with cart IDs, contact info, and trippoints discount
+     * @return List of BookingResponseDTO for created bookings
+     */
+    @PostMapping("/bulk/create")
+    public ResponseEntity<?> createBulkBookings(@Valid @RequestBody BulkBookingRequestDTO request) {
+        try {
+            if (request == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Request body is required"));
+            }
+
+            if (request.getCartItemIds() == null || request.getCartItemIds().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Cart item IDs are required"));
+            }
+
+            List<BookingResponseDTO> bookings = bookingService.createBulkBookings(request);
+            return ResponseEntity.status(HttpStatus.CREATED).body(bookings);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Bulk booking validation error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            System.err.println("Bulk booking state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            System.err.println("Bulk booking creation error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Failed to create bookings: " + e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("Unexpected bulk booking error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An unexpected error occurred"));
+        }
+    }
+
+    /**
+     * Process payment for multiple bookings with a single Stripe charge
+     *
+     * @param request Map containing bookingIds (List<Long>) and paymentToken (String)
+     * @return List of BookingResponseDTO for confirmed bookings
+     */
+    @PostMapping("/bulk/process-payment")
+    public ResponseEntity<?> processBulkPayment(@RequestBody Map<String, Object> request) {
+        try {
+            if (request == null) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Request body is required"));
+            }
+
+            // Extract bookingIds
+            @SuppressWarnings("unchecked")
+            List<Long> bookingIds = (List<Long>) request.get("bookingIds");
+            if (bookingIds == null || bookingIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Booking IDs are required"));
+            }
+
+            // Extract paymentToken
+            String paymentToken = (String) request.get("paymentToken");
+            if (paymentToken == null || paymentToken.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Payment token is required"));
+            }
+
+            // Process bulk payment
+            List<BookingResponseDTO> confirmedBookings = bookingService.processBulkPayment(bookingIds, paymentToken);
+            return ResponseEntity.ok(confirmedBookings);
+
+        } catch (IllegalArgumentException e) {
+            System.err.println("Bulk payment validation error: " + e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (IllegalStateException e) {
+            System.err.println("Bulk payment state error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
+        } catch (RuntimeException e) {
+            System.err.println("Bulk payment processing error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Payment processing failed: " + e.getMessage()));
+        } catch (Exception e) {
+            System.err.println("Unexpected bulk payment error: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "An unexpected error occurred"));
+        }
+    }
 }

@@ -176,6 +176,7 @@ const ExperienceCard = ({
                             backgroundPosition: 'center'
                         }}
                     />
+
                 {/* Edit Button (only if showEditButton) */}
                 {showEditButton && (
                     <button
@@ -305,9 +306,33 @@ const ExperienceCard = ({
                             <p className="text-[12px] text-neutrals-3 leading-[20px] flex-1">
                                 {cardData.location}
                             </p>
-                            <span className="text-[12px] font-bold text-primary-1 uppercase">
-                                ${formatPrice(cardData.price)}
-                            </span>
+                            <div className="flex flex-col items-end gap-1">
+                                {/* Show discount badge and original price only if discount >= 10% */}
+                                {cardData.discountPercentage != null && parseFloat(cardData.discountPercentage) >= 10 && cardData.originalPrice ? (
+                                    <>
+                                        {/* Discount Badge and Original Price Row */}
+                                        <div className="flex items-center gap-2">
+                                            {/* Discount Badge */}
+                                            <div className="bg-red-500 text-white px-2 py-0.5 rounded-full text-[8px] font-bold">
+                                                {Math.round(parseFloat(cardData.discountPercentage))}% OFF
+                                            </div>
+                                            {/* Original Price with Strikethrough */}
+                                            <span className="text-[10px] text-gray-500 line-through decoration-2">
+                                                ${formatPrice(cardData.originalPrice)}
+                                            </span>
+                                        </div>
+                                        {/* Current Discounted Price */}
+                                        <span className="text-[12px] font-bold text-primary-1 uppercase">
+                                            ${formatPrice(cardData.price)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    /* Regular Price (no discount) */
+                                    <span className="text-[12px] font-bold text-primary-1 uppercase">
+                                        ${formatPrice(cardData.price)}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
