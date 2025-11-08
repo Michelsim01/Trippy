@@ -344,6 +344,27 @@ public class ExperienceController {
         return result;
     }
 
+    @GetMapping("/{id}/similar")
+    public ResponseEntity<List<com.backend.dto.SimilarExperienceDTO>> getSimilarExperiences(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            // Check if experience exists
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<com.backend.dto.SimilarExperienceDTO> similarExperiences =
+                    experienceService.getSimilarExperiences(id, limit);
+
+            return ResponseEntity.ok(similarExperiences);
+        } catch (Exception e) {
+            System.err.println("Error fetching similar experiences: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
     // Separate endpoints for related data
     @GetMapping("/{id}/media")
     public ResponseEntity<?> getExperienceMedia(@PathVariable Long id) {
