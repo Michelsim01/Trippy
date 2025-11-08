@@ -65,8 +65,13 @@ const ReviewsTab = ({ reviews, loading, onSortChange }) => {
                              onClick={() => navigate(`/experience/${review.experience?.experienceId}`)}>
                             <div className="flex items-start gap-4">
                                 <img
-                                    src={review.reviewer?.profileImageUrl || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'}
-                                    alt={review.reviewer?.firstName || 'Anonymous'}
+                                    src={
+                                        review.reviewer?.profileImageUrl ||
+                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                            `${review.reviewer?.firstName || 'Anonymous'} ${review.reviewer?.lastName || ''}`
+                                        )}&background=E5E7EB&color=111827&rounded=true&size=128`
+                                    }
+                                    alt={review.reviewer ? `${review.reviewer.firstName} ${review.reviewer.lastName}` : 'Anonymous'}
                                     className="w-10 h-10 rounded-full object-cover"
                                 />
                                 <div className="flex-1">

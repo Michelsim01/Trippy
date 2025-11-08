@@ -13,24 +13,7 @@ import TourListTab from '../components/profile/TourListTab';
 import ReviewsTab from '../components/profile/ReviewsTab';
 import MyReviewsTab from '../components/profile/MyReviewsTab';
 import TripPointsHistory from '../components/trippoints/TripPointsHistory';
-
-// BlogsTab component (placeholder since it doesn't exist yet)
-const BlogsTab = ({ blogs }) => (
-    <div className="space-y-6">
-        <h3 className="text-2xl font-bold text-neutrals-1">Blogs</h3>
-        <div className="grid gap-6">
-            {blogs.map(blog => (
-                <div key={blog.id} className="border border-neutrals-6 rounded-lg p-4">
-                    <img src={blog.image} alt={blog.title} className="w-full h-48 object-cover rounded-lg mb-4" />
-                    <h4 className="text-lg font-semibold mb-2">{blog.title}</h4>
-                    <div className="text-sm text-neutrals-3">
-                        By {blog.author} • {blog.date} • {blog.views} views
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
+import BlogsTab from '../components/profile/BlogsTab';
 
 const ProfilePage = () => {
     const { id } = useParams();
@@ -302,7 +285,7 @@ const ProfilePage = () => {
         if (isOwnProfile) {
             if (currentUserIsTourGuide) {
                 // Case 2: logged in user is a tour guide viewing their own profile
-                return ['Introduction', 'Tour list', 'Reviews', 'TripPoints', 'Blogs'];
+                return ['Introduction', 'Experience list', 'Reviews', 'TripPoints', 'Blogs'];
             } else {
                 // Case 1: logged in user is a tourist viewing their own profile
                 return ['Introduction', 'TripPoints'];
@@ -310,7 +293,7 @@ const ProfilePage = () => {
         } else {
             if (profileUserIsTourGuide) {
                 // Case 4: any user viewing another tour guide profile
-                return ['Introduction', 'Tour list', 'Reviews', 'Blogs'];
+                return ['Introduction', 'Experience list', 'Reviews', 'Blogs'];
             } else {
                 // Case 3: any user viewing another tourist profile
                 return ['Introduction'];
@@ -319,25 +302,6 @@ const ProfilePage = () => {
     };
 
     const tabs = getTabsForViewingScenario();
-
-    const blogs = [
-        {
-            id: 1,
-            title: 'Convergent and divergent plate margins',
-            author: 'Farley',
-            date: '25 May, 2021',
-            views: '160',
-            image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-        },
-        {
-            id: 2,
-            title: 'Convergent and divergent plate margins',
-            author: 'Farley',
-            date: '25 May, 2021',
-            views: '160',
-            image: "https://images.unsplash.com/photo-1531366936337-7c912a4589a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80"
-        }
-    ];
 
     const renderTabContent = () => {
         switch (activeTab) {
@@ -352,7 +316,7 @@ const ProfilePage = () => {
                     surveyLoading={surveyLoading}
                     onSurveyUpdate={handleSurveyUpdate}
                 />;
-            case 'Tour list':
+            case 'Experience list':
                 return <TourListTab
                     tourData={userExperiences}
                     loading={experiencesLoading}
@@ -379,7 +343,7 @@ const ProfilePage = () => {
                     </div>
                 );
             case 'Blogs':
-                return <BlogsTab blogs={blogs} />;
+                return <BlogsTab userId={parseInt(id)} isOwnProfile={isOwnProfile} />;
             default:
                 return null;
         }

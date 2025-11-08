@@ -100,37 +100,38 @@ const BlogCard = ({
                     </span>
                 </div>
 
-                {/* Edit Button */}
-                {showEditButton && (
-                    <button
-                        className="absolute top-4 right-14 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group"
-                        onClick={handleEditClick}
-                        title="Edit Blog"
-                    >
-                        <Edit size={20} className="text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" />
-                    </button>
-                )}
+                {/* Buttons Group */}
+                <div className="absolute top-4 right-4 z-20 flex items-center gap-3">
+                    {/* Edit Button */}
+                    {showEditButton && (
+                        <button
+                            className="w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 group"
+                            onClick={handleEditClick}
+                            title="Edit Blog"
+                        >
+                            <Edit size={20} className="text-neutrals-1 group-hover:text-primary-1 transition-colors duration-200" />
+                        </button>
+                    )}
 
-                {/* Delete Button */}
-                {showDeleteButton && (
-                    <button
-                        className={`absolute top-4 right-4 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 z-20 group ${
-                            isDeleting ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                        onClick={handleDeleteClick}
-                        title="Delete Blog"
-                        disabled={isDeleting}
-                    >
-                        {isDeleting ? (
-                            <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
-                        ) : (
-                            <Trash2 size={20} className="text-neutrals-1 group-hover:text-red-500 transition-colors duration-200" />
-                        )}
-                    </button>
-                )}
+                    {/* Delete Button */}
+                    {showDeleteButton && (
+                        <button
+                            className={`w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 group ${
+                                isDeleting ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
+                            onClick={handleDeleteClick}
+                            title="Delete Blog"
+                            disabled={isDeleting}
+                        >
+                            {isDeleting ? (
+                                <div className="w-4 h-4 border-2 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                            ) : (
+                                <Trash2 size={20} className="text-neutrals-1 group-hover:text-red-500 transition-colors duration-200" />
+                            )}
+                        </button>
+                    )}
+                </div>
             </div>
-
-            {/* Card Content */}
             <div className="bg-white p-5 flex flex-col gap-4 flex-1">
                 <div className="flex-1">
                     <h3 className="text-[16px] font-medium text-neutrals-1 leading-[24px] mb-2 line-clamp-2">
