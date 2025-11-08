@@ -30,6 +30,9 @@ public class FAQKnowledgeBase {
     @Column(columnDefinition = "JSONB")
     private String embedding; // OpenAI embeddings stored as JSON array
     
+    @Column(name = "embedding_vector", columnDefinition = "vector(1536)")
+    private String embeddingVector; // OpenAI embeddings stored as PostgreSQL vector for similarity search
+    
     @Column(length = 50)
     private String category;
     
@@ -103,6 +106,14 @@ public class FAQKnowledgeBase {
     
     public void setEmbedding(String embedding) {
         this.embedding = embedding;
+    }
+    
+    public String getEmbeddingVector() {
+        return embeddingVector;
+    }
+    
+    public void setEmbeddingVector(String embeddingVector) {
+        this.embeddingVector = embeddingVector;
     }
     
     public String getCategory() {
