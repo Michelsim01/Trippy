@@ -277,7 +277,7 @@ public class FAQChatbotService {
                     "4. Keep it concise and friendly (2-3 sentences)\n\n" +
                     "Context:\n" + context.toString();
                 
-                String clarification = openAIService.generateChatResponse(prompt, "");
+                String clarification = openAIService.generateChatResponse(prompt, "", new ArrayList<>());
                 if (clarification != null && !clarification.trim().isEmpty()) {
                     return clarification + "\n\n" + buildSupportTicketOption();
                 }
@@ -310,7 +310,7 @@ public class FAQChatbotService {
                     "Don't list the FAQs, just ask a natural follow-up question.\n\n" +
                     "Context:\n" + context;
                 
-                String clarification = openAIService.generateChatResponse(prompt, "");
+                String clarification = openAIService.generateChatResponse(prompt, "", new ArrayList<>());
                 if (clarification != null && !clarification.trim().isEmpty()) {
                     return clarification + "\n\n" + buildSupportTicketOption();
                 }
