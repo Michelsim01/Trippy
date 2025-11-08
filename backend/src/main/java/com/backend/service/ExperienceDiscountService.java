@@ -127,6 +127,7 @@ public class ExperienceDiscountService {
 
     /**
      * Send notifications to wishlist users if discount >= 10%
+     * Prevents duplicate notifications by checking if similar notification was sent recently
      * 
      * @param experience Experience with updated discount
      */
@@ -149,21 +150,42 @@ public class ExperienceDiscountService {
         // Create notifications for all wishlist users
         LocalDateTime now = LocalDateTime.now();
         int discountInt = experience.getDiscountPercentage().setScale(0, RoundingMode.HALF_UP).intValue();
+        String messageToSend = experience.getTitle() + " is now " + discountInt + "% off! " +
+                               "Don't miss this special offer.";
 
         for (WishlistItem item : wishlistItems) {
+            // Check if we already sent a similar notification to this user recently (within last 2 minutes)
+            // This prevents duplicates from rapid API calls or React re-renders
+            LocalDateTime twoMinutesAgo = now.minusMinutes(2);
+            List<Notification> recentNotifications = notificationRepository.findByUserIdAndTypeAndCreatedAtGreaterThan(
+                item.getUser().getId(), 
+                NotificationType.DISCOUNT, 
+                twoMinutesAgo
+            );
+            
+            // Check if any recent notification has the same message (same experience, same discount)
+            boolean alreadyNotified = recentNotifications.stream()
+                .anyMatch(n -> n.getMessage().equals(messageToSend));
+            
+            if (alreadyNotified) {
+                System.out.println("⏭️ Skipping duplicate notification for user " + item.getUser().getId() + 
+                                 " - already notified about " + discountInt + "% discount in last 2 minutes");
+                continue; // Skip this user - already notified recently
+            }
+            
+            // Create and save new notification
             Notification notification = new Notification();
             notification.setUser(item.getUser());
             notification.setType(NotificationType.DISCOUNT);
             notification.setTitle("Price Drop Alert! 🎉");
-            notification.setMessage(
-                experience.getTitle() + " is now " + discountInt + "% off! " +
-                "Don't miss this special offer."
-            );
+            notification.setMessage(messageToSend);
             notification.setIsRead(false);
             notification.setCreatedAt(now);
             notification.setSentAt(now);
 
             notificationRepository.save(notification);
+            System.out.println("✅ Created discount notification for user " + item.getUser().getId() + 
+                             ": " + discountInt + "% off on " + experience.getTitle());
         }
     }
 

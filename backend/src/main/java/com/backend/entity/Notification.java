@@ -14,6 +14,10 @@ public class Notification {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "experience_id", nullable = true)
+    private Experience experience;
+
     @Enumerated(EnumType.STRING)
     private NotificationType type;
 
