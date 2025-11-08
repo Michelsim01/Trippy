@@ -41,6 +41,9 @@ public class ItineraryChatbotService {
     private ItineraryAvailabilityIndexRepository itineraryAvailabilityIndexRepository;
 
     @Autowired
+    private ExperienceScheduleRepository experienceScheduleRepository;
+
+    @Autowired
     private OpenAIService openAIService;
 
     @Value("${chatbot.max.results}")
@@ -57,16 +60,20 @@ public class ItineraryChatbotService {
             // Get or create chat session
             ChatbotSession session = getOrCreateSession(request.getSessionId(), userId);
 
+            // Retrieve conversation history for this session (excluding current message)
+            List<ChatbotMessage> conversationHistory = session.getMessages();
+            logger.info("Retrieved conversation history: {} previous messages", conversationHistory.size());
+
             // Build comprehensive context for itinerary planning
             String context = buildItineraryContext(request.getMessage());
 
             logger.info("Built context for itinerary planning (length: {})", context.length());
             logger.debug("Context content: {}", context);
 
-            // Generate AI response with itinerary planning context
-            logger.info("Calling OpenAI with message length: {}, context length: {}",
-                request.getMessage().length(), context.length());
-            String botResponse = openAIService.generateChatResponse(request.getMessage(), context);
+            // Generate AI response with itinerary planning context AND conversation history
+            logger.info("Calling OpenAI with message length: {}, context length: {}, conversation history: {} messages",
+                request.getMessage().length(), context.length(), conversationHistory.size());
+            String botResponse = openAIService.generateChatResponse(request.getMessage(), context, conversationHistory);
 
             logger.info("Received OpenAI response - length: {} characters", botResponse.length());
             logger.info("Response ends with: '{}'",
@@ -121,22 +128,78 @@ public class ItineraryChatbotService {
 
             if (params.getDestination() != null && !params.getDestination().isEmpty()) {
                 // Use SQL-based location filtering for better performance
+                logger.info("🔍 Executing location-filtered query:");
+                logger.info("   Destination: '{}'", params.getDestination());
+                logger.info("   Similarity threshold: {}", similarityThreshold);
+                logger.info("   Max experiences: {}", maxExperiences);
+                logger.info("   SQL will search: metadata->>'location' ILIKE '%{}%' OR metadata->>'country' ILIKE '%{}%'",
+                    params.getDestination(), params.getDestination());
+
+                // Fetch more docs since we'll filter out logistics
                 relevantExperiences = experienceKnowledgeBaseRepository.findSimilarDocumentsByLocation(
                     embeddingString,
                     params.getDestination(),
                     similarityThreshold,
-                    maxExperiences
+                    maxExperiences * 3
                 );
-                logger.info("Found {} relevant experiences for destination '{}' using SQL filtering",
+
+                // Filter out logistics documents (workaround for repository query not working)
+                int beforeFilter = relevantExperiences.size();
+
+                logger.info("DEBUG: Before filter, first 3 docs:");
+                relevantExperiences.stream().limit(3).forEach(doc ->
+                    logger.info("  - ID: {}, Type: '{}'", doc.getDocumentId(), doc.getDocumentType())
+                );
+
+                relevantExperiences = relevantExperiences.stream()
+                    .filter(doc -> {
+                        boolean keep = !"itinerary_logistics".equals(doc.getDocumentType());
+                        if (!keep) {
+                            logger.debug("FILTERING OUT: {} (type: {})", doc.getDocumentId(), doc.getDocumentType());
+                        }
+                        return keep;
+                    })
+                    .limit(maxExperiences)
+                    .collect(Collectors.toList());
+
+                logger.info("DEBUG: After filter, first 3 docs:");
+                relevantExperiences.stream().limit(3).forEach(doc ->
+                    logger.info("  - ID: {}, Type: '{}'", doc.getDocumentId(), doc.getDocumentType())
+                );
+
+                logger.info("🔧 Filtered: {} total docs → {} logistics removed → {} experience docs kept",
+                    beforeFilter, beforeFilter - relevantExperiences.size(), relevantExperiences.size());
+
+                logger.info("✅ Found {} relevant experiences for destination '{}' using SQL filtering",
                     relevantExperiences.size(), params.getDestination());
+
+                if (relevantExperiences.isEmpty()) {
+                    logger.warn("⚠️  No experiences matched location filter for '{}'", params.getDestination());
+                    logger.warn("   This could mean:");
+                    logger.warn("   1. No experiences have metadata->>'location' or metadata->>'country' matching '{}'", params.getDestination());
+                    logger.warn("   2. Similarity threshold {} is too strict", similarityThreshold);
+                    logger.warn("   3. Embedding similarity is below threshold for all experiences in this location");
+                }
             } else {
                 // No destination specified, search globally
+                logger.info("🔍 Executing global query (no location filter)");
                 relevantExperiences = experienceKnowledgeBaseRepository.findSimilarDocuments(
                     embeddingString,
                     similarityThreshold,
-                    maxExperiences
+                    maxExperiences * 3
                 );
-                logger.info("Found {} relevant experiences (no location filter)", relevantExperiences.size());
+
+                // Filter out logistics documents
+                int beforeFilter = relevantExperiences.size();
+                relevantExperiences = relevantExperiences.stream()
+                    .filter(doc -> !"logistics".equals(doc.getDocumentType()))
+                    .limit(maxExperiences)
+                    .collect(Collectors.toList());
+
+                logger.info("🔧 Filtered: {} total docs → {} logistics removed → {} experience docs kept",
+                    beforeFilter, beforeFilter - relevantExperiences.size(), relevantExperiences.size());
+
+                logger.info("✅ Found {} relevant experiences (no location filter)", relevantExperiences.size());
             }
 
             if (relevantExperiences.isEmpty()) {
@@ -149,6 +212,14 @@ public class ItineraryChatbotService {
             }
 
             // Extract experience IDs and create ID-to-title mapping
+            logger.info("🔍 Extracting experience IDs from {} knowledge base documents:", relevantExperiences.size());
+            for (ExperienceKnowledgeBaseDocument doc : relevantExperiences) {
+                logger.info("   Document ID: {}, sourceExperienceId: {}, title: {}",
+                    doc.getDocumentId(),
+                    doc.getSourceExperienceId(),
+                    doc.getTitle());
+            }
+
             List<Long> experienceIds = relevantExperiences.stream()
                 .map(ExperienceKnowledgeBaseDocument::getSourceExperienceId)
                 .filter(Objects::nonNull)
@@ -172,17 +243,7 @@ public class ItineraryChatbotService {
                 routes = itineraryDistanceMatrixRepository.findRoutesBetweenExperiences(experienceIds);
             }
 
-            // 4. Get availability data for next 30 days
-            LocalDate startDate = LocalDate.now();
-            LocalDate endDate = startDate.plusDays(30);
-            List<ItineraryAvailabilityIndex> availabilities =
-                itineraryAvailabilityIndexRepository.findByExperiencesAndDateRange(
-                    experienceIds,
-                    startDate,
-                    endDate
-                );
-
-            // 5. Calculate trip date range from user query
+            // 4. Calculate trip date range from user query FIRST
             LocalDate tripStartDate;
             if (params.getStartDate() != null) {
                 tripStartDate = params.getStartDate();
@@ -192,7 +253,34 @@ public class ItineraryChatbotService {
             }
 
             int tripDuration = params.getTripDuration() != null ? params.getTripDuration() : 3;
-            LocalDate tripEndDate = tripStartDate.plusDays(tripDuration);
+            // Trip end date should be start + (duration - 1)
+            // Example: 3-day trip from Nov 19 = Day 1 (Nov 19), Day 2 (Nov 20), Day 3 (Nov 21)
+            LocalDate tripEndDate = tripStartDate.plusDays(tripDuration - 1);
+
+            // 5. Get availability data for EXACT TRIP DATE RANGE ONLY
+            // No buffer - we want strict date matching to prevent AI from assigning wrong dates
+            LocalDate availabilityStart = tripStartDate;
+            LocalDate availabilityEnd = tripEndDate;
+
+            logger.info("Fetching availability for exact trip dates {} to {}",
+                tripStartDate, tripEndDate);
+
+            List<ItineraryAvailabilityIndex> availabilities =
+                itineraryAvailabilityIndexRepository.findByExperiencesAndDateRange(
+                    experienceIds,
+                    availabilityStart,
+                    availabilityEnd
+                );
+
+            // Fetch actual schedules with times
+            List<ExperienceSchedule> schedules =
+                experienceScheduleRepository.findAvailableSchedulesByExperiencesAndDateRange(
+                    experienceIds,
+                    availabilityStart,
+                    availabilityEnd
+                );
+
+            logger.info("📅 Fetched {} schedule records with actual times", schedules.size());
 
             // 6. Build context string
             context.append("=== ITINERARY PLANNING CONTEXT ===\n\n");
@@ -223,13 +311,66 @@ public class ItineraryChatbotService {
             context.append("- Balance experience variety and proximity\n");
             context.append("- Provide practical travel tips and recommendations\n\n");
 
-            // Add available experiences
-            context.append("=== AVAILABLE EXPERIENCES ===\n\n");
-            for (ExperienceKnowledgeBaseDocument exp : relevantExperiences) {
-                context.append(exp.getContentText()).append("\n\n");
+            // Add availability information FIRST (most critical - must not be truncated!)
+            if (!availabilities.isEmpty()) {
+                logger.info("📅 Total availability records found: {}", availabilities.size());
+
+                // Log each availability record for debugging
+                for (ItineraryAvailabilityIndex avail : availabilities) {
+                    logger.info("  Experience #{}: scheduleDate={}, availableCount={}, bookingPressure={}",
+                        avail.getExperienceId(),
+                        avail.getScheduleDate(),
+                        avail.getAvailableSchedulesCount(),
+                        avail.getBookingPressure());
+                }
+
+                context.append("=== AVAILABILITY (Exact Trip Dates Only) ===\n\n");
+                Map<Long, List<ItineraryAvailabilityIndex>> availByExperience = availabilities.stream()
+                    .collect(Collectors.groupingBy(ItineraryAvailabilityIndex::getExperienceId));
+
+                // Group schedules by experience
+                Map<Long, List<ExperienceSchedule>> schedulesByExperience = schedules.stream()
+                    .collect(Collectors.groupingBy(schedule -> schedule.getExperience().getExperienceId()));
+
+                for (Map.Entry<Long, List<ItineraryAvailabilityIndex>> entry : availByExperience.entrySet()) {
+                    List<ExperienceSchedule> experienceSchedules = schedulesByExperience.getOrDefault(entry.getKey(), new ArrayList<>());
+                    String formattedAvail = formatAvailabilityInfo(entry.getKey(), entry.getValue(), experienceSchedules, experienceIdToTitle);
+                    logger.info("📋 Availability info for Experience #{}: {}", entry.getKey(), formattedAvail);
+                    context.append(formattedAvail).append("\n");
+                }
+            } else {
+                logger.warn("⚠️  No availability records found for trip dates {} to {}", availabilityStart, availabilityEnd);
+                context.append("=== AVAILABILITY ===\n\n");
+                context.append("⚠️  No Trippy experiences have availability during the requested trip dates.\n");
+                context.append("Please create an itinerary using web-based activities and attractions.\n\n");
             }
 
-            // Add routing information
+            // Add available experiences (ONLY those with availability during trip dates!)
+            // Get set of experience IDs that have availability
+            Set<Long> experiencesWithAvailability = availabilities.stream()
+                .map(ItineraryAvailabilityIndex::getExperienceId)
+                .collect(Collectors.toSet());
+
+            // Filter experiences to only include those with availability
+            List<ExperienceKnowledgeBaseDocument> experiencesWithAvailabilityDocs = relevantExperiences.stream()
+                .filter(exp -> exp.getSourceExperienceId() != null &&
+                              experiencesWithAvailability.contains(exp.getSourceExperienceId()))
+                .collect(Collectors.toList());
+
+            logger.info("📋 Experiences with availability: {}/{} experiences have availability during trip dates",
+                experiencesWithAvailabilityDocs.size(), relevantExperiences.size());
+
+            context.append("=== AVAILABLE EXPERIENCES ===\n\n");
+            if (!experiencesWithAvailabilityDocs.isEmpty()) {
+                for (ExperienceKnowledgeBaseDocument exp : experiencesWithAvailabilityDocs) {
+                    context.append(exp.getContentText()).append("\n\n");
+                }
+            } else {
+                context.append("⚠️  No Trippy experiences have availability during your requested trip dates.\n");
+                context.append("The itinerary below will include web-based activities and attractions instead.\n\n");
+            }
+
+            // Add routing information (can be truncated if needed)
             if (!routes.isEmpty()) {
                 context.append("=== TRANSPORTATION & ROUTING ===\n\n");
                 for (ItineraryDistanceMatrix route : routes) {
@@ -237,21 +378,21 @@ public class ItineraryChatbotService {
                 }
             }
 
-            // Add availability information
-            if (!availabilities.isEmpty()) {
-                context.append("=== AVAILABILITY (Next 30 Days) ===\n\n");
-                Map<Long, List<ItineraryAvailabilityIndex>> availByExperience = availabilities.stream()
-                    .collect(Collectors.groupingBy(ItineraryAvailabilityIndex::getExperienceId));
-
-                for (Map.Entry<Long, List<ItineraryAvailabilityIndex>> entry : availByExperience.entrySet()) {
-                    context.append(formatAvailabilityInfo(entry.getKey(), entry.getValue(), experienceIdToTitle)).append("\n");
-                }
-            }
-
             // Truncate if too long
             String fullContext = context.toString();
             if (fullContext.length() > maxContextLength) {
+                logger.warn("⚠️  Context length {} exceeds max {}, truncating", fullContext.length(), maxContextLength);
                 fullContext = fullContext.substring(0, maxContextLength) + "\n... (context truncated)";
+            }
+
+            // Log the complete AVAILABILITY section that AI will see
+            int availSectionStart = fullContext.indexOf("=== AVAILABILITY");
+            int availSectionEnd = fullContext.indexOf("\n\n===", availSectionStart + 10);
+            if (availSectionStart != -1) {
+                String availSection = availSectionEnd != -1
+                    ? fullContext.substring(availSectionStart, availSectionEnd)
+                    : fullContext.substring(availSectionStart);
+                logger.info("🤖 AI will see this AVAILABILITY section:\n{}", availSection);
             }
 
             return fullContext;
@@ -306,7 +447,8 @@ public class ItineraryChatbotService {
         return sb.toString();
     }
 
-    private String formatAvailabilityInfo(Long experienceId, List<ItineraryAvailabilityIndex> availabilities, Map<Long, String> experienceIdToTitle) {
+    private String formatAvailabilityInfo(Long experienceId, List<ItineraryAvailabilityIndex> availabilities,
+                                         List<ExperienceSchedule> schedules, Map<Long, String> experienceIdToTitle) {
         StringBuilder sb = new StringBuilder();
 
         // Include experience title if available
@@ -317,27 +459,61 @@ public class ItineraryChatbotService {
             sb.append(String.format("Experience #%d:\n", experienceId));
         }
 
-        long availableDays = availabilities.stream()
-            .filter(a -> a.getAvailableSchedulesCount() > 0)
-            .count();
+        // Group schedules by date
+        Map<LocalDate, List<ExperienceSchedule>> schedulesByDate = schedules.stream()
+            .collect(Collectors.groupingBy(schedule -> schedule.getStartDateTime().toLocalDate()));
 
-        sb.append(String.format("- Available on %d days in next 30 days\n", availableDays));
-
-        // Find days with high availability (low booking pressure)
-        List<LocalDate> bestDates = availabilities.stream()
+        // Get ALL available dates (where availableSchedulesCount > 0)
+        List<LocalDate> availableDates = availabilities.stream()
             .filter(a -> a.getAvailableSchedulesCount() > 0)
-            .filter(a -> a.getBookingPressure() != null && a.getBookingPressure().doubleValue() < 50.0)
-            .sorted(Comparator.comparing(ItineraryAvailabilityIndex::getBookingPressure))
-            .limit(5)
             .map(ItineraryAvailabilityIndex::getScheduleDate)
+            .sorted()
             .collect(Collectors.toList());
 
-        if (!bestDates.isEmpty()) {
-            sb.append("- Best dates (low demand): ");
-            sb.append(bestDates.stream()
-                .map(LocalDate::toString)
-                .collect(Collectors.joining(", ")));
-            sb.append("\n");
+        if (availableDates.isEmpty()) {
+            sb.append("- ❌ NO AVAILABILITY during trip dates\n");
+            sb.append("- DO NOT include this experience in the itinerary\n");
+            sb.append("- Use web-based alternatives instead\n");
+        } else {
+            sb.append(String.format("- ✅ Available on %d dates with schedules:\n", availableDates.size()));
+
+            // Show each date with its schedule times
+            for (LocalDate date : availableDates) {
+                List<ExperienceSchedule> dateSchedules = schedulesByDate.getOrDefault(date, new ArrayList<>());
+                sb.append(String.format("  %s:\n", date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))));
+
+                if (dateSchedules.isEmpty()) {
+                    sb.append("    (Schedule times not available)\n");
+                } else {
+                    for (ExperienceSchedule schedule : dateSchedules) {
+                        java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a");
+                        String startTime = schedule.getStartDateTime().format(timeFormatter);
+                        String endTime = schedule.getEndDateTime().format(timeFormatter);
+                        sb.append(String.format("    %s to %s (%d spots available)\n",
+                            startTime, endTime, schedule.getAvailableSpots()));
+                    }
+                }
+            }
+
+            sb.append("- ⚠️  ONLY assign this experience to dates listed above\n");
+            sb.append("- ⚠️  ONLY use the schedule times shown for each date\n");
+
+            // Highlight best dates (low booking pressure) if available
+            List<LocalDate> bestDates = availabilities.stream()
+                .filter(a -> a.getAvailableSchedulesCount() > 0)
+                .filter(a -> a.getBookingPressure() != null && a.getBookingPressure().doubleValue() < 50.0)
+                .sorted(Comparator.comparing(ItineraryAvailabilityIndex::getBookingPressure))
+                .limit(3)
+                .map(ItineraryAvailabilityIndex::getScheduleDate)
+                .collect(Collectors.toList());
+
+            if (!bestDates.isEmpty()) {
+                sb.append("- 💡 Best dates (low demand): ");
+                sb.append(bestDates.stream()
+                    .map(date -> date.format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy")))
+                    .collect(Collectors.joining(", ")));
+                sb.append("\n");
+            }
         }
 
         return sb.toString();

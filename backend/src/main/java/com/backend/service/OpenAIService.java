@@ -1,5 +1,6 @@
 package com.backend.service;
 
+import com.backend.entity.ChatbotMessage;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,20 +53,47 @@ public class OpenAIService {
         }
     }
 
-    public String generateChatResponse(String userMessage, String context) {
+    public String generateChatResponse(String userMessage, String context, List<ChatbotMessage> conversationHistory) {
         try {
             String systemPrompt = buildSystemPrompt(context);
 
-            logger.info("OpenAI Request - System prompt length: {}, User message length: {}",
-                systemPrompt.length(), userMessage.length());
+            // Prune conversation history if needed to fit within token budget
+            List<ChatbotMessage> prunedHistory = pruneConversationHistory(conversationHistory, systemPrompt, userMessage);
+
+            // Build message list with conversation history
+            List<ChatMessage> messages = new ArrayList<>();
+
+            // 1. Add system prompt
+            messages.add(new ChatMessage(ChatMessageRole.SYSTEM.value(), systemPrompt));
+
+            // 2. Add pruned conversation history (previous user/assistant messages)
+            if (prunedHistory != null && !prunedHistory.isEmpty()) {
+                for (ChatbotMessage msg : prunedHistory) {
+                    // Add user message
+                    if (msg.getUserMessage() != null && !msg.getUserMessage().isEmpty()) {
+                        messages.add(new ChatMessage(ChatMessageRole.USER.value(), msg.getUserMessage()));
+                    }
+                    // Add assistant response
+                    if (msg.getBotResponse() != null && !msg.getBotResponse().isEmpty()) {
+                        messages.add(new ChatMessage(ChatMessageRole.ASSISTANT.value(), msg.getBotResponse()));
+                    }
+                }
+            }
+
+            // 3. Add current user message
+            messages.add(new ChatMessage(ChatMessageRole.USER.value(), userMessage));
+
+            logger.info("OpenAI Request - System prompt: {} chars, Conversation history: {} messages (pruned from {}), Current message: {} chars",
+                systemPrompt.length(),
+                prunedHistory != null ? prunedHistory.size() : 0,
+                conversationHistory != null ? conversationHistory.size() : 0,
+                userMessage.length());
+            logger.info("Total messages in context: {}", messages.size());
 
             ChatCompletionRequest request = ChatCompletionRequest.builder()
                     .model(chatModel)
-                    .messages(List.of(
-                            new ChatMessage(ChatMessageRole.SYSTEM.value(), systemPrompt),
-                            new ChatMessage(ChatMessageRole.USER.value(), userMessage)
-                    ))
-                    .maxTokens(4096)  // Increased to GPT-3.5-turbo's max output
+                    .messages(messages)
+                    .maxTokens(4096)  // Max output tokens
                     .temperature(0.7)
                     .build();
 
@@ -108,7 +137,79 @@ public class OpenAIService {
             return "I'm experiencing technical difficulties. Please try again later.";
         }
     }
-    
+
+    /**
+     * Prune conversation history to fit within token budget.
+     * Rough estimate: 1 token ≈ 4 characters
+     * Model: gpt-3.5-turbo-16k has 16,384 token context window
+     * Reserve: 4,096 tokens for output, leaving ~12,000 for input
+     */
+    private List<ChatbotMessage> pruneConversationHistory(List<ChatbotMessage> history, String systemPrompt, String currentMessage) {
+        if (history == null || history.isEmpty()) {
+            return history;
+        }
+
+        // Estimate tokens (rough approximation: 1 token ≈ 4 characters)
+        int systemPromptTokens = systemPrompt.length() / 4;
+        int currentMessageTokens = currentMessage.length() / 4;
+        int maxInputTokens = 12000;  // Reserve 4k for output
+        int availableForHistory = maxInputTokens - systemPromptTokens - currentMessageTokens;
+
+        logger.info("Token budget - System: ~{}, Current msg: ~{}, Available for history: ~{}",
+            systemPromptTokens, currentMessageTokens, availableForHistory);
+
+        // Calculate total history size
+        int totalHistoryTokens = 0;
+        for (ChatbotMessage msg : history) {
+            int msgTokens = 0;
+            if (msg.getUserMessage() != null) {
+                msgTokens += msg.getUserMessage().length() / 4;
+            }
+            if (msg.getBotResponse() != null) {
+                msgTokens += msg.getBotResponse().length() / 4;
+            }
+            totalHistoryTokens += msgTokens;
+        }
+
+        logger.info("Total conversation history: ~{} tokens across {} messages", totalHistoryTokens, history.size());
+
+        // If history fits, return as-is
+        if (totalHistoryTokens <= availableForHistory) {
+            logger.info("✅ Conversation history fits within budget - no pruning needed");
+            return history;
+        }
+
+        // Prune older messages, keeping most recent ones
+        logger.warn("⚠️ Conversation history exceeds budget (~{} > {}). Pruning older messages...",
+            totalHistoryTokens, availableForHistory);
+
+        List<ChatbotMessage> prunedHistory = new ArrayList<>();
+        int accumulatedTokens = 0;
+
+        // Iterate from most recent to oldest
+        for (int i = history.size() - 1; i >= 0; i--) {
+            ChatbotMessage msg = history.get(i);
+            int msgTokens = 0;
+            if (msg.getUserMessage() != null) {
+                msgTokens += msg.getUserMessage().length() / 4;
+            }
+            if (msg.getBotResponse() != null) {
+                msgTokens += msg.getBotResponse().length() / 4;
+            }
+
+            if (accumulatedTokens + msgTokens <= availableForHistory) {
+                prunedHistory.add(0, msg);  // Add to beginning to maintain order
+                accumulatedTokens += msgTokens;
+            } else {
+                logger.info("Pruned {} older messages to fit token budget", i + 1);
+                break;
+            }
+        }
+
+        logger.info("✅ Kept {} most recent messages (~{} tokens)", prunedHistory.size(), accumulatedTokens);
+        return prunedHistory;
+    }
+
     public String generateExperienceChatResponse(String userMessage, String context) {
         try {
             String systemPrompt = buildExperienceSystemPrompt(context);
@@ -210,14 +311,50 @@ public class OpenAIService {
         prompt.append("- Include mix of popular and hidden gem locations\\n\\n");
 
         prompt.append("DATE ASSIGNMENT INSTRUCTIONS:\\n");
+        prompt.append("🚨 CRITICAL: STRICT DATE VALIDATION REQUIRED 🚨\\n\\n");
+
+        prompt.append("BASIC DATE FRAMEWORK:\\n");
         prompt.append("- The USER TRIP DETAILS section specifies the trip start date and duration\\n");
         prompt.append("- Assign Day 1 to the trip start date, Day 2 to start date + 1, etc.\\n");
-        prompt.append("- Use this date framework to assign specific dates to all experiences and activities\\n");
-        prompt.append("- For Trippy experiences, cross-reference the AVAILABILITY section\\n");
-        prompt.append("- The AVAILABILITY section shows experiences by their ID and name (e.g., 'Experience #123 (Red Fort Heritage Tour)')\\n");
-        prompt.append("- Match the experience names from AVAILABLE EXPERIENCES with the IDs in AVAILABILITY\\n");
-        prompt.append("- Schedule Trippy experiences on dates when they are available and have low booking pressure\\n");
-        prompt.append("- If an experience is not available on the exact day needed, adjust the itinerary or choose an alternative\\n\\n");
+        prompt.append("- Use this date framework to assign specific dates to all experiences and activities\\n\\n");
+
+        prompt.append("TRIPPY EXPERIENCE DATE VALIDATION (MANDATORY):\\n");
+        prompt.append("⚠️  CRITICAL RULE: A Trippy experience assigned to a date NOT in its availability list is WRONG and INVALID.\\n");
+        prompt.append("⚠️  This is a HARD CONSTRAINT - there are NO exceptions.\\n\\n");
+
+        prompt.append("HOW TO VALIDATE DATES:\\n");
+        prompt.append("1. Check the AVAILABILITY section for the experience\\n");
+        prompt.append("2. Find the list after '✅ Available on X dates:'\\n");
+        prompt.append("3. ONLY use dates from that exact list\\n");
+        prompt.append("4. If the date you want is NOT in the list, DO NOT use this experience\\n\\n");
+
+        prompt.append("WHAT THE AVAILABILITY SECTION SHOWS:\\n");
+        prompt.append("- Each experience shows either:\\n");
+        prompt.append("  • ✅ Available on X dates: [COMPLETE list of valid dates]\\n");
+        prompt.append("  • ❌ NO AVAILABILITY during trip dates\\n");
+        prompt.append("- The list after ✅ is EXHAUSTIVE - if a date is not in the list, the experience is NOT available\\n");
+        prompt.append("- Example: 'Available on 2 dates: Jan 10, 2026, Jan 11, 2026' means ONLY Jan 10 and Jan 11 are valid\\n");
+        prompt.append("  - Jan 12? NO - not in list\\n");
+        prompt.append("  - Jan 13? NO - not in list\\n");
+        prompt.append("  - Jan 10? YES - in list\\n");
+        prompt.append("  - Jan 11? YES - in list\\n\\n");
+
+        prompt.append("WHEN DATES DON'T ALIGN:\\n");
+        prompt.append("- If user wants trip Jan 13-18, but experience only available Jan 10-11:\\n");
+        prompt.append("  ❌ WRONG: Assign experience to Jan 13 (not in availability list)\\n");
+        prompt.append("  ✅ RIGHT: Don't include this experience, use web alternatives instead\\n");
+        prompt.append("- If experience dates fall OUTSIDE the trip dates, skip the experience\\n");
+        prompt.append("- If experience dates fall INSIDE the trip dates, you can adjust the itinerary structure to use them\\n\\n");
+
+        prompt.append("FALLBACK STRATEGY FOR UNAVAILABLE DATES:\\n");
+        prompt.append("- If no Trippy experiences are available for a specific day in the itinerary:\\n");
+        prompt.append("  1. Fill that day with web-based activities using your general knowledge\\n");
+        prompt.append("  2. Use popular attractions, restaurants, and activities from the destination\\n");
+        prompt.append("  3. Provide realistic timing, pricing, and descriptions for web-based activities\\n");
+        prompt.append("- If NO Trippy experiences are available for the entire trip:\\n");
+        prompt.append("  1. Clearly state this at the beginning of your response\\n");
+        prompt.append("  2. Create a complete itinerary using web-based activities\\n");
+        prompt.append("  3. Suggest the user consider different travel dates if they want Trippy experiences\\n\\n");
 
         prompt.append("KEY GUIDELINES:\\n");
         prompt.append("- PRIORITIZE Trippy experiences from the context provided\\n");
@@ -239,10 +376,17 @@ public class OpenAIService {
             prompt.append("4. Include the complete 'Suggested Alternatives' section at the end\\n");
             prompt.append("5. DO NOT end with phrases like 'Stay tuned', 'Coming up next', 'To be continued'\\n");
             prompt.append("6. The itinerary MUST be complete and ready for the user to use immediately\\n\\n");
+            prompt.append("FINAL VALIDATION CHECKLIST (before responding):\\n");
+            prompt.append("For EACH Trippy experience you include, verify:\\n");
+            prompt.append("  ✓ Is the assigned date in the availability list? If NO → Remove this experience\\n");
+            prompt.append("  ✓ Does the AVAILABILITY section show this date? If NO → Remove this experience\\n");
+            prompt.append("  ✓ Would this assignment violate the date rules above? If YES → Remove this experience\\n\\n");
+
             prompt.append("Build your itinerary starting with the Trippy experiences above. ");
             prompt.append("Mark each Trippy experience clearly as [TRIPPY EXPERIENCE]. ");
             prompt.append("Include specific experience names, prices, times, and descriptions from the context. ");
-            prompt.append("Fill gaps with general activities using your knowledge, but ensure Trippy experiences are the foundation of the itinerary. ");
+            prompt.append("BUT ONLY if the experience is available on the date you're assigning it to. ");
+            prompt.append("Fill gaps with general activities using your knowledge. ");
             prompt.append("Research and provide accurate transportation details between all activities. ");
             prompt.append("REMEMBER: Generate the COMPLETE multi-day itinerary NOW - not just Day 1!");
         } else {

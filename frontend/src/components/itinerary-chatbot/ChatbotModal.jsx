@@ -3,6 +3,7 @@ import ChatbotHeader from './ChatbotHeader'
 import ChatbotMessageList from './ChatbotMessageList'
 import ChatbotInput from './ChatbotInput'
 import ChatbotSuggestions from './ChatbotSuggestions'
+import ChatbotSidebar from './ChatbotSidebar'
 import itineraryChatbotService from '../../services/itineraryChatbotService'
 
 const ChatbotModal = ({ isOpen, onClose }) => {
@@ -11,9 +12,14 @@ const ChatbotModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [allSessions, setAllSessions] = useState([])
+  const [loadingSessions, setLoadingSessions] = useState(false)
 
   useEffect(() => {
     if (isOpen) {
+      // Load user's sessions
+      loadUserSessions()
+
       // Load or create session
       const storedSessionId = localStorage.getItem('itineraryChatSessionId')
       if (storedSessionId) {
@@ -47,6 +53,26 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen])
 
+  const loadUserSessions = async () => {
+    try {
+      setLoadingSessions(true)
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (!user.id) {
+        console.error('No user ID found')
+        return
+      }
+
+      const result = await itineraryChatbotService.getUserSessions(user.id)
+      if (result.success && result.data) {
+        setAllSessions(result.data)
+      }
+    } catch (err) {
+      console.error('Error loading user sessions:', err)
+    } finally {
+      setLoadingSessions(false)
+    }
+  }
+
   const createNewSession = () => {
     const newSessionId = itineraryChatbotService.generateSessionId()
     setSessionId(newSessionId)
@@ -56,6 +82,33 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     setError(null)
   }
 
+  const handleNewTrip = () => {
+    createNewSession()
+    loadUserSessions() // Refresh session list
+  }
+
+  const handleSessionSelect = async (sid) => {
+    if (sid === sessionId) return // Already on this session
+    localStorage.setItem('itineraryChatSessionId', sid)
+    await loadSessionHistory(sid)
+  }
+
+  const handleDeleteSession = async (sid) => {
+    try {
+      const result = await itineraryChatbotService.deleteSession(sid)
+      if (result.success) {
+        // If deleting active session, create new one
+        if (sid === sessionId) {
+          createNewSession()
+        }
+        // Refresh session list
+        await loadUserSessions()
+      }
+    } catch (err) {
+      console.error('Error deleting session:', err)
+    }
+  }
+
   const loadSessionHistory = async (sid) => {
     try {
       setLoading(true)
@@ -63,8 +116,32 @@ const ChatbotModal = ({ isOpen, onClose }) => {
 
       if (result.success && result.data) {
         setSessionId(sid)
-        setMessages(result.data.messages || [])
-        setShowSuggestions(result.data.messages?.length === 0)
+
+        // Transform backend message format to frontend format
+        const transformedMessages = []
+        if (result.data.messages && result.data.messages.length > 0) {
+          result.data.messages.forEach(msg => {
+            // Add user message
+            if (msg.userMessage) {
+              transformedMessages.push({
+                role: 'user',
+                content: msg.userMessage,
+                timestamp: msg.timestamp
+              })
+            }
+            // Add bot response
+            if (msg.botResponse) {
+              transformedMessages.push({
+                role: 'assistant',
+                content: msg.botResponse,
+                timestamp: msg.timestamp
+              })
+            }
+          })
+        }
+
+        setMessages(transformedMessages)
+        setShowSuggestions(transformedMessages.length === 0)
         setError(null)
       } else if (result.notFound) {
         // Session not found in backend, but keep the session ID
@@ -167,34 +244,46 @@ const ChatbotModal = ({ isOpen, onClose }) => {
         onClick={handleClose}
       />
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
-        <ChatbotHeader
-          onClose={handleClose}
-          onNewChat={handleNewChat}
+      {/* Modal with Sidebar */}
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] flex overflow-hidden">
+        {/* Sidebar */}
+        <ChatbotSidebar
+          sessions={allSessions}
+          activeSessionId={sessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewTrip={handleNewTrip}
+          onDeleteSession={handleDeleteSession}
         />
 
-        <div className="flex-1 overflow-y-auto">
-          {messages.length === 0 && showSuggestions ? (
-            <ChatbotSuggestions onSuggestionClick={handleSuggestionClick} />
-          ) : (
-            <ChatbotMessageList
-              messages={messages}
-              loading={loading}
-            />
+        {/* Main Chat Area */}
+        <div className="flex-1 flex flex-col">
+          <ChatbotHeader
+            onClose={handleClose}
+            onNewChat={handleNewTrip}
+          />
+
+          <div className="flex-1 overflow-y-auto">
+            {messages.length === 0 && showSuggestions ? (
+              <ChatbotSuggestions onSuggestionClick={handleSuggestionClick} />
+            ) : (
+              <ChatbotMessageList
+                messages={messages}
+                loading={loading}
+              />
+            )}
+          </div>
+
+          <ChatbotInput
+            onSendMessage={handleSendMessage}
+            disabled={loading}
+          />
+
+          {error && (
+            <div className="px-6 py-3 bg-red-50 border-t border-red-100">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
           )}
         </div>
-
-        <ChatbotInput
-          onSendMessage={handleSendMessage}
-          disabled={loading}
-        />
-
-        {error && (
-          <div className="px-6 py-3 bg-red-50 border-t border-red-100">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
       </div>
     </div>
   )

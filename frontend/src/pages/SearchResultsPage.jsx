@@ -32,6 +32,7 @@ const transformExperienceData = (apiData, wishlistItems = []) => {
             id: exp.experienceId,
             title: exp.title,
             location: exp.location,
+            country: exp.country,
             price: exp.price, // This is the key field that was missing!
             averageRating: exp.averageRating || 4.9,
             imageUrl: imageUrl,
@@ -352,11 +353,12 @@ const SearchResultsPage = () => {
             const filtered = allExperiences.filter(experience =>
                     experience.title.toLowerCase().includes(query.toLowerCase()) ||
                 experience.location.toLowerCase().includes(query.toLowerCase()) ||
+                (experience.country && experience.country.toLowerCase().includes(query.toLowerCase())) ||
                 (experience.shortDescription && experience.shortDescription.toLowerCase().includes(query.toLowerCase()))
                 );
                 console.log('Search query:', query);
-                console.log('All experiences:', allExperiences.map(exp => ({ title: exp.title, location: exp.location })));
-                console.log('Filtered results:', filtered.map(exp => ({ title: exp.title, location: exp.location })));
+                console.log('All experiences:', allExperiences.map(exp => ({ title: exp.title, location: exp.location, country: exp.country })));
+                console.log('Filtered results:', filtered.map(exp => ({ title: exp.title, location: exp.location, country: exp.country })));
                 setSearchResults(filtered);
             } else {
                 setSearchResults([]);

@@ -14,8 +14,9 @@ public interface ExperienceKnowledgeBaseRepository extends JpaRepository<Experie
     List<ExperienceKnowledgeBaseDocument> findByDocumentType(String documentType);
     
     @Query(value = """
-        SELECT * FROM experience_knowledge_base 
+        SELECT * FROM experience_knowledge_base
         WHERE embedding <=> CAST(:queryEmbedding AS vector) < :threshold
+        AND document_type != 'itinerary_logistics'
         ORDER BY embedding <=> CAST(:queryEmbedding AS vector)
         LIMIT :limit
         """, nativeQuery = true)
@@ -48,6 +49,7 @@ public interface ExperienceKnowledgeBaseRepository extends JpaRepository<Experie
     @Query(value = """
         SELECT * FROM experience_knowledge_base
         WHERE embedding <=> CAST(:queryEmbedding AS vector) < :threshold
+        AND document_type != 'logistics'
         AND (
             metadata->>'location' ILIKE CONCAT('%', :location, '%')
             OR metadata->>'country' ILIKE CONCAT('%', :location, '%')
