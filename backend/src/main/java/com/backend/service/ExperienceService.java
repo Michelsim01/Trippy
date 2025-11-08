@@ -9,6 +9,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -34,6 +35,9 @@ public class ExperienceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ExperienceDiscountService discountService;
 
     @Transactional
     public Experience createCompleteExperience(Map<String, Object> payload) {
@@ -67,10 +71,15 @@ public class ExperienceService {
             experience.setCoverPhotoUrl((String) experienceData.get("coverPhotoUrl"));
             experience.setWhatIncluded((String) experienceData.get("whatIncluded"));
             experience.setImportantInfo((String) experienceData.get("importantInfo"));
-            // Handle price - check for null
+            
+            // Handle price - check for null and set as original price for new experiences
             Object priceObj = experienceData.get("price");
             if (priceObj != null && priceObj instanceof Number) {
-                experience.setPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
+                java.math.BigDecimal price = java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue());
+                experience.setPrice(price);
+                experience.setOriginalPrice(price); // Set original price for new experience
+                experience.setDiscountPercentage(java.math.BigDecimal.ZERO);
+                experience.setLastPriceUpdate(LocalDateTime.now());
             }
 
             // Handle participants allowed - check for null
@@ -314,10 +323,33 @@ public class ExperienceService {
         existingExperience.setWhatIncluded((String) experienceData.get("whatIncluded"));
         existingExperience.setImportantInfo((String) experienceData.get("importantInfo"));
 
-        // Handle price - check for null
+        // Handle price with discount logic
         Object priceObj = experienceData.get("price");
         if (priceObj != null && priceObj instanceof Number) {
-            existingExperience.setPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
+            java.math.BigDecimal newPrice = java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue());
+            java.math.BigDecimal oldPrice = existingExperience.getPrice();
+            
+            // Check if price actually changed
+            if (oldPrice == null || newPrice.compareTo(oldPrice) != 0) {
+                // Store old price for notification check
+                boolean shouldNotify = false;
+                
+                // Update discount fields
+                discountService.updateDiscountFields(existingExperience, newPrice);
+                
+                // Check if we should notify (discount >= 10% and price decreased)
+                if (existingExperience.getDiscountPercentage() != null && 
+                    existingExperience.getDiscountPercentage().compareTo(new java.math.BigDecimal("10")) >= 0 &&
+                    (oldPrice == null || newPrice.compareTo(oldPrice) < 0)) {
+                    shouldNotify = true;
+                }
+                
+                // Note: Actual notification will be sent after save to ensure transaction completes
+                if (shouldNotify) {
+                    // We'll handle this after the transaction completes
+                    existingExperience.setUpdatedAt(LocalDateTime.now()); // Mark for notification
+                }
+            }
         }
 
         // Handle participants allowed - check for null
@@ -539,6 +571,19 @@ public class ExperienceService {
             }
         } else {
             System.out.println("No schedules to update - schedules list is null or empty");
+        }
+
+        // Send notifications to wishlist users if discount is significant
+        // This is done after all updates are complete
+        if (updatedExperience.getDiscountPercentage() != null && 
+            updatedExperience.getDiscountPercentage().compareTo(new java.math.BigDecimal("10")) >= 0) {
+            try {
+                discountService.notifyWishlistUsers(updatedExperience);
+                System.out.println("Sent discount notifications for experience: " + updatedExperience.getTitle());
+            } catch (Exception e) {
+                // Log error but don't fail the update
+                System.err.println("Failed to send discount notifications: " + e.getMessage());
+            }
         }
 
         return updatedExperience;

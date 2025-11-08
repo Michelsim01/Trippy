@@ -11,6 +11,8 @@ public class ExperienceResponseDTO {
     private String shortDescription;
     private String location;
     private BigDecimal price;
+    private BigDecimal originalPrice;
+    private BigDecimal discountPercentage;
     private BigDecimal totalStars;
     private Integer totalReviews;
     private BigDecimal averageRating;
@@ -29,6 +31,8 @@ public class ExperienceResponseDTO {
         this.shortDescription = experience.getShortDescription();
         this.location = experience.getLocation();
         this.price = experience.getPrice();
+        this.originalPrice = experience.getOriginalPrice();
+        this.discountPercentage = experience.getDiscountPercentage();
         this.totalStars = experience.getTotalStars();
         this.totalReviews = experience.getTotalReviews();
         this.averageRating = experience.getAverageRating();
@@ -57,6 +61,12 @@ public class ExperienceResponseDTO {
     
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal price) { this.price = price; }
+    
+    public BigDecimal getOriginalPrice() { return originalPrice; }
+    public void setOriginalPrice(BigDecimal originalPrice) { this.originalPrice = originalPrice; }
+    
+    public BigDecimal getDiscountPercentage() { return discountPercentage; }
+    public void setDiscountPercentage(BigDecimal discountPercentage) { this.discountPercentage = discountPercentage; }
     
     public BigDecimal getTotalStars() { return totalStars; }
     public void setTotalStars(BigDecimal totalStars) { this.totalStars = totalStars; }

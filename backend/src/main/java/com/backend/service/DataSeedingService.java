@@ -815,7 +815,14 @@ public class DataSeedingService {
             experience.setFullDescription(generateFullDescription((String) data[3]));
             experience.setCategory((ExperienceCategory) data[4]);
             experience.setDuration(BigDecimal.valueOf((Double) data[5]));
-            experience.setPrice(BigDecimal.valueOf((Double) data[6]));
+            
+            // Set price and initialize discount fields
+            BigDecimal price = BigDecimal.valueOf((Double) data[6]);
+            experience.setPrice(price);
+            experience.setOriginalPrice(price); // Initialize originalPrice same as price
+            experience.setDiscountPercentage(BigDecimal.ZERO); // No discount initially
+            experience.setLastPriceUpdate(LocalDateTime.now()); // Set initial price update time
+            
             experience.setParticipantsAllowed((Integer) data[7]);
             experience.setCoverPhotoUrl((String) data[8]);
             experience.setStatus(ExperienceStatus.ACTIVE);

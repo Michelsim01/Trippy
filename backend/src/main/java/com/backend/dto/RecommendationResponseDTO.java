@@ -9,12 +9,15 @@ public class RecommendationResponseDTO {
     private String location;
     private String country;
     private BigDecimal price;
+    private BigDecimal originalPrice;
+    private BigDecimal discountPercentage;
     private String category;
     private Double averageRating;
     private Integer totalReviews;
     private String coverPhotoUrl;
     private String shortDescription;
     private BigDecimal duration;
+    private Integer participantsAllowed;
 
     // Recommendation metadata
     private Double recommendationScore;
@@ -66,6 +69,22 @@ public class RecommendationResponseDTO {
         this.price = price;
     }
 
+    public BigDecimal getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(BigDecimal originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+
+    public BigDecimal getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(BigDecimal discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
     public String getCategory() {
         return category;
     }
@@ -112,6 +131,14 @@ public class RecommendationResponseDTO {
 
     public void setDuration(BigDecimal duration) {
         this.duration = duration;
+    }
+
+    public Integer getParticipantsAllowed() {
+        return participantsAllowed;
+    }
+
+    public void setParticipantsAllowed(Integer participantsAllowed) {
+        this.participantsAllowed = participantsAllowed;
     }
 
     public Double getRecommendationScore() {

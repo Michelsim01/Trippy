@@ -240,12 +240,15 @@ public class RecommendationService {
                 dto.setLocation(exp.getLocation());
                 dto.setCountry(exp.getCountry());
                 dto.setPrice(exp.getPrice());
+                dto.setOriginalPrice(exp.getOriginalPrice());
+                dto.setDiscountPercentage(exp.getDiscountPercentage());
                 dto.setCategory(exp.getCategory() != null ? exp.getCategory().name() : null);
                 dto.setAverageRating(exp.getAverageRating() != null ? exp.getAverageRating().doubleValue() : null);
                 dto.setTotalReviews(exp.getTotalReviews());
                 dto.setCoverPhotoUrl(exp.getCoverPhotoUrl());
                 dto.setShortDescription(exp.getShortDescription());
                 dto.setDuration(exp.getDuration());
+                dto.setParticipantsAllowed(exp.getParticipantsAllowed());
                 dto.setRecommendationScore(sim.getSimilarityScore().doubleValue());
                 dto.setRecommendationReason("Similar to this experience");
 
@@ -618,12 +621,15 @@ public class RecommendationService {
         dto.setLocation(exp.getLocation());
         dto.setCountry(exp.getCountry());
         dto.setPrice(exp.getPrice());
+        dto.setOriginalPrice(exp.getOriginalPrice());
+        dto.setDiscountPercentage(exp.getDiscountPercentage());
         dto.setCategory(exp.getCategory() != null ? exp.getCategory().name() : null);
         dto.setAverageRating(exp.getAverageRating() != null ? exp.getAverageRating().doubleValue() : null);
         dto.setTotalReviews(exp.getTotalReviews());
         dto.setCoverPhotoUrl(exp.getCoverPhotoUrl());
         dto.setShortDescription(exp.getShortDescription());
         dto.setDuration(exp.getDuration());
+        dto.setParticipantsAllowed(exp.getParticipantsAllowed());
         dto.setRecommendationScore(scored.getFinalScore());
         dto.setRecommendationReason(scored.getRecommendationReason());
         dto.setScoreBreakdown(scored.getScoreBreakdown());

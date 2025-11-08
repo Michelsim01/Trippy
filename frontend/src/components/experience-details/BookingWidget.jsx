@@ -260,7 +260,22 @@ const BookingWidget = ({
     <div className={`bg-white border border-neutrals-6 rounded-2xl shadow-lg ${isMobile ? 'p-4' : 'p-6'}`}>
       {/* Price Section */}
       <div className={isMobile ? 'mb-4' : 'mb-6'}>
+        {/* Discount Badge and Original Price (shown if discount >= 10%) */}
+        {displayData.discountPercentage != null && parseFloat(displayData.discountPercentage) >= 10 && displayData.originalPrice && (
+          <div className="flex items-center gap-2 mb-2">
+            {/* Discount Badge */}
+            <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
+              {Math.round(parseFloat(displayData.discountPercentage))}% OFF
+            </div>
+            {/* Original Price with Strikethrough */}
+            <span className={`${isMobile ? 'text-lg' : 'text-xl'} text-gray-500 line-through decoration-2`}>
+              ${displayData.originalPrice}
+            </span>
+          </div>
+        )}
+        
         <div className={`flex items-baseline gap-${isMobile ? '2' : '3'} mb-2`}>
+          {/* Current Price */}
           <span className={`${isMobile ? 'text-2xl' : 'text-3xl'} font-bold text-neutrals-2`}>
             ${displayData.price || '89'}
           </span>

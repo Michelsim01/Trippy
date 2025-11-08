@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ChevronDown, AlertCircle } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useFormData } from '../contexts/FormDataContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -62,11 +62,6 @@ export default function EditExperiencePricingPage() {
   }
 
   const handlePriceChange = (value) => {
-    // Don't allow changes to price if field is restricted
-    if (isFieldRestricted('price')) {
-      return;
-    }
-
     const numericValue = value.replace(/[^0-9.]/g, '');
     const parts = numericValue.split('.');
     const formatted = parts[0] + (parts[1] !== undefined ? '.' + parts[1].slice(0, 2) : '');
@@ -99,6 +94,88 @@ export default function EditExperiencePricingPage() {
         confirmButtonColor: '#FF385C'
       });
       return;
+    }
+
+    // Check for price update warnings
+    const newPrice = parseFloat(formData.pricePerPerson);
+    const oldPrice = contextData?.price ? parseFloat(contextData.price) : null;
+    const originalPrice = contextData?.originalPrice ? parseFloat(contextData.originalPrice) : oldPrice;
+    
+    if (oldPrice && newPrice !== oldPrice) {
+      // HIGHEST PRIORITY: Check if price is lowered but discount is less than 10%
+      // This warning takes precedence over all other warnings
+      if (newPrice < oldPrice && originalPrice) {
+        const discountPercentage = ((originalPrice - newPrice) / originalPrice) * 100;
+        
+        if (discountPercentage > 0 && discountPercentage < 10) {
+          const result = await Swal.fire({
+            title: 'Discount Too Small',
+            html: `You're lowering the price by ${discountPercentage.toFixed(1)}%, but this is less than the 10% threshold.<br><br>
+                   <strong>Your listing will NOT show a discount badge.</strong><br><br>
+                   To display the discount badge, the price must be at least 10% lower than the original price of $${originalPrice.toFixed(2)}.`,
+            icon: 'info',
+            showCancelButton: true,
+            confirmButtonColor: '#FF385C',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Continue Anyway',
+            cancelButtonText: 'Adjust Price'
+          });
+
+          // If user cancelled, stop here
+          if (!result.isConfirmed) {
+            return;
+          }
+          // If user confirmed, skip other warnings and proceed
+          // Don't check backend warnings since discount warning is higher priority
+        }
+      }
+      
+      // Only check other backend validations if discount warning didn't trigger or user continued
+      // Skip if we already showed the discount warning
+      const showedDiscountWarning = newPrice < oldPrice && originalPrice && 
+        ((originalPrice - newPrice) / originalPrice) * 100 > 0 && 
+        ((originalPrice - newPrice) / originalPrice) * 100 < 10;
+      
+      if (!showedDiscountWarning) {
+        try {
+          // Validate price update with backend
+          const response = await fetch(`http://localhost:8080/api/experiences/${id}/validate-price`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({ price: newPrice })
+          });
+
+          if (response.ok) {
+            const validation = await response.json();
+            
+            // If there are warnings, show SweetAlert confirmation
+            if (validation.hasWarnings) {
+              const warningText = validation.warnings.join('\n\n');
+              const result = await Swal.fire({
+                title: 'Price Update Warnings',
+                html: warningText.replace(/\n/g, '<br>'),
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#FF385C',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Continue Anyway',
+                cancelButtonText: 'Cancel'
+              });
+
+              // If user cancelled, stop here
+              if (!result.isConfirmed) {
+                return;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error validating price:', error);
+          // Continue anyway if validation fails
+        }
+      }
     }
 
     // Prepare current page data
@@ -166,17 +243,6 @@ export default function EditExperiencePricingPage() {
     setIsSidebarOpen(false);
   };
 
-  const isFieldDisabled = (fieldName) => {
-    return isFieldRestricted(fieldName);
-  };
-
-  const getFieldWarning = (fieldName) => {
-    if (isFieldRestricted(fieldName)) {
-      return "This field cannot be modified because there are existing bookings for this experience.";
-    }
-    return null;
-  };
-
   return (
     <div className="min-h-screen bg-neutrals-8">
       {/* Desktop Layout */}
@@ -201,20 +267,53 @@ export default function EditExperiencePricingPage() {
             <div className="max-w-4xl">
               <div>
                 <div className="space-y-8">
-                  {/* Base Pricing */}
-                  <div style={{marginBottom: '15px'}}>
-                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Base Pricing</label>
-                    {getFieldWarning('price') && (
-                      <div className="mb-4 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-                        <div className="flex items-start space-x-2">
-                          <AlertCircle className="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-                          <p className="text-sm text-orange-700">{getFieldWarning('price')}</p>
+                  {/* Original Price (Read-only Reference) */}
+                  {contextData?.originalPrice && (
+                    <div style={{marginBottom: '15px'}}>
+                      <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Original Price (Reference)</label>
+                      <div className="border-2 rounded-xl p-6 bg-neutrals-7 border-neutrals-6">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-medium text-neutrals-3">Per Person</span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-neutrals-3 text-lg font-medium">$</span>
+                            <div className="w-24 px-4 py-3 border-2 rounded-xl text-lg font-medium text-center bg-neutrals-6 border-neutrals-5 text-neutrals-3 cursor-not-allowed" style={{padding: '6px'}}>
+                              {parseFloat(contextData.originalPrice).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-neutrals-4 mt-3 italic">This is your baseline price and cannot be changed</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Discount Badge Information */}
+                  {contextData?.originalPrice && (
+                    <div style={{marginBottom: '15px'}}>
+                      <div className="border-2 rounded-xl p-6 bg-blue-50 border-blue-300">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0">
+                            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-bold text-blue-900 mb-2">Want to show a discount badge on your listing?</h4>
+                            <p className="text-sm text-blue-800 mb-2">
+                              To display the discount badge, your <strong>current price must be at least 10% lower than your original price of ${parseFloat(contextData.originalPrice).toFixed(2)}</strong>.
+                            </p>
+                            <p className="text-sm text-blue-800">
+                              💡 Example: Set current price to <strong>${(parseFloat(contextData.originalPrice) * 0.9).toFixed(2)}</strong> or lower to show a 10% OFF badge.
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    <div className={`border-2 border-dashed rounded-xl p-6 ${
-                      isFieldDisabled('price') ? 'border-neutrals-6 bg-neutrals-7' : 'border-neutrals-4'
-                    }`}>
+                    </div>
+                  )}
+
+                  {/* Base Pricing */}
+                  <div style={{marginBottom: '15px'}}>
+                    <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Current Price</label>
+                    <div className="border-2 border-dashed rounded-xl p-6 border-neutrals-4">
                       <div className="flex items-center justify-between">
                         <span className="text-lg font-medium text-neutrals-2">Per Person</span>
                         <div className="flex items-center gap-3">
@@ -223,12 +322,7 @@ export default function EditExperiencePricingPage() {
                             type="text"
                             value={formData.pricePerPerson}
                             onChange={(e) => handlePriceChange(e.target.value)}
-                            disabled={isFieldDisabled('price')}
-                            className={`w-24 px-4 py-3 border-2 rounded-xl focus:outline-none text-lg font-medium text-center transition-colors ${
-                              isFieldDisabled('price')
-                                ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                                : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                            }`}
+                            className="w-24 px-4 py-3 border-2 rounded-xl focus:outline-none text-lg font-medium text-center transition-colors border-neutrals-5 focus:border-primary-1 text-neutrals-2"
                             placeholder="0.00"
                             style={{padding: '6px'}}
                           />
@@ -300,20 +394,53 @@ export default function EditExperiencePricingPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Base Pricing */}
-              <div style={{marginBottom: '10px'}}>
-                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Base Pricing</label>
-                {getFieldWarning('price') && (
-                  <div className="mb-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                      <AlertCircle className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-orange-700">{getFieldWarning('price')}</p>
+              {/* Original Price (Read-only Reference) - Mobile */}
+              {contextData?.originalPrice && (
+                <div style={{marginBottom: '10px'}}>
+                  <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Original Price (Reference)</label>
+                  <div className="border-2 rounded-xl p-4 bg-neutrals-7 border-neutrals-6">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-neutrals-3">Per Person</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-neutrals-3 text-sm font-medium">$</span>
+                        <div className="w-20 px-3 py-2 border-2 rounded-xl text-sm font-medium text-center bg-neutrals-6 border-neutrals-5 text-neutrals-3 cursor-not-allowed" style={{padding: '6px'}}>
+                          {parseFloat(contextData.originalPrice).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-neutrals-4 mt-2 italic">This is your baseline price and cannot be changed</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Discount Badge Information - Mobile */}
+              {contextData?.originalPrice && (
+                <div style={{marginBottom: '10px'}}>
+                  <div className="border-2 rounded-xl p-4 bg-blue-50 border-blue-300">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-xs font-bold text-blue-900 mb-1">Want to show a discount badge?</h4>
+                        <p className="text-xs text-blue-800 mb-1">
+                          Current price must be <strong>at least 10% lower than ${parseFloat(contextData.originalPrice).toFixed(2)}</strong>.
+                        </p>
+                        <p className="text-xs text-blue-800">
+                          💡 Set to <strong>${(parseFloat(contextData.originalPrice) * 0.9).toFixed(2)}</strong> or lower for 10% OFF badge.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                )}
-                <div className={`border-2 border-dashed rounded-xl p-4 ${
-                  isFieldDisabled('price') ? 'border-neutrals-6 bg-neutrals-7' : 'border-neutrals-4'
-                }`}>
+                </div>
+              )}
+
+              {/* Base Pricing */}
+              <div style={{marginBottom: '10px'}}>
+                <label className="block text-xs font-bold uppercase text-neutrals-5 mb-3">Current Price</label>
+                <div className="border-2 border-dashed rounded-xl p-4 border-neutrals-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium text-neutrals-2">Per Person</span>
                     <div className="flex items-center gap-2">
@@ -322,12 +449,7 @@ export default function EditExperiencePricingPage() {
                         type="text"
                         value={formData.pricePerPerson}
                         onChange={(e) => handlePriceChange(e.target.value)}
-                        disabled={isFieldDisabled('price')}
-                        className={`w-20 px-3 py-2 border-2 rounded-xl focus:outline-none text-sm font-medium text-center transition-colors ${
-                          isFieldDisabled('price')
-                            ? 'border-neutrals-6 bg-neutrals-7 text-neutrals-4 cursor-not-allowed'
-                            : 'border-neutrals-5 focus:border-primary-1 text-neutrals-2'
-                        }`}
+                        className="w-20 px-3 py-2 border-2 rounded-xl focus:outline-none text-sm font-medium text-center transition-colors border-neutrals-5 focus:border-primary-1 text-neutrals-2"
                         placeholder="0.00"
                         style={{padding: '6px'}}
                       />
