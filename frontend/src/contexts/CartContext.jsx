@@ -33,7 +33,7 @@ export const CartProvider = ({ children }) => {
   const subtotal = cartItems
     .filter((item) => selectedItemIds.includes(item.cartItemId))
     .reduce((sum, item) => {
-      const itemTotal = Number(item.priceAtTimeOfAdd) * Number(item.numberOfParticipants)
+      const itemTotal = Number(item.currentPrice) * Number(item.numberOfParticipants)
       return sum + itemTotal
     }, 0)
 

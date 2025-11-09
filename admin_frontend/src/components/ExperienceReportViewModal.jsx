@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Calendar, User, Mail, Tag, AlertCircle, CheckCircle, Trash2 } from 'lucide-react';
+import { X, Calendar, User, Mail, Tag, AlertCircle, CheckCircle, Trash2, MapPin } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import ConfirmationModal from './ConfirmationModal';
 
-const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
+const ExperienceReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
   const [confirmationModal, setConfirmationModal] = useState({
     isOpen: false,
     title: '',
@@ -44,7 +44,7 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
       async () => {
         try {
           setErrorMessage('');
-          const response = await adminService.updateReportStatus(report.reportId, 'RESOLVED');
+          const response = await adminService.updateExperienceReportStatus(report.reportId, 'RESOLVED');
           if (response.success) {
             if (onReportAction) {
               onReportAction();
@@ -69,7 +69,7 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
       async () => {
         try {
           setErrorMessage('');
-          const response = await adminService.updateReportStatus(report.reportId, 'DISMISSED');
+          const response = await adminService.updateExperienceReportStatus(report.reportId, 'DISMISSED');
           if (response.success) {
             if (onReportAction) {
               onReportAction();
@@ -94,7 +94,7 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
       async () => {
         try {
           setErrorMessage('');
-          const response = await adminService.deleteReport(report.reportId);
+          const response = await adminService.deleteExperienceReport(report.reportId);
           if (response.success) {
             if (onReportAction) {
               onReportAction();
@@ -142,22 +142,30 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
 
   const getReasonColor = (reason) => {
     switch (reason) {
-      case 'INAPPROPRIATE_NAME':
-        return 'bg-red-100 text-red-800';
-      case 'SPAM_OR_SCAM':
+      case 'INAPPROPRIATE_CONTENT':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'MISLEADING_DESCRIPTION':
         return 'bg-orange-100 text-orange-800';
-      case 'FRAUDULENT_ACTIVITY':
+      case 'SAFETY_CONCERNS':
+        return 'bg-red-100 text-red-800';
+      case 'SPAM':
+        return 'bg-orange-100 text-orange-800';
+      case 'FRAUDULENT':
         return 'bg-red-100 text-red-800';
       case 'HARASSMENT_OR_ABUSE':
         return 'bg-purple-100 text-purple-800';
-      case 'HATE_SPEECH':
+      case 'INAPPROPRIATE_IMAGES':
         return 'bg-pink-100 text-pink-800';
-      case 'IMPERSONATION':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'INAPPROPRIATE_CONTENT':
+      case 'FALSE_INFORMATION':
         return 'bg-yellow-100 text-yellow-800';
-      case 'UNDERAGE_USER':
+      case 'PRICING_ISSUES':
         return 'bg-blue-100 text-blue-800';
+      case 'CANCELLATION_POLICY_ISSUES':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'POOR_SERVICE':
+        return 'bg-gray-100 text-gray-800';
+      case 'UNSAFE_CONDITIONS':
+        return 'bg-red-100 text-red-800';
       case 'OTHER':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -171,7 +179,7 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
       <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Report Details</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Experience Report Details</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -225,20 +233,20 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
             </div>
           </div>
 
-          {/* Reported User Information */}
+          {/* Reported Experience Information */}
           <div className="bg-red-50 rounded-lg p-4">
             <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
-              <User className="w-4 h-4 mr-2" />
-              Reported User Information
+              <MapPin className="w-4 h-4 mr-2" />
+              Reported Experience Information
             </h3>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-500">Name:</span>
-                <span className="text-sm text-gray-900">{report.reportedUserName || 'N/A'}</span>
+                <span className="text-sm font-medium text-gray-500">Title:</span>
+                <span className="text-sm text-gray-900">{report.experienceTitle || 'N/A'}</span>
               </div>
               <div className="flex items-center space-x-2">
-                <Mail className="w-4 h-4 text-gray-400" />
-                <span className="text-sm text-gray-900">{report.reportedUserEmail || 'N/A'}</span>
+                <span className="text-sm font-medium text-gray-500">Experience ID:</span>
+                <span className="text-sm text-gray-900">{report.experienceId || 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -341,5 +349,5 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
   );
 };
 
-export default ReportViewModal;
+export default ExperienceReportViewModal;
 

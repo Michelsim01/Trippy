@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, MessageSquare, CheckCircle } from 'lucide-react';
 import { adminService } from '../services/adminService';
-import ReportsTable from '../components/ReportsTable';
+import ExperienceReportsTable from '../components/ExperienceReportsTable';
 
-const ReportResolutionPage = () => {
+const ExperienceReportResolutionPage = () => {
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -12,7 +12,7 @@ const ReportResolutionPage = () => {
   const fetchMetrics = async () => {
     try {
       setLoading(true);
-      const response = await adminService.getReportMetrics();
+      const response = await adminService.getExperienceReportMetrics();
       
       if (response.success) {
         setMetrics(response.data);
@@ -21,8 +21,8 @@ const ReportResolutionPage = () => {
         setError(response.error);
       }
     } catch (err) {
-      setError('Failed to load report management metrics');
-      console.error('Report management error:', err);
+      setError('Failed to load experience report management metrics');
+      console.error('Experience report management error:', err);
     } finally {
       setLoading(false);
     }
@@ -46,8 +46,8 @@ const ReportResolutionPage = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">User Report Resolution</h1>
-        <p className="text-gray-600">Manage user reports and complaints</p>
+        <h1 className="text-2xl font-bold text-gray-900">Experience Report Resolution</h1>
+        <p className="text-gray-600">Manage experience reports and complaints</p>
       </div>
 
       {/* Stats Cards */}
@@ -77,7 +77,7 @@ const ReportResolutionPage = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error loading report metrics</h3>
+                <h3 className="text-sm font-medium text-red-800">Error loading experience report metrics</h3>
                 <div className="mt-2 text-sm text-red-700">
                   <p>{error}</p>
                 </div>
@@ -145,11 +145,11 @@ const ReportResolutionPage = () => {
 
       {/* Reports Table */}
       <div className="grid grid-cols-1 gap-6">
-        <ReportsTable ref={reportsTableRef} onReportAction={handleReportAction} />
+        <ExperienceReportsTable ref={reportsTableRef} onReportAction={handleReportAction} />
       </div>
     </div>
   );
 };
 
-export default ReportResolutionPage;
+export default ExperienceReportResolutionPage;
 

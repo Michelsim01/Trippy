@@ -1,6 +1,10 @@
 package com.backend.service;
 
 import com.backend.entity.ChatbotMessage;
+import com.backend.dto.OpenAIFAQMatchResponse;
+import com.backend.entity.FAQKnowledgeBase;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
 import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
@@ -377,5 +381,203 @@ public class OpenAIService {
         }
 
         return prompt.toString();
+    }
+    
+    /**
+     * Analyze user query against candidate FAQs using OpenAI
+     * Determines if there's an exact match, close match, or if clarification is needed
+     * 
+     * @param userQuery The user's question
+     * @param faqs List of candidate FAQs (typically top 20-30 from vector search)
+     * @return OpenAIFAQMatchResponse with match type, matched FAQ index, and suggestions
+     */
+    public OpenAIFAQMatchResponse analyzeFAQMatch(String userQuery, List<FAQKnowledgeBase> faqs) {
+        try {
+            if (faqs == null || faqs.isEmpty()) {
+                logger.warn("Empty FAQ list provided for matching");
+                return new OpenAIFAQMatchResponse(
+                    OpenAIFAQMatchResponse.MatchType.UNCLEAR,
+                    null,
+                    0.0,
+                    new ArrayList<>(),
+                    "No FAQs provided"
+                );
+            }
+            
+            String systemPrompt = buildFAQMatchSystemPrompt();
+            String userPrompt = buildFAQMatchUserPrompt(userQuery, faqs);
+            
+            ChatCompletionRequest request = ChatCompletionRequest.builder()
+                    .model(chatModel)
+                    .messages(List.of(
+                            new ChatMessage(ChatMessageRole.SYSTEM.value(), systemPrompt),
+                            new ChatMessage(ChatMessageRole.USER.value(), userPrompt)
+                    ))
+                    .maxTokens(500)
+                    .temperature(0.3) // Lower temperature for more deterministic matching
+                    .build();
+            
+            ChatCompletionResult result = openAiService.createChatCompletion(request);
+            
+            if (result.getChoices() != null && !result.getChoices().isEmpty()) {
+                String responseContent = result.getChoices().get(0).getMessage().getContent();
+                return parseFAQMatchResponse(responseContent);
+            }
+            
+            logger.error("No chat completion choices received for FAQ matching");
+            return createDefaultUnclearResponse(faqs);
+            
+        } catch (Exception e) {
+            logger.error("Error analyzing FAQ match: {}", e.getMessage(), e);
+            return createDefaultUnclearResponse(faqs);
+        }
+    }
+    
+    /**
+     * Build system prompt for FAQ matching
+     */
+    private String buildFAQMatchSystemPrompt() {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are an expert at matching user questions to FAQ entries. ");
+        prompt.append("Your task is to analyze a user's question and determine which FAQ (if any) best matches it.\\n\\n");
+        
+        prompt.append("Match Types:\\n");
+        prompt.append("- EXACT: The user's question is semantically identical or very nearly identical to an FAQ question. ");
+        prompt.append("The meaning and intent are the same, even if wording differs slightly.\\n");
+        prompt.append("- CLOSE: The user's question is closely related to an FAQ, but not identical. ");
+        prompt.append("The FAQ would likely answer the user's question, but there may be some nuance.\\n");
+        prompt.append("- UNCLEAR: The user's question is ambiguous or doesn't clearly match any single FAQ. ");
+        prompt.append("Multiple FAQs might be relevant, or the question needs clarification.\\n\\n");
+        
+        prompt.append("Instructions:\\n");
+        prompt.append("1. Analyze the user's question carefully, considering semantic meaning, not just keywords\\n");
+        prompt.append("2. Compare it against each FAQ question provided\\n");
+        prompt.append("3. Return a JSON response with this exact structure:\\n");
+        prompt.append("{\\n");
+        prompt.append("  \"matchType\": \"EXACT|CLOSE|UNCLEAR\",\\n");
+        prompt.append("  \"matchedFAQIndex\": <integer index (0-based) or null>,\\n");
+        prompt.append("  \"confidence\": <0.0-1.0>,\\n");
+        prompt.append("  \"suggestedFAQIndices\": [<list of 3-5 indices if UNCLEAR>],\\n");
+        prompt.append("  \"reasoning\": \"<brief explanation>\"\\n");
+        prompt.append("}\\n\\n");
+        
+        prompt.append("Important:\\n");
+        prompt.append("- Use EXACT only when the questions are semantically identical\\n");
+        prompt.append("- Use CLOSE when the FAQ would answer the question but isn't identical\\n");
+        prompt.append("- Use UNCLEAR when multiple FAQs are relevant or the question is ambiguous\\n");
+        prompt.append("- For UNCLEAR, provide 3-5 most relevant FAQ indices in suggestedFAQIndices\\n");
+        prompt.append("- Always return valid JSON, no additional text");
+        
+        return prompt.toString();
+    }
+    
+    /**
+     * Build user prompt with query and FAQs
+     */
+    private String buildFAQMatchUserPrompt(String userQuery, List<FAQKnowledgeBase> faqs) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("User Question: ").append(userQuery).append("\\n\\n");
+        prompt.append("Available FAQs:\\n");
+        
+        for (int i = 0; i < faqs.size(); i++) {
+            FAQKnowledgeBase faq = faqs.get(i);
+            String question = extractQuestionFromFAQ(faq);
+            prompt.append(String.format("%d. %s\\n", i, question));
+        }
+        
+        prompt.append("\\nAnalyze the user's question and return the JSON response as specified.");
+        return prompt.toString();
+    }
+    
+    /**
+     * Extract question from FAQ content (first sentence before answer)
+     */
+    private String extractQuestionFromFAQ(FAQKnowledgeBase faq) {
+        String content = faq.getContent();
+        if (content == null || content.trim().isEmpty()) {
+            return "FAQ Question";
+        }
+        
+        // Extract first sentence (usually the question)
+        String[] sentences = content.split("[.!?]+", 2);
+        if (sentences.length > 0) {
+            return sentences[0].trim();
+        }
+        
+        // Fallback: return first 100 characters
+        return content.length() > 100 ? content.substring(0, 100) + "..." : content;
+    }
+    
+    /**
+     * Parse OpenAI response into OpenAIFAQMatchResponse
+     */
+    private OpenAIFAQMatchResponse parseFAQMatchResponse(String responseContent) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            
+            // Try to extract JSON from response (in case there's extra text)
+            String jsonContent = responseContent.trim();
+            if (jsonContent.startsWith("```json")) {
+                jsonContent = jsonContent.substring(7);
+            }
+            if (jsonContent.startsWith("```")) {
+                jsonContent = jsonContent.substring(3);
+            }
+            if (jsonContent.endsWith("```")) {
+                jsonContent = jsonContent.substring(0, jsonContent.length() - 3);
+            }
+            jsonContent = jsonContent.trim();
+            
+            JsonNode jsonNode = mapper.readTree(jsonContent);
+            
+            String matchTypeStr = jsonNode.has("matchType") ? jsonNode.get("matchType").asText() : "UNCLEAR";
+            OpenAIFAQMatchResponse.MatchType matchType = OpenAIFAQMatchResponse.MatchType.valueOf(matchTypeStr.toUpperCase());
+            
+            Integer matchedFAQIndex = jsonNode.has("matchedFAQIndex") && !jsonNode.get("matchedFAQIndex").isNull() 
+                ? jsonNode.get("matchedFAQIndex").asInt() : null;
+            
+            Double confidence = jsonNode.has("confidence") ? jsonNode.get("confidence").asDouble() : 0.0;
+            
+            List<Integer> suggestedFAQIndices = new ArrayList<>();
+            if (jsonNode.has("suggestedFAQIndices") && jsonNode.get("suggestedFAQIndices").isArray()) {
+                for (JsonNode indexNode : jsonNode.get("suggestedFAQIndices")) {
+                    suggestedFAQIndices.add(indexNode.asInt());
+                }
+            }
+            
+            String reasoning = jsonNode.has("reasoning") ? jsonNode.get("reasoning").asText() : null;
+            
+            return new OpenAIFAQMatchResponse(matchType, matchedFAQIndex, confidence, suggestedFAQIndices, reasoning);
+            
+        } catch (Exception e) {
+            logger.warn("Error parsing OpenAI FAQ match response: {}. Response: {}", e.getMessage(), responseContent);
+            // Return default unclear response
+            return new OpenAIFAQMatchResponse(
+                OpenAIFAQMatchResponse.MatchType.UNCLEAR,
+                null,
+                0.0,
+                new ArrayList<>(),
+                "Failed to parse response: " + e.getMessage()
+            );
+        }
+    }
+    
+    /**
+     * Create default unclear response when OpenAI fails
+     */
+    private OpenAIFAQMatchResponse createDefaultUnclearResponse(List<FAQKnowledgeBase> faqs) {
+        List<Integer> defaultIndices = new ArrayList<>();
+        int maxSuggestions = Math.min(5, faqs != null ? faqs.size() : 0);
+        for (int i = 0; i < maxSuggestions; i++) {
+            defaultIndices.add(i);
+        }
+        
+        return new OpenAIFAQMatchResponse(
+            OpenAIFAQMatchResponse.MatchType.UNCLEAR,
+            null,
+            0.0,
+            defaultIndices,
+            "OpenAI analysis failed, using default response"
+        );
     }
 }

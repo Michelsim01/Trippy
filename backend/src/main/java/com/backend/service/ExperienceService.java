@@ -1,5 +1,6 @@
 package com.backend.service;
 
+import com.backend.dto.SimilarExperienceDTO;
 import com.backend.entity.*;
 import com.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,9 @@ public class ExperienceService {
 
     @Autowired
     private ExperienceDiscountService discountService;
+
+    @Autowired
+    private ExperienceSimilarityRepository experienceSimilarityRepository;
 
     @Transactional
     public Experience createCompleteExperience(Map<String, Object> payload) {
@@ -639,7 +643,7 @@ public class ExperienceService {
 
     /**
      * Helper method to get the currently authenticated user
-     * 
+     *
      * @return User entity if authenticated, null otherwise
      */
     private User getCurrentAuthenticatedUser() {
@@ -657,5 +661,72 @@ public class ExperienceService {
             System.err.println("Error getting authenticated user: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Get similar experiences for a given experience based on ML pipeline data
+     *
+     * @param experienceId The experience ID to find similar experiences for
+     * @param limit Maximum number of similar experiences to return (default 10)
+     * @return List of similar experiences with their details
+     */
+    public List<SimilarExperienceDTO> getSimilarExperiences(Long experienceId, int limit) {
+        List<SimilarExperienceDTO> similarExperiences = new ArrayList<>();
+
+        try {
+            // Get similar experience IDs from experience_similarities table
+            List<ExperienceSimilarity> similarities = experienceSimilarityRepository
+                .findTopSimilarExperiences(experienceId, limit);
+
+            if (similarities.isEmpty()) {
+                System.out.println("No similar experiences found for experience ID: " + experienceId);
+                return similarExperiences;
+            }
+
+            // For each similar experience, fetch full experience details
+            for (ExperienceSimilarity similarity : similarities) {
+                try {
+                    Long similarExpId = similarity.getSimilarExperienceId();
+
+                    // Fetch the experience entity
+                    Experience experience = experienceRepository.findById(similarExpId).orElse(null);
+
+                    // Only include ACTIVE experiences
+                    if (experience != null && experience.getStatus() == ExperienceStatus.ACTIVE) {
+                        // Create DTO with experience details
+                        SimilarExperienceDTO dto = new SimilarExperienceDTO(experience);
+                        dto.setSimilarityScore(similarity.getSimilarityScore());
+
+                        // Get next available schedule for this experience
+                        List<ExperienceSchedule> allSchedules = experienceScheduleRepository
+                            .findByExperience_ExperienceIdOrderByStartDateTimeAsc(similarExpId);
+
+                        // Filter for future schedules that are available and not cancelled
+                        LocalDateTime now = LocalDateTime.now();
+                        for (ExperienceSchedule schedule : allSchedules) {
+                            if (schedule.getStartDateTime().isAfter(now) &&
+                                Boolean.TRUE.equals(schedule.getIsAvailable()) &&
+                                !Boolean.TRUE.equals(schedule.getCancelled())) {
+                                dto.setNextAvailableDate(schedule.getStartDateTime());
+                                break; // Take the first available future schedule
+                            }
+                        }
+
+                        similarExperiences.add(dto);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error processing similar experience: " + e.getMessage());
+                    // Continue with next similar experience
+                }
+            }
+
+            System.out.println("Found " + similarExperiences.size() + " similar experiences for experience ID: " + experienceId);
+
+        } catch (Exception e) {
+            System.err.println("Error fetching similar experiences: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return similarExperiences;
     }
 }

@@ -10,16 +10,16 @@ const getAuthHeaders = (userId) => {
   return headers;
 };
 
-export const userReportService = {
-  createReport: async ({ reporterUserId, reportedUserId, reason, description }) => {
-    const res = await fetch(`${API_BASE_URL}/user-reports`, {
+export const experienceReportService = {
+  createReport: async ({ reporterUserId, experienceId, reason, description }) => {
+    const res = await fetch(`${API_BASE_URL}/experience-reports`, {
       method: 'POST',
       headers: {
         ...getAuthHeaders(reporterUserId),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        reportedUserId,
+        experienceId,
         reason,
         description,
       }),
@@ -41,5 +41,4 @@ export const userReportService = {
     return data;
   },
 };
-
 

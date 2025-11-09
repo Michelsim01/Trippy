@@ -1,22 +1,26 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X, Info, CheckCircle, AlertCircle } from 'lucide-react';
-import { userReportService } from '../../services/userReportService';
+import { experienceReportService } from '../../services/experienceReportService';
 import { useAuth } from '../../contexts/AuthContext';
 
 const REASONS = [
-  { value: 'INAPPROPRIATE_NAME', label: 'Inappropriate name' },
-  { value: 'SPAM_OR_SCAM', label: 'Spam or scam' },
-  { value: 'FRAUDULENT_ACTIVITY', label: 'Fraudulent activity' },
-  { value: 'HARASSMENT_OR_ABUSE', label: 'Harassment or abuse' },
-  { value: 'HATE_SPEECH', label: 'Hate speech' },
-  { value: 'IMPERSONATION', label: 'Impersonation' },
   { value: 'INAPPROPRIATE_CONTENT', label: 'Inappropriate content' },
-  { value: 'UNDERAGE_USER', label: 'Underage user' },
+  { value: 'MISLEADING_DESCRIPTION', label: 'Misleading description' },
+  { value: 'SAFETY_CONCERNS', label: 'Safety concerns' },
+  { value: 'SPAM', label: 'Spam' },
+  { value: 'FRAUDULENT', label: 'Fraudulent' },
+  { value: 'HARASSMENT_OR_ABUSE', label: 'Harassment or abuse' },
+  { value: 'INAPPROPRIATE_IMAGES', label: 'Inappropriate images' },
+  { value: 'FALSE_INFORMATION', label: 'False information' },
+  { value: 'PRICING_ISSUES', label: 'Pricing issues' },
+  { value: 'CANCELLATION_POLICY_ISSUES', label: 'Cancellation policy issues' },
+  { value: 'POOR_SERVICE', label: 'Poor service' },
+  { value: 'UNSAFE_CONDITIONS', label: 'Unsafe conditions' },
   { value: 'OTHER', label: 'Other' },
 ];
 
-const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
+const ReportExperienceModal = ({ isOpen, onClose, experienceId, onSubmitted }) => {
   const { user } = useAuth();
   const [reason, setReason] = useState('');
   const [description, setDescription] = useState('');
@@ -30,9 +34,9 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
     setError(null);
     setLoading(true);
     try {
-      await userReportService.createReport({
+      await experienceReportService.createReport({
         reporterUserId: user?.id || user?.userId,
-        reportedUserId,
+        experienceId,
         reason,
         description,
       });
@@ -105,7 +109,7 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between p-4 border-b border-neutrals-6">
-                <h3 className="text-lg font-semibold text-neutrals-1">Report User</h3>
+                <h3 className="text-lg font-semibold text-neutrals-1">Report Experience</h3>
                 {!success && (
                   <button onClick={onClose} className="text-neutrals-4 hover:text-neutrals-2" aria-label="Close">
                     <X className="w-5 h-5" />
@@ -240,7 +244,7 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
                   <div className="w-10 h-10 bg-primary-1/10 rounded-full flex items-center justify-center">
                     <Info className="w-5 h-5 text-primary-1" />
                   </div>
-                  <h3 className="text-lg font-semibold text-neutrals-1">Submit User Report</h3>
+                  <h3 className="text-lg font-semibold text-neutrals-1">Submit Experience Report</h3>
                 </div>
                 <button
                   onClick={() => setShowConfirmModal(false)}
@@ -253,7 +257,7 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
 
               <div className="p-6">
                 <p className="text-neutrals-3 mb-6">
-                  Are you sure you want to submit this user report? 
+                  Are you sure you want to submit this experience report? 
                   <br />
                   <strong>Reason:</strong> {getReasonLabel()}
                   <br />
@@ -273,7 +277,7 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
                     disabled={loading}
                     className="flex-1 px-4 py-2 bg-primary-1 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
-                    {loading ? 'Submitting...' : 'Submit Ticket'}
+                    {loading ? 'Submitting...' : 'Submit Report'}
                   </button>
                 </div>
               </div>
@@ -286,4 +290,5 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
   );
 };
 
-export default ReportUserModal;
+export default ReportExperienceModal;
+

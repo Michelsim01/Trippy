@@ -1,9 +1,8 @@
 package com.backend.entity;
 
-public enum UserReportStatus {
+public enum ExperienceReportStatus {
     OPEN,
     RESOLVED,
     DISMISSED
 }
-
 

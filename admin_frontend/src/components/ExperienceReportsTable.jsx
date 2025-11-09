@@ -1,9 +1,9 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Edit, Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Eye, Trash2 } from 'lucide-react';
 import { adminService } from '../services/adminService';
-import ReportViewModal from './ReportViewModal';
+import ExperienceReportViewModal from './ExperienceReportViewModal';
 
-const ReportsTable = forwardRef(({ onReportAction }, ref) => {
+const ExperienceReportsTable = forwardRef(({ onReportAction }, ref) => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -22,7 +22,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const response = await adminService.getAllReports();
+      const response = await adminService.getAllExperienceReports();
 
       if (response.success) {
         setReports(response.data);
@@ -32,7 +32,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
       }
     } catch (err) {
       setError('Failed to load reports');
-      console.error('Reports fetch error:', err);
+      console.error('Experience reports fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -62,22 +62,30 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
 
   const getReasonColor = (reason) => {
     switch (reason) {
-      case 'INAPPROPRIATE_NAME':
-        return 'bg-red-100 text-red-800';
-      case 'SPAM_OR_SCAM':
+      case 'INAPPROPRIATE_CONTENT':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'MISLEADING_DESCRIPTION':
         return 'bg-orange-100 text-orange-800';
-      case 'FRAUDULENT_ACTIVITY':
+      case 'SAFETY_CONCERNS':
+        return 'bg-red-100 text-red-800';
+      case 'SPAM':
+        return 'bg-orange-100 text-orange-800';
+      case 'FRAUDULENT':
         return 'bg-red-100 text-red-800';
       case 'HARASSMENT_OR_ABUSE':
         return 'bg-purple-100 text-purple-800';
-      case 'HATE_SPEECH':
+      case 'INAPPROPRIATE_IMAGES':
         return 'bg-pink-100 text-pink-800';
-      case 'IMPERSONATION':
-        return 'bg-indigo-100 text-indigo-800';
-      case 'INAPPROPRIATE_CONTENT':
+      case 'FALSE_INFORMATION':
         return 'bg-yellow-100 text-yellow-800';
-      case 'UNDERAGE_USER':
+      case 'PRICING_ISSUES':
         return 'bg-blue-100 text-blue-800';
+      case 'CANCELLATION_POLICY_ISSUES':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'POOR_SERVICE':
+        return 'bg-gray-100 text-gray-800';
+      case 'UNSAFE_CONDITIONS':
+        return 'bg-red-100 text-red-800';
       case 'OTHER':
         return 'bg-gray-100 text-gray-800';
       default:
@@ -133,8 +141,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
         report.reportId.toString().includes(searchTerm) ||
         (report.reporterName && report.reporterName.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (report.reporterEmail && report.reporterEmail.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (report.reportedUserName && report.reportedUserName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (report.reportedUserEmail && report.reportedUserEmail.toLowerCase().includes(searchTerm.toLowerCase()))
+        (report.experienceTitle && report.experienceTitle.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -242,7 +249,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Reports</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Experience Reports</h3>
         </div>
         <div className="p-6">
           <div className="animate-pulse space-y-4">
@@ -269,7 +276,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">All Reports</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Experience Reports</h3>
         </div>
         <div className="p-6">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -296,7 +303,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-lg font-semibold text-gray-900">All Reports</h3>
+          <h3 className="text-lg font-semibold text-gray-900">All Experience Reports</h3>
           <div className="flex items-center gap-3 flex-wrap justify-end">
             <div className="flex items-center space-x-1">
               <label className="text-xs font-medium text-gray-700">Status:</label>
@@ -317,17 +324,21 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
               <select
                 value={filters.reason}
                 onChange={(e) => handleFilterChange('reason', e.target.value)}
-                className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent w-32"
+                className="px-2 py-1 border border-gray-300 rounded text-xs focus:ring-1 focus:ring-blue-500 focus:border-transparent w-40"
               >
                 <option value="all">All</option>
-                <option value="INAPPROPRIATE_NAME">Inappropriate Name</option>
-                <option value="SPAM_OR_SCAM">Spam/Scam</option>
-                <option value="FRAUDULENT_ACTIVITY">Fraudulent Activity</option>
-                <option value="HARASSMENT_OR_ABUSE">Harassment/Abuse</option>
-                <option value="HATE_SPEECH">Hate Speech</option>
-                <option value="IMPERSONATION">Impersonation</option>
                 <option value="INAPPROPRIATE_CONTENT">Inappropriate Content</option>
-                <option value="UNDERAGE_USER">Underage User</option>
+                <option value="MISLEADING_DESCRIPTION">Misleading Description</option>
+                <option value="SAFETY_CONCERNS">Safety Concerns</option>
+                <option value="SPAM">Spam</option>
+                <option value="FRAUDULENT">Fraudulent</option>
+                <option value="HARASSMENT_OR_ABUSE">Harassment/Abuse</option>
+                <option value="INAPPROPRIATE_IMAGES">Inappropriate Images</option>
+                <option value="FALSE_INFORMATION">False Information</option>
+                <option value="PRICING_ISSUES">Pricing Issues</option>
+                <option value="CANCELLATION_POLICY_ISSUES">Cancellation Policy Issues</option>
+                <option value="POOR_SERVICE">Poor Service</option>
+                <option value="UNSAFE_CONDITIONS">Unsafe Conditions</option>
                 <option value="OTHER">Other</option>
               </select>
             </div>
@@ -350,7 +361,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
               <Search className="w-3 h-3 absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by ID, name, or email..."
+                placeholder="Search by ID, name, email, or experience..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-7 pr-3 py-1 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-transparent w-60"
@@ -376,7 +387,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
                 Reporter
               </th>
               <th className="w-48 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Reported User
+                Reported Experience
               </th>
               <th className="w-36 px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Reason
@@ -417,14 +428,14 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
                   <div className="flex items-center">
                     <div className="w-6 h-6 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-medium text-gray-700">
-                        {report.reportedUserName ? report.reportedUserName.charAt(0).toUpperCase() : '?'}
+                        {report.experienceTitle ? report.experienceTitle.charAt(0).toUpperCase() : '?'}
                       </span>
                     </div>
                     <div className="ml-2 min-w-0 flex-1">
-                      <div className="text-xs font-medium text-gray-900 truncate" title={report.reportedUserName || 'Unknown'}>
-                        {report.reportedUserName || 'Unknown User'}
+                      <div className="text-xs font-medium text-gray-900 truncate" title={report.experienceTitle || 'Unknown'}>
+                        {report.experienceTitle || 'Unknown Experience'}
                       </div>
-                      <div className="text-xs text-gray-500 truncate" title={report.reportedUserEmail}>{report.reportedUserEmail}</div>
+                      <div className="text-xs text-gray-500 truncate">Experience ID: {report.experienceId}</div>
                     </div>
                   </div>
                 </td>
@@ -545,7 +556,7 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
       )}
 
       {/* Report View Modal */}
-      <ReportViewModal
+      <ExperienceReportViewModal
         report={selectedReport}
         isOpen={isViewModalOpen}
         onClose={handleCloseViewModal}
@@ -555,5 +566,5 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
   );
 });
 
-export default ReportsTable;
+export default ExperienceReportsTable;
 

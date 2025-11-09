@@ -1,5 +1,6 @@
 package com.backend.service;
 
+import com.backend.dto.FAQSearchResult;
 import com.backend.entity.FAQKnowledgeBase;
 import com.backend.repository.FAQKnowledgeBaseRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -38,14 +39,229 @@ public class FAQKnowledgeBaseService {
     private static final Pattern WORD_PATTERN = Pattern.compile("\\b\\w+\\b");
     
     /**
-     * Search for similar FAQs using TF-IDF similarity matching
+     * Search for similar FAQs with confidence scores using database-level vector similarity search
+     * Uses PostgreSQL vector similarity (same approach as experience recommender) for high accuracy
+     * @param query User query text
+     * @return List of FAQSearchResult objects with confidence scores, sorted by confidence (highest first)
+     */
+    public List<FAQSearchResult> searchSimilarFAQsWithConfidence(String query) {
+        logger.info("Searching for similar FAQs with confidence scores for query: '{}'", query);
+        
+        try {
+            // Generate OpenAI embedding for the query
+            List<Double> queryEmbedding = null;
+            if (useOpenAIEmbeddings && openAIService != null) {
+                try {
+                    logger.debug("Generating OpenAI embedding for query: '{}'", query);
+                    queryEmbedding = openAIService.generateEmbedding(query);
+                    if (queryEmbedding == null || queryEmbedding.isEmpty()) {
+                        logger.warn("OpenAI embedding generation failed (null or empty), falling back to TF-IDF");
+                        queryEmbedding = null;
+                    } else {
+                        logger.debug("Successfully generated embedding with {} dimensions", queryEmbedding.size());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error generating OpenAI embedding: {}. Falling back to TF-IDF", e.getMessage());
+                    queryEmbedding = null;
+                }
+            } else {
+                logger.warn("OpenAI embeddings disabled or service unavailable. useOpenAIEmbeddings={}, openAIService={}", 
+                    useOpenAIEmbeddings, openAIService != null);
+            }
+            
+            // Use database-level vector similarity search if embeddings are available
+            if (queryEmbedding != null) {
+                // Try progressive thresholds: 0.35 (primary), then 0.5 (fallback), then TF-IDF
+                double[] thresholds = {similarityThreshold, 0.5};
+                String[] thresholdNames = {"primary", "relaxed"};
+                
+                for (int i = 0; i < thresholds.length; i++) {
+                    double currentThreshold = thresholds[i];
+                    String thresholdName = thresholdNames[i];
+                    
+                    try {
+                        // Convert embedding to PostgreSQL vector format: [0.1,0.2,0.3,...]
+                        String embeddingVector = formatEmbeddingForPostgres(queryEmbedding);
+                        
+                        logger.debug("Attempting vector search with {} threshold: {}", thresholdName, currentThreshold);
+                        
+                        // Get FAQs first
+                        List<FAQKnowledgeBase> results = faqKnowledgeBaseRepository.findSimilarDocumentsByVector(
+                            embeddingVector,
+                            currentThreshold,
+                            maxResults * 2
+                        );
+                        
+                        if (!results.isEmpty()) {
+                            // Calculate similarity scores for each result and apply keyword boosting
+                            List<FAQSearchResult> searchResults = new ArrayList<>();
+                            
+                            // Extract key terms from query for boosting
+                            List<String> queryKeyTerms = extractKeyTerms(query);
+                            
+                            for (FAQKnowledgeBase faq : results) {
+                                try {
+                                    // Get actual similarity score from database
+                                    Double similarityScore = faqKnowledgeBaseRepository.getSimilarityScore(
+                                        faq.getKnowledgeId(), 
+                                        embeddingVector
+                                    );
+                                    if (similarityScore == null) {
+                                        // Fallback: use threshold as approximation
+                                        similarityScore = currentThreshold * 0.8;
+                                    }
+                                    
+                                    // Apply keyword boost for exact matches
+                                    double keywordBoost = calculateKeywordBoost(query, queryKeyTerms, faq);
+                                    // Reduce similarity score (distance) by boost amount (boost reduces distance)
+                                    double adjustedScore = Math.max(0.0, similarityScore - keywordBoost);
+                                    
+                                    logger.debug("FAQ {}: original_score={}, keyword_boost={}, adjusted_score={}", 
+                                        faq.getKnowledgeId(), similarityScore, keywordBoost, adjustedScore);
+                                    
+                                    searchResults.add(new FAQSearchResult(faq, adjustedScore));
+                                } catch (Exception e) {
+                                    logger.warn("Error getting similarity score for FAQ {}: {}", 
+                                        faq.getKnowledgeId(), e.getMessage());
+                                    // Fallback: use threshold as approximation
+                                    searchResults.add(new FAQSearchResult(faq, currentThreshold * 0.8));
+                                }
+                            }
+                            
+                            if (!searchResults.isEmpty()) {
+                                logger.info("Found {} similar FAQs using vector search ({} threshold: {}) for query: '{}'", 
+                                    searchResults.size(), thresholdName, currentThreshold, query);
+                                // Sort by confidence (higher is better)
+                                searchResults.sort((a, b) -> Double.compare(b.getConfidence(), a.getConfidence()));
+                                return searchResults;
+                            }
+                        } else {
+                            logger.debug("No vector search results found with {} threshold: {} for query: '{}'", 
+                                thresholdName, currentThreshold, query);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Vector search failed with {} threshold {}: {}. Trying next threshold or TF-IDF", 
+                            thresholdName, currentThreshold, e.getMessage(), e);
+                    }
+                }
+                
+                logger.warn("Vector search returned no results with any threshold for query: '{}'. Falling back to TF-IDF", query);
+            } else {
+                logger.warn("No query embedding available for query: '{}'. Falling back to TF-IDF", query);
+            }
+            
+            // Fallback to TF-IDF if vector search is not available or returns no results
+            logger.info("Using TF-IDF fallback search for query: '{}'", query);
+            List<FAQKnowledgeBase> fallbackResults = searchSimilarFAQsFallback(query);
+            // Convert to FAQSearchResult with low confidence
+            return fallbackResults.stream()
+                .map(faq -> new FAQSearchResult(faq, 0.6)) // Low confidence for TF-IDF results
+                .collect(Collectors.toList());
+            
+        } catch (Exception e) {
+            logger.error("Error searching for similar FAQs: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Search for similar FAQs using database-level vector similarity search
+     * Uses PostgreSQL vector similarity (same approach as experience recommender) for high accuracy
      * @param query User query text
      * @return List of FAQs sorted by similarity score (highest first)
      */
     public List<FAQKnowledgeBase> searchSimilarFAQs(String query) {
+        logger.info("Searching for similar FAQs for query: '{}'", query);
+        
+        try {
+            // Generate OpenAI embedding for the query
+            List<Double> queryEmbedding = null;
+            if (useOpenAIEmbeddings && openAIService != null) {
+                try {
+                    logger.debug("Generating OpenAI embedding for query: '{}'", query);
+                    queryEmbedding = openAIService.generateEmbedding(query);
+                    if (queryEmbedding == null || queryEmbedding.isEmpty()) {
+                        logger.warn("OpenAI embedding generation failed (null or empty), falling back to TF-IDF");
+                        queryEmbedding = null;
+                    } else {
+                        logger.debug("Successfully generated embedding with {} dimensions", queryEmbedding.size());
+                    }
+                } catch (Exception e) {
+                    logger.warn("Error generating OpenAI embedding: {}. Falling back to TF-IDF", e.getMessage());
+                    queryEmbedding = null;
+                }
+            } else {
+                logger.warn("OpenAI embeddings disabled or service unavailable. useOpenAIEmbeddings={}, openAIService={}", 
+                    useOpenAIEmbeddings, openAIService != null);
+            }
+            
+            // Use database-level vector similarity search if embeddings are available
+            if (queryEmbedding != null) {
+                // Try progressive thresholds: 0.35 (primary), then 0.5 (fallback), then TF-IDF
+                double[] thresholds = {similarityThreshold, 0.5};
+                String[] thresholdNames = {"primary", "relaxed"};
+                
+                for (int i = 0; i < thresholds.length; i++) {
+                    double currentThreshold = thresholds[i];
+                    String thresholdName = thresholdNames[i];
+                    
+                    try {
+                        // Convert embedding to PostgreSQL vector format: [0.1,0.2,0.3,...]
+                        String embeddingVector = formatEmbeddingForPostgres(queryEmbedding);
+                        
+                        logger.debug("Attempting vector search with {} threshold: {}", thresholdName, currentThreshold);
+                        
+                        // Use database-level vector similarity search (same as experience recommender)
+                        List<FAQKnowledgeBase> results = faqKnowledgeBaseRepository.findSimilarDocumentsByVector(
+                            embeddingVector,
+                            currentThreshold,
+                            maxResults
+                        );
+                        
+                        if (!results.isEmpty()) {
+                            logger.info("Found {} similar FAQs using vector search ({} threshold: {}) for query: '{}'", 
+                                results.size(), thresholdName, currentThreshold, query);
+                            logger.debug("Top result: knowledge_id={}, category={}", 
+                                results.get(0).getKnowledgeId(), 
+                                results.get(0).getCategory());
+                            return results;
+                        } else {
+                            logger.debug("No vector search results found with {} threshold: {} for query: '{}'", 
+                                thresholdName, currentThreshold, query);
+                        }
+                    } catch (Exception e) {
+                        logger.warn("Vector search failed with {} threshold {}: {}. Trying next threshold or TF-IDF", 
+                            thresholdName, currentThreshold, e.getMessage(), e);
+                    }
+                }
+                
+                logger.warn("Vector search returned no results with any threshold for query: '{}'. Falling back to TF-IDF", query);
+            } else {
+                logger.warn("No query embedding available for query: '{}'. Falling back to TF-IDF", query);
+            }
+            
+            // Fallback to TF-IDF if vector search is not available or returns no results
+            logger.info("Using TF-IDF fallback search for query: '{}'", query);
+            return searchSimilarFAQsFallback(query);
+            
+        } catch (Exception e) {
+            logger.error("Error searching for similar FAQs: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+    
+    /**
+     * Fallback TF-IDF search method (kept for backward compatibility)
+     * Used when vector search is unavailable or returns no results
+     */
+    private List<FAQKnowledgeBase> searchSimilarFAQsFallback(String query) {
+        logger.debug("Starting TF-IDF fallback search for query: '{}'", query);
+        
         try {
             // Get all FAQs from knowledge base
             List<FAQKnowledgeBase> allFAQs = faqKnowledgeBaseRepository.findBySourceType("faq");
+            
+            logger.debug("Retrieved {} FAQs from knowledge base for TF-IDF search", allFAQs.size());
             
             if (allFAQs.isEmpty()) {
                 logger.warn("No FAQs found in knowledge base");
@@ -57,77 +273,51 @@ public class FAQKnowledgeBaseService {
             List<String> queryTermsList = tokenizeAndNormalize(query);
             Set<String> queryTerms = new HashSet<>(queryTermsList);
             
+            logger.debug("Query tokenized into {} terms: {}", queryTerms.size(), queryTerms);
+            
             if (queryVector.isEmpty() && queryTerms.isEmpty()) {
-                logger.warn("Query vector is empty after tokenization");
+                logger.warn("Query vector is empty after tokenization for query: '{}'", query);
                 return new ArrayList<>();
             }
             
             // Calculate similarity scores for each FAQ
             List<FAQWithSimilarity> faqsWithSimilarity = new ArrayList<>();
             
-            // Try OpenAI embeddings first if enabled and available
-            List<Double> queryEmbedding = null;
-            if (useOpenAIEmbeddings && openAIService != null) {
-                try {
-                    queryEmbedding = openAIService.generateEmbedding(query);
-                    if (queryEmbedding == null || queryEmbedding.isEmpty()) {
-                        logger.warn("OpenAI embedding generation failed, falling back to TF-IDF");
-                        queryEmbedding = null;
-                    }
-                } catch (Exception e) {
-                    logger.warn("Error generating OpenAI embedding: {}. Falling back to TF-IDF", e.getMessage());
-                    queryEmbedding = null;
-                }
-            }
-            
             for (FAQKnowledgeBase faq : allFAQs) {
                 // Calculate multiple similarity scores
                 double exactPhraseSimilarity = calculateExactPhraseSimilarity(query.toLowerCase(), faq);
-                double embeddingSimilarity = 0.0;
-                
-                // Use OpenAI embeddings if available
-                if (queryEmbedding != null) {
-                    embeddingSimilarity = calculateEmbeddingSimilarity(queryEmbedding, faq);
-                }
-                
-                // Fallback to TF-IDF if embeddings not available
-                double tfidfSimilarity = (embeddingSimilarity == 0.0) 
-                    ? calculateCosineSimilarity(queryVector, faq) 
-                    : 0.0;
-                
+                double tfidfSimilarity = calculateCosineSimilarity(queryVector, faq);
                 double keywordSimilarity = calculateKeywordSimilarity(queryTerms, faq);
                 double contentSimilarity = calculateContentSimilarity(query.toLowerCase(), faq.getContent().toLowerCase());
                 
                 // Weighted combination: exact phrase matches get highest priority
-                // OpenAI embeddings get higher weight than TF-IDF
-                double semanticSimilarity = Math.max(embeddingSimilarity, tfidfSimilarity);
-                
                 double similarity = Math.max(
                     exactPhraseSimilarity * 1.5,  // Boost exact phrase matches
                     Math.max(
                         contentSimilarity * 1.2,   // Boost content similarity
-                        Math.max(semanticSimilarity * 1.3, keywordSimilarity)  // Boost semantic similarity
+                        Math.max(tfidfSimilarity * 1.3, keywordSimilarity)  // Boost semantic similarity
                     )
                 );
                 
                 // Cap at 1.0
                 similarity = Math.min(similarity, 1.0);
                 
-                logger.debug("FAQ {} - Exact: {}, Content: {}, Embedding: {}, TF-IDF: {}, Keyword: {}, Final: {}", 
-                    faq.getKnowledgeId(), exactPhraseSimilarity, contentSimilarity, embeddingSimilarity, tfidfSimilarity, keywordSimilarity, similarity);
-                
                 if (similarity >= similarityThreshold) {
                     faqsWithSimilarity.add(new FAQWithSimilarity(faq, similarity));
+                    logger.debug("FAQ {} matched with similarity {} (exact={}, tfidf={}, keyword={}, content={})", 
+                        faq.getKnowledgeId(), similarity, exactPhraseSimilarity, tfidfSimilarity, keywordSimilarity, contentSimilarity);
                 }
             }
             
             // If no matches found with TF-IDF, try keyword matching with lower threshold
             if (faqsWithSimilarity.isEmpty()) {
-                logger.warn("No matches found with threshold {}, trying keyword matching with lower threshold", similarityThreshold);
+                logger.warn("No matches found with TF-IDF threshold {} for query: '{}'. Trying keyword matching with lower threshold (0.1)", 
+                    similarityThreshold, query);
                 for (FAQKnowledgeBase faq : allFAQs) {
                     double keywordSimilarity = calculateKeywordSimilarity(queryTerms, faq);
                     if (keywordSimilarity >= 0.1) { // Lower threshold for keyword matching
                         faqsWithSimilarity.add(new FAQWithSimilarity(faq, keywordSimilarity));
+                        logger.debug("FAQ {} matched via keyword similarity: {}", faq.getKnowledgeId(), keywordSimilarity);
                     }
                 }
             }
@@ -139,13 +329,29 @@ public class FAQKnowledgeBaseService {
                     .map(f -> f.faq)
                     .collect(Collectors.toList());
             
-            logger.info("Found {} similar FAQs for query: '{}'", results.size(), query);
+            if (!results.isEmpty()) {
+                logger.info("Found {} similar FAQs using TF-IDF fallback for query: '{}' (top similarity: {})", 
+                    results.size(), query, faqsWithSimilarity.get(0).similarity);
+            } else {
+                logger.warn("TF-IDF fallback returned no results for query: '{}'", query);
+            }
+            
             return results;
             
         } catch (Exception e) {
-            logger.error("Error searching for similar FAQs: {}", e.getMessage(), e);
+            logger.error("Error in TF-IDF fallback search for query '{}': {}", query, e.getMessage(), e);
             return new ArrayList<>();
         }
+    }
+    
+    /**
+     * Format embedding list as PostgreSQL vector string
+     * Converts List<Double> to format: [0.1,0.2,0.3,...]
+     */
+    private String formatEmbeddingForPostgres(List<Double> embedding) {
+        return embedding.stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(",", "[", "]"));
     }
     
     /**
@@ -443,6 +649,137 @@ public class FAQKnowledgeBaseService {
         }
         
         return Math.min(jaccard, 1.0);
+    }
+    
+    /**
+     * Extract key terms from query (excluding common question words)
+     */
+    private List<String> extractKeyTerms(String query) {
+        Set<String> stopWords = Set.of("what", "is", "are", "the", "your", "my", "how", "when", "where", 
+            "who", "why", "can", "do", "does", "will", "would", "should", "could", "a", "an", "to", "for");
+        
+        List<String> terms = tokenizeAndNormalize(query);
+        return terms.stream()
+            .filter(term -> !stopWords.contains(term) && term.length() > 2)
+            .collect(Collectors.toList());
+    }
+    
+    /**
+     * Calculate keyword boost for exact matches
+     * Returns a boost value (0.0 to 0.3) that reduces the similarity distance score
+     * Higher boost = better match = lower distance = higher confidence
+     */
+    private double calculateKeywordBoost(String query, List<String> queryKeyTerms, FAQKnowledgeBase faq) {
+        if (queryKeyTerms.isEmpty()) {
+            return 0.0;
+        }
+        
+        String queryLower = query.toLowerCase();
+        String faqContent = faq.getContent().toLowerCase();
+        String faqQuestion = faqContent.split("[.!?]")[0].toLowerCase();
+        
+        // Define synonym groups for better matching
+        Map<String, Set<String>> synonymGroups = Map.of(
+            "earn", Set.of("earn", "get", "obtain", "receive", "gain", "acquire"),
+            "use", Set.of("use", "apply", "spend", "redeem"),
+            "cancel", Set.of("cancel", "cancellation", "cancelled"),
+            "refund", Set.of("refund", "refunded", "reimburse")
+        );
+        
+        // Check for exact phrase matches (highest boost)
+        if (faqQuestion.contains(queryLower) || queryLower.contains(faqQuestion)) {
+            logger.debug("Exact phrase match found for FAQ {}", faq.getKnowledgeId());
+            return 0.3; // Strong boost for exact phrase
+        }
+        
+        // Check for action verb matches with synonyms (very important for "earn" vs "get")
+        // This ensures "how do i get trippoints" matches "How do I earn TripPoints?" not "What are TripPoints?"
+        for (Map.Entry<String, Set<String>> synonymGroup : synonymGroups.entrySet()) {
+            String primaryTerm = synonymGroup.getKey();
+            Set<String> synonyms = synonymGroup.getValue();
+            
+            // Check if query contains any synonym
+            boolean queryHasSynonym = synonyms.stream().anyMatch(queryLower::contains);
+            
+            if (queryHasSynonym) {
+                // Check if FAQ question contains the primary term or any synonym
+                boolean faqHasTerm = faqQuestion.contains(primaryTerm) || 
+                    synonyms.stream().anyMatch(faqQuestion::contains);
+                
+                if (faqHasTerm) {
+                    // Very strong boost for action verb matches
+                    // This prioritizes action-specific FAQs over general ones
+                    logger.debug("Action verb match found for FAQ {}: query has {}, FAQ has {}", 
+                        faq.getKnowledgeId(), synonyms, primaryTerm);
+                    return 0.28; // Very strong boost for action verb matches (higher than general matches)
+                } else {
+                    // If query asks about an action but FAQ doesn't have that action, reduce boost
+                    // This helps avoid matching "how do i get trippoints" to "What are TripPoints?"
+                    logger.debug("Query asks about {} but FAQ {} doesn't contain it, no boost", 
+                        primaryTerm, faq.getKnowledgeId());
+                    // Don't return here, let other checks handle it, but this prevents over-boosting
+                }
+            }
+        }
+        
+        // Check for all key terms present (strong boost)
+        long matchingTerms = queryKeyTerms.stream()
+            .filter(term -> {
+                // Check direct match
+                if (faqQuestion.contains(term) || faqContent.contains(term)) {
+                    return true;
+                }
+                // Check synonym match
+                for (Map.Entry<String, Set<String>> synonymGroup : synonymGroups.entrySet()) {
+                    Set<String> synonyms = synonymGroup.getValue();
+                    if (synonyms.contains(term)) {
+                        // Check if FAQ contains any synonym from this group
+                        return synonyms.stream().anyMatch(syn -> 
+                            faqQuestion.contains(syn) || faqContent.contains(syn));
+                    }
+                }
+                return false;
+            })
+            .count();
+        
+        if (matchingTerms == queryKeyTerms.size() && queryKeyTerms.size() >= 2) {
+            logger.debug("All key terms matched for FAQ {}: {}", faq.getKnowledgeId(), queryKeyTerms);
+            return 0.25; // Very strong boost
+        }
+        
+        // Check for most key terms present (medium boost)
+        double matchRatio = (double) matchingTerms / queryKeyTerms.size();
+        if (matchRatio >= 0.8 && matchingTerms >= 2) {
+            logger.debug("Most key terms matched for FAQ {}: {}/{}", faq.getKnowledgeId(), matchingTerms, queryKeyTerms.size());
+            return 0.15; // Medium boost
+        }
+        
+        // Check for important terms (specific boost for cancellation vs refund)
+        // If query contains "cancellation", boost FAQs with "cancellation" more than "refund"
+        if (queryLower.contains("cancellation") || queryLower.contains("cancel")) {
+            if (faqQuestion.contains("cancellation") || faqQuestion.contains("cancel")) {
+                logger.debug("Cancellation keyword match for FAQ {}", faq.getKnowledgeId());
+                return 0.2; // Boost for exact cancellation match
+            } else if (faqQuestion.contains("refund")) {
+                // Don't boost refund FAQs when user asks about cancellation
+                return 0.0;
+            }
+        }
+        
+        // If query contains "refund", boost FAQs with "refund"
+        if (queryLower.contains("refund")) {
+            if (faqQuestion.contains("refund")) {
+                logger.debug("Refund keyword match for FAQ {}", faq.getKnowledgeId());
+                return 0.2; // Boost for exact refund match
+            }
+        }
+        
+        // Partial match boost
+        if (matchRatio >= 0.5 && matchingTerms >= 1) {
+            return 0.05; // Small boost
+        }
+        
+        return 0.0;
     }
     
     /**

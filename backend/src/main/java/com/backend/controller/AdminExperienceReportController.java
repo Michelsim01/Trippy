@@ -1,9 +1,11 @@
 package com.backend.controller;
 
-import com.backend.entity.UserReport;
-import com.backend.entity.UserReportStatus;
+import com.backend.entity.ExperienceReport;
+import com.backend.entity.ExperienceReportStatus;
+import com.backend.entity.Experience;
 import com.backend.entity.User;
-import com.backend.repository.UserReportRepository;
+import com.backend.repository.ExperienceReportRepository;
+import com.backend.repository.ExperienceRepository;
 import com.backend.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,21 +19,24 @@ import java.util.Map;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/admin/reports")
+@RequestMapping("/api/admin/experience-reports")
 @CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"})
-public class AdminReportController {
+public class AdminExperienceReportController {
 
     @Autowired
-    private UserReportRepository userReportRepository;
+    private ExperienceReportRepository experienceReportRepository;
 
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private ExperienceRepository experienceRepository;
+
     /**
-     * Helper method to populate user information for reports
+     * Helper method to populate user and experience information for reports
      */
-    private void populateUserInfo(List<UserReport> reports) {
-        for (UserReport report : reports) {
+    private void populateReportInfo(List<ExperienceReport> reports) {
+        for (ExperienceReport report : reports) {
             // Populate reporter info
             if (report.getUserId() != null) {
                 Optional<User> reporterUser = userRepository.findById(report.getUserId());
@@ -42,13 +47,12 @@ public class AdminReportController {
                 }
             }
             
-            // Populate reported user info
-            if (report.getReportedUserId() != null) {
-                Optional<User> reportedUser = userRepository.findById(report.getReportedUserId());
-                if (reportedUser.isPresent()) {
-                    User reported = reportedUser.get();
-                    report.setReportedUserName(reported.getFirstName() + " " + reported.getLastName());
-                    report.setReportedUserEmail(reported.getEmail());
+            // Populate experience info
+            if (report.getExperienceId() != null) {
+                Optional<Experience> experience = experienceRepository.findById(report.getExperienceId());
+                if (experience.isPresent()) {
+                    Experience exp = experience.get();
+                    report.setExperienceTitle(exp.getTitle());
                 }
             }
         }
@@ -81,15 +85,15 @@ public class AdminReportController {
     }
 
     /**
-     * Get report management metrics for admin dashboard
+     * Get experience report management metrics for admin dashboard
      */
     @GetMapping("/metrics")
     public ResponseEntity<?> getReportMetrics() {
         try {
-            long totalReports = userReportRepository.count();
-            long openReports = userReportRepository.findByStatus(UserReportStatus.OPEN).size();
-            long resolvedReports = userReportRepository.findByStatus(UserReportStatus.RESOLVED).size();
-            long dismissedReports = userReportRepository.findByStatus(UserReportStatus.DISMISSED).size();
+            long totalReports = experienceReportRepository.count();
+            long openReports = experienceReportRepository.findByStatus(ExperienceReportStatus.OPEN).size();
+            long resolvedReports = experienceReportRepository.findByStatus(ExperienceReportStatus.RESOLVED).size();
+            long dismissedReports = experienceReportRepository.findByStatus(ExperienceReportStatus.DISMISSED).size();
 
             Map<String, Object> metrics = new HashMap<>();
             metrics.put("totalReports", totalReports);
@@ -104,16 +108,16 @@ public class AdminReportController {
     }
 
     /**
-     * Get all user reports for admin management
+     * Get all experience reports for admin management
      */
     @GetMapping
     public ResponseEntity<?> getAllReports() {
         try {
-            List<UserReport> reports = userReportRepository.findAll();
+            List<ExperienceReport> reports = experienceReportRepository.findAll();
             reports.sort((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()));
             
-            // Populate user information for reports
-            populateUserInfo(reports);
+            // Populate user and experience information for reports
+            populateReportInfo(reports);
             
             return ResponseEntity.ok(reports);
         } catch (Exception e) {
@@ -134,21 +138,21 @@ public class AdminReportController {
                 return ResponseEntity.badRequest().body(Map.of("error", "Status is required"));
             }
 
-            UserReportStatus status;
+            ExperienceReportStatus status;
             try {
-                status = UserReportStatus.valueOf(statusStr.toUpperCase());
+                status = ExperienceReportStatus.valueOf(statusStr.toUpperCase());
             } catch (IllegalArgumentException e) {
                 return ResponseEntity.badRequest().body(Map.of("error", "Invalid status: " + statusStr));
             }
 
-            Optional<UserReport> reportOpt = userReportRepository.findById(reportId);
+            Optional<ExperienceReport> reportOpt = experienceReportRepository.findById(reportId);
             if (reportOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
 
-            UserReport report = reportOpt.get();
+            ExperienceReport report = reportOpt.get();
             report.setStatus(status);
-            UserReport updatedReport = userReportRepository.save(report);
+            ExperienceReport updatedReport = experienceReportRepository.save(report);
 
             return ResponseEntity.ok(updatedReport);
         } catch (Exception e) {
@@ -157,17 +161,17 @@ public class AdminReportController {
     }
 
     /**
-     * Delete a user report
+     * Delete an experience report
      */
     @DeleteMapping("/{reportId}")
     public ResponseEntity<?> deleteReport(@PathVariable Long reportId) {
         try {
-            Optional<UserReport> reportOpt = userReportRepository.findById(reportId);
+            Optional<ExperienceReport> reportOpt = experienceReportRepository.findById(reportId);
             if (reportOpt.isEmpty()) {
                 return ResponseEntity.notFound().build();
             }
 
-            userReportRepository.deleteById(reportId);
+            experienceReportRepository.deleteById(reportId);
             return ResponseEntity.ok(Map.of("message", "Report deleted successfully"));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));

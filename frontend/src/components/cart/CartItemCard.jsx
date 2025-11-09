@@ -109,10 +109,10 @@ const CartItemCard = ({ item }) => {
           {/* Price */}
           <div className="mt-2">
             <p className="text-lg font-bold text-neutrals-2">
-              ${(item.priceAtTimeOfAdd * item.numberOfParticipants).toFixed(2)}
+              ${(item.currentPrice * item.numberOfParticipants).toFixed(2)}
             </p>
             <p className="text-xs text-neutrals-4">
-              ${item.priceAtTimeOfAdd.toFixed(2)} × {item.numberOfParticipants}
+              ${item.currentPrice.toFixed(2)} × {item.numberOfParticipants}
             </p>
           </div>
         </div>
