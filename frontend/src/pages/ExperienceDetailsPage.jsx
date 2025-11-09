@@ -14,6 +14,7 @@ import BookingWidget from '../components/experience-details/BookingWidget';
 import HostProfile from '../components/experience-details/HostProfile';
 import ReviewCard from '../components/reviews/ReviewCard';
 import ReviewStats from '../components/reviews/ReviewStats';
+import ReportExperienceModal from '../components/experience/ReportExperienceModal';
 
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
@@ -72,6 +73,7 @@ const ExperienceDetailsPage = () => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Booking states
   const [guests, setGuests] = useState(2);
@@ -484,6 +486,7 @@ const ExperienceDetailsPage = () => {
                 handleWishlistToggle={handleWishlistToggle}
                 averageRating={averageRating}
                 totalReviews={totalReviews}
+                onReportClick={() => setIsReportModalOpen(true)}
                 isMobile={false}
               />
 
@@ -709,6 +712,7 @@ const ExperienceDetailsPage = () => {
               handleWishlistToggle={handleWishlistToggle}
               averageRating={averageRating}
               totalReviews={totalReviews}
+              onReportClick={() => setIsReportModalOpen(true)}
               isMobile={true}
             />
 
@@ -998,6 +1002,16 @@ const ExperienceDetailsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Report Experience Modal */}
+      <ReportExperienceModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        experienceId={id ? parseInt(id) : null}
+        onSubmitted={() => {
+          // Optional: Add any post-submission logic here
+        }}
+      />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { MapPin } from 'lucide-react';
+import { MapPin, Flag } from 'lucide-react';
 
 // Helper function to convert category enum to display name
 const getCategoryDisplayName = (enumValue) => {
@@ -17,6 +17,7 @@ const ExperienceHeader = ({
   displayData,
   isWishlisted,
   handleWishlistToggle,
+  onReportClick,
   isMobile = false
 }) => {
   if (isMobile) {
@@ -65,6 +66,15 @@ const ExperienceHeader = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
               </svg>
             </button>
+            {onReportClick && (
+              <button
+                onClick={onReportClick}
+                className="p-2 border border-neutrals-6 rounded-full bg-white shadow-sm hover:bg-neutrals-7 transition-colors"
+                title="Report Experience"
+              >
+                <Flag className="w-5 h-5 text-neutrals-4" />
+              </button>
+            )}
             <button
               onClick={handleWishlistToggle}
               className={`p-2 border border-neutrals-6 rounded-full shadow-sm hover:shadow-md transition-all duration-300 hover:scale-105 active:scale-95 ${
@@ -138,6 +148,15 @@ const ExperienceHeader = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
           </svg>
         </button>
+        {onReportClick && (
+          <button
+            onClick={onReportClick}
+            className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7 transition-colors"
+            title="Report Experience"
+          >
+            <Flag className="w-6 h-6 text-neutrals-4" />
+          </button>
+        )}
         <button
           onClick={handleWishlistToggle}
           className={`p-2 border-2 border-neutrals-6 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95 ${
