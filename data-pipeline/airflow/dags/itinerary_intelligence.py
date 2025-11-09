@@ -62,8 +62,8 @@ def get_last_run_timestamp(**context):
     execution_date = context['execution_date']
     is_full_refresh = execution_date.weekday() == 0  # 0 = Monday
 
-    # Check if itinerary_distance_matrix table exists and has data
-    # If empty, force full refresh (auto-recovery mechanism)
+    # Check if itinerary_distance_matrix table exists and has route data
+    # If empty or missing route data, force full refresh (auto-recovery mechanism)
     dm_table_count = pg_hook.get_first("""
         SELECT COUNT(*)
         FROM information_schema.tables
@@ -76,6 +76,27 @@ def get_last_run_timestamp(**context):
         if dm_count and dm_count[0] == 0:
             print("WARNING: itinerary_distance_matrix table is empty. Forcing full refresh for recovery.")
             is_full_refresh = True
+        else:
+            # Table has rows, but check if they have route data
+            routes_count = pg_hook.get_first("""
+                SELECT COUNT(*)
+                FROM itinerary_distance_matrix
+                WHERE route_fetched_at IS NOT NULL
+            """)
+            if routes_count and routes_count[0] == 0:
+                print("WARNING: itinerary_distance_matrix table has no route data. Forcing full refresh for recovery.")
+                is_full_refresh = True
+            elif routes_count:
+                # Calculate percentage of pairs with route data
+                total_pairs = dm_count[0]
+                pairs_with_routes = routes_count[0]
+                route_coverage = (pairs_with_routes / total_pairs * 100) if total_pairs > 0 else 0
+                print(f"Route coverage: {pairs_with_routes}/{total_pairs} pairs ({route_coverage:.1f}%)")
+
+                # If less than 50% of pairs have routes, force full refresh
+                if route_coverage < 50:
+                    print(f"WARNING: Only {route_coverage:.1f}% of pairs have route data. Forcing full refresh for recovery.")
+                    is_full_refresh = True
 
     # If it's Monday or no previous run, do full refresh (return very old date)
     if is_full_refresh or not result:
@@ -272,11 +293,14 @@ def calculate_distance_matrix(**context):
 
     print(f"Found {len(existing_pairs)} existing routes in database")
 
-    distance_pairs = []
+    # Separate pairs into two groups: with routes and without routes
+    pairs_needing_routes = []
+    pairs_with_routes = []
+
     api_calls = 0
     max_api_calls = 500  # Safety limit per run
 
-    # Calculate pairwise distances
+    # Calculate pairwise distances and categorize
     for i, exp1 in experiences_df.iterrows():
         for j, exp2 in experiences_df.iterrows():
             # Skip same experience
@@ -316,57 +340,70 @@ def calculate_distance_matrix(**context):
 
             # Check if we should fetch routes for this pair
             should_fetch_routes = (
-                pair_key not in existing_pairs  # New pair
+                pair_key not in existing_pairs  # New pair (no route data yet)
                 or is_full_refresh  # Weekly full refresh
             )
 
-            if should_fetch_routes and api_calls < max_api_calls:
-                # Fetch multi-modal routes from Google Maps
-                print(f"Fetching routes for {exp1['title']} → {exp2['title']}")
-
-                routes = get_multi_modal_routes(
-                    exp1['latitude'], exp1['longitude'],
-                    exp2['latitude'], exp2['longitude'],
-                    straight_line_distance
-                )
-
-                # Count API calls (each mode = 1 call)
-                api_calls += len(routes)
-
-                # Add route data to pair
-                if 'driving' in routes:
-                    pair_data['driving_distance_km'] = routes['driving']['distance_km']
-                    pair_data['driving_time_minutes'] = int(routes['driving']['duration_minutes'])
-
-                if 'transit' in routes:
-                    pair_data['transit_distance_km'] = routes['transit']['distance_km']
-                    pair_data['transit_time_minutes'] = int(routes['transit']['duration_minutes'])
-                    pair_data['transit_available'] = True
-                else:
-                    pair_data['transit_available'] = False
-
-                if 'walking' in routes:
-                    pair_data['walking_distance_km'] = routes['walking']['distance_km']
-                    pair_data['walking_time_minutes'] = int(routes['walking']['duration_minutes'])
-                    pair_data['walking_feasible'] = True
-                else:
-                    pair_data['walking_feasible'] = False
-
-                # Determine recommended mode
-                pair_data['recommended_mode'] = determine_recommended_mode(routes)
-                pair_data['route_fetched'] = True
-
-                # Rate limiting: pause every 50 calls
-                if api_calls % 50 == 0:
-                    print(f"Made {api_calls} API calls, pausing for 5 seconds...")
-                    time.sleep(5)
+            if should_fetch_routes:
+                pairs_needing_routes.append((pair_data, pair_key, straight_line_distance))
             else:
-                # Skip route fetching (already exists or hit API limit)
-                pair_data['route_fetched'] = False
-                if pair_key in existing_pairs:
-                    print(f"Skipping route fetch for pair {pair_key} (already exists)")
+                pairs_with_routes.append(pair_data)
 
-            distance_pairs.append(pair_data)
+    print(f"Pairs needing routes: {len(pairs_needing_routes)}")
+    print(f"Pairs with existing routes: {len(pairs_with_routes)}")
+
+    # Process pairs needing routes (prioritize these to fill gaps)
+    distance_pairs = []
+    for pair_data, pair_key, straight_line_distance in pairs_needing_routes:
+        if api_calls < max_api_calls:
+            # Fetch multi-modal routes from Google Maps
+            print(f"Fetching routes for {pair_data['origin_title']} → {pair_data['destination_title']}")
+
+            routes = get_multi_modal_routes(
+                pair_data['origin_lat'], pair_data['origin_lon'],
+                pair_data['dest_lat'], pair_data['dest_lon'],
+                straight_line_distance
+            )
+
+            # Count API calls (each mode = 1 call)
+            api_calls += len(routes)
+
+            # Add route data to pair
+            if 'driving' in routes:
+                pair_data['driving_distance_km'] = routes['driving']['distance_km']
+                pair_data['driving_time_minutes'] = int(routes['driving']['duration_minutes'])
+
+            if 'transit' in routes:
+                pair_data['transit_distance_km'] = routes['transit']['distance_km']
+                pair_data['transit_time_minutes'] = int(routes['transit']['duration_minutes'])
+                pair_data['transit_available'] = True
+            else:
+                pair_data['transit_available'] = False
+
+            if 'walking' in routes:
+                pair_data['walking_distance_km'] = routes['walking']['distance_km']
+                pair_data['walking_time_minutes'] = int(routes['walking']['duration_minutes'])
+                pair_data['walking_feasible'] = True
+            else:
+                pair_data['walking_feasible'] = False
+
+            # Determine recommended mode
+            pair_data['recommended_mode'] = determine_recommended_mode(routes)
+            pair_data['route_fetched'] = True
+
+            # Rate limiting: pause every 50 calls
+            if api_calls % 50 == 0:
+                print(f"Made {api_calls} API calls, pausing for 5 seconds...")
+                time.sleep(5)
+        else:
+            # Hit API limit - mark as not fetched
+            pair_data['route_fetched'] = False
+            print(f"API limit reached. Skipping route fetch for pair {pair_key}")
+
+        distance_pairs.append(pair_data)
+
+    # Add pairs that already have routes (don't need to fetch again)
+    distance_pairs.extend(pairs_with_routes)
 
     print(f"Generated {len(distance_pairs)} distance pairs (filtered by same country + ≤200km)")
     print(f"Made {api_calls} Google Maps API calls")
@@ -689,6 +726,8 @@ def store_itinerary_intelligence(**context):
 
     for pair in distance_pairs:
         # Build INSERT statement with all routing columns
+        # On conflict: only update route data if new routes were fetched (route_fetched_at IS NOT NULL)
+        # Otherwise, preserve existing route data to avoid overwriting with NULLs
         insert_distance_sql = """
         INSERT INTO itinerary_distance_matrix (
             origin_experience_id, destination_experience_id, straight_line_km, country,
@@ -702,16 +741,47 @@ def store_itinerary_intelligence(**context):
         DO UPDATE SET
             straight_line_km = EXCLUDED.straight_line_km,
             country = EXCLUDED.country,
-            driving_distance_km = EXCLUDED.driving_distance_km,
-            driving_time_minutes = EXCLUDED.driving_time_minutes,
-            transit_distance_km = EXCLUDED.transit_distance_km,
-            transit_time_minutes = EXCLUDED.transit_time_minutes,
-            transit_available = EXCLUDED.transit_available,
-            walking_distance_km = EXCLUDED.walking_distance_km,
-            walking_time_minutes = EXCLUDED.walking_time_minutes,
-            walking_feasible = EXCLUDED.walking_feasible,
-            recommended_mode = EXCLUDED.recommended_mode,
-            route_fetched_at = EXCLUDED.route_fetched_at,
+            -- Only update route data if new routes were fetched
+            driving_distance_km = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.driving_distance_km
+                ELSE itinerary_distance_matrix.driving_distance_km
+            END,
+            driving_time_minutes = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.driving_time_minutes
+                ELSE itinerary_distance_matrix.driving_time_minutes
+            END,
+            transit_distance_km = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.transit_distance_km
+                ELSE itinerary_distance_matrix.transit_distance_km
+            END,
+            transit_time_minutes = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.transit_time_minutes
+                ELSE itinerary_distance_matrix.transit_time_minutes
+            END,
+            transit_available = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.transit_available
+                ELSE itinerary_distance_matrix.transit_available
+            END,
+            walking_distance_km = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.walking_distance_km
+                ELSE itinerary_distance_matrix.walking_distance_km
+            END,
+            walking_time_minutes = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.walking_time_minutes
+                ELSE itinerary_distance_matrix.walking_time_minutes
+            END,
+            walking_feasible = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.walking_feasible
+                ELSE itinerary_distance_matrix.walking_feasible
+            END,
+            recommended_mode = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.recommended_mode
+                ELSE itinerary_distance_matrix.recommended_mode
+            END,
+            route_fetched_at = CASE
+                WHEN EXCLUDED.route_fetched_at IS NOT NULL THEN EXCLUDED.route_fetched_at
+                ELSE itinerary_distance_matrix.route_fetched_at
+            END,
             updated_at = CURRENT_TIMESTAMP
         """
 

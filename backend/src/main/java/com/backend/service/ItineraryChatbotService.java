@@ -360,6 +360,11 @@ public class ItineraryChatbotService {
             logger.info("📋 Experiences with availability: {}/{} experiences have availability during trip dates",
                 experiencesWithAvailabilityDocs.size(), relevantExperiences.size());
 
+            logger.info("📋 Experience IDs being included in context:");
+            for (ExperienceKnowledgeBaseDocument exp : experiencesWithAvailabilityDocs) {
+                logger.info("  - Experience #{}: {}", exp.getSourceExperienceId(), exp.getTitle());
+            }
+
             context.append("=== AVAILABLE EXPERIENCES ===\n\n");
             if (!experiencesWithAvailabilityDocs.isEmpty()) {
                 for (ExperienceKnowledgeBaseDocument exp : experiencesWithAvailabilityDocs) {
@@ -393,6 +398,16 @@ public class ItineraryChatbotService {
                     ? fullContext.substring(availSectionStart, availSectionEnd)
                     : fullContext.substring(availSectionStart);
                 logger.info("🤖 AI will see this AVAILABILITY section:\n{}", availSection);
+            }
+
+            // Log the AVAILABLE EXPERIENCES section
+            int expSectionStart = fullContext.indexOf("=== AVAILABLE EXPERIENCES ===");
+            int expSectionEnd = fullContext.indexOf("\n\n===", expSectionStart + 10);
+            if (expSectionStart != -1) {
+                String expSection = expSectionEnd != -1
+                    ? fullContext.substring(expSectionStart, Math.min(expSectionStart + 500, expSectionEnd))
+                    : fullContext.substring(expSectionStart, Math.min(expSectionStart + 500, fullContext.length()));
+                logger.info("🤖 AI will see this AVAILABLE EXPERIENCES section (first 500 chars):\n{}", expSection);
             }
 
             return fullContext;

@@ -288,33 +288,56 @@ def extract_travel_articles(**context):
 
 def create_knowledge_documents(**context):
     """Transform experience data and travel articles into rich knowledge documents for chatbot"""
-    
+
     # Get data from previous tasks
     experience_data = context['ti'].xcom_pull(task_ids='extract_enhanced_experience_data')
     articles_data = context['ti'].xcom_pull(task_ids='extract_travel_articles')
-    
+
     knowledge_documents = []
-    
+
     # Process experience data
     if experience_data and experience_data['experiences_data']:
         experiences_df = pd.read_json(experience_data['experiences_data'])
-        reviews_df = pd.read_json(experience_data['reviews_data'])
-        similarities_df = pd.read_json(experience_data['similarities_data'])
-        
+
+        # Handle reviews data - may be empty or have different structure
+        reviews_df = pd.DataFrame()
+        if experience_data['reviews_data'] and experience_data['reviews_data'] != '[]':
+            try:
+                reviews_df = pd.read_json(experience_data['reviews_data'])
+            except Exception as e:
+                print(f"Warning: Could not parse reviews data: {e}")
+
+        # Handle similarities data - may be empty or have different structure
+        similarities_df = pd.DataFrame()
+        if experience_data['similarities_data'] and experience_data['similarities_data'] != '[]':
+            try:
+                similarities_df = pd.read_json(experience_data['similarities_data'])
+            except Exception as e:
+                print(f"Warning: Could not parse similarities data: {e}")
+
         for _, experience in experiences_df.iterrows():
             experience_id = experience['experience_id']
-            
-            # Get additional data for this experience
-            exp_reviews = reviews_df[reviews_df['experience_id'] == experience_id]
-            exp_similarities = similarities_df[similarities_df['experience_id'] == experience_id]
-            
+
+            # Get additional data for this experience - check if DataFrames are not empty
+            exp_reviews = None
+            if not reviews_df.empty and 'experience_id' in reviews_df.columns:
+                exp_reviews_filtered = reviews_df[reviews_df['experience_id'] == experience_id]
+                if len(exp_reviews_filtered) > 0:
+                    exp_reviews = exp_reviews_filtered.iloc[0]
+
+            exp_similarities = None
+            if not similarities_df.empty and 'experience_id' in similarities_df.columns:
+                exp_similarities_filtered = similarities_df[similarities_df['experience_id'] == experience_id]
+                if len(exp_similarities_filtered) > 0:
+                    exp_similarities = exp_similarities_filtered.iloc[0]
+
             # Build comprehensive knowledge document
             knowledge_doc = build_experience_knowledge_document(
-                experience, 
-                exp_reviews.iloc[0] if len(exp_reviews) > 0 else None,
-                exp_similarities.iloc[0] if len(exp_similarities) > 0 else None
+                experience,
+                exp_reviews,
+                exp_similarities
             )
-            
+
             knowledge_documents.append(knowledge_doc)
     
     # Process travel articles

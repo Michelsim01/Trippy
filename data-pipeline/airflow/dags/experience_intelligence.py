@@ -729,12 +729,16 @@ def compute_experience_similarities(**context):
         
         # Merge: existing experiences from DB + new experiences from current run
         all_experiences = []
-        
+
         # Add existing experiences from database (excluding any that are in current run to avoid duplicates)
         for _, row in all_exp_df.iterrows():
             if row['experience_id'] not in current_exp_ids:
-                all_experiences.append(row['intelligence_data'])
-        
+                # Parse intelligence_data from JSON string to dict if needed
+                intel_data = row['intelligence_data']
+                if isinstance(intel_data, str):
+                    intel_data = json.loads(intel_data)
+                all_experiences.append(intel_data)
+
         # Add all experiences from current run (includes both new and updated)
         all_experiences.extend(intelligence_data)
         
