@@ -131,8 +131,6 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
     switch (status) {
       case 'OPEN':
         return 'bg-yellow-100 text-yellow-800';
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800';
       case 'RESOLVED':
         return 'bg-green-100 text-green-800';
       case 'DISMISSED':
@@ -287,8 +285,8 @@ const ReportViewModal = ({ report, isOpen, onClose, onReportAction }) => {
         {/* Footer */}
         <div className="flex justify-between items-center p-6 border-t border-gray-200">
           <div className="flex space-x-2">
-            {/* Resolve Button - Only show for OPEN or IN_PROGRESS reports */}
-            {(report.status === 'OPEN' || report.status === 'IN_PROGRESS') && (
+            {/* Resolve Button - Only show for OPEN reports */}
+            {report.status === 'OPEN' && (
               <button
                 onClick={handleResolveReport}
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors flex items-center space-x-2"

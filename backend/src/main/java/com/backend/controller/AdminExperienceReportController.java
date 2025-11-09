@@ -92,14 +92,12 @@ public class AdminExperienceReportController {
         try {
             long totalReports = experienceReportRepository.count();
             long openReports = experienceReportRepository.findByStatus(ExperienceReportStatus.OPEN).size();
-            long inProgressReports = experienceReportRepository.findByStatus(ExperienceReportStatus.IN_PROGRESS).size();
             long resolvedReports = experienceReportRepository.findByStatus(ExperienceReportStatus.RESOLVED).size();
             long dismissedReports = experienceReportRepository.findByStatus(ExperienceReportStatus.DISMISSED).size();
 
             Map<String, Object> metrics = new HashMap<>();
             metrics.put("totalReports", totalReports);
             metrics.put("openReports", openReports);
-            metrics.put("inProgressReports", inProgressReports);
             metrics.put("resolvedReports", resolvedReports);
             metrics.put("dismissedReports", dismissedReports);
 
