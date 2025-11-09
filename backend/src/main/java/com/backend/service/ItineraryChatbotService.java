@@ -295,9 +295,6 @@ public class ItineraryChatbotService {
             if (params.getDestination() != null) {
                 context.append(String.format("Destination: %s\n", params.getDestination()));
             }
-            if (params.getDepartureCity() != null) {
-                context.append(String.format("Departing From: %s\n", params.getDepartureCity()));
-            }
             context.append("\n");
 
             // Add system instructions

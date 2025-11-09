@@ -32,25 +32,13 @@ public class QueryParser {
         // Extract destination
         // Pattern: "travel to [DESTINATION]"
         Pattern destPattern = Pattern.compile(
-            "travel to ([A-Za-z\\s]+?)(?:,|\\.|for|departing)",
+            "travel to ([A-Za-z\\s]+?)(?:,|\\.|for|starting)",
             Pattern.CASE_INSENSITIVE
         );
         Matcher destMatcher = destPattern.matcher(userMessage);
         if (destMatcher.find()) {
             params.setDestination(destMatcher.group(1).trim());
             logger.debug("Extracted destination: {}", params.getDestination());
-        }
-
-        // Extract departure city
-        // Pattern: "departing from [CITY]"
-        Pattern departurePattern = Pattern.compile(
-            "departing from ([A-Za-z\\s]+?)(?:\\.|for|,)",
-            Pattern.CASE_INSENSITIVE
-        );
-        Matcher departureMatcher = departurePattern.matcher(userMessage);
-        if (departureMatcher.find()) {
-            params.setDepartureCity(departureMatcher.group(1).trim());
-            logger.debug("Extracted departure city: {}", params.getDepartureCity());
         }
 
         // Extract duration

@@ -4,6 +4,7 @@ import ChatbotMessageList from './ChatbotMessageList'
 import ChatbotInput from './ChatbotInput'
 import ChatbotSuggestions from './ChatbotSuggestions'
 import ChatbotSidebar from './ChatbotSidebar'
+import TripDetailsForm from './TripDetailsForm'
 import itineraryChatbotService from '../../services/itineraryChatbotService'
 
 const ChatbotModal = ({ isOpen, onClose }) => {
@@ -12,6 +13,7 @@ const ChatbotModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [showSuggestions, setShowSuggestions] = useState(true)
+  const [showTripForm, setShowTripForm] = useState(true)
   const [allSessions, setAllSessions] = useState([])
   const [loadingSessions, setLoadingSessions] = useState(false)
 
@@ -79,6 +81,7 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     localStorage.setItem('itineraryChatSessionId', newSessionId)
     setMessages([])
     setShowSuggestions(true)
+    setShowTripForm(true) // Show trip form for new sessions
     setError(null)
   }
 
@@ -142,6 +145,7 @@ const ChatbotModal = ({ isOpen, onClose }) => {
 
         setMessages(transformedMessages)
         setShowSuggestions(transformedMessages.length === 0)
+        setShowTripForm(transformedMessages.length === 0) // Show form only for empty sessions
         setError(null)
       } else if (result.notFound) {
         // Session not found in backend, but keep the session ID
@@ -150,6 +154,7 @@ const ChatbotModal = ({ isOpen, onClose }) => {
         setSessionId(sid)
         setMessages([])
         setShowSuggestions(true)
+        setShowTripForm(true) // Show form for new sessions
         setError(null)
       } else {
         setError(result.error)
@@ -163,11 +168,18 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     }
   }
 
+  const handleTripFormSubmit = (formattedPrompt) => {
+    // Hide the form and send the formatted prompt
+    setShowTripForm(false)
+    handleSendMessage(formattedPrompt)
+  }
+
   const handleSendMessage = async (message) => {
     if (!message.trim() || !sessionId) return
 
-    // Hide suggestions once user starts chatting
+    // Hide suggestions and form once user starts chatting
     setShowSuggestions(false)
+    setShowTripForm(false)
 
     // Add user message to UI
     const userMessage = {
@@ -263,7 +275,9 @@ const ChatbotModal = ({ isOpen, onClose }) => {
           />
 
           <div className="flex-1 overflow-y-auto">
-            {messages.length === 0 && showSuggestions ? (
+            {messages.length === 0 && showTripForm ? (
+              <TripDetailsForm onSubmit={handleTripFormSubmit} />
+            ) : messages.length === 0 && showSuggestions ? (
               <ChatbotSuggestions onSuggestionClick={handleSuggestionClick} />
             ) : (
               <ChatbotMessageList
@@ -273,10 +287,12 @@ const ChatbotModal = ({ isOpen, onClose }) => {
             )}
           </div>
 
-          <ChatbotInput
-            onSendMessage={handleSendMessage}
-            disabled={loading}
-          />
+          {!showTripForm && (
+            <ChatbotInput
+              onSendMessage={handleSendMessage}
+              disabled={loading}
+            />
+          )}
 
           {error && (
             <div className="px-6 py-3 bg-red-50 border-t border-red-100">
