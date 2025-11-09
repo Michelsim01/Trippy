@@ -4,11 +4,56 @@ import { Trash2, MessageSquare } from 'lucide-react'
 const ChatbotSessionItem = ({ session, isActive, onClick, onDelete }) => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-  // Generate title from first message or use default
+  // Parse trip details from first message
+  const parseTripDetails = () => {
+    if (!session.messages || session.messages.length === 0) {
+      return null
+    }
+
+    const firstMessage = session.messages[0].userMessage
+    if (!firstMessage) {
+      return null
+    }
+
+    // Parse: "I want to travel to [DESTINATION] for [DURATION] days, starting [DATE]"
+    const destinationMatch = firstMessage.match(/travel to ([A-Za-z\s]+?)(?:\s+for)/i)
+    const durationMatch = firstMessage.match(/for (\d+) days?/i)
+    const dateMatch = firstMessage.match(/starting ([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i)
+
+    if (destinationMatch && durationMatch && dateMatch) {
+      const destination = destinationMatch[1].trim()
+      const duration = durationMatch[1]
+      const startDate = dateMatch[1]
+
+      // Format the date (e.g., "February 1, 2026" -> "Feb 1, 2026")
+      const date = new Date(startDate)
+      const formattedDate = date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+
+      return {
+        destination,
+        duration,
+        startDate: formattedDate
+      }
+    }
+
+    return null
+  }
+
+  // Generate title from parsed trip details or use default
   const getTitle = () => {
     if (session.title) {
       return session.title
     }
+
+    const tripDetails = parseTripDetails()
+    if (tripDetails) {
+      return `${tripDetails.duration} Days Trip to ${tripDetails.destination}`
+    }
+
     if (session.messages && session.messages.length > 0) {
       const firstMessage = session.messages[0].userMessage || 'New Trip'
       // Truncate to 40 characters
@@ -16,7 +61,17 @@ const ChatbotSessionItem = ({ session, isActive, onClick, onDelete }) => {
         ? firstMessage.substring(0, 40) + '...'
         : firstMessage
     }
+
     return 'New Trip'
+  }
+
+  // Get subtitle with start date
+  const getSubtitle = () => {
+    const tripDetails = parseTripDetails()
+    if (tripDetails) {
+      return `from ${tripDetails.startDate}`
+    }
+    return getLastActivity()
   }
 
   // Format last activity time
@@ -70,7 +125,7 @@ const ChatbotSessionItem = ({ session, isActive, onClick, onDelete }) => {
             {getTitle()}
           </div>
           <div className={`text-xs mt-1 ${isActive ? 'text-white opacity-80' : 'text-neutrals-4'}`}>
-            {getLastActivity()}
+            {getSubtitle()}
           </div>
         </div>
         {!showDeleteConfirm ? (
