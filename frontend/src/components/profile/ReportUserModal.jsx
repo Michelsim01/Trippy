@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Info, CheckCircle } from 'lucide-react';
+import { X, Info, CheckCircle, AlertCircle } from 'lucide-react';
 import { userReportService } from '../../services/userReportService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -24,6 +24,7 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(null);
+  const [showReasonTooltip, setShowReasonTooltip] = useState(false);
 
   const handleSubmit = async () => {
     setError(null);
@@ -49,11 +50,35 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
       }, 3000);
     } catch (e) {
       console.error('Error submitting report:', e);
-      setError(e.message || 'Failed to submit report');
+      // Handle network errors and duplicate reports
+      let errorMessage = 'We couldn\'t submit your report. Please try again later.';
+      if (e.message) {
+        // If the error message contains duplicate info or other specific errors, use it
+        if (e.message.includes('already submitted') || e.message.includes('already reported')) {
+          errorMessage = e.message;
+        } else if (e.message.includes('network') || e.message.includes('fetch')) {
+          errorMessage = 'We couldn\'t submit your report. Please check your connection and try again later.';
+        } else if (e.message.includes('500') || e.message.includes('server')) {
+          errorMessage = 'We couldn\'t submit your report. Please try again later.';
+        } else {
+          // For validation errors or other specific errors, show the actual message
+          errorMessage = e.message;
+        }
+      }
+      setError(errorMessage);
       setShowConfirmModal(false);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmitClick = () => {
+    if (!reason) {
+      setShowReasonTooltip(true);
+      setTimeout(() => setShowReasonTooltip(false), 3000);
+      return;
+    }
+    setShowConfirmModal(true);
   };
 
   const getReasonLabel = () => {
@@ -129,18 +154,33 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
                       </div>
                     )}
                     <div>
-                      <label className="block text-sm font-medium text-neutrals-2 mb-1">Reason</label>
-                      <select
-                        className="w-full border border-neutrals-6 rounded-lg px-3 py-2 text-sm"
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        disabled={loading}
-                      >
-                        <option value="">Please select reason</option>
-                        {REASONS.map(r => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                      </select>
+                      <label className="block text-sm font-medium text-neutrals-2 mb-1">
+                        Reason <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          className={`w-full border rounded-lg px-3 py-2 text-sm ${
+                            showReasonTooltip ? 'border-red-500' : 'border-neutrals-6'
+                          }`}
+                          value={reason}
+                          onChange={(e) => {
+                            setReason(e.target.value);
+                            setShowReasonTooltip(false);
+                          }}
+                          disabled={loading}
+                        >
+                          <option value="">Please select reason</option>
+                          {REASONS.map(r => (
+                            <option key={r.value} value={r.value}>{r.label}</option>
+                          ))}
+                        </select>
+                        {showReasonTooltip && (
+                          <div className="absolute left-0 top-full mt-1 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg px-3 py-2 z-10 flex items-center gap-2 shadow-md">
+                            <AlertCircle className="w-4 h-4" />
+                            Please select a reason to continue
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-neutrals-2 mb-1">Description (optional)</label>
@@ -165,13 +205,16 @@ const ReportUserModal = ({ isOpen, onClose, reportedUserId, onSubmitted }) => {
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={() => setShowConfirmModal(true)}
-                    className="px-4 py-2 rounded-lg text-sm bg-primary-1 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={loading || !reason}
-                  >
-                    Submit Report
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={handleSubmitClick}
+                      className="px-4 py-2 rounded-lg text-sm bg-primary-1 text-white hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={loading}
+                      title={!reason ? 'Please select a reason to continue' : ''}
+                    >
+                      Submit Report
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

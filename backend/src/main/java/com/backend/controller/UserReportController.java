@@ -85,8 +85,8 @@ public class UserReportController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
             logger.error("Error creating user report: {}", e.getMessage(), e);
-            e.printStackTrace();
-            return ResponseEntity.status(500).body(Map.of("error", "Failed to create report: " + e.getMessage()));
+            // Return user-friendly error message for network/server errors
+            return ResponseEntity.status(500).body(Map.of("error", "We couldn't submit your report. Please try again later."));
         }
     }
 

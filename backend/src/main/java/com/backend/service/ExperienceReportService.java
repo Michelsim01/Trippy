@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ExperienceReportService {
@@ -20,6 +21,12 @@ public class ExperienceReportService {
     private ExperienceReportRepository experienceReportRepository;
 
     public ExperienceReport createReport(Long reporterUserId, Long experienceId, ExperienceReportReason reason, String description) {
+        // Check for duplicate report
+        Optional<ExperienceReport> existingReport = experienceReportRepository.findByUserIdAndExperienceId(reporterUserId, experienceId);
+        if (existingReport.isPresent()) {
+            throw new IllegalArgumentException("You have already submitted a report for this experience");
+        }
+        
         // Create report
         ExperienceReport report = new ExperienceReport();
         report.setUserId(reporterUserId);
