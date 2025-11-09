@@ -4,7 +4,6 @@ import com.backend.dto.QueryParams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -64,23 +63,6 @@ public class QueryParser {
         if (durationMatcher.find()) {
             params.setTripDuration(Integer.parseInt(durationMatcher.group(1)));
             logger.debug("Extracted trip duration: {} days", params.getTripDuration());
-        }
-
-        // Extract budget (optional)
-        // Pattern: "budget $[X]" or "under $[X]"
-        Pattern budgetPattern = Pattern.compile(
-            "(?:budget|under)\\s*\\$?([\\d,]+)",
-            Pattern.CASE_INSENSITIVE
-        );
-        Matcher budgetMatcher = budgetPattern.matcher(userMessage);
-        if (budgetMatcher.find()) {
-            String budgetStr = budgetMatcher.group(1).replaceAll(",", "");
-            try {
-                params.setMaxBudget(new BigDecimal(budgetStr));
-                logger.debug("Extracted budget: ${}", params.getMaxBudget());
-            } catch (NumberFormatException e) {
-                logger.warn("Failed to parse budget: {}", budgetStr);
-            }
         }
 
         // Extract start date (optional)

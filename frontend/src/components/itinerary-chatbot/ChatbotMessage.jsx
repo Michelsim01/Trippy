@@ -5,6 +5,65 @@ const ChatbotMessage = ({ message }) => {
   const isUser = message.role === 'user'
   const isError = message.isError
 
+  // Parse inline markdown (bold text and links)
+  const parseInlineMarkdown = (text) => {
+    const elements = []
+    let currentIndex = 0
+
+    // Combined regex to match both [text](url) links and **bold** text
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+    const boldRegex = /\*\*([^*]+)\*\*/g
+
+    // Find all matches for links and bold
+    const matches = []
+    let match
+
+    while ((match = linkRegex.exec(text)) !== null) {
+      matches.push({ type: 'link', index: match.index, length: match[0].length, text: match[1], url: match[2] })
+    }
+
+    while ((match = boldRegex.exec(text)) !== null) {
+      matches.push({ type: 'bold', index: match.index, length: match[0].length, text: match[1] })
+    }
+
+    // Sort matches by index
+    matches.sort((a, b) => a.index - b.index)
+
+    // Build elements array
+    matches.forEach((match, i) => {
+      // Add text before this match
+      if (match.index > currentIndex) {
+        elements.push(text.substring(currentIndex, match.index))
+      }
+
+      // Add the matched element
+      if (match.type === 'link') {
+        elements.push(
+          <a
+            key={`link-${i}`}
+            href={match.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-1 hover:underline font-medium"
+          >
+            {match.text}
+          </a>
+        )
+      } else if (match.type === 'bold') {
+        elements.push(<strong key={`bold-${i}`}>{match.text}</strong>)
+      }
+
+      currentIndex = match.index + match.length
+    })
+
+    // Add remaining text
+    if (currentIndex < text.length) {
+      elements.push(text.substring(currentIndex))
+    }
+
+    return elements.length > 0 ? elements : text
+  }
+
   const formatContent = (content) => {
     // Handle undefined or null content
     if (!content) {
@@ -43,14 +102,11 @@ const ChatbotMessage = ({ message }) => {
           </li>
         )
       }
-      // Check if line is bold (wrapped in **)
-      else if (line.includes('**')) {
-        const parts = line.split('**')
+      // Check if line contains markdown links or bold text
+      else if (line.includes('**') || line.includes('](')) {
         return (
           <p key={index} className="mb-2">
-            {parts.map((part, i) =>
-              i % 2 === 1 ? <strong key={i}>{part}</strong> : part
-            )}
+            {parseInlineMarkdown(line)}
           </p>
         )
       }

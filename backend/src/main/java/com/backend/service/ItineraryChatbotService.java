@@ -298,9 +298,6 @@ public class ItineraryChatbotService {
             if (params.getDepartureCity() != null) {
                 context.append(String.format("Departing From: %s\n", params.getDepartureCity()));
             }
-            if (params.getMaxBudget() != null) {
-                context.append(String.format("Budget: $%s per person\n", params.getMaxBudget()));
-            }
             context.append("\n");
 
             // Add system instructions
@@ -311,9 +308,9 @@ public class ItineraryChatbotService {
             context.append("- Balance experience variety and proximity\n");
             context.append("- Provide practical travel tips and recommendations\n\n");
 
-            // Add availability information FIRST (most critical - must not be truncated!)
+            // Log availability information (will append to context after clustering)
             if (!availabilities.isEmpty()) {
-                logger.info("📅 Total availability records found: {}", availabilities.size());
+                logger.info("📅 Total availability records found (before clustering): {}", availabilities.size());
 
                 // Log each availability record for debugging
                 for (ItineraryAvailabilityIndex avail : availabilities) {
@@ -323,26 +320,8 @@ public class ItineraryChatbotService {
                         avail.getAvailableSchedulesCount(),
                         avail.getBookingPressure());
                 }
-
-                context.append("=== AVAILABILITY (Exact Trip Dates Only) ===\n\n");
-                Map<Long, List<ItineraryAvailabilityIndex>> availByExperience = availabilities.stream()
-                    .collect(Collectors.groupingBy(ItineraryAvailabilityIndex::getExperienceId));
-
-                // Group schedules by experience
-                Map<Long, List<ExperienceSchedule>> schedulesByExperience = schedules.stream()
-                    .collect(Collectors.groupingBy(schedule -> schedule.getExperience().getExperienceId()));
-
-                for (Map.Entry<Long, List<ItineraryAvailabilityIndex>> entry : availByExperience.entrySet()) {
-                    List<ExperienceSchedule> experienceSchedules = schedulesByExperience.getOrDefault(entry.getKey(), new ArrayList<>());
-                    String formattedAvail = formatAvailabilityInfo(entry.getKey(), entry.getValue(), experienceSchedules, experienceIdToTitle);
-                    logger.info("📋 Availability info for Experience #{}: {}", entry.getKey(), formattedAvail);
-                    context.append(formattedAvail).append("\n");
-                }
             } else {
                 logger.warn("⚠️  No availability records found for trip dates {} to {}", availabilityStart, availabilityEnd);
-                context.append("=== AVAILABILITY ===\n\n");
-                context.append("⚠️  No Trippy experiences have availability during the requested trip dates.\n");
-                context.append("Please create an itinerary using web-based activities and attractions.\n\n");
             }
 
             // Add available experiences (ONLY those with availability during trip dates!)
@@ -360,9 +339,107 @@ public class ItineraryChatbotService {
             logger.info("📋 Experiences with availability: {}/{} experiences have availability during trip dates",
                 experiencesWithAvailabilityDocs.size(), relevantExperiences.size());
 
+            // Filter to top 5 closest experiences forming a tight cluster
+            if (experiencesWithAvailabilityDocs.size() > 5 && !routes.isEmpty()) {
+                List<Long> availableExpIds = experiencesWithAvailabilityDocs.stream()
+                    .map(ExperienceKnowledgeBaseDocument::getSourceExperienceId)
+                    .collect(Collectors.toList());
+
+                // Build travel time matrix
+                Map<String, Integer> travelTimeMatrix = new HashMap<>();
+                for (ItineraryDistanceMatrix route : routes) {
+                    Long origin = route.getOriginExperienceId();
+                    Long dest = route.getDestinationExperienceId();
+
+                    if (availableExpIds.contains(origin) && availableExpIds.contains(dest)) {
+                        // Find minimum travel time among available modes
+                        Integer minTime = null;
+                        if (route.getDrivingTimeMinutes() != null) {
+                            minTime = route.getDrivingTimeMinutes();
+                        }
+                        if (route.getTransitTimeMinutes() != null &&
+                            (minTime == null || route.getTransitTimeMinutes() < minTime)) {
+                            minTime = route.getTransitTimeMinutes();
+                        }
+                        if (route.getWalkingTimeMinutes() != null &&
+                            (minTime == null || route.getWalkingTimeMinutes() < minTime)) {
+                            minTime = route.getWalkingTimeMinutes();
+                        }
+
+                        if (minTime != null) {
+                            travelTimeMatrix.put(origin + "_" + dest, minTime);
+                        }
+                    }
+                }
+
+                // Find cluster of 5 experiences with minimum total pairwise travel time
+                List<Long> bestCluster = findMinimumTravelTimeCluster(availableExpIds, travelTimeMatrix, 5);
+
+                logger.info("📏 Cluster filtering: selecting tightest cluster of 5 from {} available",
+                    availableExpIds.size());
+                logger.info("  Best cluster: {}", bestCluster);
+
+                // Calculate total travel time for the selected cluster
+                int totalTime = 0;
+                int pairCount = 0;
+                for (int i = 0; i < bestCluster.size(); i++) {
+                    for (int j = i + 1; j < bestCluster.size(); j++) {
+                        Integer time = travelTimeMatrix.get(bestCluster.get(i) + "_" + bestCluster.get(j));
+                        if (time == null) {
+                            time = travelTimeMatrix.get(bestCluster.get(j) + "_" + bestCluster.get(i));
+                        }
+                        if (time != null) {
+                            totalTime += time;
+                            pairCount++;
+                        }
+                    }
+                }
+                if (pairCount > 0) {
+                    logger.info("  Cluster avg pairwise travel time: {:.1f} minutes", (double) totalTime / pairCount);
+                }
+
+                // Filter to only include cluster experiences
+                Set<Long> clusterSet = new HashSet<>(bestCluster);
+                experiencesWithAvailabilityDocs = experiencesWithAvailabilityDocs.stream()
+                    .filter(exp -> clusterSet.contains(exp.getSourceExperienceId()))
+                    .collect(Collectors.toList());
+
+                availabilities = availabilities.stream()
+                    .filter(avail -> clusterSet.contains(avail.getExperienceId()))
+                    .collect(Collectors.toList());
+                schedules = schedules.stream()
+                    .filter(schedule -> clusterSet.contains(schedule.getExperience().getExperienceId()))
+                    .collect(Collectors.toList());
+
+                logger.info("📋 After cluster filter: {} experiences, {} availability records, {} schedules",
+                    experiencesWithAvailabilityDocs.size(), availabilities.size(), schedules.size());
+            }
+
             logger.info("📋 Experience IDs being included in context:");
             for (ExperienceKnowledgeBaseDocument exp : experiencesWithAvailabilityDocs) {
                 logger.info("  - Experience #{}: {}", exp.getSourceExperienceId(), exp.getTitle());
+            }
+
+            // Add availability information FIRST (most critical - must not be truncated!)
+            // This is done AFTER clustering so only clustered experiences are included
+            if (!availabilities.isEmpty()) {
+                context.append("=== AVAILABILITY (Exact Trip Dates Only) ===\n\n");
+                Map<Long, List<ItineraryAvailabilityIndex>> availByExperience = availabilities.stream()
+                    .collect(Collectors.groupingBy(ItineraryAvailabilityIndex::getExperienceId));
+
+                // Group schedules by experience
+                Map<Long, List<ExperienceSchedule>> schedulesByExperience = schedules.stream()
+                    .collect(Collectors.groupingBy(schedule -> schedule.getExperience().getExperienceId()));
+
+                for (Map.Entry<Long, List<ItineraryAvailabilityIndex>> entry : availByExperience.entrySet()) {
+                    List<ExperienceSchedule> experienceSchedules = schedulesByExperience.getOrDefault(entry.getKey(), new ArrayList<>());
+                    String formattedAvail = formatAvailabilityInfo(entry.getKey(), entry.getValue(), experienceSchedules, experienceIdToTitle);
+                    context.append(formattedAvail).append("\n");
+                }
+            } else {
+                context.append("=== AVAILABILITY ===\n\n");
+                context.append("⚠️  No Trippy experiences have availability during the requested trip dates.\n");
+                context.append("Please create an itinerary using web-based activities and attractions.\n\n");
             }
 
             context.append("=== AVAILABLE EXPERIENCES ===\n\n");
@@ -375,13 +452,8 @@ public class ItineraryChatbotService {
                 context.append("The itinerary below will include web-based activities and attractions instead.\n\n");
             }
 
-            // Add routing information (can be truncated if needed)
-            if (!routes.isEmpty()) {
-                context.append("=== TRANSPORTATION & ROUTING ===\n\n");
-                for (ItineraryDistanceMatrix route : routes) {
-                    context.append(formatRouteInfo(route)).append("\n\n");
-                }
-            }
+            // Transportation routing removed to save context space
+            // The AI can create good itineraries based on availability and experience info alone
 
             // Truncate if too long
             String fullContext = context.toString();
@@ -532,6 +604,102 @@ public class ItineraryChatbotService {
         }
 
         return sb.toString();
+    }
+
+    /**
+     * Find the cluster of N experiences with minimum total pairwise travel time
+     * Uses a greedy approach: start with the pair with shortest distance, then iteratively
+     * add the experience that minimizes total distance to the current cluster
+     */
+    private List<Long> findMinimumTravelTimeCluster(List<Long> experienceIds,
+                                                     Map<String, Integer> travelTimeMatrix,
+                                                     int clusterSize) {
+        if (experienceIds.size() <= clusterSize) {
+            return new ArrayList<>(experienceIds);
+        }
+
+        // Start with the pair of experiences with the shortest travel time
+        Long exp1 = null, exp2 = null;
+        int minTime = Integer.MAX_VALUE;
+
+        for (int i = 0; i < experienceIds.size(); i++) {
+            for (int j = i + 1; j < experienceIds.size(); j++) {
+                Integer time = getTravelTime(experienceIds.get(i), experienceIds.get(j), travelTimeMatrix);
+                if (time != null && time < minTime) {
+                    minTime = time;
+                    exp1 = experienceIds.get(i);
+                    exp2 = experienceIds.get(j);
+                }
+            }
+        }
+
+        if (exp1 == null || exp2 == null) {
+            // No travel time data, return first N experiences
+            return experienceIds.stream().limit(clusterSize).collect(Collectors.toList());
+        }
+
+        // Build cluster starting with closest pair
+        List<Long> cluster = new ArrayList<>();
+        cluster.add(exp1);
+        cluster.add(exp2);
+
+        Set<Long> remaining = new HashSet<>(experienceIds);
+        remaining.remove(exp1);
+        remaining.remove(exp2);
+
+        // Iteratively add experiences that minimize total cluster travel time
+        while (cluster.size() < clusterSize && !remaining.isEmpty()) {
+            Long bestCandidate = null;
+            int bestTotalTime = Integer.MAX_VALUE;
+
+            for (Long candidate : remaining) {
+                int totalTime = 0;
+                int validConnections = 0;
+
+                // Calculate total travel time from candidate to all cluster members
+                for (Long member : cluster) {
+                    Integer time = getTravelTime(candidate, member, travelTimeMatrix);
+                    if (time != null) {
+                        totalTime += time;
+                        validConnections++;
+                    }
+                }
+
+                // Use average time per connection to normalize
+                if (validConnections > 0 && totalTime < bestTotalTime) {
+                    bestTotalTime = totalTime;
+                    bestCandidate = candidate;
+                }
+            }
+
+            if (bestCandidate != null) {
+                cluster.add(bestCandidate);
+                remaining.remove(bestCandidate);
+            } else {
+                // No more experiences with travel time data, add arbitrary remaining ones
+                break;
+            }
+        }
+
+        // If cluster is smaller than requested, fill with remaining experiences
+        while (cluster.size() < clusterSize && !remaining.isEmpty()) {
+            Long next = remaining.iterator().next();
+            cluster.add(next);
+            remaining.remove(next);
+        }
+
+        return cluster;
+    }
+
+    /**
+     * Helper to get travel time between two experiences (bidirectional lookup)
+     */
+    private Integer getTravelTime(Long exp1, Long exp2, Map<String, Integer> travelTimeMatrix) {
+        Integer time = travelTimeMatrix.get(exp1 + "_" + exp2);
+        if (time == null) {
+            time = travelTimeMatrix.get(exp2 + "_" + exp1);
+        }
+        return time;
     }
 
     private String convertEmbeddingToString(List<Double> embedding) {

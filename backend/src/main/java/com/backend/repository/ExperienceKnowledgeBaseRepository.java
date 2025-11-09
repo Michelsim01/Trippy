@@ -48,8 +48,7 @@ public interface ExperienceKnowledgeBaseRepository extends JpaRepository<Experie
 
     @Query(value = """
         SELECT * FROM experience_knowledge_base
-        WHERE embedding <=> CAST(:queryEmbedding AS vector) < :threshold
-        AND document_type != 'logistics'
+        WHERE document_type != 'itinerary_logistics'
         AND (
             metadata->>'location' ILIKE CONCAT('%', :location, '%')
             OR metadata->>'country' ILIKE CONCAT('%', :location, '%')

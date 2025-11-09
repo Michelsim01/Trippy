@@ -97,7 +97,7 @@ public class OpenAIService {
             ChatCompletionRequest request = ChatCompletionRequest.builder()
                     .model(chatModel)
                     .messages(messages)
-                    .maxTokens(4096)  // Max output tokens
+                    .maxTokens(4096)  // Max output tokens (model limit)
                     .temperature(0.7)
                     .build();
 
@@ -256,46 +256,33 @@ public class OpenAIService {
         prompt.append("When building itineraries, ALWAYS prioritize Trippy experiences first.\\n\\n");
 
         prompt.append("ITINERARY FORMAT:\\n");
-        prompt.append("Start with a title: '[X] Days [Travel Style] [Theme] Exploration in [Destination]'\\n");
+        prompt.append("Start with a title: # [X] Days [Travel Style] [Theme] Exploration in [Destination]'\\n");
         prompt.append("Add a brief introduction paragraph describing the itinerary's focus and appeal.\\n\\n");
 
         prompt.append("DAY STRUCTURE:\\n");
-        prompt.append("Format each day as follows:\\n\\n");
-        prompt.append("Day [X] - [Date]\\n\\n");
-        prompt.append("Morning\\n\\n");
-        prompt.append("[Experience Title] [TRIPPY EXPERIENCE]\\n");
-        prompt.append("[if this is a Trippy experience and not an experience you found from the web, append with the relevant trippy experience ID] 🔗 http://localhost:5173/experience/[EXPERIENCE_ID]\\n\\n");
-        prompt.append("Date: [Specific date of experience]\\n");
-        prompt.append("[Start time] to [End time]\\n");
-        prompt.append("$[Price] per person if this is a trippy experience\\n\\n");
-        prompt.append("[Detailed description of the experience, using the trippy experience description if it is a trippy experience]\\n\\n");
+        prompt.append("Organize each day chronologically by actual start times:\\n");
+        prompt.append("- Morning (6am-11am): Activities starting before noon\\n");
+        prompt.append("- Afternoon (12pm-5pm): Activities starting in the afternoon\\n");
+        prompt.append("- Evening (6pm-11pm): Activities starting in the evening\\n\\n");
 
-        prompt.append("TRANSPORTATION BETWEEN ACTIVITIES:\\n");
-        prompt.append("After each activity, provide detailed transportation information that you can find:\\n");
-        prompt.append("Take [bus/metro/taxi/etc]...\\n");
-        prompt.append("- Include full route information (e.g., 'Take bus 520 from Red Fort to India Gate')\\n");
-        prompt.append("- Specify travel time (e.g., '15 minutes')\\n");
-        prompt.append("- Include approximate price if available\\n");
-        prompt.append("- Use OpenAI's knowledge to research realistic transportation options\\n\\n");
+        prompt.append("IMPORTANT: List activities in TIME ORDER on each day.\\n");
+        prompt.append("An activity from 9am-2pm must come BEFORE an activity from 1pm-4pm.\\n");
+        prompt.append("Do NOT schedule overlapping activities on the same day.\\n\\n");
 
-        prompt.append("Afternoon\\n");
-        prompt.append("[Next experience with same detailed format as day]\\n\\n");
-
-        prompt.append("Evening\\n");
-        prompt.append("[Next experience with same detailed format as day]\\n\\n");
+        prompt.append("Format each day:\\n\\n");
+        prompt.append("## Day [X] - [Date]\\n\\n");
+        prompt.append("### Morning (or Afternoon or Evening based on actual start time)\\n\\n");
+        prompt.append("**[Experience Title]** [TRIPPY EXPERIENCE]\\n");
+        prompt.append("[Book Experience](http://localhost:5173/experience/[ID])\\n\\n");
+        prompt.append("**Time:** [Start time] to [End time]\\n");
+        prompt.append("**Price:** $[Price] per person\\n\\n");
+        prompt.append("[Description]\\n\\n");
 
         prompt.append("GENERAL ACTIVITIES (when no suitable Trippy experience exists):\\n");
         prompt.append("- Use OpenAI's knowledge of travel destinations and popular attractions\\n");
         prompt.append("- Provide realistic timing, pricing, and descriptions\\n");
         prompt.append("- Ensure activities fit the user's travel style and theme preferences\\n");
         prompt.append("- Balance the day appropriately (meals, rest, sightseeing)\\n\\n");
-
-        prompt.append("TRANSPORTATION OPTIONS SECTION:\\n");
-        prompt.append("At the end of the itinerary, add a section titled 'Transportation Options'\\n");
-        prompt.append("- Explain outbound journey options from departure city to destination\\n");
-        prompt.append("- Mention departure timing considerations (e.g., arriving day before for rest)\\n");
-        prompt.append("- Note that dates are for reference and should be verified\\n");
-        prompt.append("- Include flight/ferry/train details if applicable\\n\\n");
 
         prompt.append("SUGGESTED ALTERNATIVES SECTION:\\n");
         prompt.append("End with 'Suggested Alternatives' section listing 4-6 additional attractions:\\n");
@@ -307,7 +294,6 @@ public class OpenAIService {
         prompt.append("- PRIORITIZE Trippy experiences from the context provided\\n");
         prompt.append("- Use actual dates from USER TRIP DETAILS, not placeholders\\n");
         prompt.append("- Be specific with times (e.g., 9:00am to 11:00am)\\n");
-        prompt.append("- Provide realistic, detailed transportation between each activity\\n");
         prompt.append("- Balance Trippy experiences with general activities to create a complete day\\n");
         prompt.append("- Consider travel time, meal breaks, and rest periods\\n");
         prompt.append("- Write in an engaging, friendly, and knowledgeable tone\\n\\n");
@@ -316,27 +302,14 @@ public class OpenAIService {
             prompt.append("=== TRIPPY EXPERIENCES (PRIORITIZE THESE) ===\\n");
             prompt.append(context);
             prompt.append("\\n\\n");
-            prompt.append("MANDATORY COMPLETION REQUIREMENTS:\\n");
-            prompt.append("1. Include EVERY day specified in the trip duration (check USER TRIP DETAILS section)\\n");
-            prompt.append("2. Write out ALL days completely - Day 1, Day 2, Day 3, etc. until the final day\\n");
-            prompt.append("3. Include the complete 'Transportation Options' section at the end\\n");
-            prompt.append("4. Include the complete 'Suggested Alternatives' section at the end\\n");
-            prompt.append("5. DO NOT end with phrases like 'Stay tuned', 'Coming up next', 'To be continued'\\n");
-            prompt.append("6. The itinerary MUST be complete and ready for the user to use immediately\\n\\n");
-            prompt.append("FINAL VALIDATION CHECKLIST (before responding):\\n");
-            prompt.append("For EACH Trippy experience you include, verify:\\n");
-            prompt.append("  ✓ Is the assigned date in the availability list? If NO → Remove this experience\\n");
-            prompt.append("  ✓ Does the AVAILABILITY section show this date? If NO → Remove this experience\\n");
-            prompt.append("  ✓ Would this assignment violate the date rules above? If YES → Remove this experience\\n");
-            prompt.append("  ✓ Did you include the booking link (🔗 http://localhost:5173/experience/[ID])? If NO → Add it now\\n\\n");
+            prompt.append("IMPORTANT: You must include ALL days in this single response.\\n");
+            prompt.append("Write Day 1, Day 2, Day 3... through the final day, then end with Suggested Alternatives.\\n\\n");
 
-            prompt.append("Build your itinerary starting with the Trippy experiences above. ");
-            prompt.append("Mark each Trippy experience clearly as [TRIPPY EXPERIENCE]. ");
-            prompt.append("Include specific experience names, prices, times, and descriptions from the context. ");
-            prompt.append("BUT ONLY if the experience is available on the date you're assigning it to. ");
-            prompt.append("Fill gaps with general activities using your knowledge. ");
-            prompt.append("Research and provide accurate transportation details between all activities. ");
-            prompt.append("REMEMBER: Generate the COMPLETE multi-day itinerary NOW - not just Day 1!");
+            prompt.append("Build your itinerary by:\\n");
+            prompt.append("- Prioritizing Trippy experiences marked [TRIPPY EXPERIENCE]\\n");
+            prompt.append("- ONLY assigning experiences to dates shown in AVAILABILITY section\\n");
+            prompt.append("- Filling gaps with general activities from your knowledge\\n");
+            prompt.append("- Writing ALL days completely before ending\\n");
         } else {
             prompt.append("No specific Trippy experiences available. Provide general travel assistance and ask clarifying questions to better help the user.");
         }
