@@ -576,8 +576,8 @@ public class ItineraryChatbotService {
                         java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a");
                         String startTime = schedule.getStartDateTime().format(timeFormatter);
                         String endTime = schedule.getEndDateTime().format(timeFormatter);
-                        sb.append(String.format("    %s to %s (%d spots available)\n",
-                            startTime, endTime, schedule.getAvailableSpots()));
+                        sb.append(String.format("    %s to %s (%d spots available) - ScheduleID: %d\n",
+                            startTime, endTime, schedule.getAvailableSpots(), schedule.getScheduleId()));
                     }
                 }
             }

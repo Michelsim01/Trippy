@@ -273,10 +273,12 @@ public class OpenAIService {
         prompt.append("## Day [X] - [Date]\\n\\n");
         prompt.append("### Morning (or Afternoon or Evening based on actual start time)\\n\\n");
         prompt.append("**[Experience Title]** [TRIPPY EXPERIENCE]\\n");
-        prompt.append("[Book Experience](http://localhost:5173/experience/[ID])\\n\\n");
+        prompt.append("[View Experience](http://localhost:5173/experience/[EXPERIENCE_ID])\\n");
+        prompt.append("{{ADD_TO_CART:[SCHEDULE_ID]}}\\n\\n");
         prompt.append("**Time:** [Start time] to [End time]\\n");
         prompt.append("**Price:** $[Price] per person\\n\\n");
-        prompt.append("[Description]\\n\\n");
+        prompt.append("[Description]\\n");
+        prompt.append("IMPORTANT: Replace [EXPERIENCE_ID] and [SCHEDULE_ID] with the actual IDs from the AVAILABILITY section.\\n\\n");
 
         prompt.append("GENERAL ACTIVITIES (when no suitable Trippy experience exists):\\n");
         prompt.append("- Use OpenAI's knowledge of travel destinations and popular attractions\\n");

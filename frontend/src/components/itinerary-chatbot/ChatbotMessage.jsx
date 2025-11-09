@@ -1,29 +1,78 @@
-import React from 'react'
-import { User } from 'lucide-react'
+import React, { useState } from 'react'
+import { User, ShoppingCart } from 'lucide-react'
+import { useCart } from '../../contexts/CartContext'
 
 const ChatbotMessage = ({ message }) => {
   const isUser = message.role === 'user'
   const isError = message.isError
+  const { addToCart, cartItems } = useCart()
+  const [loadingScheduleIds, setLoadingScheduleIds] = useState([])
+  const [addedScheduleIds, setAddedScheduleIds] = useState([])
 
-  // Parse inline markdown (bold text and links)
+  // Helper function to check if a schedule is already in cart
+  const isScheduleInCart = (scheduleId) => {
+    return cartItems.some((item) => item.scheduleId === scheduleId)
+  }
+
+  // Handle Add to Cart button click
+  const handleAddToCart = async (scheduleId) => {
+    setLoadingScheduleIds((prev) => [...prev, scheduleId])
+    try {
+      const success = await addToCart(scheduleId, 1) // Default to 1 participant
+      if (success) {
+        // Mark as added
+        setAddedScheduleIds((prev) => [...prev, scheduleId])
+        console.log(`Successfully added schedule ${scheduleId} to cart`)
+      }
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+    } finally {
+      setLoadingScheduleIds((prev) => prev.filter((id) => id !== scheduleId))
+    }
+  }
+
+  // Parse inline markdown (bold text, links, and Add to Cart buttons)
   const parseInlineMarkdown = (text) => {
     const elements = []
     let currentIndex = 0
 
-    // Combined regex to match both [text](url) links and **bold** text
-    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
-    const boldRegex = /\*\*([^*]+)\*\*/g
+    // Combined regex to match **[text](url)** bold links, [text](url) links, **bold** text, and {{ADD_TO_CART:scheduleId}}
+    const boldLinkRegex = /\*\*\[([^\]]+)\]\(([^)]+)\)\*\*/g  // **[text](url)**
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g              // [text](url)
+    const boldRegex = /\*\*([^*]+)\*\*/g                      // **text**
+    const addToCartRegex = /\{\{ADD_TO_CART:(\d+)\}\}/g       // {{ADD_TO_CART:id}}
 
-    // Find all matches for links and bold
+    // Find all matches for bold links, links, bold, and add to cart buttons
     const matches = []
     let match
 
+    // Check for bold links first (most specific pattern)
+    while ((match = boldLinkRegex.exec(text)) !== null) {
+      matches.push({ type: 'boldLink', index: match.index, length: match[0].length, text: match[1], url: match[2] })
+    }
+
     while ((match = linkRegex.exec(text)) !== null) {
-      matches.push({ type: 'link', index: match.index, length: match[0].length, text: match[1], url: match[2] })
+      // Skip if this link is already part of a bold link
+      const isPartOfBoldLink = matches.some(
+        (m) => m.type === 'boldLink' && match.index >= m.index && match.index < m.index + m.length
+      )
+      if (!isPartOfBoldLink) {
+        matches.push({ type: 'link', index: match.index, length: match[0].length, text: match[1], url: match[2] })
+      }
     }
 
     while ((match = boldRegex.exec(text)) !== null) {
-      matches.push({ type: 'bold', index: match.index, length: match[0].length, text: match[1] })
+      // Skip if this bold is already part of a bold link
+      const isPartOfBoldLink = matches.some(
+        (m) => m.type === 'boldLink' && match.index >= m.index && match.index < m.index + m.length
+      )
+      if (!isPartOfBoldLink) {
+        matches.push({ type: 'bold', index: match.index, length: match[0].length, text: match[1] })
+      }
+    }
+
+    while ((match = addToCartRegex.exec(text)) !== null) {
+      matches.push({ type: 'addToCart', index: match.index, length: match[0].length, scheduleId: parseInt(match[1]) })
     }
 
     // Sort matches by index
@@ -37,7 +86,19 @@ const ChatbotMessage = ({ message }) => {
       }
 
       // Add the matched element
-      if (match.type === 'link') {
+      if (match.type === 'boldLink') {
+        elements.push(
+          <a
+            key={`boldlink-${i}`}
+            href={match.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-1 hover:underline font-bold"
+          >
+            {match.text}
+          </a>
+        )
+      } else if (match.type === 'link') {
         elements.push(
           <a
             key={`link-${i}`}
@@ -51,6 +112,25 @@ const ChatbotMessage = ({ message }) => {
         )
       } else if (match.type === 'bold') {
         elements.push(<strong key={`bold-${i}`}>{match.text}</strong>)
+      } else if (match.type === 'addToCart') {
+        const isLoading = loadingScheduleIds.includes(match.scheduleId)
+        const isAdded = addedScheduleIds.includes(match.scheduleId) || isScheduleInCart(match.scheduleId)
+
+        elements.push(
+          <button
+            key={`cart-${i}`}
+            onClick={() => handleAddToCart(match.scheduleId)}
+            disabled={isLoading || isAdded}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+              isAdded
+                ? 'bg-neutrals-5 text-neutrals-3 cursor-default'
+                : 'bg-primary-1 text-white hover:bg-primary-2 disabled:opacity-50 disabled:cursor-not-allowed'
+            }`}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" />
+            {isLoading ? 'Adding...' : isAdded ? 'Added to Cart' : 'Add to Cart'}
+          </button>
+        )
       }
 
       currentIndex = match.index + match.length
@@ -102,8 +182,8 @@ const ChatbotMessage = ({ message }) => {
           </li>
         )
       }
-      // Check if line contains markdown links or bold text
-      else if (line.includes('**') || line.includes('](')) {
+      // Check if line contains markdown links, bold text, or Add to Cart buttons
+      else if (line.includes('**') || line.includes('](') || line.includes('{{ADD_TO_CART:')) {
         return (
           <p key={index} className="mb-2">
             {parseInlineMarkdown(line)}
