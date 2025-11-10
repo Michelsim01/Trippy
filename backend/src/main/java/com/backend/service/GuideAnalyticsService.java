@@ -200,6 +200,7 @@ public class GuideAnalyticsService {
                     }
 
                     return new TopExperienceDTO(
+                            exp.getExperienceId(),
                             exp.getTitle(),
                             Integer.valueOf(bookingCount.intValue()),
                             rating,
@@ -207,7 +208,6 @@ public class GuideAnalyticsService {
                             conversionRate);
                 })
                 .sorted(Comparator.comparingInt(TopExperienceDTO::getBookings).reversed())
-                .limit(5)
                 .collect(Collectors.toList());
 
         return topExperiences;

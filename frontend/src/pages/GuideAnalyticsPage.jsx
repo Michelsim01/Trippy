@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 import Footer from '../components/Footer';
+import SmartSuggestionsModal from '../components/SmartSuggestionsModal';
 import ProfitTrendChart from '../components/analytics/ProfitTrendChart';
 import { getAllAnalytics } from '../services/guideAnalyticsService';
 
@@ -12,6 +13,8 @@ const GuideAnalyticsPage = () => {
     const [loading, setLoading] = useState(true);
     const [analyticsData, setAnalyticsData] = useState(null);
     const [error, setError] = useState(null);
+    const [showSmartSuggestionsModal, setShowSmartSuggestionsModal] = useState(false);
+    const [selectedExperience, setSelectedExperience] = useState(null);
 
     useEffect(() => {
         const fetchAnalytics = async () => {
@@ -19,6 +22,7 @@ const GuideAnalyticsPage = () => {
                 setLoading(true);
                 const data = await getAllAnalytics(user?.id || user?.userId);
                 setAnalyticsData(data);
+                console.log('Analytics data:', data);
                 setError(null);
             } catch (err) {
                 console.error('Failed to fetch analytics:', err);
@@ -60,6 +64,18 @@ const GuideAnalyticsPage = () => {
             .split('_')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(' ');
+    };
+
+    // Handle lightbulb click to show smart suggestions
+    const handleSuggestionsClick = (experience) => {
+        console.log('Smart suggestions clicked for experience:', experience.experienceId);
+        setSelectedExperience(experience);
+        setShowSmartSuggestionsModal(true);
+    };
+
+    const handleCloseSmartSuggestionsModal = () => {
+        setShowSmartSuggestionsModal(false);
+        setSelectedExperience(null);
     };
 
     // Render metric card component with change percentage
@@ -208,9 +224,18 @@ const GuideAnalyticsPage = () => {
                                         />
                                     </div>
 
-                                    {/* Top Performing Experiences */}
+                                    {/* All Experiences */}
                                     <div className="bg-white p-6 rounded-lg border border-neutrals-6 shadow-sm">
-                                        <h3 className="text-lg font-semibold text-neutrals-1 mb-4">Top Performing Experiences</h3>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold text-neutrals-1">All Experiences</h3>
+                                            <div className="flex items-center gap-2 text-sm text-neutrals-4">
+                                            <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                            </svg>
+                                                <span>Smart Suggestions Available</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-neutrals-4 mb-4">Click the lightbulb to see personalized improvement suggestions</p>
                                         <div className="overflow-x-auto">
                                             <table className="w-full">
                                                 <thead>
@@ -220,11 +245,12 @@ const GuideAnalyticsPage = () => {
                                                         <th className="text-center py-3 px-4 text-sm font-semibold text-neutrals-3">Bookings</th>
                                                         <th className="text-center py-3 px-4 text-sm font-semibold text-neutrals-3">Rating</th>
                                                         <th className="text-center py-3 px-4 text-sm font-semibold text-neutrals-3">Conversion</th>
+                                                        <th className="text-center py-3 px-4 text-sm font-semibold text-neutrals-3">Suggestions</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody>
                                                     {analyticsData.topExperiences.map((experience, index) => (
-                                                        <tr key={index} className="border-b border-neutrals-6 hover:bg-neutrals-8 transition-colors">
+                                                        <tr key={experience.experienceId || index} className="border-b border-neutrals-6 hover:bg-neutrals-8 transition-colors">
                                                             <td className="py-3 px-4 text-sm text-neutrals-1 font-medium">{experience.name}</td>
                                                             <td className="py-3 px-4">
                                                                 <span className="inline-block px-3 py-1 text-xs font-medium rounded-full bg-green-100 text-green-700">
@@ -241,6 +267,17 @@ const GuideAnalyticsPage = () => {
                                                                 </div>
                                                             </td>
                                                             <td className="py-3 px-4 text-center text-sm text-neutrals-3">{experience.conversionRate}%</td>
+                                                            <td className="py-3 px-4 text-center">
+                                                                <button
+                                                                    onClick={() => handleSuggestionsClick(experience)}
+                                                                    className="p-2 hover:bg-yellow-50 rounded-lg transition-colors group"
+                                                                    title="View smart suggestions"
+                                                                >
+                                                                    <svg className="w-5 h-5 text-yellow-500 group-hover:text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                                                    </svg>
+                                                                </button>
+                                                            </td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
@@ -342,15 +379,34 @@ const GuideAnalyticsPage = () => {
                                 />
                             </div>
 
-                            {/* Top Performing Experiences - Mobile */}
+                            {/* All Experiences - Mobile */}
                             <div className="bg-white p-4 rounded-lg border border-neutrals-6 shadow-sm">
-                                <h3 className="text-md font-semibold text-neutrals-1 mb-4">Top Performing Experiences</h3>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-md font-semibold text-neutrals-1">All Experiences</h3>
+                                    <div className="flex items-center gap-1 text-xs text-neutrals-4">
+                                    <svg className="w-6 h-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                    </svg>
+                                        <span>Smart Suggestions Available</span>
+                                    </div>
+                                </div>
                                 <div className="space-y-4">
                                     {analyticsData.topExperiences.map((experience, index) => (
-                                        <div key={index} className="border-b border-neutrals-6 pb-4 last:border-b-0 last:pb-0">
+                                        <div key={experience.experienceId || index} className="border-b border-neutrals-6 pb-4 last:border-b-0 last:pb-0">
                                             <div className="flex items-start justify-between mb-2">
                                                 <h4 className="text-sm font-medium text-neutrals-1 flex-1">{experience.name}</h4>
-                                                <span className="text-sm font-bold text-primary-1 ml-2">{experience.bookings} bookings</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-bold text-primary-1">{experience.bookings} bookings</span>
+                                                    <button
+                                                        onClick={() => handleSuggestionsClick(experience)}
+                                                        className="p-1 hover:bg-yellow-50 rounded transition-colors"
+                                                        title="View suggestions"
+                                                    >
+                                                        <svg className="w-4 h-4 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="flex items-center gap-3 text-xs text-neutrals-4">
                                                 <span className="inline-block px-2 py-1 rounded-full bg-green-100 text-green-700 font-medium">
@@ -374,6 +430,16 @@ const GuideAnalyticsPage = () => {
                 <div className="h-px bg-neutrals-6 w-full" />
                 <Footer />
             </div>
+
+            {/* Smart Suggestions Modal */}
+            {showSmartSuggestionsModal && selectedExperience && (
+                <SmartSuggestionsModal 
+                    experienceId={selectedExperience.experienceId}
+                    experienceName={selectedExperience.name}
+                    isOpen={showSmartSuggestionsModal}
+                    onClose={handleCloseSmartSuggestionsModal}
+                />
+            )}
         </div>
     );
 };

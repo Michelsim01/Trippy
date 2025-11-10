@@ -190,12 +190,27 @@ def extract_experience_data(**context):
     booking_query = f""" 
     SELECT 
         e.experience_id,
+        e.view_count,
         COUNT(b.booking_id) as total_bookings,
         COUNT(CASE WHEN b.status = 'COMPLETED' THEN 1 END) as completed_bookings,
         AVG(b.total_amount) as avg_booking_amount,
         COUNT(DISTINCT b.traveler_id) as unique_travelers,
         MIN(b.booking_date) as first_booking_date,
         MAX(b.booking_date) as latest_booking_date,
+        -- Conversion rate calculation
+        CASE WHEN e.view_count > 0 THEN 
+            COUNT(b.booking_id)::float / e.view_count 
+            ELSE 0 END as conversion_rate,
+        -- Monthly trending (last 6 months)
+        COUNT(CASE WHEN b.booking_date >= CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as bookings_last_month,
+        COUNT(CASE WHEN b.booking_date >= CURRENT_DATE - INTERVAL '2 months' 
+                   AND b.booking_date < CURRENT_DATE - INTERVAL '1 month' THEN 1 END) as bookings_2_months_ago,
+        COUNT(CASE WHEN b.booking_date >= CURRENT_DATE - INTERVAL '3 months' 
+                   AND b.booking_date < CURRENT_DATE - INTERVAL '2 months' THEN 1 END) as bookings_3_months_ago,
+        -- Revenue metrics
+        SUM(b.total_amount) as total_revenue,
+        -- Monthly average
+        COUNT(b.booking_id)::float / NULLIF(COUNT(DISTINCT DATE_TRUNC('month', b.booking_date)), 0) as avg_monthly_bookings,
         -- Seasonal patterns
         COUNT(CASE WHEN EXTRACT(MONTH FROM es.start_date_time) IN (12,1,2) THEN 1 END) as winter_bookings,
         COUNT(CASE WHEN EXTRACT(MONTH FROM es.start_date_time) IN (3,4,5) THEN 1 END) as spring_bookings,
@@ -207,7 +222,7 @@ def extract_experience_data(**context):
     LEFT JOIN experience_schedule es ON e.experience_id = es.experience_id
     LEFT JOIN booking b ON es.schedule_id = b.experience_schedule_id
     WHERE e.experience_id IN ({experience_ids_str})
-    GROUP BY e.experience_id
+    GROUP BY e.experience_id, e.view_count
     """
     
     # Extract itinerary data for content richness (only for selected experiences)
@@ -512,6 +527,20 @@ def analyze_sentiment_and_popularity(**context):
             # Content intelligence
             'content_features': content_info,
             
+            # Performance metrics (NEW)
+            'performance_metrics': {
+                'total_bookings': int(booking_info['total_bookings']) if booking_info is not None else 0,
+                'conversion_rate': float(booking_info['conversion_rate']) if booking_info is not None else 0.0,
+                'monthly_bookings': float(booking_info['avg_monthly_bookings']) if booking_info is not None else 0.0,
+                'total_revenue': float(booking_info['total_revenue']) if booking_info is not None and booking_info['total_revenue'] is not None else 0.0,
+                'avg_booking_value': float(booking_info['avg_booking_amount']) if booking_info is not None and booking_info['avg_booking_amount'] is not None else 0.0,
+                'booking_trend': calculate_booking_trend(booking_info) if booking_info is not None else 'stable',
+                'recent_bookings': int(booking_info['recent_bookings']) if booking_info is not None else 0,
+                'bookings_last_month': int(booking_info['bookings_last_month']) if booking_info is not None else 0,
+                'bookings_2_months_ago': int(booking_info['bookings_2_months_ago']) if booking_info is not None else 0,
+                'bookings_3_months_ago': int(booking_info['bookings_3_months_ago']) if booking_info is not None else 0
+            },
+            
             # Sentiment intelligence
             'sentiment_score': float(avg_sentiment),
             'sentiment_distribution': sentiment_distribution,
@@ -638,6 +667,24 @@ def calculate_recommendation_weight(popularity_score, sentiment_score, avg_ratin
     )
     
     return weight * 100  # Scale to 0-100
+
+def calculate_booking_trend(booking_info):
+    """Determine if bookings are increasing, decreasing, or stable"""
+    if booking_info is None:
+        return 'stable'
+    
+    recent = booking_info.get('bookings_last_month', 0)
+    previous = booking_info.get('bookings_2_months_ago', 0)
+    
+    if previous == 0:
+        return 'stable' if recent == 0 else 'increasing'
+    
+    if recent > previous * 1.2:
+        return 'increasing'
+    elif recent < previous * 0.8:
+        return 'decreasing'
+    else:
+        return 'stable'
 
 def build_similarity_text(exp_data):
     """Build text representation for similarity computation from experience data"""
