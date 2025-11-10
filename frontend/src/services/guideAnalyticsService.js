@@ -106,6 +106,29 @@ export const getExperienceViews = async (experienceId, guideId) => {
 };
 
 /**
+ * Get smart suggestions for improving an experience listing
+ * @param {number} experienceId - The experience ID
+ * @returns {Promise<Object>} Smart suggestions response with recommendations
+ */
+export const getSmartSuggestions = async (experienceId) => {
+    try {
+        const response = await api.get(`/api/guide-analytics/suggestions/${experienceId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error fetching smart suggestions:', error);
+        
+        // Handle specific error cases gracefully
+        if (error.response?.status === 404) {
+            throw new Error('Experience not found');
+        } else if (error.response?.status === 400) {
+            throw new Error('Unable to generate suggestions for this experience');
+        } else {
+            throw new Error('Failed to load suggestions. Please try again later.');
+        }
+    }
+};
+
+/**
  * Get all analytics data for a guide in one call
  * @param {number} guideId - The guide's user ID
  * @returns {Promise<Object>} Complete analytics data
@@ -135,5 +158,6 @@ export default {
     getProfitChartData,
     getTopExperiences,
     getExperienceViews,
+    getSmartSuggestions,
     getAllAnalytics
 };

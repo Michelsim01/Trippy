@@ -1,6 +1,7 @@
 package com.backend.dto;
 
 public class TopExperienceDTO {
+    private Long experienceId;
     private String name;
     private Integer bookings;
     private Double rating;
@@ -9,12 +10,21 @@ public class TopExperienceDTO {
 
     public TopExperienceDTO() {}
 
-    public TopExperienceDTO(String name, Integer bookings, Double rating, String category, Double conversionRate) {
+    public TopExperienceDTO(Long experienceId, String name, Integer bookings, Double rating, String category, Double conversionRate) {
+        this.experienceId = experienceId;
         this.name = name;
         this.bookings = bookings;
         this.rating = rating;
         this.category = category;
         this.conversionRate = conversionRate;
+    }
+
+    public Long getExperienceId() {
+        return experienceId;
+    }
+
+    public void setExperienceId(Long experienceId) {
+        this.experienceId = experienceId;
     }
 
     public String getName() {
