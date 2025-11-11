@@ -26,4 +26,26 @@ public interface TravelArticleRepository extends JpaRepository<TravelArticle, Lo
 
     @Query("SELECT t FROM TravelArticle t WHERE t.author.id = :authorId AND t.status = :status ORDER BY t.createdAt DESC")
     List<TravelArticle> findByAuthorIdAndStatusOrderByCreatedAtDesc(@Param("authorId") Long authorId, @Param("status") ArticleStatusEnum status);
+
+    @Query("SELECT DISTINCT t FROM TravelArticle t " +
+           "LEFT JOIN t.author a " +
+           "WHERE t.status = :status " +
+           "AND (LOWER(t.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(t.content) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(a.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(a.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(CONCAT(a.firstName, ' ', a.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    List<TravelArticle> searchPublishedArticles(@Param("status") ArticleStatusEnum status, @Param("searchTerm") String searchTerm);
+
+    @Query("SELECT DISTINCT t FROM TravelArticle t " +
+           "LEFT JOIN t.author a " +
+           "WHERE t.status = :status AND t.category = :category " +
+           "AND (LOWER(t.title) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(t.content) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(a.firstName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(a.lastName) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "OR LOWER(CONCAT(a.firstName, ' ', a.lastName)) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    List<TravelArticle> searchPublishedArticlesByCategory(@Param("status") ArticleStatusEnum status,
+                                                           @Param("category") ArticleCategoryEnum category,
+                                                           @Param("searchTerm") String searchTerm);
 }

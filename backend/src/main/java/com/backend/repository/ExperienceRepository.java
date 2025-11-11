@@ -2,6 +2,7 @@ package com.backend.repository;
 
 import com.backend.entity.Experience;
 import com.backend.entity.ExperienceStatus;
+import com.backend.entity.ExperienceCategory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -60,4 +61,18 @@ public interface ExperienceRepository extends JpaRepository<Experience, Long> {
            "ORDER BY e.createdAt ASC " +
            "LIMIT 5")
     List<Object[]> findPendingExperiences();
+
+    // Methods for blog recommendations
+    List<Experience> findTop3ByCategoryAndStatusOrderByCreatedAtDesc(ExperienceCategory category, ExperienceStatus status);
+
+    List<Experience> findTop4ByStatusOrderByCreatedAtDesc(ExperienceStatus status);
+
+    @Query("SELECT e FROM Experience e WHERE " +
+           "(LOWER(e.title) LIKE LOWER(CONCAT('%', :location, '%')) OR " +
+           "LOWER(e.fullDescription) LIKE LOWER(CONCAT('%', :location, '%'))) " +
+           "AND e.status = :status " +
+           "ORDER BY e.createdAt DESC")
+    List<Experience> findByLocationAndStatus(
+        @Param("location") String location,
+        @Param("status") ExperienceStatus status);
 }

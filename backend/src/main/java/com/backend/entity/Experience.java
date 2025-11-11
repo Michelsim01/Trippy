@@ -15,6 +15,7 @@ public class Experience {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guide_id", nullable = true) // Made nullable temporarily for testing
+    @JsonIgnore
     private User guide;
 
     @Column(nullable = false)

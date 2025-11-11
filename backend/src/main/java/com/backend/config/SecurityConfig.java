@@ -152,6 +152,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/api/travel-articles/upload-image").permitAll() // Allow blog image uploads
                 .requestMatchers("/api/travel-articles/images/**").permitAll() // Allow blog image access
+                .requestMatchers("/api/travel-articles/*/recommended-experiences").permitAll() // Allow public access to blog recommendations
                 .requestMatchers("/api/experiences/*/increment-view").permitAll() // Allow public view tracking
 
                 // WebSocket endpoints (no authentication required for connection)

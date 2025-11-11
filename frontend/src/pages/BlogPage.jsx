@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, X } from 'lucide-react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -19,6 +19,8 @@ const BlogPage = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('ALL');
     const [lastRefresh, setLastRefresh] = useState(Date.now());
+    const [searchDebounceTimer, setSearchDebounceTimer] = useState(null);
+    const [showMyBlogsOnly, setShowMyBlogsOnly] = useState(false);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
@@ -28,10 +30,30 @@ const BlogPage = () => {
         setIsSidebarOpen(false);
     };
 
-    // Fetch blogs on mount and when filters change
+    // Fetch blogs on mount and when category or showMyBlogsOnly changes
     useEffect(() => {
         fetchBlogs();
-    }, [selectedCategory, searchTerm]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCategory, showMyBlogsOnly]);
+
+    // Debounced search effect
+    useEffect(() => {
+        if (searchDebounceTimer) {
+            clearTimeout(searchDebounceTimer);
+        }
+
+        const timer = setTimeout(() => {
+            fetchBlogs();
+        }, 300);
+
+        setSearchDebounceTimer(timer);
+
+        return () => {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        };
+    }, [searchTerm]);
 
     // Refresh blogs when navigating to this page from create/edit pages
     useEffect(() => {
@@ -74,13 +96,33 @@ const BlogPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const params = {
-                category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
-                search: searchTerm
-            };
+            let data;
 
-            // Use getPublishedBlogs to only fetch published blogs from server
-            const data = await blogService.getPublishedBlogs(params);
+            // If "My Blogs" filter is active, fetch only user's blogs
+            if (showMyBlogsOnly && user) {
+                data = await blogService.getBlogsByAuthor(user.id, 'PUBLISHED');
+
+                // Apply search filter on frontend for author's blogs
+                if (searchTerm) {
+                    const searchLower = searchTerm.toLowerCase();
+                    data = data.filter(blog =>
+                        blog.title.toLowerCase().includes(searchLower) ||
+                        blog.content.toLowerCase().includes(searchLower)
+                    );
+                }
+
+                // Apply category filter
+                if (selectedCategory !== 'ALL') {
+                    data = data.filter(blog => blog.category === selectedCategory);
+                }
+            } else {
+                // Fetch all published blogs with search and category filters
+                const params = {
+                    category: selectedCategory !== 'ALL' ? selectedCategory : undefined,
+                    search: searchTerm
+                };
+                data = await blogService.getPublishedBlogs(params);
+            }
 
             setBlogs(data);
 
@@ -199,8 +241,33 @@ const BlogPage = () => {
 
                             {/* Filter and Search Section */}
                             <div className="flex flex-col lg:flex-row gap-4 mb-8">
-                                {/* Category Tags on the Left */}
-                                <div className="flex flex-wrap gap-2 flex-1">
+                                {/* Category Tags and My Blogs Toggle on the Left */}
+                                <div className="flex flex-col gap-3 flex-1">
+                                    {/* My Blogs Toggle - Only show if user is logged in */}
+                                    {user && (
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => setShowMyBlogsOnly(!showMyBlogsOnly)}
+                                                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                                                    showMyBlogsOnly
+                                                        ? 'bg-primary-1 text-white'
+                                                        : 'bg-white border border-neutrals-6 text-neutrals-3 hover:border-primary-1 hover:text-primary-1'
+                                                }`}
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                </svg>
+                                                My Blogs Only
+                                            </button>
+                                            {showMyBlogsOnly && (
+                                                <span className="text-sm text-neutrals-4">
+                                                    Showing only your blogs
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {/* Category Tags */}
+                                    <div className="flex flex-wrap gap-2">
                                     {Object.entries(BLOG_CATEGORIES).map(([key, value]) => (
                                         <button
                                             key={key}
@@ -214,27 +281,36 @@ const BlogPage = () => {
                                             {value}
                                         </button>
                                     ))}
+                                    </div>
                                 </div>
 
                                 {/* Search Bar on the Right - Navbar Style */}
                                 <div className="relative lg:w-[300px]">
                                     {/* Search Icon */}
                                     <div className="w-6 h-6 absolute" style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }}>
-                                        <svg className="w-5 h-5" fill="none" stroke="#777E90" viewBox="0 0 24 24" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                        </svg>
+                                        <Search className="w-5 h-5 text-neutrals-4" strokeWidth={2} />
                                     </div>
+                                    {/* Clear Search Button */}
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="w-6 h-6 absolute flex items-center justify-center hover:bg-neutrals-7 rounded-full transition-colors"
+                                            style={{ right: '15px', top: '50%', transform: 'translateY(-50%)' }}
+                                        >
+                                            <X className="w-4 h-4 text-neutrals-4" strokeWidth={2} />
+                                        </button>
+                                    )}
                                     {/* Search Input */}
                                     <input
                                         type="text"
-                                        placeholder="Search blogs..."
+                                        placeholder="Search blogs, authors, tags..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         onKeyDown={handleSearchKeyDown}
                                         className="input-field white w-full"
                                         style={{
                                             paddingLeft: '50px',
-                                            paddingRight: '24px',
+                                            paddingRight: searchTerm ? '50px' : '24px',
                                             fontSize: '14px',
                                             lineHeight: '24px',
                                             borderRadius: '9999px',
@@ -246,8 +322,8 @@ const BlogPage = () => {
                                 </div>
                             </div>
 
-                            {/* Spotlight Blog Section */}
-                            {spotlightBlog && !loading && (
+                            {/* Spotlight Blog Section - Only show when not searching/filtering */}
+                            {spotlightBlog && !loading && !searchTerm && selectedCategory === 'ALL' && (
                                 <div className="mb-12">
                                     <h2 className="text-2xl font-semibold text-neutrals-1 mb-6">Featured Blog</h2>
                                     <div
@@ -315,7 +391,16 @@ const BlogPage = () => {
                             {/* Blog Grid */}
                             {!loading && !error && (
                                 <div>
-                                    <h2 className="text-2xl font-semibold text-neutrals-1 mb-6">All Blogs</h2>
+                                    <div className="flex items-center justify-between mb-6">
+                                        <h2 className="text-2xl font-semibold text-neutrals-1">
+                                            {showMyBlogsOnly ? 'My Blogs' : 'All Blogs'}
+                                        </h2>
+                                        {(searchTerm || selectedCategory !== 'ALL' || showMyBlogsOnly) && (
+                                            <span className="text-sm text-neutrals-4">
+                                                {blogs.length} blog{blogs.length !== 1 ? 's' : ''} found
+                                            </span>
+                                        )}
+                                    </div>
                                     {blogs.length > 0 ? (
                                         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                                             {blogs.map((blog) => (
@@ -336,14 +421,14 @@ const BlogPage = () => {
                                                 </svg>
                                             </div>
                                             <h3 className="text-xl font-semibold text-neutrals-3 mb-2">
-                                                {searchTerm || selectedCategory !== 'ALL'
-                                                    ? 'No blogs match your search'
+                                                {searchTerm || selectedCategory !== 'ALL' || showMyBlogsOnly
+                                                    ? 'No blogs match your filters'
                                                     : 'No published blogs yet'
                                                 }
                                             </h3>
                                             <p className="text-neutrals-4 mb-6">
-                                                {searchTerm || selectedCategory !== 'ALL'
-                                                    ? 'Try adjusting your search terms or browse different categories.'
+                                                {searchTerm || selectedCategory !== 'ALL' || showMyBlogsOnly
+                                                    ? 'Try adjusting your filters or browse all blogs.'
                                                     : 'Be the first to share your travel experiences!'
                                                 }
                                             </p>
@@ -355,11 +440,12 @@ const BlogPage = () => {
                                                     Write Your First Blog
                                                 </button>
                                             )}
-                                            {(searchTerm || selectedCategory !== 'ALL') && (
+                                            {(searchTerm || selectedCategory !== 'ALL' || showMyBlogsOnly) && (
                                                 <button
                                                     onClick={() => {
                                                         setSearchTerm('');
                                                         setSelectedCategory('ALL');
+                                                        setShowMyBlogsOnly(false);
                                                     }}
                                                     className="ml-4 px-6 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
                                                 >
@@ -422,20 +508,28 @@ const BlogPage = () => {
                         {/* Mobile Search */}
                         <div className="relative mb-4">
                             <div className="w-6 h-6 absolute" style={{ left: '20px', top: '50%', transform: 'translateY(-50%)' }}>
-                                <svg className="w-5 h-5" fill="none" stroke="#777E90" viewBox="0 0 24 24" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
+                                <Search className="w-5 h-5 text-neutrals-4" strokeWidth={2} />
                             </div>
+                            {/* Clear Search Button */}
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="w-6 h-6 absolute flex items-center justify-center hover:bg-neutrals-7 rounded-full transition-colors"
+                                    style={{ right: '15px', top: '50%', transform: 'translateY(-50%)' }}
+                                >
+                                    <X className="w-4 h-4 text-neutrals-4" strokeWidth={2} />
+                                </button>
+                            )}
                             <input
                                 type="text"
-                                placeholder="Search blogs..."
+                                placeholder="Search blogs, authors, tags..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onKeyDown={handleSearchKeyDown}
                                 className="input-field white w-full"
                                 style={{
                                     paddingLeft: '50px',
-                                    paddingRight: '24px',
+                                    paddingRight: searchTerm ? '50px' : '24px',
                                     fontSize: '14px',
                                     lineHeight: '24px',
                                     borderRadius: '9999px',

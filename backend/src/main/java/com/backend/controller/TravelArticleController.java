@@ -6,9 +6,13 @@ import com.backend.entity.ArticleStatusEnum;
 import com.backend.entity.ArticleCategoryEnum;
 import com.backend.entity.ArticleLike;
 import com.backend.entity.ArticleComment;
+import com.backend.entity.Experience;
+import com.backend.entity.ExperienceCategory;
+import com.backend.entity.ExperienceStatus;
 import com.backend.repository.TravelArticleRepository;
 import com.backend.repository.UserRepository;
 import com.backend.repository.ArticleLikeRepository;
+import com.backend.repository.ExperienceRepository;
 import com.backend.service.ArticleCommentService;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,11 +29,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/travel-articles")
@@ -47,6 +53,9 @@ public class TravelArticleController {
     @Autowired
     private ArticleCommentService articleCommentService;
 
+    @Autowired
+    private ExperienceRepository experienceRepository;
+
     private final String UPLOAD_DIR = "uploads/blog-images/";
 
     @GetMapping
@@ -61,18 +70,71 @@ public class TravelArticleController {
     }
 
     @GetMapping("/published")
-    public ResponseEntity<List<TravelArticle>> getPublishedArticles(@RequestParam(required = false) String category) {
+    public ResponseEntity<List<TravelArticle>> getPublishedArticles(
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String search) {
         try {
             List<TravelArticle> articles;
-            if (category != null && !category.isEmpty()) {
+
+            // If search term is provided
+            if (search != null && !search.trim().isEmpty()) {
+                String searchTerm = search.trim();
+                String searchLower = searchTerm.toLowerCase();
+
+                // Search with category filter if category is also provided
+                if (category != null && !category.isEmpty()) {
+                    ArticleCategoryEnum categoryEnum = ArticleCategoryEnum.valueOf(category.toUpperCase());
+                    articles = travelArticleRepository.searchPublishedArticlesByCategory(
+                        ArticleStatusEnum.PUBLISHED, categoryEnum, searchTerm);
+                } else {
+                    articles = travelArticleRepository.searchPublishedArticles(
+                        ArticleStatusEnum.PUBLISHED, searchTerm);
+                }
+
+                // Sort results by relevance: title matches first, then author matches, then content matches
+                articles.sort((a, b) -> {
+                    boolean aTitleMatch = a.getTitle() != null && a.getTitle().toLowerCase().contains(searchLower);
+                    boolean bTitleMatch = b.getTitle() != null && b.getTitle().toLowerCase().contains(searchLower);
+
+                    boolean aAuthorMatch = false;
+                    boolean bAuthorMatch = false;
+
+                    if (a.getAuthor() != null) {
+                        String aFullName = (a.getAuthor().getFirstName() + " " + a.getAuthor().getLastName()).toLowerCase();
+                        aAuthorMatch = aFullName.contains(searchLower) ||
+                                     (a.getAuthor().getFirstName() != null && a.getAuthor().getFirstName().toLowerCase().contains(searchLower)) ||
+                                     (a.getAuthor().getLastName() != null && a.getAuthor().getLastName().toLowerCase().contains(searchLower));
+                    }
+
+                    if (b.getAuthor() != null) {
+                        String bFullName = (b.getAuthor().getFirstName() + " " + b.getAuthor().getLastName()).toLowerCase();
+                        bAuthorMatch = bFullName.contains(searchLower) ||
+                                     (b.getAuthor().getFirstName() != null && b.getAuthor().getFirstName().toLowerCase().contains(searchLower)) ||
+                                     (b.getAuthor().getLastName() != null && b.getAuthor().getLastName().toLowerCase().contains(searchLower));
+                    }
+
+                    // Priority: title match > author match > content match
+                    if (aTitleMatch && !bTitleMatch) return -1;
+                    if (!aTitleMatch && bTitleMatch) return 1;
+                    if (aAuthorMatch && !bAuthorMatch) return -1;
+                    if (!aAuthorMatch && bAuthorMatch) return 1;
+
+                    // If same priority, sort by date (newest first)
+                    return b.getCreatedAt().compareTo(a.getCreatedAt());
+                });
+            }
+            // No search term, just filter by category or get all
+            else if (category != null && !category.isEmpty()) {
                 ArticleCategoryEnum categoryEnum = ArticleCategoryEnum.valueOf(category.toUpperCase());
                 articles = travelArticleRepository.findByStatusAndCategory(ArticleStatusEnum.PUBLISHED, categoryEnum);
             } else {
                 articles = travelArticleRepository.findByStatusOrderByCreatedAtDesc(ArticleStatusEnum.PUBLISHED);
             }
+
             return ResponseEntity.ok(articles);
         } catch (Exception e) {
             System.err.println("Error retrieving published articles: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
@@ -504,6 +566,135 @@ public class TravelArticleController {
             Map<String, Object> error = new HashMap<>();
             error.put("error", "Failed to toggle comment like");
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    // ====================
+    // RECOMMENDATION ENDPOINTS
+    // ====================
+
+    @GetMapping("/{id}/recommended-experiences")
+    public ResponseEntity<List<Experience>> getRecommendedExperiences(@PathVariable Long id) {
+        try {
+            // Get the blog article
+            Optional<TravelArticle> articleOpt = travelArticleRepository.findById(id);
+            if (articleOpt.isEmpty()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            TravelArticle article = articleOpt.get();
+            List<Experience> recommendations = new ArrayList<>();
+
+            // Category-based matching
+            List<Experience> categoryMatches = getCategoryBasedRecommendations(article);
+            recommendations.addAll(categoryMatches);
+
+            // Location-based matching
+            List<Experience> locationMatches = getLocationBasedRecommendations(article);
+            for (Experience exp : locationMatches) {
+                if (!recommendations.contains(exp) && recommendations.size() < 6) {
+                    recommendations.add(exp);
+                }
+            }
+
+            // Fallback to popular experiences if not enough recommendations
+            if (recommendations.size() < 4) {
+                try {
+                    List<Experience> popularExperiences = experienceRepository.findTop4ByStatusOrderByCreatedAtDesc(ExperienceStatus.ACTIVE);
+                    for (Experience exp : popularExperiences) {
+                        if (!recommendations.contains(exp) && recommendations.size() < 6) {
+                            recommendations.add(exp);
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error fetching popular experiences: " + e.getMessage());
+                }
+            }
+
+            return ResponseEntity.ok(recommendations.stream().limit(6).collect(Collectors.toList()));
+
+        } catch (Exception e) {
+            System.err.println("Error getting recommended experiences: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ArrayList<>());
+        }
+    }
+
+    private List<Experience> getCategoryBasedRecommendations(TravelArticle article) {
+        try {
+            if (article == null || article.getCategory() == null) {
+                System.err.println("Article or article category is null");
+                return new ArrayList<>();
+            }
+
+            ExperienceCategory targetCategory = mapBlogCategoryToExperienceCategory(article.getCategory());
+
+            if (targetCategory != null) {
+                List<Experience> experiences = experienceRepository.findTop3ByCategoryAndStatusOrderByCreatedAtDesc(targetCategory, ExperienceStatus.ACTIVE);
+                return experiences != null ? experiences : new ArrayList<>();
+            }
+
+            return new ArrayList<>();
+        } catch (Exception e) {
+            System.err.println("Error in category-based recommendations: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    private List<Experience> getLocationBasedRecommendations(TravelArticle article) {
+        try {
+            if (article == null) {
+                System.err.println("Article is null in location-based recommendations");
+                return new ArrayList<>();
+            }
+
+            // Common Indonesian destinations
+            String[] locations = {"bali", "jakarta", "yogyakarta", "bandung", "lombok", "borobudur", "ubud", "canggu", "seminyak"};
+
+            String title = article.getTitle() != null ? article.getTitle() : "";
+            String content = article.getContent() != null ? article.getContent() : "";
+            String combinedContent = (title + " " + content).toLowerCase();
+
+            List<Experience> locationMatches = new ArrayList<>();
+
+            for (String location : locations) {
+                if (combinedContent.contains(location)) {
+                    List<Experience> matches = experienceRepository.findByLocationAndStatus(location, ExperienceStatus.ACTIVE);
+                    if (matches != null) {
+                        locationMatches.addAll(matches);
+                    }
+                    if (locationMatches.size() >= 3) break;
+                }
+            }
+
+            return locationMatches.stream().limit(3).collect(Collectors.toList());
+        } catch (Exception e) {
+            System.err.println("Error in location-based recommendations: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    private ExperienceCategory mapBlogCategoryToExperienceCategory(ArticleCategoryEnum blogCategory) {
+        if (blogCategory == null) {
+            return ExperienceCategory.OTHERS;
+        }
+
+        switch (blogCategory) {
+            case TRAVEL:
+                return ExperienceCategory.GUIDED_TOUR;
+            case EXPLORING:
+                return ExperienceCategory.ADVENTURE;
+            case TIPSANDTRICKS:
+                return ExperienceCategory.WORKSHOP;
+            case HOWTO:
+                return ExperienceCategory.WORKSHOP;
+            case OFFTOPIC:
+                return ExperienceCategory.OTHERS;
+            case OTHERS:
+                return ExperienceCategory.OTHERS;
+            default:
+                return ExperienceCategory.OTHERS;
         }
     }
 }

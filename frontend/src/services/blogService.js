@@ -60,25 +60,19 @@ export const blogService = {
         queryParams.append('category', params.category)
       }
 
+      // Add search parameter to backend request
+      if (params.search && params.search.trim()) {
+        queryParams.append('search', params.search.trim())
+      }
+
       const queryString = queryParams.toString()
       const url = `/api/travel-articles/published${queryString ? `?${queryString}` : ''}`
 
       const response = await api.get(url)
       const blogs = response.data
 
-      // Filter by search on frontend (for now)
-      let filteredBlogs = blogs
-      if (params.search) {
-        const searchLower = params.search.toLowerCase()
-        filteredBlogs = blogs.filter(blog =>
-          blog.title.toLowerCase().includes(searchLower) ||
-          blog.content.toLowerCase().includes(searchLower) ||
-          (blog.tags && blog.tags.some(tag => tag.toLowerCase().includes(searchLower)))
-        )
-      }
-
       // Ensure full URLs for images in all blogs
-      return filteredBlogs.map(blog => {
+      return blogs.map(blog => {
         if (blog.thumbnailUrl && !blog.thumbnailUrl.startsWith('http')) {
           blog.thumbnailUrl = `http://localhost:8080${blog.thumbnailUrl}`
         }
@@ -363,6 +357,17 @@ export const blogService = {
     } catch (error) {
       console.error('Error toggling comment like:', error)
       throw error
+    }
+  },
+
+  // Get recommended experiences for a blog
+  getRecommendedExperiences: async (blogId) => {
+    try {
+      const response = await api.get(`/api/travel-articles/${blogId}/recommended-experiences`)
+      return response.data || []
+    } catch (error) {
+      console.error('Error fetching recommended experiences:', error)
+      return []
     }
   },
 

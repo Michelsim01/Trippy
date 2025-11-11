@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Eye, User, Edit, Trash2, Heart, MessageCircle, Send } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
+import RecommendedTours from '../components/RecommendedTours';
 import { useAuth } from '../contexts/AuthContext';
 import { blogService, BLOG_CATEGORIES } from '../services/blogService';
 
@@ -263,7 +264,7 @@ const BlogDetailPage = () => {
                         onToggleSidebar={toggleSidebar}
                     />
                     <main className="w-full p-8">
-                        <div className="max-w-4xl mx-auto">
+                        <div className="max-w-7xl mx-auto">
                             {/* Back Button */}
                             <button
                                 onClick={() => navigate('/blog')}
@@ -273,7 +274,11 @@ const BlogDetailPage = () => {
                                 Back to Blog
                             </button>
 
-                            {/* Blog Content */}
+                            {/* Main Layout with Sidebar */}
+                            <div className="flex gap-8">
+                                {/* Main Content */}
+                                <div className="flex-1">
+                                    {/* Blog Content */}
                             <article className="bg-white rounded-xl shadow-xl overflow-hidden border border-neutrals-6">
                                 {/* Hero Image */}
                                 {blog.thumbnailUrl && (
@@ -660,6 +665,15 @@ const BlogDetailPage = () => {
                                     </div>
                                 </div>
                             </article>
+                                </div>
+
+                                {/* Sidebar */}
+                                <div className="w-80 flex-shrink-0">
+                                    <div className="sticky top-8">
+                                        <RecommendedTours blogId={id} />
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </main>
                 </div>
@@ -712,6 +726,11 @@ const BlogDetailPage = () => {
                                 </div>
                             </div>
                         </article>
+
+                        {/* Mobile Recommended Tours */}
+                        <div className="mt-6">
+                            <RecommendedTours blogId={id} />
+                        </div>
                     </div>
                 </main>
             </div>
