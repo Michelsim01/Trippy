@@ -193,4 +193,33 @@ public class CartService {
     public long getCartCount(Long userId) {
         return cartItemRepository.countByUser_Id(userId);
     }
+
+    /**
+     * Remove multiple cart items by IDs (for bulk checkout cleanup).
+     * Validates that all cart items belong to the specified user before deletion.
+     *
+     * @param userId ID of the user
+     * @param cartItemIds List of cart item IDs to remove
+     * @throws IllegalArgumentException if any cart item doesn't belong to the user
+     */
+    @Transactional
+    public void removeMultipleCartItems(Long userId, List<Long> cartItemIds) {
+        if (cartItemIds == null || cartItemIds.isEmpty()) {
+            return;
+        }
+
+        // Fetch all cart items
+        List<CartItem> cartItems = cartItemRepository.findAllById(cartItemIds);
+
+        // Validate all cart items belong to the user
+        for (CartItem cartItem : cartItems) {
+            if (!cartItem.getUser().getId().equals(userId)) {
+                throw new IllegalArgumentException("Cart item " + cartItem.getCartItemId() +
+                        " does not belong to user " + userId);
+            }
+        }
+
+        // Delete all validated cart items
+        cartItemRepository.deleteAll(cartItems);
+    }
 }

@@ -47,6 +47,9 @@ public class WishlistItemController {
                 exp.put("shortDescription", item.getExperience().getShortDescription());
                 exp.put("coverPhotoUrl", item.getExperience().getCoverPhotoUrl());
                 exp.put("price", item.getExperience().getPrice());
+                exp.put("originalPrice", item.getExperience().getOriginalPrice());
+                exp.put("discountPercentage", item.getExperience().getDiscountPercentage());
+                exp.put("lastPriceUpdate", item.getExperience().getLastPriceUpdate());
                 exp.put("duration", item.getExperience().getDuration());
                 exp.put("location", item.getExperience().getLocation());
                 exp.put("category", item.getExperience().getCategory());

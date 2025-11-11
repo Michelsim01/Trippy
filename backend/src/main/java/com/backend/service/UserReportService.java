@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserReportService {
@@ -23,6 +24,12 @@ public class UserReportService {
         // Validate: User cannot report themselves
         if (reporterUserId.equals(reportedUserId)) {
             throw new IllegalArgumentException("You cannot report yourself");
+        }
+        
+        // Check for duplicate report
+        Optional<UserReport> existingReport = userReportRepository.findByUserIdAndReportedUserId(reporterUserId, reportedUserId);
+        if (existingReport.isPresent()) {
+            throw new IllegalArgumentException("You have already submitted a report for this user");
         }
         
         // Create report (similar to SupportTicket - simple create and save)

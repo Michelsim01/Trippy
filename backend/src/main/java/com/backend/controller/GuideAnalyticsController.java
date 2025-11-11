@@ -3,9 +3,12 @@ package com.backend.controller;
 import com.backend.dto.ExperienceViewsDTO;
 import com.backend.dto.GuideDashboardMetricsDTO;
 import com.backend.dto.ProfitChartDataDTO;
+import com.backend.dto.SmartSuggestionDTO;
+import com.backend.dto.SuggestionsResponseDTO;
 import com.backend.dto.TopExperienceDTO;
 import com.backend.service.ExperienceAnalyticsService;
 import com.backend.service.GuideAnalyticsService;
+import com.backend.service.SmartSuggestionsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,9 @@ public class GuideAnalyticsController {
 
     @Autowired
     private ExperienceAnalyticsService experienceAnalyticsService;
+
+    @Autowired
+    private SmartSuggestionsService smartSuggestionsService;
 
     /**
      * Get dashboard metrics for a guide
@@ -87,5 +93,47 @@ public class GuideAnalyticsController {
             e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
+    }
+
+    /**
+     * Get smart suggestions for improving an experience listing
+     * Analyzes performance vs similar experiences and provides actionable recommendations
+     */
+    @GetMapping("/suggestions/{experienceId}")
+    public ResponseEntity<SuggestionsResponseDTO> getSmartSuggestions(@PathVariable Long experienceId) {
+        try {
+            SuggestionsResponseDTO suggestions = smartSuggestionsService.generateSuggestions(experienceId);
+            return ResponseEntity.ok(suggestions);
+        } catch (RuntimeException e) {
+            // Handle business logic errors (experience not found, no intelligence data, etc.)
+            String errorMessage = e.getMessage();
+            System.err.println("ERROR in GuideAnalyticsController.getSmartSuggestions: " + errorMessage);
+            
+            if (errorMessage.contains("not found")) {
+                return ResponseEntity.notFound().build();
+            } else if (errorMessage.contains("intelligence not found")) {
+                // Return empty suggestions if no intelligence data available yet
+                return ResponseEntity.ok(createEmptyResponse(experienceId, "Experience data is still being processed"));
+            } else {
+                return ResponseEntity.status(400).build();
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR in GuideAnalyticsController.getSmartSuggestions: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+
+    /**
+     * Helper method to create empty suggestions response when no data is available
+     */
+    private SuggestionsResponseDTO createEmptyResponse(Long experienceId, String message) {
+        return SuggestionsResponseDTO.builder()
+                .experienceId(experienceId)
+                .experienceTitle("Experience")
+                .suggestions(List.of())
+                .similarExperiencesCount(0)
+                .analysisBase(message)
+                .build();
     }
 }

@@ -135,6 +135,38 @@ public class CartController {
     }
 
     /**
+     * Remove multiple cart items (bulk deletion for checkout)
+     *
+     * @param userId ID of the user (for authorization)
+     * @param cartItemIds List of cart item IDs to remove
+     * @return Success message
+     */
+    @DeleteMapping("/items/bulk")
+    public ResponseEntity<?> removeMultipleCartItems(
+            @RequestParam Long userId,
+            @RequestBody Map<String, List<Long>> request) {
+        try {
+            List<Long> cartItemIds = request.get("cartItemIds");
+
+            if (cartItemIds == null || cartItemIds.isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "Cart item IDs are required"));
+            }
+
+            cartService.removeMultipleCartItems(userId, cartItemIds);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Cart items removed successfully");
+            response.put("count", cartItemIds.size());
+
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
      * Clear all items from a user's cart
      *
      * @param userId ID of the user

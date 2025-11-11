@@ -27,7 +27,8 @@ const Sidebar = () => {
     { name: 'Transaction Management', href: '/admin/transactions', icon: FileText },
     { name: 'KYC Management', href: '/admin/kyc', icon: ShieldCheck },
     { name: 'Ticket Resolution', href: '/admin/tickets', icon: AlertTriangle },
-    { name: 'Report Resolution', href: '/admin/reports', icon: AlertTriangle },
+    { name: 'User Report Resolution', href: '/admin/reports', icon: AlertTriangle },
+    { name: 'Experience Report Resolution', href: '/admin/experience-reports', icon: AlertTriangle },
     { name: 'Admin Referrals', href: '/admin/referrals', icon: UserPlus },
     { name: 'Settings', href: '/admin/settings', icon: Settings },
   ];

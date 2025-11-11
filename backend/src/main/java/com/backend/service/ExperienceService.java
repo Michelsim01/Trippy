@@ -1,5 +1,6 @@
 package com.backend.service;
 
+import com.backend.dto.SimilarExperienceDTO;
 import com.backend.entity.*;
 import com.backend.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -34,6 +36,12 @@ public class ExperienceService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ExperienceDiscountService discountService;
+
+    @Autowired
+    private ExperienceSimilarityRepository experienceSimilarityRepository;
 
     @Transactional
     public Experience createCompleteExperience(Map<String, Object> payload) {
@@ -67,10 +75,15 @@ public class ExperienceService {
             experience.setCoverPhotoUrl((String) experienceData.get("coverPhotoUrl"));
             experience.setWhatIncluded((String) experienceData.get("whatIncluded"));
             experience.setImportantInfo((String) experienceData.get("importantInfo"));
-            // Handle price - check for null
+            
+            // Handle price - check for null and set as original price for new experiences
             Object priceObj = experienceData.get("price");
             if (priceObj != null && priceObj instanceof Number) {
-                experience.setPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
+                java.math.BigDecimal price = java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue());
+                experience.setPrice(price);
+                experience.setOriginalPrice(price); // Set original price for new experience
+                experience.setDiscountPercentage(java.math.BigDecimal.ZERO);
+                experience.setLastPriceUpdate(LocalDateTime.now());
             }
 
             // Handle participants allowed - check for null
@@ -314,10 +327,37 @@ public class ExperienceService {
         existingExperience.setWhatIncluded((String) experienceData.get("whatIncluded"));
         existingExperience.setImportantInfo((String) experienceData.get("importantInfo"));
 
-        // Handle price - check for null
+        // Handle price with discount logic
         Object priceObj = experienceData.get("price");
+        boolean shouldNotifyWishlist = false; // Track if we should send notifications
+        
         if (priceObj != null && priceObj instanceof Number) {
-            existingExperience.setPrice(java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue()));
+            java.math.BigDecimal newPrice = java.math.BigDecimal.valueOf(((Number) priceObj).doubleValue());
+            java.math.BigDecimal oldPrice = existingExperience.getPrice();
+            java.math.BigDecimal oldDiscountPercentage = existingExperience.getDiscountPercentage();
+            
+            // Check if price actually changed
+            if (oldPrice == null || newPrice.compareTo(oldPrice) != 0) {
+                // Update discount fields
+                discountService.updateDiscountFields(existingExperience, newPrice);
+                
+                // Only notify if:
+                // 1. Discount is >= 10% AND
+                // 2. Either (discount just crossed 10% threshold OR discount percentage increased)
+                java.math.BigDecimal newDiscountPercentage = existingExperience.getDiscountPercentage();
+                
+                if (newDiscountPercentage != null && newDiscountPercentage.compareTo(new java.math.BigDecimal("10")) >= 0) {
+                    // Check if this is the first time crossing 10% threshold
+                    boolean justCrossedThreshold = (oldDiscountPercentage == null || 
+                                                    oldDiscountPercentage.compareTo(new java.math.BigDecimal("10")) < 0);
+                    
+                    // Check if discount percentage increased
+                    boolean discountIncreased = (oldDiscountPercentage == null || 
+                                                newDiscountPercentage.compareTo(oldDiscountPercentage) > 0);
+                    
+                    shouldNotifyWishlist = justCrossedThreshold || discountIncreased;
+                }
+            }
         }
 
         // Handle participants allowed - check for null
@@ -541,6 +581,20 @@ public class ExperienceService {
             System.out.println("No schedules to update - schedules list is null or empty");
         }
 
+        // Send notifications to wishlist users if discount conditions are met
+        // Only send if shouldNotifyWishlist flag was set during price update
+        if (shouldNotifyWishlist) {
+            try {
+                discountService.notifyWishlistUsers(updatedExperience);
+                System.out.println("✅ Sent discount notifications for experience: " + updatedExperience.getTitle() + 
+                                 " (Discount: " + updatedExperience.getDiscountPercentage() + "%)");
+            } catch (Exception e) {
+                // Log error but don't fail the update
+                System.err.println("❌ Failed to send discount notifications: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
         return updatedExperience;
     }
 
@@ -589,7 +643,7 @@ public class ExperienceService {
 
     /**
      * Helper method to get the currently authenticated user
-     * 
+     *
      * @return User entity if authenticated, null otherwise
      */
     private User getCurrentAuthenticatedUser() {
@@ -607,5 +661,72 @@ public class ExperienceService {
             System.err.println("Error getting authenticated user: " + e.getMessage());
         }
         return null;
+    }
+
+    /**
+     * Get similar experiences for a given experience based on ML pipeline data
+     *
+     * @param experienceId The experience ID to find similar experiences for
+     * @param limit Maximum number of similar experiences to return (default 10)
+     * @return List of similar experiences with their details
+     */
+    public List<SimilarExperienceDTO> getSimilarExperiences(Long experienceId, int limit) {
+        List<SimilarExperienceDTO> similarExperiences = new ArrayList<>();
+
+        try {
+            // Get similar experience IDs from experience_similarities table
+            List<ExperienceSimilarity> similarities = experienceSimilarityRepository
+                .findTopSimilarExperiences(experienceId, limit);
+
+            if (similarities.isEmpty()) {
+                System.out.println("No similar experiences found for experience ID: " + experienceId);
+                return similarExperiences;
+            }
+
+            // For each similar experience, fetch full experience details
+            for (ExperienceSimilarity similarity : similarities) {
+                try {
+                    Long similarExpId = similarity.getSimilarExperienceId();
+
+                    // Fetch the experience entity
+                    Experience experience = experienceRepository.findById(similarExpId).orElse(null);
+
+                    // Only include ACTIVE experiences
+                    if (experience != null && experience.getStatus() == ExperienceStatus.ACTIVE) {
+                        // Create DTO with experience details
+                        SimilarExperienceDTO dto = new SimilarExperienceDTO(experience);
+                        dto.setSimilarityScore(similarity.getSimilarityScore());
+
+                        // Get next available schedule for this experience
+                        List<ExperienceSchedule> allSchedules = experienceScheduleRepository
+                            .findByExperience_ExperienceIdOrderByStartDateTimeAsc(similarExpId);
+
+                        // Filter for future schedules that are available and not cancelled
+                        LocalDateTime now = LocalDateTime.now();
+                        for (ExperienceSchedule schedule : allSchedules) {
+                            if (schedule.getStartDateTime().isAfter(now) &&
+                                Boolean.TRUE.equals(schedule.getIsAvailable()) &&
+                                !Boolean.TRUE.equals(schedule.getCancelled())) {
+                                dto.setNextAvailableDate(schedule.getStartDateTime());
+                                break; // Take the first available future schedule
+                            }
+                        }
+
+                        similarExperiences.add(dto);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error processing similar experience: " + e.getMessage());
+                    // Continue with next similar experience
+                }
+            }
+
+            System.out.println("Found " + similarExperiences.size() + " similar experiences for experience ID: " + experienceId);
+
+        } catch (Exception e) {
+            System.err.println("Error fetching similar experiences: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return similarExperiences;
     }
 }

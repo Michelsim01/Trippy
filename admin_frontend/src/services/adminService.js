@@ -943,6 +943,89 @@ export const adminService = {
     }
   },
 
+  /**
+   * Get experience report metrics
+   * @returns {Promise<Object>} Experience report metrics
+   */
+  getExperienceReportMetrics: async () => {
+    try {
+      const response = await api.get('/api/admin/experience-reports/metrics');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching experience report metrics:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch experience report metrics'
+      };
+    }
+  },
+
+  /**
+   * Get all experience reports
+   * @returns {Promise<Object>} All experience reports
+   */
+  getAllExperienceReports: async () => {
+    try {
+      const response = await api.get('/api/admin/experience-reports');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error fetching all experience reports:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch experience reports'
+      };
+    }
+  },
+
+  /**
+   * Update experience report status
+   * @param {number} reportId - The report ID
+   * @param {string} status - New status (OPEN, IN_PROGRESS, RESOLVED, DISMISSED)
+   * @returns {Promise<Object>} Update result
+   */
+  updateExperienceReportStatus: async (reportId, status) => {
+    try {
+      const response = await api.put(`/api/admin/experience-reports/${reportId}/status`, { status });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error updating experience report status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update experience report status'
+      };
+    }
+  },
+
+  /**
+   * Delete experience report
+   * @param {number} reportId - The report ID
+   * @returns {Promise<Object>} Delete result
+   */
+  deleteExperienceReport: async (reportId) => {
+    try {
+      const response = await api.delete(`/api/admin/experience-reports/${reportId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error deleting experience report:', error);
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete experience report'
+      };
+    }
+  },
+
   // Create notification
   async createNotification(notificationData) {
     try {

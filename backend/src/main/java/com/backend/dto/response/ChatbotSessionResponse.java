@@ -1,17 +1,23 @@
 package com.backend.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class ChatbotSessionResponse {
-    
+
     @JsonProperty("sessionId")
     private String sessionId;
-    
+
     private List<MessageHistory> messages;
-    
+
     private LocalDateTime createdAt;
+
+    // Trip details for session title
+    private String destination;
+    private Integer duration;
+    private LocalDate startDate;
     
     // Constructors
     public ChatbotSessionResponse() {}
@@ -46,7 +52,31 @@ public class ChatbotSessionResponse {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
-    
+
+    public String getDestination() {
+        return destination;
+    }
+
+    public void setDestination(String destination) {
+        this.destination = destination;
+    }
+
+    public Integer getDuration() {
+        return duration;
+    }
+
+    public void setDuration(Integer duration) {
+        this.duration = duration;
+    }
+
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
+    }
+
     // Inner class for message history
     public static class MessageHistory {
         private String userMessage;

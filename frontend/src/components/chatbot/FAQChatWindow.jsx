@@ -12,6 +12,7 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [lastOptionsMessage, setLastOptionsMessage] = useState(null); // Store last message with numbered options
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -22,15 +23,15 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
     }
   }, [isOpen, user]);
 
-  // Scroll to bottom when new messages are added (not when loading history)
+  // Scroll to bottom when new messages are added or when sending (loading indicator)
   useEffect(() => {
-    if (!loading && messages.length > 0) {
+    if (!loading) {
       // Small delay to ensure DOM is updated
       setTimeout(() => {
         scrollToBottom();
       }, 100);
     }
-  }, [messages.length, loading]);
+  }, [messages.length, loading, sending]);
 
   // Focus input when window opens
   useEffect(() => {
@@ -94,9 +95,21 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || sending || !sessionId) return;
 
-    const userMessage = inputMessage.trim();
+    let userMessage = inputMessage.trim();
     setInputMessage('');
     setSending(true);
+
+    // Check if user sent just a number (for selecting from numbered list)
+    const numberMatch = userMessage.match(/^\s*(\d+)\s*\.?\s*$/);
+    if (numberMatch && lastOptionsMessage) {
+      const selectedNumber = parseInt(numberMatch[1]);
+      // Extract the question from the numbered list
+      const questionText = extractQuestionFromNumberedList(lastOptionsMessage.text, selectedNumber);
+      if (questionText) {
+        // Use the extracted question instead of just the number
+        userMessage = questionText;
+      }
+    }
 
     // Add user message to UI immediately
     const userMsg = {
@@ -119,6 +132,13 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
         timestamp: formatTimestamp(response.timestamp || new Date()),
       };
       setMessages(prev => [...prev, botMsg]);
+
+      // Check if this bot message contains a numbered list (options)
+      if (hasNumberedList(response.response)) {
+        setLastOptionsMessage(botMsg);
+      } else {
+        setLastOptionsMessage(null); // Clear if not an options message
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       const errorMsg = {
@@ -132,6 +152,57 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
       setSending(false);
       inputRef.current?.focus();
     }
+  };
+
+  // Extract question text from numbered list by number
+  const extractQuestionFromNumberedList = (text, number) => {
+    // Try multiple patterns to find the question
+    // Pattern 1: "1. **Question**" or "1. Question" (single line)
+    let pattern = new RegExp(`${number}[\.\)]\\s*\\*\\*([^*]+)\\*\\*`, 'i');
+    let match = text.match(pattern);
+    if (match && match[1]) {
+      return match[1].trim();
+    }
+
+    // Pattern 2: "1. Question text" (may span multiple lines until next number or end)
+    pattern = new RegExp(`${number}[\.\)]\\s*([^\\n]+(?:\\n(?!\\s*\\d+[\.\\)])[^\\n]+)*)`, 'i');
+    match = text.match(pattern);
+    if (match && match[1]) {
+      // Clean up: remove markdown, trim, and collapse whitespace
+      return match[1]
+        .replace(/\*\*/g, '')
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // Pattern 3: Line-by-line search (more reliable for complex formatting)
+    const lines = text.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      const lineMatch = line.match(new RegExp(`^${number}[\.\)]\\s*(.+)$`, 'i'));
+      if (lineMatch) {
+        let question = lineMatch[1].replace(/\*\*/g, '').trim();
+        
+        // Check if question continues on next lines (until next number or empty line)
+        for (let j = i + 1; j < lines.length; j++) {
+          const nextLine = lines[j].trim();
+          if (nextLine.length === 0) break; // Empty line ends the question
+          if (/^\d+[\.\)]\s+/.test(nextLine)) break; // Next number starts
+          question += ' ' + nextLine.replace(/\*\*/g, '').trim();
+        }
+        
+        return question.replace(/\s+/g, ' ').trim();
+      }
+    }
+
+    return null;
+  };
+
+  // Check if message contains a numbered list
+  const hasNumberedList = (text) => {
+    // Check for patterns like "1.", "2.", etc. or "1)", "2)", etc.
+    return /^\s*\d+[\.\)]\s+/.test(text) || /\n\s*\d+[\.\)]\s+/.test(text);
   };
 
   const handleKeyDown = (e) => {
@@ -223,8 +294,158 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
       }
     }
     
+    // Check if message contains numbered list and format it nicely
+    if (hasNumberedList(text)) {
+      return renderNumberedList(text, renderTextWithLinks);
+    }
+    
     // No FAQ structure, just render with links
     return renderTextWithLinks(text);
+  };
+
+  // Render numbered list with proper formatting
+  const renderNumberedList = (text, renderTextWithLinks) => {
+    // First, try to find numbered list patterns in the text
+    // Pattern: "1. text" or "1) text" or "1 text" (with optional markdown bold)
+    const listPattern = /(\d+)[\.\)]\s*\*?([^*\n]+)\*?/g;
+    const matches = [];
+    let match;
+    
+    while ((match = listPattern.exec(text)) !== null) {
+      matches.push({
+        number: match[1],
+        content: match[2].trim(),
+        index: match.index,
+        fullMatch: match[0]
+      });
+    }
+
+    // If we found numbered items, format them nicely
+    if (matches.length > 0) {
+      const result = [];
+      let lastIndex = 0;
+
+      // Add text before the first list item
+      if (matches[0].index > 0) {
+        const beforeText = text.substring(0, matches[0].index).trim();
+        if (beforeText) {
+          result.push(
+            <div key="before-list" className="mb-3 whitespace-pre-wrap">
+              {renderTextWithLinks(beforeText)}
+            </div>
+          );
+        }
+      }
+
+      // Render the numbered list
+      result.push(
+        <div key="numbered-list" className="my-3 space-y-2">
+          {matches.map((item, idx) => (
+            <div key={`item-${idx}`} className="flex items-start gap-2">
+              <span className="font-semibold text-neutrals-1 flex-shrink-0 min-w-[1.5rem]">{item.number}.</span>
+              <span className="flex-1">{renderTextWithLinks(item.content)}</span>
+            </div>
+          ))}
+        </div>
+      );
+
+      // Add text after the last list item
+      const lastMatchEnd = matches[matches.length - 1].index + matches[matches.length - 1].fullMatch.length;
+      if (lastMatchEnd < text.length) {
+        const afterText = text.substring(lastMatchEnd).trim();
+        if (afterText) {
+          result.push(
+            <div key="after-list" className="mt-3 whitespace-pre-wrap">
+              {renderTextWithLinks(afterText)}
+            </div>
+          );
+        }
+      }
+
+      return <div className="space-y-2">{result}</div>;
+    }
+
+    // Fallback: if no matches found, try line-by-line parsing
+    const lines = text.split('\n');
+    const result = [];
+    let beforeList = [];
+    let listItems = [];
+    let afterList = [];
+    let foundList = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmedLine = line.trim();
+      const listMatch = trimmedLine.match(/^(\d+)[\.\)]\s*(.+)$/);
+      
+      if (listMatch) {
+        foundList = true;
+        if (beforeList.length > 0 && listItems.length === 0) {
+          // First list item found, render what came before
+          result.push(
+            <div key={`before-${i}`} className="mb-3 whitespace-pre-wrap">
+              {renderTextWithLinks(beforeList.join('\n'))}
+            </div>
+          );
+          beforeList = [];
+        }
+        const number = listMatch[1];
+        const content = listMatch[2].replace(/\*\*/g, '').trim();
+        listItems.push({ number, content });
+      } else if (foundList && trimmedLine.length === 0) {
+        // Empty line - might be end of list or separator
+        if (listItems.length > 0) {
+          result.push(
+            <div key={`list-${i}`} className="my-3 space-y-2">
+              {listItems.map((item, idx) => (
+                <div key={`item-${idx}`} className="flex items-start gap-2">
+                  <span className="font-semibold text-neutrals-1 flex-shrink-0 min-w-[1.5rem]">{item.number}.</span>
+                  <span className="flex-1">{renderTextWithLinks(item.content)}</span>
+                </div>
+              ))}
+            </div>
+          );
+          listItems = [];
+          foundList = false;
+        }
+        afterList.push(lines[i]);
+      } else if (foundList && listItems.length > 0) {
+        // Continuation of current list item
+        listItems[listItems.length - 1].content += ' ' + trimmedLine;
+      } else if (!foundList) {
+        beforeList.push(lines[i]);
+      } else {
+        afterList.push(lines[i]);
+      }
+    }
+
+    // Handle remaining list items
+    if (listItems.length > 0) {
+      result.push(
+        <div key="list-final" className="my-3 space-y-2">
+          {listItems.map((item, idx) => (
+            <div key={`item-${idx}`} className="flex items-start gap-2">
+              <span className="font-semibold text-neutrals-1 flex-shrink-0 min-w-[1.5rem]">{item.number}.</span>
+              <span className="flex-1">{renderTextWithLinks(item.content)}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    // Add remaining text
+    if (afterList.length > 0) {
+      const afterText = afterList.join('\n').trim();
+      if (afterText) {
+        result.push(
+          <div key="after" className="mt-3 whitespace-pre-wrap">
+            {renderTextWithLinks(afterText)}
+          </div>
+        );
+      }
+    }
+
+    return result.length > 0 ? <div className="space-y-2">{result}</div> : renderTextWithLinks(text);
   };
 
   if (!isOpen) return null;
@@ -258,31 +479,45 @@ const FAQChatWindow = ({ isOpen, onClose }) => {
             <p className="mt-2 text-xs">I'll help you find answers to common questions.</p>
           </div>
         ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
-            >
+          <>
+            {messages.map((message) => (
               <div
-                className={`max-w-[80%] px-4 py-2 rounded-lg ${
-                  message.isUser
-                    ? 'bg-primary-1 text-white'
-                    : 'bg-white text-neutrals-1 border border-neutrals-6'
-                }`}
+                key={message.id}
+                className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
               >
-                <div className="text-sm">
-                  {message.isUser ? (
-                    <p>{message.text}</p>
-                  ) : (
-                    renderMessage(message.text)
-                  )}
+                <div
+                  className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                    message.isUser
+                      ? 'bg-primary-1 text-white'
+                      : 'bg-white text-neutrals-1 border border-neutrals-6'
+                  }`}
+                >
+                  <div className="text-sm">
+                    {message.isUser ? (
+                      <p>{message.text}</p>
+                    ) : (
+                      renderMessage(message.text)
+                    )}
+                  </div>
+                  <p className={`text-xs mt-1 ${message.isUser ? 'text-white/70' : 'text-neutrals-4'}`}>
+                    {message.timestamp}
+                  </p>
                 </div>
-                <p className={`text-xs mt-1 ${message.isUser ? 'text-white/70' : 'text-neutrals-4'}`}>
-                  {message.timestamp}
-                </p>
               </div>
-            </div>
-          ))
+            ))}
+            {/* Loading indicator when waiting for bot response */}
+            {sending && (
+              <div className="flex items-start justify-start">
+                <div className="max-w-[80%] bg-white border border-neutrals-6 rounded-lg rounded-tl-none px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-neutrals-4 rounded-full animate-bounce"></div>
+                    <div className="w-2 h-2 bg-neutrals-4 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 bg-neutrals-4 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
         <div ref={messagesEndRef} />
       </div>

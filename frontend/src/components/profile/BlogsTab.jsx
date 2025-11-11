@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Eye, Edit, FileText, Plus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { blogService, BLOG_CATEGORIES } from '../../services/blogService';
+import { FileText, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { blogService } from '../../services/blogService';
+import BlogCard from '../BlogCard';
+import { useAuth } from '../../contexts/AuthContext';
 
-const BlogsTab = ({ userId }) => {
+const BlogsTab = ({ userId, isOwnProfile }) => {
+    const { user } = useAuth();
     const [publishedBlogs, setPublishedBlogs] = useState([]);
     const [draftsCount, setDraftsCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const navigate = useNavigate();
 
     useEffect(() => {
         if (userId) {
@@ -21,12 +23,16 @@ const BlogsTab = ({ userId }) => {
             setLoading(true);
             setError(null);
 
+            console.log('Fetching blogs for userId:', userId);
+
             // Fetch published blogs by author
             const published = await blogService.getBlogsByAuthor(userId, 'PUBLISHED');
+            console.log('Published blogs fetched:', published);
             setPublishedBlogs(published);
 
             // Fetch drafts count
             const drafts = await blogService.getDraftsByAuthor(userId);
+            console.log('Drafts fetched:', drafts);
             setDraftsCount(drafts.length);
         } catch (err) {
             console.error('Error fetching user blogs:', err);
@@ -36,13 +42,8 @@ const BlogsTab = ({ userId }) => {
         }
     };
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'Unknown date';
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+    const handleBlogDeleted = (deletedBlogId) => {
+        setPublishedBlogs(prevBlogs => prevBlogs.filter(blog => blog.articleId !== deletedBlogId));
     };
 
     if (loading) {
@@ -87,13 +88,15 @@ const BlogsTab = ({ userId }) => {
                             {draftsCount} Draft{draftsCount !== 1 ? 's' : ''}
                         </Link>
                     )}
-                    <Link
-                        to="/create-blog"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                    >
-                        <Plus size={16} />
-                        New Blog
-                    </Link>
+                    {isOwnProfile && (
+                        <Link
+                            to="/create-blog"
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                            <Plus size={16} />
+                            New Blog
+                        </Link>
+                    )}
                 </div>
             </div>
 
@@ -115,42 +118,15 @@ const BlogsTab = ({ userId }) => {
                     </Link>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {publishedBlogs.map((blog) => (
-                        <div
+                        <BlogCard
                             key={blog.articleId}
-                            className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                            onClick={() => navigate(`/blog/${blog.articleId}`)}
-                        >
-                            <div className="relative">
-                                <img
-                                    src={blog.thumbnailUrl || blog.imagesUrl?.[0] || '/api/placeholder/400/200'}
-                                    alt={blog.title}
-                                    className="w-full h-48 object-cover"
-                                />
-                                <div className="absolute top-3 left-3">
-                                    <span className="px-2 py-1 bg-primary-1 text-white rounded-full text-xs font-medium">
-                                        {BLOG_CATEGORIES[blog.category] || blog.category}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="p-4">
-                                <h4 className="font-semibold text-neutrals-1 mb-2 line-clamp-2">{blog.title}</h4>
-                                <p className="text-sm text-neutrals-4 mb-3 line-clamp-2">
-                                    {blog.content ? blog.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...' : ''}
-                                </p>
-                                <div className="flex items-center justify-between text-sm text-neutrals-4">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-4 h-4" />
-                                        <span>{formatDate(blog.createdAt)}</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Eye className="w-4 h-4" />
-                                        <span>{blog.viewsCount || 0} views</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            blog={blog}
+                            showEditButton={user?.id === userId}
+                            showDeleteButton={user?.id === userId}
+                            onBlogDeleted={handleBlogDeleted}
+                        />
                     ))}
                 </div>
             )}

@@ -26,7 +26,13 @@ export const userReportService = {
       credentials: 'include'
     });
 
-    const data = await res.json().catch(() => ({}));
+    let data;
+    try {
+      data = await res.json();
+    } catch (e) {
+      // If response is not JSON, it's likely a network error
+      throw new Error('Network error: Unable to connect to server');
+    }
     
     if (!res.ok) {
       const errorMessage = data.error || data.message || `Failed to submit report (${res.status})`;

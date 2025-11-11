@@ -85,10 +85,10 @@ const IntroductionTab = ({ userData, userName, isTourGuide, isOwnProfile, survey
                         {isOwnProfile && (
                             <button
                                 onClick={() => setIsEditModalOpen(true)}
-                                className="ml-auto p-3 bg-primary-1/10 hover:bg-primary-1/20 rounded-xl transition-colors group/edit"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
                                 title="Edit travel preferences"
                             >
-                                <Edit className="w-5 h-5 text-primary-1 group-hover/edit:scale-110 transition-transform duration-200" />
+                                <Edit className="w-5 h-5 text-white group-hover/edit:scale-110 transition-transform duration-200" />
                             </button>
                         )}
                     </div>

@@ -47,6 +47,9 @@ export const FormDataProvider = ({ children }) => {
 
     // Step 3: Pricing - matching Experience entity fields
     price: '', // BigDecimal, changed from 'pricePerPerson'
+    originalPrice: null, // BigDecimal - original baseline price
+    discountPercentage: 0, // BigDecimal - calculated discount
+    lastPriceUpdate: null, // LocalDateTime - last price change timestamp
 
     // Step 4: Availability - will be converted to ExperienceSchedule records
     schedules: [] // Each item: { date, startTime, endTime, availableSpots, isAvailable }
@@ -91,6 +94,9 @@ export const FormDataProvider = ({ children }) => {
       importantInfo: '',
       itinerary: [],
       price: '',
+      originalPrice: null,
+      discountPercentage: 0,
+      lastPriceUpdate: null,
       schedules: []
     });
   };
@@ -152,6 +158,9 @@ export const FormDataProvider = ({ children }) => {
 
         // Pricing
         price: experienceData.price || '',
+        originalPrice: experienceData.originalPrice || null,
+        discountPercentage: experienceData.discountPercentage || 0,
+        lastPriceUpdate: experienceData.lastPriceUpdate || null,
 
         // Availability
         schedules: schedulesData || []

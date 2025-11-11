@@ -14,6 +14,7 @@ import BookingWidget from '../components/experience-details/BookingWidget';
 import HostProfile from '../components/experience-details/HostProfile';
 import ReviewCard from '../components/reviews/ReviewCard';
 import ReviewStats from '../components/reviews/ReviewStats';
+import ReportExperienceModal from '../components/experience/ReportExperienceModal';
 
 const ExperienceDetailsPage = () => {
   const { id } = useParams();
@@ -72,11 +73,16 @@ const ExperienceDetailsPage = () => {
   const [error, setError] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   // Booking states
   const [guests, setGuests] = useState(2);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [showAllSchedules, setShowAllSchedules] = useState(false);
+
+  // Similar experiences states
+  const [similarExperiences, setSimilarExperiences] = useState([]);
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0);
 
   // View tracking ref (prevents double-counting in StrictMode)
   const hasTrackedView = useRef(false);
@@ -203,6 +209,32 @@ const ExperienceDetailsPage = () => {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showAllSchedules]);
+
+  // Fetch similar experiences
+  useEffect(() => {
+    const fetchSimilarExperiences = async () => {
+      if (!id) return;
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/experiences/${id}/similar?limit=10`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSimilarExperiences(data);
+          setCurrentCarouselIndex(0); // Reset carousel when new data loads
+        }
+      } catch (error) {
+        console.error('Error fetching similar experiences:', error);
+      }
+    };
+
+    fetchSimilarExperiences();
+  }, [id]);
 
   const fetchAllExperienceData = async () => {
     setLoading(true);
@@ -400,38 +432,41 @@ const ExperienceDetailsPage = () => {
   const totalReviews = reviews.length;
   const displayReviews = showAllReviews ? sortedReviews : sortedReviews.slice(0, 3);
 
-  const relatedTours = [
-    {
-      id: 1,
-      title: 'Venice, Rome & Milan',
-      location: 'Karineside',
-      price: 548,
-      originalPrice: 699,
-      rating: 4.9,
-      image: 'http://localhost:3845/assets/f5acba007cc57e5c56e48f53ba4139382e8c62f9.png',
-      dates: 'Tue, Jul 20 - Fri, Jul 23'
-    },
-    {
-      id: 2,
-      title: 'Florence Art & Culture',
-      location: 'Historic Center',
-      price: 425,
-      originalPrice: 550,
-      rating: 4.8,
-      image: 'http://localhost:3845/assets/f5506261d9ca04e13fc0b119992337acb5cff52a.png',
-      dates: 'Mon, Jul 26 - Thu, Jul 29'
-    },
-    {
-      id: 3,
-      title: 'Tuscany Wine Experience',
-      location: 'Chianti Region',
-      price: 680,
-      originalPrice: 850,
-      rating: 4.9,
-      image: 'http://localhost:3845/assets/a1d053f86ede5fe9f5d710d9dea9809e92f5fbce.png',
-      dates: 'Sat, Aug 7 - Sun, Aug 8'
+  // Transform similar experiences data for display
+  const transformedSimilarExperiences = similarExperiences.map(exp => ({
+    id: exp.experienceId,
+    title: exp.title,
+    location: exp.location,
+    price: exp.price,
+    originalPrice: exp.originalPrice,
+    rating: exp.averageRating || 0,
+    image: exp.coverPhotoUrl,
+    dates: exp.nextAvailableDate ? new Date(exp.nextAvailableDate).toLocaleDateString('en-US', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short'
+    }) : 'No dates available'
+  }));
+
+  // Carousel navigation
+  const canGoNext = currentCarouselIndex + 3 < transformedSimilarExperiences.length;
+  const canGoPrev = currentCarouselIndex > 0;
+  const displayedSimilarExperiences = transformedSimilarExperiences.slice(
+    currentCarouselIndex,
+    currentCarouselIndex + 3
+  );
+
+  const handleNextCarousel = () => {
+    if (canGoNext) {
+      setCurrentCarouselIndex(prev => prev + 3);
     }
-  ];
+  };
+
+  const handlePrevCarousel = () => {
+    if (canGoPrev) {
+      setCurrentCarouselIndex(prev => prev - 3);
+    }
+  };
 
   // Loading state
   if (loading && id) {
@@ -484,6 +519,7 @@ const ExperienceDetailsPage = () => {
                 handleWishlistToggle={handleWishlistToggle}
                 averageRating={averageRating}
                 totalReviews={totalReviews}
+                onReportClick={() => setIsReportModalOpen(true)}
                 isMobile={false}
               />
 
@@ -627,39 +663,47 @@ const ExperienceDetailsPage = () => {
               onGuideProfileClick={handleGuideProfileClick}
             />
 
-            {/* Related Tours (hard coded now) */}
-            <div className="max-w-7xl mx-auto px-10 mt-16">
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <p className="text-neutrals-4 text-xs uppercase font-bold mb-2" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
-                  <h2 className="text-5xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
-                    You may be interested in
-                  </h2>
+            {/* Similar Experiences */}
+            {transformedSimilarExperiences.length > 0 && (
+              <div className="max-w-7xl mx-auto px-10 mt-16">
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <p className="text-neutrals-4 text-xs uppercase font-bold mb-2" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
+                    <h2 className="text-5xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
+                      You may be interested in
+                    </h2>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handlePrevCarousel}
+                      disabled={!canGoPrev}
+                      className={`p-2 border-2 border-neutrals-6 rounded-full transition-colors ${canGoPrev ? 'hover:bg-neutrals-7 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                    >
+                      <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleNextCarousel}
+                      disabled={!canGoNext}
+                      className={`p-2 border-2 border-neutrals-6 rounded-full transition-colors ${canGoNext ? 'hover:bg-neutrals-7 cursor-pointer' : 'opacity-50 cursor-not-allowed'}`}
+                    >
+                      <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7">
-                    <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button className="p-2 border-2 border-neutrals-6 rounded-full hover:bg-neutrals-7">
-                    <svg className="w-6 h-6 text-neutrals-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-3 gap-8">
-                {relatedTours.map((tour) => (
-                  <div key={tour.id} className="bg-neutrals-8 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                <div className="grid grid-cols-3 gap-8">
+                  {displayedSimilarExperiences.map((tour) => (
+                  <div
+                    key={tour.id}
+                    onClick={() => navigate(`/experience/${tour.id}`)}
+                    className="bg-neutrals-8 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                  >
                     <div className="relative h-48">
                       <img src={tour.image} alt={tour.title} className="w-full h-full object-cover" />
-                      <button className="absolute top-4 right-4 p-2 bg-neutrals-8 rounded-full shadow-lg">
-                        <svg className="w-4 h-4 text-primary-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      </button>
                     </div>
                     <div className="p-4">
                       <h3 className="font-medium text-neutrals-2 mb-2">{tour.title}</h3>
@@ -683,9 +727,10 @@ const ExperienceDetailsPage = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             <Footer />
           </div>
@@ -709,6 +754,7 @@ const ExperienceDetailsPage = () => {
               handleWishlistToggle={handleWishlistToggle}
               averageRating={averageRating}
               totalReviews={totalReviews}
+              onReportClick={() => setIsReportModalOpen(true)}
               isMobile={true}
             />
 
@@ -849,27 +895,28 @@ const ExperienceDetailsPage = () => {
           />
 
           {/* Mobile Related Tours */}
-          <div className="px-4 mt-8">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-neutrals-4 text-xs uppercase font-bold mb-1" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
-                <h2 className="text-2xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
-                  You may be interested in
-                </h2>
+          {transformedSimilarExperiences.length > 0 && (
+            <div className="px-4 mt-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-neutrals-4 text-xs uppercase font-bold mb-1" style={{ fontFamily: 'Poppins' }}>The perfect trip</p>
+                  <h2 className="text-2xl font-bold text-neutrals-2" style={{ fontFamily: 'DM Sans', letterSpacing: '-0.96px' }}>
+                    You may be interested in
+                  </h2>
+                </div>
               </div>
-            </div>
 
-            <div className="overflow-x-auto pb-4">
-              <div className="flex gap-4" style={{ width: 'max-content' }}>
-                {relatedTours.map((tour) => (
-                  <div key={tour.id} className="bg-neutrals-8 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow" style={{ width: '280px', flexShrink: 0 }}>
+              <div className="overflow-x-auto pb-4">
+                <div className="flex gap-4" style={{ width: 'max-content' }}>
+                  {transformedSimilarExperiences.map((tour) => (
+                  <div
+                    key={tour.id}
+                    onClick={() => navigate(`/experience/${tour.id}`)}
+                    className="bg-neutrals-8 rounded-2xl overflow-hidden shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
+                    style={{ width: '280px', flexShrink: 0 }}
+                  >
                     <div className="relative h-40">
                       <img src={tour.image} alt={tour.title} className="w-full h-full object-cover" />
-                      <button className="absolute top-3 right-3 p-2 bg-neutrals-8 rounded-full shadow-lg">
-                        <svg className="w-4 h-4 text-primary-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                        </svg>
-                      </button>
                     </div>
                     <div className="p-4">
                       <h3 className="font-medium text-neutrals-2 mb-2 text-sm">{tour.title}</h3>
@@ -893,10 +940,11 @@ const ExperienceDetailsPage = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         <Footer />
@@ -998,6 +1046,16 @@ const ExperienceDetailsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Report Experience Modal */}
+      <ReportExperienceModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        experienceId={id ? parseInt(id) : null}
+        onSubmitted={() => {
+          // Optional: Add any post-submission logic here
+        }}
+      />
     </div>
   );
 };

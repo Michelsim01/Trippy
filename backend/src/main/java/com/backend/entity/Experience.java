@@ -50,6 +50,15 @@ public class Experience {
 
     private BigDecimal price;
 
+    @Column(name = "original_price")
+    private BigDecimal originalPrice;
+
+    @Column(name = "discount_percentage", columnDefinition = "NUMERIC DEFAULT 0")
+    private BigDecimal discountPercentage = BigDecimal.ZERO;
+
+    @Column(name = "last_price_update")
+    private LocalDateTime lastPriceUpdate;
+
     @Column(name = "participants_allowed")
     private Integer participantsAllowed;
 
@@ -211,6 +220,30 @@ public class Experience {
 
     public void setPrice(BigDecimal price) {
         this.price = price;
+    }
+
+    public BigDecimal getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(BigDecimal originalPrice) {
+        this.originalPrice = originalPrice;
+    }
+
+    public BigDecimal getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(BigDecimal discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
+    public LocalDateTime getLastPriceUpdate() {
+        return lastPriceUpdate;
+    }
+
+    public void setLastPriceUpdate(LocalDateTime lastPriceUpdate) {
+        this.lastPriceUpdate = lastPriceUpdate;
     }
 
     public Integer getParticipantsAllowed() {

@@ -440,7 +440,11 @@ def build_search_embeddings(**context):
             batch = texts[start:start + batch_size]
             response = client.embeddings.create(model="text-embedding-3-small", input=batch)
             for idx, emb in enumerate(response.data):
+                # Store embedding as JSONB (for backward compatibility)
                 knowledge_entries[start + idx]['embedding'] = json.dumps(emb.embedding)
+                # Also format as PostgreSQL vector string for vector column
+                embedding_vector_str = '[' + ','.join(str(x) for x in emb.embedding) + ']'
+                knowledge_entries[start + idx]['embedding_vector'] = embedding_vector_str
         print(f"Built OpenAI embeddings for {len(knowledge_entries)} entries")
     except Exception as e:
         print(f"OpenAI embeddings generation failed, continuing without: {e}")
@@ -464,6 +468,9 @@ def save_knowledge_base(**context):
     
     # Create knowledge base table if it doesn't exist
     create_table_sql = """
+    -- Enable pgvector extension
+    CREATE EXTENSION IF NOT EXISTS vector;
+    
     CREATE TABLE IF NOT EXISTS faq_knowledge_base (
         knowledge_id BIGSERIAL PRIMARY KEY,
         source_type VARCHAR(50) NOT NULL,
@@ -471,6 +478,7 @@ def save_knowledge_base(**context):
         content TEXT NOT NULL,
         vectorized_content TEXT,
         embedding JSONB,
+        embedding_vector vector(1536),  -- OpenAI text-embedding-3-small dimension for vector similarity search
         category VARCHAR(50),
         keywords VARCHAR(255),
         metadata JSONB,
@@ -488,9 +496,32 @@ def save_knowledge_base(**context):
     -- Ensure embedding column exists even if table predates this change
     ALTER TABLE faq_knowledge_base
       ADD COLUMN IF NOT EXISTS embedding JSONB;
+    -- Ensure embedding_vector column exists (for vector similarity search)
+    ALTER TABLE faq_knowledge_base
+      ADD COLUMN IF NOT EXISTS embedding_vector vector(1536);
+    
+    -- Vector similarity index (using cosine distance) for fast similarity search
+    CREATE INDEX IF NOT EXISTS idx_faq_knowledge_base_embedding_vector 
+        ON faq_knowledge_base USING ivfflat (embedding_vector vector_cosine_ops)
+        WITH (lists = 100);
     """
     
     pg_hook.run(create_table_sql)
+    
+    # Migrate existing JSONB embeddings to vector column if needed
+    # This handles the case where embeddings exist in JSONB but not in vector format
+    try:
+        migrate_embeddings_sql = """
+        UPDATE faq_knowledge_base
+        SET embedding_vector = CAST(embedding::text AS vector)
+        WHERE embedding IS NOT NULL 
+          AND embedding_vector IS NULL
+          AND embedding::text ~ '^\\[.*\\]$';
+        """
+        pg_hook.run(migrate_embeddings_sql)
+        print("Migrated existing JSONB embeddings to vector column")
+    except Exception as e:
+        print(f"Note: Could not migrate existing embeddings (this is OK if none exist): {e}")
     
     # Save knowledge base data using batch insert for efficiency
     batch_size = 100
@@ -508,14 +539,15 @@ def save_knowledge_base(**context):
         for entry in batch:
             upsert_sql = """
         INSERT INTO faq_knowledge_base (
-            source_type, source_id, content, vectorized_content, embedding,
+            source_type, source_id, content, vectorized_content, embedding, embedding_vector,
             category, keywords, metadata, created_at, last_updated
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (source_type, source_id, content)
             DO UPDATE SET 
                 vectorized_content = EXCLUDED.vectorized_content,
-            embedding = EXCLUDED.embedding,
+                embedding = EXCLUDED.embedding,
+                embedding_vector = EXCLUDED.embedding_vector,
                 category = EXCLUDED.category,
                 keywords = EXCLUDED.keywords,
                 metadata = EXCLUDED.metadata,
@@ -525,6 +557,9 @@ def save_knowledge_base(**context):
             # Handle None source_id
             source_id = entry['source_id'] if entry['source_id'] is not None else None
             
+            # Get embedding vector string if available
+            embedding_vector = entry.get('embedding_vector', None)
+            
             try:
                 pg_hook.run(upsert_sql, parameters=[
                     entry['source_type'],
@@ -532,6 +567,7 @@ def save_knowledge_base(**context):
                     entry['content'],
                     entry.get('vectorized_content', ''),
                     entry.get('embedding', None),
+                    embedding_vector,  # PostgreSQL vector format: [0.1,0.2,0.3,...]
                     entry.get('category', 'GENERAL'),
                     entry['keywords_str'],
                     entry.get('metadata', '{}')

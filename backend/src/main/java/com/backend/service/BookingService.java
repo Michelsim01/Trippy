@@ -13,7 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -42,6 +44,9 @@ public class BookingService {
 
     @Autowired
     private TripChatService tripChatService;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     /**
      * Validate a booking request before creating the actual booking.
@@ -301,13 +306,13 @@ public class BookingService {
 
                     // Add the traveler to the trip chat
                     tripChatService.addUserToTripChat(
-                        schedule.getScheduleId(),
-                        booking.getTraveler().getId(),
-                        booking.getBookingId()
-                    );
+                            schedule.getScheduleId(),
+                            booking.getTraveler().getId(),
+                            booking.getBookingId());
                 } catch (Exception e) {
                     // Log error but don't fail the booking if chat creation fails
-                    System.err.println("Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    System.err.println(
+                            "Error creating trip chat for booking " + booking.getBookingId() + ": " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
@@ -471,10 +476,14 @@ public class BookingService {
 
     /**
      * Calculate refund amount for tourist cancellation based on policy:
-     * - Free: 24 hours after purchase (full base amount)
-     * - 7+ days before: Full base amount refund (service fee not refunded)
-     * - 3-6 days before: 50% base amount refund (service fee not refunded)
+     * Refund = (Base Amount - Trippoints Discount) * Policy Percentage
+     *
+     * - Free: 24 hours after purchase (full refund)
+     * - 7+ days before: Full refund
+     * - 3-6 days before: 50% refund
      * - <3 days: Non-refundable
+     *
+     * Note: Service fee and trippoints discount are NEVER refunded
      */
     private BigDecimal calculateTouristRefundAmount(Booking booking) {
         if (booking.getBookingDate() == null || booking.getExperienceSchedule() == null) {
@@ -486,6 +495,13 @@ public class BookingService {
         LocalDateTime experienceStart = booking.getExperienceSchedule().getStartDateTime();
 
         BigDecimal baseAmount = booking.getBaseAmount() != null ? booking.getBaseAmount() : BigDecimal.ZERO;
+        BigDecimal trippointsDiscount = booking.getTrippointsDiscount() != null ? booking.getTrippointsDiscount()
+                : BigDecimal.ZERO;
+
+        // Calculate the actual amount paid by customer (excluding service fee)
+        // This is: baseAmount - trippointsDiscount
+        // Equivalent to: totalAmount - serviceFee
+        BigDecimal refundableAmount = baseAmount.subtract(trippointsDiscount);
 
         // Calculate hours since booking was created
         long hoursFromBooking = java.time.Duration.between(bookingCreated, now).toHours();
@@ -496,16 +512,16 @@ public class BookingService {
 
         // Free cancellation: Within 24 hours of booking
         if (hoursFromBooking <= 24) {
-            return baseAmount; // Full base amount refund
+            return refundableAmount; // Full refund of what customer paid (minus service fee)
         }
 
         // Standard cancellation policies based on time until experience
         if (daysToExperience >= 7) {
-            // Full base amount refund (service fee never refunded)
-            return baseAmount;
+            // Full refund (service fee and trippoints never refunded)
+            return refundableAmount;
         } else if (daysToExperience >= 3) {
-            // 50% base amount refund (service fee never refunded)
-            return baseAmount.multiply(new BigDecimal("0.5"));
+            // 50% refund (service fee and trippoints never refunded)
+            return refundableAmount.multiply(new BigDecimal("0.5"));
         } else {
             // Non-refundable
             return BigDecimal.ZERO;
@@ -562,7 +578,8 @@ public class BookingService {
                     paymentService.createRefundTransaction(booking, booking.getRefundAmount());
                 } catch (Exception e) {
                     // Log the error but don't fail the schedule cancellation
-                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId() + ": " + e.getMessage());
+                    System.err.println("Failed to create refund transaction for booking " + booking.getBookingId()
+                            + ": " + e.getMessage());
                 }
             }
 
@@ -878,7 +895,7 @@ public class BookingService {
 
     /**
      * Helper method to get the currently authenticated user
-     * 
+     *
      * @return User entity if authenticated, null otherwise
      */
     private User getCurrentAuthenticatedUser() {
@@ -896,5 +913,356 @@ public class BookingService {
             System.err.println("Error getting authenticated user: " + e.getMessage());
         }
         return null;
+    }
+
+    // ================================
+    // BULK CHECKOUT METHODS
+    // ================================
+
+    /**
+     * Validate multiple cart items for bulk booking.
+     *
+     * Validates each cart item individually, checking:
+     * - Cart item exists and belongs to user
+     * - Experience schedule is available and in future
+     * - Experience is ACTIVE
+     * - Sufficient spots available
+     * - User is not booking their own experience
+     *
+     * @param cartItemIds List of cart item IDs to validate
+     * @return List of validation errors (empty if all valid)
+     */
+    public List<String> validateBulkBooking(List<Long> cartItemIds) {
+        List<String> errors = new ArrayList<>();
+
+        try {
+            // Get current user
+            User currentUser = getCurrentAuthenticatedUser();
+            if (currentUser == null) {
+                errors.add("No authenticated user found");
+                return errors;
+            }
+
+            // Fetch all cart items
+            List<CartItem> cartItems = cartItemRepository.findAllById(cartItemIds);
+
+            if (cartItems.isEmpty()) {
+                errors.add("No cart items found");
+                return errors;
+            }
+
+            if (cartItems.size() != cartItemIds.size()) {
+                errors.add("Some cart items not found");
+            }
+
+            // Validate each cart item
+            for (CartItem cartItem : cartItems) {
+                String itemPrefix = "Item " + cartItem.getCartItemId() + ": ";
+
+                // Verify cart item belongs to current user
+                if (!cartItem.getUser().getId().equals(currentUser.getId())) {
+                    errors.add(itemPrefix + "Cart item does not belong to current user");
+                    continue;
+                }
+
+                ExperienceSchedule schedule = cartItem.getExperienceSchedule();
+                if (schedule == null) {
+                    errors.add(itemPrefix + "Experience schedule not found");
+                    continue;
+                }
+
+                Experience experience = schedule.getExperience();
+                if (experience == null) {
+                    errors.add(itemPrefix + "Experience not found");
+                    continue;
+                }
+
+                // Check if user is trying to book their own experience
+                if (experience.getGuide() != null &&
+                        experience.getGuide().getId().equals(currentUser.getId())) {
+                    errors.add(itemPrefix + "Cannot book your own experience");
+                    continue;
+                }
+
+                // Validate experience is active
+                if (experience.getStatus() != ExperienceStatus.ACTIVE) {
+                    errors.add(itemPrefix + "Experience is not active");
+                }
+
+                // Validate schedule is in future
+                if (schedule.getStartDateTime().isBefore(LocalDateTime.now())) {
+                    errors.add(itemPrefix + "Cannot book past experiences");
+                }
+
+                // Check availability
+                int availableSpots = schedule.getAvailableSpots();
+                if (availableSpots < cartItem.getNumberOfParticipants()) {
+                    errors.add(itemPrefix + "Not enough spots available. Available: " +
+                            availableSpots + ", Requested: " + cartItem.getNumberOfParticipants());
+                }
+            }
+
+        } catch (Exception e) {
+            errors.add("Validation error: " + e.getMessage());
+        }
+
+        return errors;
+    }
+
+    /**
+     * Create multiple PENDING bookings from cart items with proportional trippoints
+     * discount.
+     *
+     * For each cart item:
+     * - Extracts schedule, participants, and pricing information
+     * - Calculates proportional trippoints discount based on booking cost
+     * - Creates booking in PENDING status with shared contact info
+     * - Does NOT decrement available spots (done on payment confirmation)
+     *
+     * Uses @Transactional to ensure all bookings are created atomically or none at
+     * all.
+     *
+     * @param request BulkBookingRequestDTO containing cart item IDs, contact info,
+     *                and trippoints discount
+     * @return List of BookingResponseDTO for created bookings
+     * @throws IllegalArgumentException if validation fails
+     * @throws RuntimeException         if booking creation fails
+     */
+    @Transactional
+    public List<BookingResponseDTO> createBulkBookings(BulkBookingRequestDTO request) {
+        // Validate first
+        List<String> validationErrors = validateBulkBooking(request.getCartItemIds());
+        if (!validationErrors.isEmpty()) {
+            throw new IllegalArgumentException("Bulk booking validation failed: " +
+                    String.join(", ", validationErrors));
+        }
+
+        try {
+            // Get current user
+            User currentUser = getCurrentAuthenticatedUser();
+            if (currentUser == null) {
+                throw new IllegalStateException("No authenticated user found");
+            }
+
+            // Fetch all cart items
+            List<CartItem> cartItems = cartItemRepository.findAllById(request.getCartItemIds());
+
+            // Calculate grand total (before discount) for proportional distribution
+            BigDecimal grandTotal = BigDecimal.ZERO;
+            for (CartItem cartItem : cartItems) {
+                BigDecimal baseAmount = cartItem.getPriceAtTimeOfAdd()
+                        .multiply(new BigDecimal(cartItem.getNumberOfParticipants()));
+                BigDecimal serviceFee = baseAmount.multiply(new BigDecimal("0.04"));
+                grandTotal = grandTotal.add(baseAmount).add(serviceFee);
+            }
+
+            // Get total trippoints discount to distribute
+            BigDecimal totalTrippointsDiscount = request.getTrippointsDiscount() != null
+                    ? request.getTrippointsDiscount()
+                    : BigDecimal.ZERO;
+
+            // Create bookings with proportional discount
+            List<BookingResponseDTO> bookingResponses = new ArrayList<>();
+
+            for (CartItem cartItem : cartItems) {
+                // Calculate individual booking amounts
+                BigDecimal baseAmount = cartItem.getPriceAtTimeOfAdd()
+                        .multiply(new BigDecimal(cartItem.getNumberOfParticipants()));
+                BigDecimal serviceFee = baseAmount.multiply(new BigDecimal("0.04"))
+                        .setScale(2, RoundingMode.HALF_UP);
+                BigDecimal bookingSubtotal = baseAmount.add(serviceFee);
+
+                // Calculate proportional trippoints discount for this booking
+                BigDecimal bookingTrippointsDiscount = BigDecimal.ZERO;
+                if (totalTrippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal proportion = bookingSubtotal.divide(grandTotal, 4, RoundingMode.HALF_UP);
+                    bookingTrippointsDiscount = proportion.multiply(totalTrippointsDiscount)
+                            .setScale(2, RoundingMode.HALF_UP);
+                }
+
+                // Calculate final total amount
+                BigDecimal totalAmount = bookingSubtotal.subtract(bookingTrippointsDiscount);
+
+                // Create PENDING booking
+                Booking booking = new Booking();
+                booking.setTraveler(currentUser);
+                booking.setExperienceSchedule(cartItem.getExperienceSchedule());
+                booking.setNumberOfParticipants(cartItem.getNumberOfParticipants());
+                booking.setStatus(BookingStatus.PENDING);
+
+                // Set shared contact information
+                booking.setContactFirstName(request.getContactFirstName());
+                booking.setContactLastName(request.getContactLastName());
+                booking.setContactEmail(request.getContactEmail());
+                booking.setContactPhone(request.getContactPhone());
+
+                // Set pricing information
+                booking.setBaseAmount(baseAmount);
+                booking.setServiceFee(serviceFee);
+                booking.setTrippointsDiscount(bookingTrippointsDiscount);
+                booking.setTotalAmount(totalAmount);
+
+                // Generate confirmation code
+                booking.setConfirmationCode(generateConfirmationCode());
+
+                // Set timestamps
+                booking.setBookingDate(LocalDateTime.now());
+                booking.setCreatedAt(LocalDateTime.now());
+                booking.setUpdatedAt(LocalDateTime.now());
+
+                // Save booking
+                booking = bookingRepository.save(booking);
+
+                // Create response DTO
+                bookingResponses.add(createBookingResponseDTO(booking));
+            }
+
+            return bookingResponses;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create bulk bookings: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Process payment for multiple bookings with a single Stripe charge.
+     *
+     * Creates individual Transaction records for each booking, all sharing the same
+     * stripeChargeId.
+     * On successful payment:
+     * - Confirms all bookings atomically
+     * - Decrements available spots for each schedule
+     * - Deducts trippoints from user balance (sum of all booking discounts)
+     * - Adds users to trip chats
+     *
+     * Uses @Transactional to ensure all operations succeed or fail together.
+     *
+     * @param bookingIds   List of booking IDs to process payment for
+     * @param paymentToken Stripe payment token from client
+     * @return List of BookingResponseDTO for confirmed bookings
+     * @throws IllegalArgumentException if bookings not found
+     * @throws IllegalStateException    if bookings are not in payable state
+     * @throws RuntimeException         if payment processing fails
+     */
+    @Transactional
+    public List<BookingResponseDTO> processBulkPayment(List<Long> bookingIds, String paymentToken) {
+        // Fetch all bookings
+        List<Booking> bookings = bookingRepository.findAllById(bookingIds);
+
+        if (bookings.isEmpty()) {
+            throw new IllegalArgumentException("No bookings found");
+        }
+
+        if (bookings.size() != bookingIds.size()) {
+            throw new IllegalArgumentException("Some bookings not found");
+        }
+
+        // Validate all bookings are PENDING
+        for (Booking booking : bookings) {
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw new IllegalStateException("Booking " + booking.getBookingId() +
+                        " is not in PENDING status");
+            }
+        }
+
+        try {
+            // Calculate grand total (sum of all booking.totalAmount)
+            BigDecimal grandTotal = bookings.stream()
+                    .map(Booking::getTotalAmount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            // Process single Stripe payment for grand total
+            // Using first booking as reference for payment (any booking works, they share
+            // same user)
+            PaymentTransactionDTO paymentResult = paymentService.processPayment(bookings.get(0), paymentToken);
+
+            if (paymentResult.getStatus() != TransactionStatus.COMPLETED) {
+                throw new RuntimeException("Payment failed or pending");
+            }
+
+            // Get the transaction that was created by payment service to extract
+            // stripeChargeId
+            Transaction firstTransaction = getBookingPaymentTransaction(bookings.get(0));
+            String stripeChargeId = firstTransaction.getStripeChargeId();
+            String externalTransactionId = firstTransaction.getExternalTransactionId();
+
+            // Process all bookings (first one needs transaction update, rest need
+            // transaction creation)
+            for (int i = 0; i < bookings.size(); i++) {
+                Booking booking = bookings.get(i);
+
+                if (i == 0) {
+                    // First booking already has a transaction from processPayment
+                    // Just need to update the amount to match the booking's totalAmount (not
+                    // grandTotal)
+                    firstTransaction.setAmount(booking.getTotalAmount());
+                    transactionRepository.save(firstTransaction);
+                } else {
+                    // Create new transaction for other bookings
+                    Transaction transaction = new Transaction();
+                    transaction.setBooking(booking);
+                    transaction.setUser(booking.getTraveler());
+                    transaction.setAmount(booking.getTotalAmount());
+                    transaction.setStripeChargeId(stripeChargeId); // SAME for all!
+                    transaction.setType(TransactionType.PAYMENT);
+                    transaction.setStatus(TransactionStatus.COMPLETED);
+                    transaction.setExternalTransactionId(externalTransactionId);
+                    transaction.setLastFourDigits(paymentResult.getLastFourDigits());
+                    transaction.setCardBrand(paymentResult.getCardBrand());
+                    transaction.setCreatedAt(LocalDateTime.now());
+                    transaction.setUpdatedAt(LocalDateTime.now());
+                    transaction.setProcessedAt(LocalDateTime.now());
+                    transactionRepository.save(transaction);
+                }
+
+                // Confirm booking
+                booking.setStatus(BookingStatus.CONFIRMED);
+                booking.setUpdatedAt(LocalDateTime.now());
+
+                // Decrement available spots
+                ExperienceSchedule schedule = booking.getExperienceSchedule();
+                int availableSpots = schedule.getAvailableSpots() - booking.getNumberOfParticipants();
+                schedule.setAvailableSpots(availableSpots);
+                if (availableSpots <= 0) {
+                    schedule.setIsAvailable(false);
+                }
+                experienceScheduleRepository.save(schedule);
+
+                // Add users to trip chat
+                try {
+                    Long guideId = schedule.getExperience().getGuide().getId();
+                    tripChatService.addGuideToTripChat(schedule.getScheduleId(), guideId);
+                    tripChatService.addUserToTripChat(
+                            schedule.getScheduleId(),
+                            booking.getTraveler().getId(),
+                            booking.getBookingId());
+                } catch (Exception e) {
+                    System.err.println("Error creating trip chat for booking " +
+                            booking.getBookingId() + ": " + e.getMessage());
+                }
+
+                bookingRepository.save(booking);
+            }
+
+            // Deduct trippoints from user balance (sum of all discounts)
+            BigDecimal totalTrippointsDiscount = bookings.stream()
+                    .map(Booking::getTrippointsDiscount)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            if (totalTrippointsDiscount.compareTo(BigDecimal.ZERO) > 0) {
+                int pointsToRedeem = totalTrippointsDiscount
+                        .multiply(new BigDecimal("100"))
+                        .intValue();
+                tripPointsService.redeemPoints(bookings.get(0).getTraveler().getId(), pointsToRedeem);
+            }
+
+            // Return booking responses
+            return bookings.stream()
+                    .map(this::createBookingResponseDTO)
+                    .collect(Collectors.toList());
+
+        } catch (Exception e) {
+            throw new RuntimeException("Bulk payment processing failed: " + e.getMessage(), e);
+        }
     }
 }

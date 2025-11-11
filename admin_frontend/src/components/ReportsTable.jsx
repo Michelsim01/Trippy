@@ -51,8 +51,6 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
     switch (status) {
       case 'OPEN':
         return 'bg-yellow-100 text-yellow-800';
-      case 'IN_PROGRESS':
-        return 'bg-blue-100 text-blue-800';
       case 'RESOLVED':
         return 'bg-green-100 text-green-800';
       case 'DISMISSED':
@@ -309,7 +307,6 @@ const ReportsTable = forwardRef(({ onReportAction }, ref) => {
               >
                 <option value="all">All</option>
                 <option value="OPEN">Open</option>
-                <option value="IN_PROGRESS">In Progress</option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="DISMISSED">Dismissed</option>
               </select>

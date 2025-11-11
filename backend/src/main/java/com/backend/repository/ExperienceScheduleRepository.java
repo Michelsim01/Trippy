@@ -29,4 +29,15 @@ public interface ExperienceScheduleRepository extends JpaRepository<ExperienceSc
 
     // Find experience schedules that start within a date range
     List<ExperienceSchedule> findByStartDateTimeBetween(LocalDateTime startDate, LocalDateTime endDate);
+
+    // Find schedules for specific experiences within a date range (available and not cancelled)
+    @Query("SELECT es FROM ExperienceSchedule es WHERE es.experience.experienceId IN :experienceIds " +
+           "AND DATE(es.startDateTime) BETWEEN :startDate AND :endDate " +
+           "AND es.isAvailable = true AND es.cancelled = false " +
+           "ORDER BY es.startDateTime ASC")
+    List<ExperienceSchedule> findAvailableSchedulesByExperiencesAndDateRange(
+        @Param("experienceIds") List<Long> experienceIds,
+        @Param("startDate") java.time.LocalDate startDate,
+        @Param("endDate") java.time.LocalDate endDate
+    );
 }

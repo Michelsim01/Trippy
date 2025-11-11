@@ -12,8 +12,10 @@ import com.backend.repository.ExperienceItineraryRepository;
 import com.backend.repository.BookingRepository;
 import com.backend.repository.PersonalChatRepository;
 import com.backend.dto.SearchSuggestionDTO;
+import com.backend.dto.PriceUpdateValidationDTO;
 import com.backend.service.ExperienceService;
 import com.backend.service.ExperienceAnalyticsService;
+import com.backend.service.ExperienceDiscountService;
 import com.backend.entity.BookingStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -21,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
@@ -46,6 +49,9 @@ public class ExperienceController {
     private ExperienceService experienceService;
 
     @Autowired
+    private ExperienceDiscountService discountService;
+
+    @Autowired
     private BookingRepository bookingRepository;
 
     @Autowired
@@ -68,6 +74,9 @@ public class ExperienceController {
             expMap.put("latitude", exp.getLatitude());
             expMap.put("longitude", exp.getLongitude());
             expMap.put("price", exp.getPrice());
+            expMap.put("originalPrice", exp.getOriginalPrice());
+            expMap.put("discountPercentage", exp.getDiscountPercentage());
+            expMap.put("lastPriceUpdate", exp.getLastPriceUpdate());
             expMap.put("totalStars", exp.getTotalStars());
             expMap.put("averageRating", exp.getAverageRating());
             expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
@@ -114,6 +123,9 @@ public class ExperienceController {
             expMap.put("latitude", exp.getLatitude());
             expMap.put("longitude", exp.getLongitude());
             expMap.put("price", exp.getPrice());
+            expMap.put("originalPrice", exp.getOriginalPrice());
+            expMap.put("discountPercentage", exp.getDiscountPercentage());
+            expMap.put("lastPriceUpdate", exp.getLastPriceUpdate());
             expMap.put("totalStars", exp.getTotalStars());
             expMap.put("averageRating", exp.getAverageRating());
             expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());
@@ -163,6 +175,38 @@ public class ExperienceController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
                     "success", false,
                     "message", "Failed to create experience: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Validate price update for an experience
+     * Returns warnings without making any changes
+     */
+    @PostMapping("/{id}/validate-price")
+    public ResponseEntity<?> validatePriceUpdate(
+            @PathVariable Long id, 
+            @RequestBody Map<String, Object> payload) {
+        try {
+            Experience experience = experienceRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Experience not found"));
+            
+            Object priceObj = payload.get("price");
+            if (priceObj == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "message", "Price is required"
+                ));
+            }
+            
+            BigDecimal newPrice = new BigDecimal(priceObj.toString());
+            PriceUpdateValidationDTO validation = discountService.validatePriceUpdate(experience, newPrice);
+            
+            return ResponseEntity.ok(validation);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+                "success", false,
+                "message", "Failed to validate price: " + e.getMessage()
+            ));
         }
     }
 
@@ -300,6 +344,27 @@ public class ExperienceController {
         return result;
     }
 
+    @GetMapping("/{id}/similar")
+    public ResponseEntity<List<com.backend.dto.SimilarExperienceDTO>> getSimilarExperiences(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "10") int limit) {
+        try {
+            // Check if experience exists
+            if (!experienceRepository.existsById(id)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            List<com.backend.dto.SimilarExperienceDTO> similarExperiences =
+                    experienceService.getSimilarExperiences(id, limit);
+
+            return ResponseEntity.ok(similarExperiences);
+        } catch (Exception e) {
+            System.err.println("Error fetching similar experiences: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(List.of());
+        }
+    }
+
     // Separate endpoints for related data
     @GetMapping("/{id}/media")
     public ResponseEntity<?> getExperienceMedia(@PathVariable Long id) {
@@ -374,6 +439,9 @@ public class ExperienceController {
                 expMap.put("location", exp.getLocation());
                 expMap.put("country", exp.getCountry());
                 expMap.put("price", exp.getPrice());
+                expMap.put("originalPrice", exp.getOriginalPrice());
+                expMap.put("discountPercentage", exp.getDiscountPercentage());
+                expMap.put("lastPriceUpdate", exp.getLastPriceUpdate());
                 expMap.put("totalStars", exp.getTotalStars());
                 expMap.put("averageRating", exp.getAverageRating());
                 expMap.put("coverPhotoUrl", exp.getCoverPhotoUrl());

@@ -773,27 +773,69 @@ public class DataSeedingService {
                         ExperienceCategory.OTHERS, 2.5, 35.00, 20,
                         "https://images.unsplash.com/photo-1508804185872-d7badad00f7d" },
 
-                // USA - New York Area (5 experiences within 150km)
-                { "Statue of Liberty & Ellis Island", "New York City", "United States",
+                // USA - New York Area
+                { "Statue of Liberty & Ellis Island", "Statue City Cruises Battery Park", "United States",
                         "Ferry tour to Liberty Island and Ellis Island Immigration Museum with skip-the-line access",
                         ExperienceCategory.GUIDED_TOUR, 5.0, 85.00, 25,
                         "https://images.unsplash.com/photo-1485871981521-5b1fd3805eee" },
-                { "Central Park Guided Walk", "New York City", "United States",
+                { "Central Park Guided Walk", "Central Park", "United States",
                         "Explore iconic Central Park landmarks, Bethesda Fountain, Bow Bridge and Strawberry Fields",
                         ExperienceCategory.GUIDED_TOUR, 3.0, 45.00, 15,
                         "https://images.unsplash.com/photo-1551632811-561732d1e306" },
-                { "Broadway Theater Experience", "New York City", "United States",
+                { "Broadway Theater Experience", "1681 Broadway, New York, NY 10019", "United States",
                         "Premium orchestra seats to top Broadway show with pre-theater dinner at Times Square restaurant",
                         ExperienceCategory.OTHERS, 5.0, 280.00, 10,
                         "https://images.unsplash.com/photo-1503095396549-807759245b35" },
-                { "Brooklyn Food Tour", "Brooklyn", "United States",
+                { "Brooklyn Food Tour", "88 E Broadway, New York, NY 10002", "United States",
                         "Taste artisanal foods in Williamsburg and DUMBO neighborhoods with local foodie guide",
                         ExperienceCategory.GUIDED_TOUR, 4.0, 95.00, 12,
                         "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8" },
-                { "Niagara Falls Day Trip", "Niagara Falls", "United States",
+                { "Niagara Falls Day Trip", "niagara falls new york", "United States",
                         "Full-day excursion to Niagara Falls with Maid of the Mist boat ride and Cave of the Winds",
                         ExperienceCategory.DAYTRIP, 14.0, 180.00, 20,
-                        "https://images.unsplash.com/photo-1489447068241-b3490214e879" }
+                        "https://images.unsplash.com/photo-1489447068241-b3490214e879" },
+                { "Metropolitan Museum of Art Tour", "1000 5th Ave, New York, NY 10028", "United States",
+                        "Skip-the-line guided tour of The Met's masterpieces including Egyptian art, European paintings and modern gallery",
+                        ExperienceCategory.GUIDED_TOUR, 3.5, 75.00, 18,
+                        "https://images.unsplash.com/photo-1564399579883-451a5d44ec08" },
+                { "Brooklyn Bridge Bike Tour", "Brooklyn Bridge, New York, NY 10038", "United States",
+                        "Bike across iconic Brooklyn Bridge with stops at DUMBO waterfront and Brooklyn Heights Promenade",
+                        ExperienceCategory.ADVENTURE, 2.5, 55.00, 20,
+                        "https://images.unsplash.com/photo-1514565131-fce0801e5785" },
+                { "Harlem Gospel & Soul Food", "253 W 125th St, New York, NY 10027", "United States",
+                        "Sunday morning gospel church service in Harlem followed by authentic soul food brunch at local favorite",
+                        ExperienceCategory.OTHERS, 4.0, 90.00, 16,
+                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d" },
+                { "Hudson Valley Wine Tour", "87 Nevele Rd, Ellenville, NY 12428", "United States",
+                        "Full-day wine tasting tour visiting 3 boutique wineries in scenic Hudson Valley with lunch included",
+                        ExperienceCategory.DAYTRIP, 8.0, 145.00, 14,
+                        "https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb" },
+                { "High Line & Chelsea Market Walk", "The High Line, New York, NY 10011", "United States",
+                        "Guided walk through elevated High Line park and Chelsea Market food hall with tastings",
+                        ExperienceCategory.GUIDED_TOUR, 3.0, 65.00, 18,
+                        "https://images.unsplash.com/photo-1522083165195-3424ed129620" },
+
+                // USA - Other Regions (5 experiences across the country)
+                { "Grand Canyon Helicopter Tour", "Grand Canyon National Park, Arizona", "United States",
+                        "45-minute aerial tour over the Grand Canyon with views of Colorado River and North Rim",
+                        ExperienceCategory.ADVENTURE, 1.5, 320.00, 8,
+                        "https://images.unsplash.com/photo-1474044159687-1ee9f3a51722" },
+                { "French Quarter Walking Tour", "632 Royal St, New Orleans, LA 70130", "United States",
+                        "Explore historic French Quarter with stories of voodoo, jazz legends and Creole architecture",
+                        ExperienceCategory.GUIDED_TOUR, 2.5, 55.00, 20,
+                        "https://images.unsplash.com/photo-1560525821-d5615ef80c69" },
+                { "Golden Gate Bridge Bike Ride", "Golden Gate Bridge", "United States",
+                        "Bike from Fisherman's Wharf across Golden Gate Bridge to Sausalito with ferry return",
+                        ExperienceCategory.ADVENTURE, 3.5, 75.00, 15,
+                        "https://images.unsplash.com/photo-1501594907352-04cda38ebc29" },
+                { "Everglades Airboat Adventure", "Everglades National Park, Florida", "United States",
+                        "High-speed airboat ride through Everglades swamps with alligator encounters and wildlife spotting",
+                        ExperienceCategory.ADVENTURE, 2.0, 85.00, 18,
+                        "https://images.unsplash.com/photo-1580655653885-65763b2597d0" },
+                { "Savannah Ghost Tour", "Madison Square Anderson", "United States",
+                        "Evening walking tour through historic Savannah's haunted squares and cemeteries with paranormal stories",
+                        ExperienceCategory.GUIDED_TOUR, 2.0, 45.00, 22,
+                        "https://images.unsplash.com/photo-1571492913183-66c5f8d87b7f" }
         };
 
         for (int i = 0; i < experienceData.length; i++) {
@@ -815,7 +857,14 @@ public class DataSeedingService {
             experience.setFullDescription(generateFullDescription((String) data[3]));
             experience.setCategory((ExperienceCategory) data[4]);
             experience.setDuration(BigDecimal.valueOf((Double) data[5]));
-            experience.setPrice(BigDecimal.valueOf((Double) data[6]));
+            
+            // Set price and initialize discount fields
+            BigDecimal price = BigDecimal.valueOf((Double) data[6]);
+            experience.setPrice(price);
+            experience.setOriginalPrice(price); // Initialize originalPrice same as price
+            experience.setDiscountPercentage(BigDecimal.ZERO); // No discount initially
+            experience.setLastPriceUpdate(LocalDateTime.now()); // Set initial price update time
+            
             experience.setParticipantsAllowed((Integer) data[7]);
             experience.setCoverPhotoUrl((String) data[8]);
             experience.setStatus(ExperienceStatus.ACTIVE);
@@ -1083,10 +1132,10 @@ public class DataSeedingService {
 
     private List<ExperienceSchedule> createExperienceSchedules(List<Experience> experiences) {
         List<ExperienceSchedule> allSchedules = new ArrayList<>();
-        
-        // Determine if this is a demo experience (last 15 experiences)
+
+        // Determine if this is a demo experience (last 25 experiences: 5 India + 5 China + 15 USA)
         int totalExperiences = experiences.size();
-        int demoStartIndex = totalExperiences - 15;
+        int demoStartIndex = totalExperiences - 25;
 
         for (int expIndex = 0; expIndex < experiences.size(); expIndex++) {
             Experience experience = experiences.get(expIndex);
@@ -1128,53 +1177,94 @@ public class DataSeedingService {
     }
     
     /**
-     * Create specific January 2026 schedules for demo experiences with smart timing
+     * Create specific January-February 2026 schedules for demo experiences with smart timing
      * Ensures non-overlapping schedules with proper travel buffers between cities
      */
     private List<ExperienceSchedule> createDemoSchedules(Experience experience, int demoIndex) {
         List<ExperienceSchedule> schedules = new ArrayList<>();
-        
-        // Define schedule patterns for each demo experience (0-14)
+
+        // Define schedule patterns for each demo experience (0-24)
         // India experiences (0-4): Jan 10-18, 2026
-        // China experiences (5-9): Jan 19-27, 2026  
-        // USA experiences (10-14): Jan 28 - Feb 5, 2026
-        
+        // China experiences (5-9): Jan 19-27, 2026
+        // USA experiences (10-24): Feb 1-5, 2026 (15 experiences distributed across 5 days)
+
         LocalDateTime baseDate;
         int scheduleCount = 2; // Create 2 schedules per demo experience
-        
+
         if (demoIndex < 5) {
             // INDIA experiences - January 10-18, 2026
             baseDate = LocalDateTime.of(2026, 1, 10, 9, 0);
             baseDate = baseDate.plusDays(demoIndex * 2); // Space out by 2 days for travel between cities
-            
+
         } else if (demoIndex < 10) {
             // CHINA experiences - January 19-27, 2026
             baseDate = LocalDateTime.of(2026, 1, 19, 9, 0);
             baseDate = baseDate.plusDays((demoIndex - 5) * 2); // Space out by 2 days
-            
+
         } else {
-            // USA experiences - January 28 - February 5, 2026
-            baseDate = LocalDateTime.of(2026, 1, 28, 9, 0);
-            baseDate = baseDate.plusDays((demoIndex - 10) * 2); // Space out by 2 days
+            // USA experiences - February 1-5, 2026 (15 experiences)
+            // Distribute 15 experiences across 5 days (3 per day at different times)
+            int usaIndex = demoIndex - 10; // 0-14
+            int dayOffset = usaIndex / 3; // Which day (0-4 = Feb 1-5)
+            int timeSlot = usaIndex % 3; // Which time slot within the day (0=morning, 1=afternoon, 2=evening)
+
+            baseDate = LocalDateTime.of(2026, 2, 1, 9, 0); // Start Feb 1, 2026 at 9 AM
+            baseDate = baseDate.plusDays(dayOffset);
+
+            // Adjust hour based on time slot
+            if (timeSlot == 1) {
+                baseDate = baseDate.withHour(13); // 1 PM
+            } else if (timeSlot == 2) {
+                baseDate = baseDate.withHour(17); // 5 PM
+            }
         }
-        
-        // Create morning and afternoon/evening schedules
-        int[] hourOffsets = {0, 6}; // Morning (9 AM) and Afternoon (3 PM)
-        
-        for (int i = 0; i < scheduleCount; i++) {
-            ExperienceSchedule schedule = new ExperienceSchedule();
-            schedule.setExperience(experience);
-            
-            LocalDateTime startTime = baseDate.plusDays(i).withHour(9 + hourOffsets[i]).withMinute(0).withSecond(0).withNano(0);
-            LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
-            
-            schedule.setStartDateTime(startTime);
-            schedule.setEndDateTime(endTime);
-            schedule.setAvailableSpots(experience.getParticipantsAllowed());
-            schedule.setIsAvailable(true);
-            schedule.setCreatedAt(LocalDateTime.now().minusDays(5));
-            
-            schedules.add(experienceScheduleRepository.save(schedule));
+
+        // Create schedules
+        if (demoIndex >= 10) {
+            // For USA experiences: Create multiple schedules on the same day at the assigned time
+            // and one more schedule on a different day
+            for (int i = 0; i < scheduleCount; i++) {
+                ExperienceSchedule schedule = new ExperienceSchedule();
+                schedule.setExperience(experience);
+
+                LocalDateTime startTime;
+                if (i == 0) {
+                    // First schedule at the assigned time slot
+                    startTime = baseDate.withMinute(0).withSecond(0).withNano(0);
+                } else {
+                    // Second schedule: next day, different time (morning if original was afternoon/evening)
+                    startTime = baseDate.plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
+                }
+
+                LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
+
+                schedule.setStartDateTime(startTime);
+                schedule.setEndDateTime(endTime);
+                schedule.setAvailableSpots(experience.getParticipantsAllowed());
+                schedule.setIsAvailable(true);
+                schedule.setCreatedAt(LocalDateTime.now().minusDays(5));
+
+                schedules.add(experienceScheduleRepository.save(schedule));
+            }
+        } else {
+            // For India and China experiences: Create morning and afternoon schedules
+            int[] hourOffsets = {0, 6}; // Morning (9 AM) and Afternoon (3 PM)
+
+            for (int i = 0; i < scheduleCount; i++) {
+                ExperienceSchedule schedule = new ExperienceSchedule();
+                schedule.setExperience(experience);
+
+                LocalDateTime startTime = baseDate.plusDays(i).withHour(9 + hourOffsets[i]).withMinute(0).withSecond(0).withNano(0);
+                LocalDateTime endTime = startTime.plusHours(experience.getDuration().longValue());
+
+                schedule.setStartDateTime(startTime);
+                schedule.setEndDateTime(endTime);
+                schedule.setAvailableSpots(experience.getParticipantsAllowed());
+                schedule.setIsAvailable(true);
+                schedule.setCreatedAt(LocalDateTime.now().minusDays(5));
+
+                schedules.add(experienceScheduleRepository.save(schedule));
+            }
         }
         
         return schedules;

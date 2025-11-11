@@ -14,6 +14,7 @@ import TransactionManagementPage from './pages/TransactionManagementPage';
 import KYCManagementPage from './pages/KYCManagementPage';
 import TicketResolutionPage from './pages/TicketResolutionPage';
 import ReportResolutionPage from './pages/ReportResolutionPage';
+import ExperienceReportResolutionPage from './pages/ExperienceReportResolutionPage';
 import AdminReferralPage from './pages/AdminReferralPage';
 
 // Placeholder components for other pages
@@ -146,6 +147,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute>
             <ReportResolutionPage />
+          </ProtectedRoute>
+        } 
+      />
+      <Route 
+        path="/admin/experience-reports" 
+        element={
+          <ProtectedRoute>
+            <ExperienceReportResolutionPage />
           </ProtectedRoute>
         } 
       />
