@@ -1050,7 +1050,9 @@ public class BookingService {
             // Calculate grand total (before discount) for proportional distribution
             BigDecimal grandTotal = BigDecimal.ZERO;
             for (CartItem cartItem : cartItems) {
-                BigDecimal baseAmount = cartItem.getPriceAtTimeOfAdd()
+                // Use current price from experience, not price at time of add
+                BigDecimal currentPrice = cartItem.getExperienceSchedule().getExperience().getPrice();
+                BigDecimal baseAmount = currentPrice
                         .multiply(new BigDecimal(cartItem.getNumberOfParticipants()));
                 BigDecimal serviceFee = baseAmount.multiply(new BigDecimal("0.04"));
                 grandTotal = grandTotal.add(baseAmount).add(serviceFee);
@@ -1065,8 +1067,9 @@ public class BookingService {
             List<BookingResponseDTO> bookingResponses = new ArrayList<>();
 
             for (CartItem cartItem : cartItems) {
-                // Calculate individual booking amounts
-                BigDecimal baseAmount = cartItem.getPriceAtTimeOfAdd()
+                // Calculate individual booking amounts using current price
+                BigDecimal currentPrice = cartItem.getExperienceSchedule().getExperience().getPrice();
+                BigDecimal baseAmount = currentPrice
                         .multiply(new BigDecimal(cartItem.getNumberOfParticipants()));
                 BigDecimal serviceFee = baseAmount.multiply(new BigDecimal("0.04"))
                         .setScale(2, RoundingMode.HALF_UP);
