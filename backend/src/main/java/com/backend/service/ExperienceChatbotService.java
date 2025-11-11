@@ -51,14 +51,26 @@ public class ExperienceChatbotService {
             // Get or create chat session
             ChatbotSession session = getOrCreateSession(request.getSessionId(), userId);
 
+            // Retrieve conversation history for this session (excluding current message)
+            List<ChatbotMessage> conversationHistory = chatbotMessageRepository.findByChatbotSessionOrderByCreatedAtAsc(session);
+            logger.info("Retrieved conversation history: {} previous messages", conversationHistory.size());
+
             // Search knowledge base for relevant context
             List<ExperienceKnowledgeBaseDocument> relevantDocs = experienceKnowledgeBaseService.searchSimilarDocuments(request.getMessage());
 
             // Build context from relevant documents
             String context = experienceKnowledgeBaseService.buildContext(relevantDocs);
 
-            // Generate AI response
-            String botResponse = openAIService.generateExperienceChatResponse(request.getMessage(), context);
+            logger.info("Built context for experience chat (length: {})", context.length());
+
+            // Generate AI response with conversation history AND context
+            String botResponse = openAIService.generateExperienceChatResponseWithHistory(
+                request.getMessage(), 
+                context, 
+                conversationHistory
+            );
+
+            logger.info("Received OpenAI response - length: {} characters", botResponse.length());
 
             // Save the conversation
             ChatbotMessage chatbotMessage = saveChatMessage(session, request.getMessage(), botResponse, relevantDocs);
