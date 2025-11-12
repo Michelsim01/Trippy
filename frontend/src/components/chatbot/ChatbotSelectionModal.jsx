@@ -1,7 +1,7 @@
 import React from 'react';
-import { X, MessageSquare, Sparkles } from 'lucide-react';
+import { X, MessageSquare, Sparkles, Map } from 'lucide-react';
 
-const ChatbotSelectionModal = ({ isOpen, onClose, onSelectFAQ, onSelectExperience }) => {
+const ChatbotSelectionModal = ({ isOpen, onClose, onSelectFAQ, onSelectExperience, onSelectItinerary }) => {
   if (!isOpen) return null;
 
   return (
@@ -51,6 +51,23 @@ const ChatbotSelectionModal = ({ isOpen, onClose, onSelectFAQ, onSelectExperienc
             <div className="flex-1 text-left">
               <h4 className="font-semibold text-neutrals-1">Experience Recommender</h4>
               <p className="text-sm text-neutrals-4">Get personalized experience recommendations</p>
+            </div>
+          </button>
+
+          {/* Trip Itinerary Planner Option */}
+          <button
+            onClick={() => {
+              onSelectItinerary();
+              onClose();
+            }}
+            className="w-full p-4 border-2 border-neutrals-6 hover:border-primary-1 rounded-lg transition-all flex items-center space-x-4 group"
+          >
+            <div className="w-12 h-12 bg-green-600/10 rounded-full flex items-center justify-center group-hover:bg-green-600/20 transition-colors">
+              <Map className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="flex-1 text-left">
+              <h4 className="font-semibold text-neutrals-1">AI Trip Planner</h4>
+              <p className="text-sm text-neutrals-4">Plan your perfect trip with AI assistance</p>
             </div>
           </button>
         </div>

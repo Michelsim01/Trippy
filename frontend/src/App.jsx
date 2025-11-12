@@ -67,6 +67,7 @@ import FloatingChatButton from './components/chatbot/FloatingChatButton'
 import ChatbotSelectionModal from './components/chatbot/ChatbotSelectionModal'
 import FAQChatWindow from './components/chatbot/FAQChatWindow'
 import ExperienceChatWindow from './components/chatbot/ExperienceChatWindow'
+import ChatbotModal from './components/itinerary-chatbot/ChatbotModal'
 import './App.css'
 
 // Initialize Stripe with publishable key
@@ -78,6 +79,7 @@ function AppRoutes() {
   const [showChatbotModal, setShowChatbotModal] = useState(false)
   const [showFAQChat, setShowFAQChat] = useState(false)
   const [showExperienceChat, setShowExperienceChat] = useState(false)
+  const [showItineraryChat, setShowItineraryChat] = useState(false)
   
   // Global chat notifications for navbar badge updates on all pages
   const { chatNotifications, clearChatNotifications } = useChatNotifications(user?.id || user?.userId)
@@ -362,6 +364,7 @@ function AppRoutes() {
           onClose={() => setShowChatbotModal(false)}
           onSelectFAQ={() => setShowFAQChat(true)}
           onSelectExperience={() => setShowExperienceChat(true)}
+          onSelectItinerary={() => setShowItineraryChat(true)}
         />
         <FAQChatWindow
           isOpen={showFAQChat}
@@ -370,6 +373,10 @@ function AppRoutes() {
         <ExperienceChatWindow
           isOpen={showExperienceChat}
           onClose={() => setShowExperienceChat(false)}
+        />
+        <ChatbotModal
+          isOpen={showItineraryChat}
+          onClose={() => setShowItineraryChat(false)}
         />
       </>
     )}

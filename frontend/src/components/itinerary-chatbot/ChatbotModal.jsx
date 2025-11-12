@@ -83,11 +83,22 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     setShowSuggestions(true)
     setShowTripForm(true) // Show trip form for new sessions
     setError(null)
+
+    // Immediately add the new session to the sidebar
+    const newSession = {
+      sessionId: newSessionId,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      title: 'New Trip',
+      messages: []
+    }
+
+    // Add new session at the beginning of the list
+    setAllSessions(prev => [newSession, ...prev])
   }
 
   const handleNewTrip = () => {
     createNewSession()
-    loadUserSessions() // Refresh session list
   }
 
   const handleSessionSelect = async (sid) => {
@@ -204,6 +215,9 @@ const ChatbotModal = ({ isOpen, onClose }) => {
         }
 
         setMessages((prev) => [...prev, aiMessage])
+
+        // Refresh the session list to get updated titles/data from backend
+        await loadUserSessions()
       } else {
         setError(result.error || 'Failed to send message')
 
@@ -252,7 +266,7 @@ const ChatbotModal = ({ isOpen, onClose }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-50"
+        className="absolute inset-0 bg-black opacity-50"
         onClick={handleClose}
       />
 
