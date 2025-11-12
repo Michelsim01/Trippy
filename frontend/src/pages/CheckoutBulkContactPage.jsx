@@ -126,7 +126,7 @@ export default function CheckoutBulkContactPage() {
   // Calculate pricing for all selected items
   const calculatePricing = (items) => {
     const subtotal = items.reduce((sum, item) => {
-      return sum + (Number(item.priceAtTimeOfAdd) * Number(item.numberOfParticipants))
+      return sum + (Number(item.currentPrice) * Number(item.numberOfParticipants))
     }, 0)
 
     const serviceFee = subtotal * 0.04
@@ -395,7 +395,7 @@ export default function CheckoutBulkContactPage() {
                             <h4 className="text-sm font-semibold text-neutrals-1 truncate">{item.experienceTitle}</h4>
                             <p className="text-xs text-neutrals-3">{item.numberOfParticipants} guest{item.numberOfParticipants > 1 ? 's' : ''}</p>
                             <p className="text-sm font-medium text-neutrals-1 mt-1">
-                              ${(item.priceAtTimeOfAdd * item.numberOfParticipants).toFixed(2)}
+                              ${(item.currentPrice * item.numberOfParticipants).toFixed(2)}
                             </p>
                           </div>
                         </div>
@@ -545,7 +545,7 @@ export default function CheckoutBulkContactPage() {
                       <img src={item.coverPhotoUrl || '/placeholder.jpg'} alt="" className="w-12 h-12 object-cover rounded" />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-semibold text-neutrals-1 truncate">{item.experienceTitle}</p>
-                        <p className="text-xs text-neutrals-3">{item.numberOfParticipants} x ${item.priceAtTimeOfAdd}</p>
+                        <p className="text-xs text-neutrals-3">{item.numberOfParticipants} x ${item.currentPrice}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

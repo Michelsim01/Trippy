@@ -432,11 +432,6 @@ const MessagesPage = () => {
                                 <SearchBar />
                             </div>
 
-                            {/* Start new AI chat button */}
-                            <div className="p-4 border-b">
-                                <AIChatButton onClick={startNewAIChat} />
-                            </div>
-
                             {/* Conversations List */}
                             <div className="flex-1 overflow-y-auto">
                                 {loading ? (
@@ -450,12 +445,9 @@ const MessagesPage = () => {
                                         onChatSelect={handleChatSelect}
                                     />
                                 ) : (
-                                    <EmptyState 
-                                        title="No conversations yet"
-                                        description="Start chatting with guides about experiences!"
-                                        buttonText="Start chatting with Trippy AI"
-                                        onButtonClick={startNewAIChat}
-                                    />
+                                    <div className="p-4 text-center text-neutrals-4 bg-white">
+                                        No conversations yet
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -503,14 +495,10 @@ const MessagesPage = () => {
                                 })()
 
                             ) : (
-                                // No chat selected state
-                                <EmptyState 
-                                    isChat={true}
-                                    title="Welcome to Messages"
-                                    description="Select a conversation to start chatting"
-                                    buttonText="Start chatting with Trippy AI"
-                                    onButtonClick={startNewAIChat}
-                                />
+                                // Empty state when no chat is selected
+                                <div className="flex-1 flex flex-col items-center justify-center bg-neutrals-8">
+                                    No chat selected. Please select a conversation to start chatting.
+                                </div>
                             )}
                         </div>
                     </main>
@@ -579,7 +567,6 @@ const MessagesPage = () => {
                             {/* Mobile Header with AI Chat Button */}
                             <div className="p-4 bg-white border-b border-neutrals-6">
                                 <h1 className="text-xl font-bold text-neutrals-1 mb-4">Messages</h1>
-                                <AIChatButton onClick={startNewAIChat} size="small" />
                                 <div className="mt-4">
                                     <SearchBar />
                                 </div>
@@ -601,12 +588,9 @@ const MessagesPage = () => {
                                         />
                                     </div>
                                 ) : (
-                                    <EmptyState 
-                                        title="No conversations yet"
-                                        description="Start chatting with guides about experiences!"
-                                        buttonText="Start chatting with Trippy AI"
-                                        onButtonClick={startNewAIChat}
-                                    />
+                                    <div className="p-4 text-center text-neutrals-4 bg-white">
+                                        No conversations yet
+                                    </div>
                                 )}
                             </div>
                         </>

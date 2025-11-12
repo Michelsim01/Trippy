@@ -243,6 +243,84 @@ public class OpenAIService {
         }
     }
 
+    /**
+     * Generate experience chatbot response WITH conversation history for context-aware conversations
+     * This allows the chatbot to remember previous exchanges and provide coherent follow-up responses
+     */
+    public String generateExperienceChatResponseWithHistory(String userMessage, String context, List<ChatbotMessage> conversationHistory) {
+        try {
+            String systemPrompt = buildExperienceSystemPrompt(context);
+
+            // Prune conversation history if needed to fit within token budget
+            List<ChatbotMessage> prunedHistory = pruneConversationHistory(conversationHistory, systemPrompt, userMessage);
+
+            // Build message list with conversation history
+            List<ChatMessage> messages = new ArrayList<>();
+
+            // 1. Add system prompt with experience context
+            messages.add(new ChatMessage(ChatMessageRole.SYSTEM.value(), systemPrompt));
+
+            // 2. Add pruned conversation history (previous user/assistant messages)
+            if (prunedHistory != null && !prunedHistory.isEmpty()) {
+                for (ChatbotMessage msg : prunedHistory) {
+                    // Add user message
+                    if (msg.getUserMessage() != null && !msg.getUserMessage().isEmpty()) {
+                        messages.add(new ChatMessage(ChatMessageRole.USER.value(), msg.getUserMessage()));
+                    }
+                    // Add assistant response
+                    if (msg.getBotResponse() != null && !msg.getBotResponse().isEmpty()) {
+                        messages.add(new ChatMessage(ChatMessageRole.ASSISTANT.value(), msg.getBotResponse()));
+                    }
+                }
+            }
+
+            // 3. Add current user message
+            messages.add(new ChatMessage(ChatMessageRole.USER.value(), userMessage));
+
+            logger.info("Experience Chat - System prompt: {} chars, Conversation history: {} messages (pruned from {}), Current message: {} chars",
+                systemPrompt.length(),
+                prunedHistory != null ? prunedHistory.size() : 0,
+                conversationHistory != null ? conversationHistory.size() : 0,
+                userMessage.length());
+            logger.info("Total messages in context: {}", messages.size());
+
+            ChatCompletionRequest request = ChatCompletionRequest.builder()
+                    .model(chatModel)
+                    .messages(messages)
+                    .maxTokens(2000)
+                    .temperature(0.7)
+                    .build();
+            
+            logger.info("Sending request to OpenAI for experience chat with history");
+            ChatCompletionResult result = openAiService.createChatCompletion(request);
+            
+            if (result.getChoices() != null && !result.getChoices().isEmpty()) {
+                String responseContent = result.getChoices().get(0).getMessage().getContent();
+                String finishReason = result.getChoices().get(0).getFinishReason();
+
+                logger.info("✅ OpenAI Response - finish_reason: {}, response length: {} chars",
+                    finishReason, responseContent.length());
+
+                // Log token usage if available
+                if (result.getUsage() != null) {
+                    logger.info("Token usage - prompt: {}, completion: {}, total: {}",
+                        result.getUsage().getPromptTokens(),
+                        result.getUsage().getCompletionTokens(),
+                        result.getUsage().getTotalTokens());
+                }
+
+                return responseContent;
+            }
+            
+            logger.error("No chat completion choices received for message: {}", userMessage);
+            return "I'm sorry, I couldn't process your request at the moment. Please try again.";
+            
+        } catch (Exception e) {
+            logger.error("Error generating experience chat response with history: {}", e.getMessage());
+            return "I'm experiencing technical difficulties. Please try again later.";
+        }
+    }
+
     private String buildSystemPrompt(String context) {
         StringBuilder prompt = new StringBuilder();
 
