@@ -101,8 +101,6 @@ const MapboxMap = ({
       )
       .addTo(map.current);
 
-    // Show popup on load
-    marker.getPopup().addTo(map.current);
     markers.current.push(marker);
   };
 

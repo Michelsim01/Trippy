@@ -79,7 +79,7 @@ const BlogsTab = ({ userId, isOwnProfile }) => {
             <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-neutrals-1">Blogs</h3>
                 <div className="flex gap-3">
-                    {draftsCount > 0 && (
+                    {isOwnProfile && draftsCount > 0 && (
                         <Link
                             to="/drafts"
                             className="flex items-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg transition-colors text-sm font-medium"
@@ -108,14 +108,18 @@ const BlogsTab = ({ userId, isOwnProfile }) => {
                         </svg>
                     </div>
                     <h4 className="text-lg font-semibold text-neutrals-3 mb-2">No published blogs yet</h4>
-                    <p className="text-neutrals-4 mb-4">Share your travel experiences with the community!</p>
-                    <Link
-                        to="/create-blog"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
-                    >
-                        <Plus size={18} />
-                        Write Your First Blog
-                    </Link>
+                    {isOwnProfile && (
+                        <>
+                            <p className="text-neutrals-4 mb-4">Share your travel experiences with the community!</p>
+                            <Link
+                                to="/create-blog"
+                                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors font-medium"
+                            >
+                                <Plus size={18} />
+                                Write Your First Blog
+                            </Link>
+                        </>
+                    )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
