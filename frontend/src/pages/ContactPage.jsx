@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
 
@@ -99,14 +100,17 @@ const ContactPage = () => {
                                 </div>
 
                                 {/* Support ticket link */}
-                                <div className="bg-primary-1 opacity-10 rounded-lg p-8">
+                                <div className="bg-primary-1/20 border-2 border-primary-1/30 rounded-lg p-8">
                                     <h3 className="text-2xl font-semibold text-neutrals-1 mb-4">Need Support?</h3>
-                                    <p className="text-neutrals-4 mb-6 text-lg">
+                                    <p className="text-neutrals-2 mb-6 text-lg">
                                         For technical issues or detailed inquiries, please submit a support ticket.
                                     </p>
-                                    <button className="text-primary-1 font-medium hover:underline text-lg">
+                                    <Link 
+                                        to="/support" 
+                                        className="inline-flex items-center text-primary-1 font-semibold hover:text-primary-2 transition-colors text-lg"
+                                    >
                                         Submit Support Ticket →
-                                    </button>
+                                    </Link>
                                 </div>
                             </div>
                         </div>
@@ -192,14 +196,17 @@ const ContactPage = () => {
                             </div>
 
                             {/* Support ticket link */}
-                            <div className="bg-primary-1 opacity-10 rounded-lg p-6">
+                            <div className="bg-primary-1/20 border-2 border-primary-1/30 rounded-lg p-6">
                                 <h3 className="text-xl font-semibold text-neutrals-1 mb-2">Need Support?</h3>
-                                <p className="text-neutrals-4 mb-4">
+                                <p className="text-neutrals-2 mb-4">
                                     For technical issues or detailed inquiries, please submit a support ticket.
                                 </p>
-                                <button className="text-primary-1 font-medium hover:underline">
+                                <Link 
+                                    to="/support" 
+                                    className="inline-flex items-center text-primary-1 font-semibold hover:text-primary-2 transition-colors"
+                                >
                                     Submit Support Ticket →
-                                </button>
+                                </Link>
                             </div>
                         </div>
                     </div>

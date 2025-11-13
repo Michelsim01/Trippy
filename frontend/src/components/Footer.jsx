@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
@@ -15,20 +16,19 @@ const Footer = () => {
                     {/* Links */}
                     <div className="flex flex-wrap gap-10 lg:gap-20 lg:flex-nowrap">
                         <div className="flex flex-col gap-8 w-[140px]">
-                            <h3 className="text-[16px] font-bold text-neutrals-1">About</h3>
+                            <Link to="/about" className="text-[16px] font-bold text-neutrals-1 hover:text-primary-1 transition-colors">About</Link>
                             <div className="flex flex-col gap-4 text-[12px] font-semibold text-neutrals-4">
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Discover</a>
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Find Travel</a>
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Popular Destinations</a>
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Reviews</a>
+                                <Link to="/home" className="hover:text-neutrals-1 transition-colors">Discover</Link>
+                                <Link to="/blog" className="hover:text-neutrals-1 transition-colors">Blog</Link>
+                                <Link to="/contact" className="hover:text-neutrals-1 transition-colors">Contact</Link>
                             </div>
                         </div>
                         <div className="flex flex-col gap-8 w-[140px]">
                             <h3 className="text-[16px] font-bold text-neutrals-1">Support</h3>
                             <div className="flex flex-col gap-4 text-[12px] font-semibold text-neutrals-4">
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Customer Support</a>
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Privacy & Policy</a>
-                                <a href="#" className="hover:text-neutrals-1 transition-colors">Contact Channels</a>
+                                <Link to="/support" className="hover:text-neutrals-1 transition-colors">Customer Support</Link>
+                                <Link to="/faq" className="hover:text-neutrals-1 transition-colors">FAQ</Link>
+                                <Link to="/contact" className="hover:text-neutrals-1 transition-colors">Contact Us</Link>
                             </div>
                         </div>
                     </div>
