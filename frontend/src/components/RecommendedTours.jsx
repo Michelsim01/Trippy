@@ -110,7 +110,7 @@ const RecommendedTours = ({ blogId }) => {
 
             <div className="mt-4 pt-4 border-t border-neutrals-7">
                 <button
-                    onClick={() => navigate('/experiences')}
+                    onClick={() => navigate('/home')}
                     className="text-sm text-primary-1 hover:text-primary-2 font-medium"
                 >
                     View all experiences →
