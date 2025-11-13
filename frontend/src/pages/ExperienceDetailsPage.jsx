@@ -710,7 +710,6 @@ const ExperienceDetailsPage = () => {
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm text-neutrals-3">{tour.location}</span>
                         <div className="flex items-center gap-1">
-                          <span className="text-xs text-neutrals-5 line-through">${tour.originalPrice}</span>
                           <span className="text-xs text-primary-1 font-bold">${tour.price}</span>
                         </div>
                       </div>
