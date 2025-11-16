@@ -1,8 +1,20 @@
-# Capstone Project - Full Stack Application
+# Trippy - Travel Experience Booking Platform
 
 [![CI Pipeline](https://github.com/Michelsim01/capstone_project/actions/workflows/ci.yml/badge.svg)](https://github.com/Michelsim01/capstone_project/actions/workflows/ci.yml)
 
-A full-stack web application built with React (frontend) and Spring Boot (backend) with PostgreSQL database.
+A full-stack travel platform that connects travelers with local guides and unique experiences. Users can discover, book, and create travel experiences while guides can manage tours, track analytics, and communicate with travelers.
+
+## Features
+
+- **Experience Discovery**: Browse and search for unique travel experiences
+- **Booking System**: Complete booking flow with Stripe payment integration
+- **Guide Dashboard**: Tools for guides to create and manage tours
+- **Real-time Messaging**: Communication between travelers and guides
+- **Review System**: Rate and review completed experiences
+- **Blog Platform**: Share travel stories and experiences
+- **Analytics**: Revenue and booking analytics for guides
+- **AI Chatbot**: Smart assistance for FAQ and itinerary planning
+- **Mobile Responsive**: Works seamlessly across all devices
 
 ## Tech Stack
 
@@ -54,23 +66,22 @@ git clone <your-repo-url>
 cd capstone_project
 ```
 
-After cloning the repository, create your local configuration file:
-1. Create a file in backend/src/main/resources called 'application.properties'. This file should not be committed to version control as it contains environment-specific configuration and potentially sensitive data like database passwords and API keys. To create the file, run these commands in order:
-```bash
-# Make sure you are in the capstone_project directory
-mkdir -p backend/src/main/resources
-touch backend/src/main/resources/application.properties
-```
-3. Copy and paste this code in.
-```bash
-# application.properties (DEV)
-spring.application.name=spring-boot
+### 2. Configuration Setup
 
-# Server configuration - bind to all interfaces to allow external access
+You'll need to obtain API keys from the following services:
+- **Stripe** (for payments) - Get test keys from [stripe.com](https://stripe.com)
+- **Mapbox** (for maps) - Get token from [mapbox.com](https://mapbox.com) 
+- **OpenAI** (for chatbot) - Get API key from [openai.com](https://openai.com)
+
+**Backend Configuration**: Create `backend/src/main/resources/application.properties`:
+
+```properties
+# Server Configuration
+spring.application.name=spring-boot
 server.port=8080
 server.address=0.0.0.0
 
-# JDBC points to the HOST port you mapped in docker-compose 
+# Database Configuration
 spring.datasource.url=jdbc:postgresql://localhost:5332/appdb
 spring.datasource.username=app
 spring.datasource.password=secret
@@ -79,35 +90,25 @@ spring.datasource.driver-class-name=org.postgresql.Driver
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
-spring.jpa.properties.hibernate.format_sql=true
 
 # JWT Configuration
-jwt.secret=trippy-secret-key-2024-very-long-and-secure-key-for-jwt-token-generation
+jwt.secret=your-secure-jwt-secret-key-here
 jwt.expiration=86400000
 jwt.prefix=Bearer 
 
 # Email Configuration (Gmail SMTP)
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=Michelsim2002@gmail.com
-spring.mail.password=orroajxbyuaxjodl
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-app-password
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
-spring.mail.properties.mail.smtp.starttls.required=true
-spring.mail.properties.mail.smtp.ssl.trust=smtp.gmail.com
 
-# Email Templates
-spring.mail.templates.path=classpath:/templates/email/
-
-# Stripe Configuration
-stripe.api.secret-key=sk_test_51SASx4PPgLxRpMEFgG9lqCXpgBxIqBquMKF6hGsbpk8RazH7G6ZcpcaP2rF75jvF4MI9VEnQCu1xaqFppIQen7J100EuR3LCRC
-stripe.api.publishable-key=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
-
-# MapBox Configuration
-mapbox.api.access-token=pk.eyJ1IjoibWljaGVsc2ltMDEiLCJhIjoiY21najUwZWM4MGd2MzJqb2t0cXgwMmNmZyJ9.U_2z19hTOSuTlD1-gpRrMg
-
-# OpenAI Configuration
-openai.api.key=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
+# API Keys (replace with your own)
+stripe.api.secret-key=your-stripe-secret-key
+stripe.api.publishable-key=your-stripe-publishable-key
+mapbox.api.access-token=your-mapbox-token
+openai.api.key=your-openai-api-key
 openai.model.embedding=text-embedding-3-small
 openai.model.chat=gpt-3.5-turbo
 
@@ -117,20 +118,17 @@ chatbot.similarity.threshold=0.7
 chatbot.max.results=5
 ```
 
-4. Create a `.env` file in the frontend directory (`frontend/.env`):
+**Frontend Configuration**: Create `frontend/.env`:
 
 ```env
-# Backend API Configuration
 VITE_API_BASE_URL=http://localhost:8080
-
-# Stripe Configuration (Test Mode)
-VITE_STRIPE_PUBLIC_KEY=pk_test_51SASx4PPgLxRpMEFg4PZJPwab4EIxU6N3XcsGGJ10XRPKrm9Kgox1eP7KouzNVqFcNXSuxDsA5q8v3vmx0A9CAUD00BZwXkd6s
-
-# Mapbox Configuration
-VITE_MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoibWljaGVsc2ltMDEiLCJhIjoiY21najUwZWM4MGd2MzJqb2t0cXgwMmNmZyJ9.U_2z19hTOSuTlD1-gpRrMg
+VITE_STRIPE_PUBLIC_KEY=your-stripe-publishable-key
+VITE_MAPBOX_ACCESS_TOKEN=your-mapbox-token
 ```
 
-### 2. Start Services with Docker Compose
+⚠️ **Important**: Never commit the configuration files containing your API keys to version control. They should be in your `.gitignore`.
+
+### 3. Start Services with Docker Compose
 
 From the **root directory**, start all services (database, Airflow):
 
@@ -151,7 +149,7 @@ Check that all services are healthy:
 docker-compose ps
 ```
 
-### 3. Run the Backend
+### 4. Run the Backend
 Seed the data:
 ```bash
 cd backend
@@ -167,16 +165,16 @@ Stay in the backend directory and run:
 mvnw.cmd spring-boot:run
 ```
 
-### 4. Run the Frontend
+### 5. Run the Frontend
 Open a new terminal, navigate to the frontend directory:
 ```bash
 cd frontend
 npm install  # Only needed first time
 npm run dev
 ```
-The frontend will start on http://localhost:3000
+The frontend will start on http://localhost:5173
 
-### 5. Access Airflow (Optional - for Data Pipeline)
+### 6. Access Airflow (Optional - for Data Pipeline)
 
 Airflow UI will be available at http://localhost:8081
 
@@ -189,27 +187,8 @@ See [data-pipeline/README.md](data-pipeline/README.md) for more details on confi
 
 - Database is running: `docker ps` should show postgres-spring and airflow containers
 - Backend is running: http://localhost:8080
-- Frontend is running: http://localhost:3000
+- Frontend is running: http://localhost:5173
 - Airflow is running: http://localhost:8081
 
-## Testing Payment Integration
-
-The application uses Stripe in test mode for payment processing. Use the following test card numbers to simulate different payment scenarios:
-
-### Successful Payment Test Cards
-
-- **Visa** → `4242 4242 4242 4242`
-- **Mastercard** → `5555 5555 5555 4444`
-- **American Express** → `3782 822463 10005`
-
-### Error Simulation Test Cards
-
-- **Declined card** → `4000 0000 0000 0002`
-- **Insufficient funds** → `4000 0000 0000 9995`
-- **Incorrect CVC** → `4000 0000 0000 0127`
-- **Expired card** → `4000 0000 0000 0069`
-- **Processing error** → `4000 0000 0000 0119`
-
-**Note:** For all test cards, you can use any future expiration date and any 3-digit CVC code.
 
 
