@@ -128,7 +128,22 @@ VITE_MAPBOX_ACCESS_TOKEN=your-mapbox-token
 
 ⚠️ **Important**: Never commit the configuration files containing your API keys to version control. They should be in your `.gitignore`.
 
-### 3. Start Services with Docker Compose
+### 3. Docker Environment Setup
+
+Create a `.env` file in the root directory for Docker Compose:
+
+```env
+# Airflow Configuration
+AIRFLOW_FERNET_KEY=your-32-character-fernet-key
+AIRFLOW_WEBSERVER_SECRET_KEY=your-secret-key
+AIRFLOW_UID=1000
+
+# API Keys
+OPENAI_API_KEY=your-openai-api-key
+GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+```
+
+### 4. Start Services with Docker Compose
 
 From the **root directory**, start all services (database, Airflow):
 
@@ -149,7 +164,7 @@ Check that all services are healthy:
 docker-compose ps
 ```
 
-### 4. Run the Backend
+### 5. Run the Backend
 Seed the data:
 ```bash
 cd backend
@@ -165,7 +180,7 @@ Stay in the backend directory and run:
 mvnw.cmd spring-boot:run
 ```
 
-### 5. Run the Frontend
+### 6. Run the Frontend
 Open a new terminal, navigate to the frontend directory:
 ```bash
 cd frontend
@@ -174,7 +189,7 @@ npm run dev
 ```
 The frontend will start on http://localhost:5173
 
-### 6. Access Airflow (Optional - for Data Pipeline)
+### 7. Access Airflow (Optional - for Data Pipeline)
 
 Airflow UI will be available at http://localhost:8081
 

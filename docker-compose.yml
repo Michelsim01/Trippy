@@ -9,17 +9,17 @@ x-airflow-common:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres/airflow
-    AIRFLOW__CORE__FERNET_KEY: 'zTxHxvF8VfB6K1J2N3M4P5Q6R7S8T9U0V1W2X3Y4Z5A='
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY}
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
     AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
-    AIRFLOW__WEBSERVER__SECRET_KEY: 'airflow-secret-key-change-in-production'
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY}
     AIRFLOW__WEBSERVER__WEB_SERVER_PORT: 8081 
     AIRFLOW__WEBSERVER__WORKER_REFRESH_INTERVAL: 0
     AIRFLOW__WEBSERVER__WEB_SERVER_WORKER_TIMEOUT: 300
-    OPENAI_API_KEY: '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'
-    GOOGLE_MAPS_API_KEY: 'AIzaSyBzvt8EAD9wcG3KE5JNow_NZZQn33XMi58'
+    OPENAI_API_KEY: ${OPENAI_API_KEY}
+    GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY}
   volumes:
     - ./data-pipeline/airflow/dags:/opt/airflow/dags
     - ./data-pipeline/airflow/logs:/opt/airflow/logs
